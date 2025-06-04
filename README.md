@@ -50,6 +50,8 @@ For more adhoc context - we provide a simple knowledgebase, built on:
 which provides the ability to ingest general facts and documents, which can then be used to enhance context on all feature 
 analysis.
 
+Aegis provides MCP integration as well.
+
 ---
 
 ## Quick Start & Usage
@@ -95,7 +97,7 @@ Here's an example demonstrating how to get an impact suggestion for a CVE:
 ```python
 import asyncio
 from aegis.agents import feature_agent
-from aegis.features import cve # Assuming cve.py defines SuggestImpact
+from aegis.features import cve 
 
 async def main():
     feature = cve.SuggestImpact(feature_agent)
