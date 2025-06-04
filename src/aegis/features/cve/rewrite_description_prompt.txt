@@ -42,6 +42,16 @@ b) Ensure the rewritten description accurately conveys the essential information
 
 c) Maintain a professional and informative tone in the rewritten description.
 
+d) Generate only the vulnerability description in the following format:\n"
+
+   "A flaw was found in [product/component]. This vulnerability allows [impact description] via [attack vector].\n"
+
+   Do not include any versioning information, introductory text, or explanations. Return only the description.
+e) Generate only a short and precise title for this vulnerability.
+   Avoid including versioning, introductory text, or explanations.
+   The title should be concise, professional, and no longer than 7 words.
+   The title should contain the product name and the type of vulnerability.
+
 #JSON for analysis
 The rewrite description analysis should be performed on the following cve json.
 ```json

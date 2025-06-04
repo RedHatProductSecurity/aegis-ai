@@ -129,19 +129,19 @@ class RewriteDescriptionModel(BaseModel):
         description="Contains CVE id",
     )
 
-    title: str = Field(
+    original_title: str = Field(
         ...,
         description="Contains CVE title",
-    )
-
-    components: List = Field(
-        ...,
-        description="List of affected components",
     )
 
     original_description: List = Field(
         ...,
         description="Original cve description",
+    )
+
+    components: List = Field(
+        ...,
+        description="List of affected components",
     )
 
     explanation: str = Field(
@@ -158,7 +158,9 @@ class RewriteDescriptionModel(BaseModel):
         description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
     )
 
-    description: str = Field(..., description="rewritten cve description.")
+    rewritten_description: str = Field(..., description="rewritten cve description.")
+
+    rewritten_title: str = Field(..., description="rewritten cve title.")
 
 
 class RewriteStatementModel(BaseModel):
