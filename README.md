@@ -10,7 +10,7 @@
 
 **Aegis enables security teams to leverage the latest Generative AI models for enhanced security analysis.** Integrate your preferred LLM (ChatGPT, Anthropic, Gemini, or even a local model) to quickly perform deep security analysis on critical artifacts like **CVEs, advisories, and more**.
 
-Aegis streamlines the process, helping you:
+Aegis helps by:
 
 * **Accelerate Analysis:** Insights into complex security data.
 * **Improve Accuracy:** Augment LLM capabilities with in-context security information.
@@ -182,19 +182,34 @@ Once running, you can interact with the API (e.g., `http://localhost:9000/api/v1
 C4Context
     title Aegis System Context Diagram
 
+    System(osim, "OSIM", "Open Source Impact Management (Internal Red Hat System)")
     Person(psirt_analyst, "Stressed out PSIRT Analyst", "The primary user of the Aegis System, needing assistance with vulnerability management.")
 
-    System(osim, "OSIM", "Open Source Impact Management (Internal Red Hat System)")
     Rel(psirt_analyst, osim, "Retrieves CVE data from", "API")
 
 
     Boundary(aegis_system_boundary, "Aegis System") {
+        System(osidb, "OSIDB Tool", "OSIDB tool")
         System(aegis, "Aegis", "Aegis agent")
-        System(osidb, "OSIDB", "OSIDB tool")
-        System(rhtpav2, "RHTPAv2", "RHTPA tool")
+        System(rhtpav2, "RHTPAv2 Tool", "RHTPA tool")
         System(rh_prodsec_kb, "Aegis Knowledgebase", "internal RAG Source")
         System(mcp_servers, "MCP Server(s)", "Managed Cluster Platform Servers (Source of incident data)")
     }
 
+    Boundary(llm_model, "LLM Model") {
+        System(custom_model, "Custom Model", "for secure analysis")
+        System(gemini, "gemini")
+        System(ollama, "ollama")
+        System(chatgpt, "chatgpt")
+        System(anthropic, "anthropic")
+    }
+    
     Rel(osim, aegis, "feature analysis", "API")
+    Rel(aegis, custom_model, "llm inference", "API")
+
+    Rel(aegis, osidb, "fetch CVE", "API")
+    Rel(aegis, rhtpav2, "", "API")
+    Rel(aegis, rh_prodsec_kb, "", "API")
+    Rel(aegis, mcp_servers, "", "API")
+
 ```
