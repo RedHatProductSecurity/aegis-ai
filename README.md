@@ -62,13 +62,12 @@ Aegis allows you to connect to various LLM providers, from cloud services to sec
 
 Note: Eventually we will have a proper package on pypi.
 
-### Connecting to LLMs
-
-
 Ensure Aegis can use any required ca certs:
 ```commandline
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
+
+### Connecting to LLMs
 
 **Using Aegis with Local Ollama:**
 Configure Aegis to use a locally running Ollama instance:
@@ -88,6 +87,16 @@ export AEGIS_LLM_MODEL="anthropic:claude-3-5-sonnet-latest"
 export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 ```
 **Note:** For other LLM providers (e.g., OpenAI, Google Gemini), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
+
+### Connecting to Tools
+
+#### OSIDB
+
+Integration with OSIDB is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
+OSIDB server url for Aegis with:
+```bash
+export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
+```
 
 ### Setup RAG knowledgebase
 
