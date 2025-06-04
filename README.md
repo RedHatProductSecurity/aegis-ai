@@ -8,12 +8,12 @@
 
 ## Overview
 
-**Aegis empowers security teams to leverage the latest Generative AI models for enhanced security analysis.** Integrate your preferred LLM (ChatGPT, Anthropic, Gemini, or even a local model) to quickly perform deep security analysis on critical artifacts like **CVEs, advisories, and more**.
+**Aegis enables security teams to leverage the latest Generative AI models for enhanced security analysis.** Integrate your preferred LLM (ChatGPT, Anthropic, Gemini, or even a local model) to quickly perform deep security analysis on critical artifacts like **CVEs, advisories, and more**.
 
 Aegis streamlines the process, helping you:
 
-* **Accelerate Analysis:** Rapid insights into complex security data.
-* **Improve Accuracy:** Augment LLM capabilities with curated, in-context security information.
+* **Accelerate Analysis:** Insights into complex security data.
+* **Improve Accuracy:** Augment LLM capabilities with in-context security information.
 * **Enhance Efficiency:** Automate repetitive analysis tasks to focus on higher-value work.
 
 ---
@@ -52,31 +52,20 @@ For more adhoc context - we provide a simple knowledgebase, built on:
 which provides the ability to ingest general facts and documents, which can then be used to enhance context on all feature 
 analysis.
 
-Aegis provides MCP integration as well.
+Aegis provides [MCP](https://modelcontextprotocol.io/introduction) integration as well.
 
 ---
 
 ## Quick Start & Usage
 
-Aegis is designed for flexibility, allowing you to connect to various LLM providers, from cloud services to local models.
+Aegis allows you to connect to various LLM providers, from cloud services to secure local models.
 
-### Setup RAG knowledgebase
-
-To run a local postgres with pgvector - which is used for additional RAG context.
-```commandline
-cd etc/deploy && podman-compose up --build
-```
+Note: Eventually we will have a proper package on pypi.
 
 ### Connecting to LLMs
 
-Install any dependencies:
 
-```commandline
-uv sync 
-```
-
-Note: eventually we will have a proper package on pypi
-
+Ensure Aegis can use any required ca certs:
 ```commandline
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
@@ -100,6 +89,13 @@ export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 ```
 **Note:** For other LLM providers (e.g., OpenAI, Google Gemini), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
 
+### Setup RAG knowledgebase
+
+To run a local postgres with pgvector - which is used for additional RAG context.
+```commandline
+cd etc/deploy && podman-compose up --build
+```
+
 ### Invoking an Aegis Feature
 
 Aegis features can be invoked programmatically via Python, through its built-in Command-Line Interface (CLI), or exposed via a REST API.
@@ -107,6 +103,12 @@ Aegis features can be invoked programmatically via Python, through its built-in 
 #### Programmatic Usage (Python)
 
 Here's an example demonstrating how to get an impact suggestion for a CVE:
+
+Install any dependencies:
+
+```commandline
+uv sync 
+```
 
 ```python
 import asyncio
@@ -145,6 +147,8 @@ Run features directly from your terminal:
 uv run aegis suggest-impact "CVE-2025-5399"
 ```
 
+which should also install any required dependencies.
+
 #### REST API Server
 
 For integration with other services, you can run Aegis as a local REST API server:
@@ -152,4 +156,4 @@ For integration with other services, you can run Aegis as a local REST API serve
 ```bash
 uv run uvicorn src.aegis_restapi.main:app --port 9000
 ```
-Once running, you can interact with the API (e.g., `GET /api/v1/cve/suggest/impact/CVE-2022-12345`). Refer to the API documentation (e.g., `/docs` endpoint) for more details.
+Once running, you can interact with the API (e.g., `http://localhost:9000/api/v1/cve/suggest/impact/CVE-2022-12345`). 
