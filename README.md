@@ -1,5 +1,7 @@
 # <img src="docs/logo.png" alt="logo" width="50"> Aegis - Red Hat Product Security Agent
 
+[![Aegis Tests](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml/badge.svg)](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml)
+
 **Note: undergoing disruptive development to get to first release - 'here be dragons'**
 
 ## Overview
