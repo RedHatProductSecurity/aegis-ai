@@ -69,7 +69,13 @@ cd etc/deploy && podman-compose up --build
 
 ### Connecting to LLMs
 
-First make sure Aegis can find any CA it needs to
+Install any dependencies:
+
+```commandline
+uv sync 
+```
+
+Note: eventually we will have a proper package on pypi
 
 ```commandline
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
