@@ -3,6 +3,7 @@
 [![Aegis Tests](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml/badge.svg)](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml)
 
 **Note: undergoing disruptive development to get to first release - 'here be dragons'**
+**Note: Be careful of what llm model you use ... if you want to integrate with OSIDB/RHTPA, you should use a secure model**
 
 ## Overview
 
