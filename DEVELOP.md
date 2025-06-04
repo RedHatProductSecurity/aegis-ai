@@ -112,7 +112,7 @@ AEGIS_LLM_MODEL="anthropic:claude-sonnet-4-latest" # Recommended model for gener
 AEGIS_RAG_SIMILARITY_SCORE_GT=.7
 AEGIS_RAG_EMBEDDING_DIMENSION=768
 AEGIS_RAG_EMBEDDING_MODEL_NAME="sentence-transformers/all-mpnet-base-v2"
-AEGIS_OSIDB_SERVER_URI="https://localhost:8000"
+AEGIS_OSIDB_SERVER_URL="https://localhost:8000"
 # For SSL/TLS certificate bundles, if your environment requires it:
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
