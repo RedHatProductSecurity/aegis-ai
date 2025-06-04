@@ -56,9 +56,7 @@ Aegis provides [MCP](https://modelcontextprotocol.io/introduction) integration a
 
 ---
 
-## Quick Start & Usage
-
-Aegis allows you to connect to various LLM providers, from cloud services to secure local models.
+## Quick Start
 
 Note: Eventually we will have a proper package on pypi.
 
@@ -68,6 +66,8 @@ REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
 
 ### Connecting to LLMs
+
+Aegis allows you to connect to various LLM providers, from cloud services to secure local models.
 
 **Using Aegis with Local Ollama:**
 Configure Aegis to use a locally running Ollama instance:
@@ -88,7 +88,9 @@ export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 ```
 **Note:** For other LLM providers (e.g., OpenAI, Google Gemini), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
 
-### Connecting to Tools
+### Setting up Aegis Tools
+
+Aegis provides a few tools the agent uses for integrating contextual data.
 
 #### OSIDB
 
@@ -97,19 +99,32 @@ OSIDB server url for Aegis with:
 ```bash
 export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
 ```
+#### RHTPA
 
-### Setup RAG knowledgebase
+TBA
+
+### Setting up the RAG knowledgebase
 
 To run a local postgres with pgvector - which is used for additional RAG context.
 ```commandline
 cd etc/deploy && podman-compose up --build
 ```
 
-### Invoking an Aegis Feature
+---
+
+## Using Aegis Feature
 
 Aegis features can be invoked programmatically via Python, through its built-in Command-Line Interface (CLI), or exposed via a REST API.
 
-#### Programmatic Usage (Python)
+### Command-Line Interface (CLI)
+
+Run features directly from your terminal:
+
+```bash
+uv run aegis suggest-impact "CVE-2025-5399"
+```
+
+### Programmatic Usage (Python)
 
 Here's an example demonstrating how to get an impact suggestion for a CVE:
 
@@ -148,17 +163,10 @@ This will produce structured JSON output, like this:
 }
 ```
 
-#### Command-Line Interface (CLI)
-
-Run features directly from your terminal:
-
-```bash
-uv run aegis suggest-impact "CVE-2025-5399"
-```
 
 which should also install any required dependencies.
 
-#### REST API Server
+### REST API Server
 
 For integration with other services, you can run Aegis as a local REST API server:
 
@@ -166,3 +174,26 @@ For integration with other services, you can run Aegis as a local REST API serve
 uv run uvicorn src.aegis_restapi.main:app --port 9000
 ```
 Once running, you can interact with the API (e.g., `http://localhost:9000/api/v1/cve/suggest/impact/CVE-2022-12345`). 
+
+---
+## System Context diagram
+
+```mermaid
+C4Context
+    title Aegis System Context Diagram
+
+    Person(psirt_analyst, "Stressed out PSIRT Analyst", "The primary user of the Aegis System, needing assistance with vulnerability management.")
+
+    System(osim, "OSIM", "Open Source Impact Management (Internal Red Hat System)")
+    Rel(psirt_analyst, osim, "Retrieves CVE data from", "API")
+
+
+    Boundary(aegis_system_boundary, "Aegis System") {
+        System(aegis, "Aegis", "Aegis agent")
+        System(osidb, "OSIDB", "OSIDB tool")
+        System(rhtpav2, "RHTPAv2", "RHTPA tool")
+        System(rh_prodsec_kb, "Aegis Knowledgebase", "internal RAG Source")
+        System(mcp_servers, "MCP Server(s)", "Managed Cluster Platform Servers (Source of incident data)")
+    }
+
+    Rel(osim, aegis, "feature analysis", "API")```
