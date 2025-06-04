@@ -3,7 +3,8 @@
 [![Aegis Tests](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml/badge.svg)](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml)
 
 **Note: undergoing disruptive development to get to first release - 'here be dragons'**
-**Note: Be careful of what llm model you use ... if you want to integrate with OSIDB/RHTPA, you should use a secure model**
+
+**Note: As Aegis is an agent - be careful of which llm model you use ... if you want to integrate with OSIDB/RHTPA, you should use a secure model**
 
 ## Overview
 
@@ -68,12 +69,18 @@ cd etc/deploy && podman-compose up --build
 
 ### Connecting to LLMs
 
+First make sure Aegis can find any CA it needs to
+
+```commandline
+REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
+```
+
 **Using Aegis with Local Ollama:**
 Configure Aegis to use a locally running Ollama instance:
 
 ```bash
 export AEGIS_LLM_HOST=http://localhost:11434
-export AEGIS_LLM_MODEL=llama3.2
+export AEGIS_LLM_MODEL=llama3.2:3b
 # Ensure Ollama is running and 'llama3.2' model is pulled
 ```
 
