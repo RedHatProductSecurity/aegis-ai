@@ -4,7 +4,7 @@
 
 ## Status
 
-Draft
+Accepted
 
 ## Context
 
