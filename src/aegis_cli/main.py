@@ -14,7 +14,6 @@ from aegis import check_llm_status, config_logging
 from aegis.agents import (
     feature_agent,
     rag_agent,
-    base_agent,
 )
 from aegis.features import component, cve
 from aegis.rag import (
@@ -23,8 +22,6 @@ from aegis.rag import (
     initialize_rag_db,
     DocumentInput,
     add_document_to_vector_store,
-    perform_rag_query,
-    RAGQuery,
 )
 
 from aegis_cli import print_version
@@ -69,7 +66,8 @@ def add_fact(fact):
         )
 
     result = asyncio.run(_doit())
-    console.print("fact added")
+    if result:
+        console.print("fact added")
 
 
 @aegis_cli.command()
@@ -91,7 +89,8 @@ def add_document(file_path):
                 )
 
             result = asyncio.run(_doit())
-            console.print("fact added")
+            if result:
+                console.print("fact added")
 
     except FileNotFoundError:
         console.print(f"Error: The file '{file_path}' was not found.")

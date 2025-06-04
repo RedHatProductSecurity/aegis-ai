@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -137,7 +137,7 @@ async def cve_explain_diff(cve_id: str):
 async def kb_add_fact(fact_data: FactInput):
     try:
         add_fact_to_vector_store(fact_data)
-        return {"message": f"Fact added successfully to Aegis."}
+        return {"message": "Fact added successfully to Aegis."}
     except Exception as e:
         return {"error": f"Failed to add fact: {str(e)}"}, 500
 

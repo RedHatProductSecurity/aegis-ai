@@ -1,6 +1,4 @@
-from typing import List, Dict, Any, Optional, Union, Literal
-
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 
 class ComponentIntelligenceModel(BaseModel):

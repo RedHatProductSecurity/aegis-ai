@@ -1,26 +1,6 @@
 import logging
-from typing import Literal
-from pydantic import BaseModel, Field
-
-from jinja2 import (
-    Environment,
-    FileSystemLoader,
-    PackageLoader,
-    Template,
-    exceptions as jinja2_exceptions,
-)
 
 from aegis.features import env_fs, Feature
-from aegis.features.cve.data_models import (
-    SuggestImpactModel,
-    SuggestCWEModel,
-    PIIReportModel,
-    RewriteStatementModel,
-    RewriteDescriptionModel,
-)
-
-from aegis.features import Feature
-
 from aegis.features.component.data_models import ComponentIntelligenceModel
 
 logger = logging.getLogger(__name__)

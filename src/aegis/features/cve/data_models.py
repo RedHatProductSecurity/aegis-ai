@@ -1,6 +1,6 @@
-from typing import List, Dict, Any, Optional, Union, Literal
+from typing import List, Literal
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 
 class SuggestImpactModel(BaseModel):

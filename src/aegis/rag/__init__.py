@@ -25,7 +25,6 @@ from aegis.rag.data_models import (
     RAGQuery,
     RAGResponse,
     SourceItem,
-    LLMAnswer,
     RAGContext,
 )
 

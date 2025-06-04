@@ -57,7 +57,7 @@ class CVE(BaseModel):
         cve_regex = r"^CVE-\d{4}-\d{4,6}$"
         if not re.match(cve_regex, v):
             raise ValueError(
-                f"Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX (e.g., CVE-2024-30941)."
+                "Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX (e.g., CVE-2024-30941)."
             )
         return v
 
@@ -80,7 +80,7 @@ class OsidbLookupInput(BaseModel):
         cve_regex = r"^CVE-\d{4}-\d{4,6}$"
         if not re.match(cve_regex, v):
             raise ValueError(
-                f"Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX (e.g., CVE-2024-30941)."
+                "Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX (e.g., CVE-2024-30941)."
             )
         return v
 

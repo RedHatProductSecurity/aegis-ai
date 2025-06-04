@@ -15,7 +15,7 @@ jobs:
         with:
           version: "0.11.12"
           args: "format --check --diff"
-          
+
   tests:
     name: pytest
     runs-on: ubuntu-latest

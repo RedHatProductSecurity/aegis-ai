@@ -7,7 +7,6 @@ import datetime
 from dataclasses import dataclass, field
 import logging
 import os
-from pydoc import describe
 
 from dotenv import load_dotenv
 
@@ -78,8 +77,6 @@ def check_llm_status(
     """
     Check operational status of an LLM service by hitting its /health endpoint.
     """
-    return True
-
     logger.info(f"check if {llm_host} is available and healthy")
     try:
         health_url = f"{llm_host}"
@@ -102,18 +99,18 @@ def check_llm_status(
             f"AEGIS_LLM_HOST health check timed out after {timeout_seconds} seconds."
         )
         return False
-    except requests.exceptions.ConnectionError as e:
+    except requests.exceptions.ConnectionError:
         logging.warn(
             f"AEGIS_LLM_HOST health check timed out after {timeout_seconds} seconds."
         )
         return False
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         # Catches any other requests-related errors (e.g., DNS, malformed URL)
         logging.warn(
             f"AEGIS_LLM_HOST health check timed out after {timeout_seconds} seconds."
         )
         return False
-    except Exception as e:
+    except Exception:
         # Catch any other unexpected Python errors
         logging.warn(
             f"AEGIS_LLM_HOST health check timed out after {timeout_seconds} seconds."

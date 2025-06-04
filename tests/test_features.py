@@ -31,13 +31,6 @@ async def test_identify_pii_with_test_model():
 
 
 @pytest.mark.asyncio
-async def test_identify_pii_with_test_model():
-    with feature_agent.override(model=TestModel()):
-        result = await cve.IdentifyPII(feature_agent).exec("CVE-2025-0725")
-        assert isinstance(result.output, cve.data_models.PIIReportModel)
-
-
-@pytest.mark.asyncio
 async def test_rewrite_description_with_test_model():
     with feature_agent.override(model=TestModel()):
         result = await cve.RewriteDescriptionText(feature_agent).exec("CVE-2025-0725")
