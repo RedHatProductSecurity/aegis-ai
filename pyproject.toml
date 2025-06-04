@@ -38,7 +38,7 @@ pythonpath = ["."]
 testpaths = "tests"
 python_files = "test_*.py"
 env = [
-    "AEGIS_OSIDB_SERVER_URI=",
+    "AEGIS_OSIDB_SERVER_URL=",
     "OPENAI_API_KEY=",
 ]
 

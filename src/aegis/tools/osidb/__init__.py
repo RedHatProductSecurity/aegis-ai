@@ -16,7 +16,7 @@ import osidb_bindings
 
 logger = logging.getLogger(__name__)
 
-osidb_server_uri = os.getenv("AEGIS_OSIDB_SERVER_URI", "https://localhost:8000")
+osidb_server_uri = os.getenv("AEGIS_OSIDB_SERVER_URL", "https://localhost:8000")
 
 
 @dataclass
