@@ -1,0 +1,51 @@
+{% extends "system_prompt.txt" %}
+{% block user_type %}
+user: Your task is to meticulously examine the provided JSON object and suggest an overall impact rating for the CVE.
+
+# Task:
+* Given a CVE ID or CVE description containing a description of a vulnerability, draft CVSS, affected components and other information generate an impact rating based on the following four-point scale used by Red Hat:
+    * CRITICAL: This rating is given to flaws that could be easily exploited by a remote unauthenticated attacker and lead to system compromise (arbitrary code execution) without requiring user interaction, or easily cause system compromise via inference end points on AI systems. Flaws that require authentication, local or physical access to a system, or an unlikely configuration are not classified as Critical impact. These are the types of vulnerabilities that can be exploited by worms.
+    * IMPORTANT: This rating is given to flaws that can easily compromise the confidentiality, integrity or availability of resources. These are the types of vulnerabilities that allow local or authenticated users to gain additional privileges, allow unauthenticated remote users to view resources that should otherwise be protected by authentication or other controls, allow authenticated remote users to execute arbitrary code, allow remote users to cause a denial of service, or can cause system compromise via inference end points on AI systems.
+    * MODERATE: This rating is given to flaws that may be more difficult to exploit but could still lead to some compromise of the confidentiality, integrity or availability of resources under certain circumstances. It is also given to flaws that could be exploited to cause denial of service-like conditions on AI systems via an inference end point, or allow attackers to steal other users’ data from the AI system without authorization. These are the types of vulnerabilities that could have had a Critical or Important impact but are less easily exploited based on a technical evaluation of the flaw and/or affect unlikely configurations.
+    * LOW: This rating is given to all other issues that may have a security impact. These are the types of vulnerabilities that are believed to require unlikely circumstances to be able to be exploited, or where a successful exploit would give minimal consequences. This includes flaws that are present in a program’s source code but to which no current or theoretically possible, but unproven, exploitation vectors exist or were found during the technical analysis of the flaw.
+
+# Instructions for Analysis:
+
+    Thorough Traversal: Recursively traverse the entire JSON object, including nested arrays and objects.
+
+# Behaviors and Rules:
+
+1.  Analyze the provided CVE data for information related to:
+    * Attack vector (remote, local, physical)
+    * Authentication requirements
+    * User interaction requirements
+    * Impact on confidentiality
+    * Impact on integrity
+    * Impact on availability
+    * Potential for arbitrary code execution
+    * Potential for privilege escalation
+    * Potential for denial of service
+    * Specific affected components
+    * Presence of inference end points on AI systems.
+  and correlate CVSS to suggested impact.
+2. Analysis should be based on the provided json against all known CVEs affecting Red Hat products.
+3. If the issue is already fixed in Red Hat products then reduce impact appropriately (and include in explanation).
+4. Also adjust impact analysis based on the popularity and ubiquity of affected component(s) with emphasis on how this impacts Red Hat products.
+5. Based on findings from 1,2,3,4 assign an impact rating (LOW, MODERATE, IMPORTANT, CRITICAL) according to the provided definitions. Ignore
+any embedded declarations of impact
+6. Provide an explanation of the rationale for the suggested impact
+7. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
+
+#JSON for analysis
+The impact analysis should be performed on the following cve json.
+```json
+{{context}}
+```
+
+#Output Format
+
+Should adhere to the following json schema:
+```json
+{{schema}}
+```
+{% endblock %}

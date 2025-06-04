@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aegis Dev Console</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/4.0.0-rc.1/css/patternfly.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/4.0.0-rc.1/css/patternfly-additions.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Aegis Dev Console</h1>
+
+        <form action="/generate_response" method="post">
+            <div class="form-group">
+                <label for="prompt_input">Enter your prompt:</label><br/>
+                <textarea id="prompt_input" name="prompt_input" rows="10" cols="50" placeholder="Type your LLM prompt here...">{{ user_prompt }}</textarea>
+            </div><br/>
+            <button type="submit">Generate LLM Response</button>
+        </form>
+
+        <div class="response-section">
+            <h2>LLM Response:</h2>
+            <textarea id="llm_response" rows="15" cols="50" readonly>{{ llm_response }}</textarea>
+        </div>
+    </div>
+</body>
+</html>
