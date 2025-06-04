@@ -1,10 +1,10 @@
 # ADR 00001: Aegis - AI-Powered Product Security Analysis
 
-**Date:** 2025-23-05
+**Date:** 2025-05-23
 
 ## Status
 
-Draft
+Accepted
 
 ## Context
 
@@ -43,6 +43,8 @@ We will develop a standalone **Aegis Python module** (available at [https://gith
 2.  **Aegis CLI:** A `click`-based command-line interface for easy management and test interaction.
 3.  **Aegis REST API:** A `FastAPI`-based web service as an example integration of Aegis features.
 
+All components of the system are open source.
+
 **Initial Feature Implementation:**
 The first features to be delivered will be:
 * **Suggest Impact**
@@ -58,8 +60,9 @@ For each feature, responses will be:
 **Integration & Context:**
 * Provide UX integration of Aegis features into the [OSIM](https://github.com/RedHatProductSecurity/osim/) UX.
 * Integrate [OSIDB](https://github.com/RedHatProductSecurity/osidb/) and [RHTPAv2](https://github.com/trustification/trustify) data sources for custom and private query context enrichment.
-* Implement a **GRAPHRAG/RAG solution** knowledgebase starting with [pgvector])(https://github.com/pgvector/pgvector) to enable private RAG. This will allow PSIRT analysts to securely upload and use their own documents ("facts") to continuously improve Aegis's analysis.
+* Implement a **GRAPHRAG/RAG solution** knowledgebase starting with [pgvector](https://github.com/pgvector/pgvector) to enable private RAG. This will allow PSIRT analysts to securely upload and use their own documents ("facts") to continuously improve Aegis's analysis.
 * Provide out-of-the-box integration with MCP servers for ad-hoc query context enrichment.
+* We **MAY** provide an MCP server for Aegis itself so other MCP clients can connect.
 
 **Development & Deployment:**
 * Establish clear paths for easy, secure, and "frictionless" development of Agent AI features.
