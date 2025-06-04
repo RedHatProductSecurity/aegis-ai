@@ -13,8 +13,9 @@ jobs:
 
       - uses: astral-sh/ruff-action@v3
         with:
+          version: "0.11.12"
           args: "format --check --diff"
-
+          
   tests:
     name: pytest
     runs-on: ubuntu-latest
