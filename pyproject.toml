@@ -24,6 +24,7 @@ dependencies = [
     "sentence-transformers>=4.1.0",
     "transformers>=4.52.3",
     "uvicorn>=0.34.2",
+    "wikipedia>=1.4.0",
 ]
 
 [project.scripts]

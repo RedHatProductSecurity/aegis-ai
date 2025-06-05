@@ -12,6 +12,7 @@ from rich.rule import Rule
 
 from aegis import check_llm_status, config_logging
 from aegis.agents import (
+    component_feature_agent,
     feature_agent,
     rag_agent,
 )
@@ -245,7 +246,7 @@ def component_intelligence(component_name):
     """
 
     async def _doit():
-        feature = component.ComponentIntelligence(feature_agent)
+        feature = component.ComponentIntelligence(component_feature_agent)
         return await feature.exec(component_name)
 
     result = asyncio.run(_doit())
