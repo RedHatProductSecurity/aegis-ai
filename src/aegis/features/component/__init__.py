@@ -7,6 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class ComponentIntelligence(Feature):
+    """Based on supplied component name and rh context generate a component 'card' of information."""
+
     async def exec(self, component_name):
         template = env_fs.get_template("component/component_intelligence_prompt.txt")
         prompt = template.render(

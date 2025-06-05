@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class SuggestImpact(Feature):
+    """Based on current CVE information and rh context assert an aggregated impact."""
+
     async def exec(self, cve_id):
         data = await osidb_retrieve(cve_id)
         if data is None:
@@ -37,6 +39,8 @@ class SuggestImpact(Feature):
 
 
 class SuggestCWE(Feature):
+    """Based on current CVE information and rh context assert CWE(s)."""
+
     async def exec(self, cve_id):
         data = await osidb_retrieve(cve_id)
         if data is None:
@@ -59,6 +63,8 @@ class SuggestCWE(Feature):
 
 
 class IdentifyPII(Feature):
+    """Based on current CVE information (public comments, description, statement) and rh context assert if it contains any PII."""
+
     async def exec(self, cve_id):
         data = await osidb_retrieve(cve_id)
         if data is None:
@@ -81,6 +87,8 @@ class IdentifyPII(Feature):
 
 
 class RewriteDescriptionText(Feature):
+    """Based on current CVE information and rh context rewrite/create description and title."""
+
     async def exec(self, cve_id):
         data = await osidb_retrieve(cve_id)
         if data is None:
@@ -103,6 +111,8 @@ class RewriteDescriptionText(Feature):
 
 
 class RewriteStatementText(Feature):
+    """Based on current CVE information and rh context rewrite/create statement."""
+
     async def exec(self, cve_id):
         data = await osidb_retrieve(cve_id)
         if data is None:
@@ -125,6 +135,8 @@ class RewriteStatementText(Feature):
 
 
 class CVSSDiffExplainer(Feature):
+    """Based on current CVE information and rh context explain CVSS score diff between nvd and rh."""
+
     async def exec(self, cve_id):
         data = await osidb_retrieve(cve_id)
         if data is None:

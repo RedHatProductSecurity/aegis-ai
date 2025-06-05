@@ -4,7 +4,7 @@
 
 **Note: undergoing disruptive development to get to first release - 'here be dragons'**
 
-**Note: As Aegis is an agent - be careful of which llm model you use ... if you want to integrate with OSIDB/RHTPA, you should use a secure model**
+**Note: As Aegis is an agent - be careful of which llm model you use ... if you want to integrate with OSIDB/RHTPA, you MUST use a secure model**
 
 ## Overview
 
@@ -14,13 +14,13 @@ Aegis helps by:
 
 * **Accelerate Analysis:** Insights into complex security data.
 * **Improve Accuracy:** Augment LLM capabilities with in-context security information.
-* **Enhance Efficiency:** Automate repetitive analysis tasks to focus on higher-value work.
+* **Enhance Efficiency:** Automate repetitive analysis tasks, working on security entities (ex. CVE) to focus on higher-value work.
 
 ---
 
 ## Features
 
-Aegis offers specialized "Features" designed to address common product security needs:
+Aegis features address common product security needs:
 
 ### CVE Analysis
 
@@ -33,41 +33,42 @@ Aegis offers specialized "Features" designed to address common product security 
 
 ### Component Intelligence
 
-* **Component Intelligence:** Gain insights and context about software components.
+* **Component Intelligence:** Generate a component 'card' of information.
 
 ## Context
 
-Feature analysis requires 'context' beyond that supplied by any specific llm model. We provide 'out of the box' integrations
-with the following:
+Feature analysis requires 'context' beyond that contained by any specific llm model. 
+
+We provide 'out of the box' integrations with the following:
 
 * [OSIDB](https://github.com/RedHatProductSecurity/osidb) 
 * [RHTPAv2](https://github.com/trustification/trustify)
 
 which perform lookups on security entities (ex. CVE).
 
-For more adhoc context - we provide a simple knowledgebase, built on:
+For adhoc context - we provide a simple knowledgebase, built on:
 * [postgres](https://www.postgresql.org/)
 * [pgvector](https://github.com/pgvector/pgvector)
 
-which provides the ability to ingest general facts and documents, which can then be used to enhance context on all feature 
+which we can ingest additional general facts and documents, which are then used to enhance context on all AI feature 
 analysis.
 
-Aegis provides [MCP](https://modelcontextprotocol.io/introduction) integration as well.
-
+Aegis can also be an [MCP](https://modelcontextprotocol.io/introduction) client to integrate (providing further tooling/context)
+with any compliant MCP servers.
 ---
 
 ## Quick Start
 
-Note: Eventually we will have a proper package on pypi.
+**Note**: Eventually we will have a proper package on pypi.
 
-Ensure Aegis can use any required ca certs:
+First ensure `Aegis` can use any required ca certs:
 ```commandline
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
 
 ### Connecting to LLMs
 
-Aegis allows you to connect to various LLM providers, from cloud services to secure local models.
+Aegis allows you to connect to various LLM providers, from your own custom models to cloud LLM services and MaaS.
 
 **Using Aegis with Local Ollama:**
 Configure Aegis to use a locally running Ollama instance:
@@ -88,9 +89,11 @@ export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 ```
 **Note:** For other LLM providers (e.g., OpenAI, Google Gemini), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
 
+Be aware that Aegis is an agent (which autonomously invokes tools) so any llm model you use must be secure/trusted.
+
 ### Setting up Aegis Tools
 
-Aegis provides a few tools the agent uses for integrating contextual data.
+Aegis provides a few 'out of the box' tools that the agent can use to enhance llm query context.
 
 #### OSIDB
 
@@ -99,6 +102,9 @@ OSIDB server url for Aegis with:
 ```bash
 export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
 ```
+
+Uses kerberos built in auth with `osidb-bindings`.
+
 #### RHTPA
 
 TBA
@@ -110,15 +116,17 @@ To run a local postgres with pgvector - which is used for additional RAG context
 cd etc/deploy && podman-compose up --build
 ```
 
+Once this is running it will be consulted by the Agent for additional context.
+
 ---
 
-## Using Aegis Feature
+## Using Aegis Features
 
-Aegis features can be invoked programmatically via Python, through its built-in Command-Line Interface (CLI), or exposed via a REST API.
+`Aegis` features can be invoked programmatically via Python, through its built-in Command-Line Interface (CLI), or exposed via a REST API.
 
 ### Command-Line Interface (CLI)
 
-Run features directly from your terminal:
+Run features directly from your terminal using the CLI:
 
 ```bash
 uv run aegis suggest-impact "CVE-2025-5399"
@@ -126,13 +134,13 @@ uv run aegis suggest-impact "CVE-2025-5399"
 
 ### Programmatic Usage (Python)
 
-Here's an example demonstrating how to get an impact suggestion for a CVE:
-
-Install any dependencies:
+First install required dependencies:
 
 ```commandline
 uv sync 
 ```
+
+The following programmatically invokes the `SuggestImpact` feature:
 
 ```python
 import asyncio
@@ -141,42 +149,57 @@ from aegis.features import cve
 
 async def main():
     feature = cve.SuggestImpact(feature_agent)
-    result = await feature.exec("CVE-2022-12345")
+    result = await feature.exec("CVE-2025-0725")
     print(result.output.model_dump_json(indent=2))
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-This will produce structured JSON output, like this:
+Which produces JSON output:
 
 ```json
 {
-  "cve_id": "CVE-2025-5399",
-  "title": "WebSocket endless loop",
+  "cve_id": "CVE-2025-0725",
+  "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
   "components": [
-    "curl"
+    "libcurl"
   ],
-  "explanation": "explanation contains rationale for suggested impact",
-  "confidence": 0.85,
+  "explanation": "This vulnerability is assessed as LOW impact for the following reasons:\n\n1. The statement
+
+explicitly indicates \"This CVE is not applicable to any supported version of Red Hat Enterprise Linux since
+
+RHEL-4\"\n2. The vulnerability only affects systems using zlib 1.2.0.3 or older, which is an extremely outdated
+
+version\n3. While the vulnerability type (buffer overflow via integer overflow) could potentially be serious, the
+
+specific conditions required make this unlikely to affect any supported Red Hat products\n4. The attack requires
+
+specific conditions: libcurl must be configured to use automatic gzip decompression with CURLOPT_ACCEPT_ENCODING and
+
+must be using the vulnerable zlib version\n\nGiven that this affects only legacy, unsupported versions and
+
+configurations, the real-world impact on Red Hat customers is minimal.",
+
+  "confidence": 0.95,
+
   "impact": "LOW"
+
 }
 ```
 
-
-which should also install any required dependencies.
-
 ### REST API Server
 
-For integration with other services, you can run Aegis as a local REST API server:
+You can also accesss all features from the example fastapi based REST API server:
 
 ```bash
 uv run uvicorn src.aegis_restapi.main:app --port 9000
 ```
-Once running, you can interact with the API (e.g., `http://localhost:9000/api/v1/cve/suggest/impact/CVE-2022-12345`). 
+Once running - interact with the API via HTTP - for example: `http://localhost:9000/api/v1/cve/suggest/impact/CVE-2025-0725`). 
 
 ---
-## System Context diagram
+## System Overview
+System context diagram for Aegis.
 
 ```mermaid
 C4Context
