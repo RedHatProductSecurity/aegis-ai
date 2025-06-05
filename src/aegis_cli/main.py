@@ -59,7 +59,7 @@ def aegis_cli(debug):
 def add_fact(fact):
     """ """
 
-    async def _doit():  # <--- Define an inner async function
+    async def _doit():
         await initialize_rag_db()
         return await add_fact_to_vector_store(
             FactInput(fact=fact, metadata={"source": "aegis"})
@@ -79,7 +79,7 @@ def add_document(file_path):
             json_data_dict = json.load(f)
             console.print(json.dumps(json_data_dict, indent=4))
 
-            async def _doit():  # <--- Define an inner async function
+            async def _doit():
                 await initialize_rag_db()
                 return await add_document_to_vector_store(
                     DocumentInput(
