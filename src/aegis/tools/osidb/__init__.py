@@ -47,6 +47,8 @@ class CVE(BaseModel):
     )
     description: str = Field(None, description="CVE cve_description.")
     components: List = Field(..., description="list of components")
+    references: List = Field(..., description="list of references")
+    affects: List = Field(..., description="list of affects")
 
     @field_validator("cve_id")
     @classmethod
@@ -91,7 +93,7 @@ async def osidb_retrieve(cve_id: str):
         session = osidb_bindings.new_session(osidb_server_uri=osidb_server_uri)
         flaw = session.flaws.retrieve(
             id=cve_id,
-            include_fields="cve_id,title,cve_description,statement,components,comments,comment_zero",
+            include_fields="cve_id,title,cve_description,statement,components,comments,comment_zero,affects,references,",
         )
 
         logger.info(f"successfully retrieved {cve_id}:{flaw.title}")
@@ -101,6 +103,24 @@ async def osidb_retrieve(cve_id: str):
             if not comment.is_private:
                 comments += str(comment.text) + " "
 
+        affects = []
+        for affect in flaw.affects:
+            affects.append(
+                {
+                    "affected": affect.affectedness,
+                    "ps_module": affect.ps_module,
+                    "ps_product": affect.ps_product,
+                    "ps_component": affect.ps_component,
+                    "impact": affect.impact,
+                }
+            )
+        references = []
+        for reference in flaw.references:
+            references.append(
+                {
+                    "url": reference.url,
+                }
+            )
         return CVE(
             cve_id=flaw.cve_id,
             title=f"{flaw.title}",
@@ -109,6 +129,8 @@ async def osidb_retrieve(cve_id: str):
             statement=f"{flaw.statement}",
             description=f"{flaw.cve_description}",
             components=flaw.components,
+            references=references,
+            affects=affects,
         )
 
     except Exception as e:
