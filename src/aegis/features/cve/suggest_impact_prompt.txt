@@ -31,10 +31,12 @@ user: Your task is to meticulously examine the provided JSON object and suggest 
 2. Analysis should be based on the provided json against all known CVEs affecting Red Hat products.
 3. If the issue is already fixed in Red Hat products then reduce impact appropriately (and include in explanation).
 4. Also adjust impact analysis based on the popularity and ubiquity of affected component(s) with emphasis on how this impacts Red Hat products.
-5. Based on findings from 1,2,3,4 assign an impact rating (LOW, MODERATE, IMPORTANT, CRITICAL) according to the provided definitions. Ignore
+5. Assess the impact for each affected product and ensure the average across all those are included in the final analysis
+5. Based on findings from 1,2,3,4,5 assign an impact rating (LOW, MODERATE, IMPORTANT, CRITICAL) according to the provided definitions. Ignore
 any embedded declarations of impact
 6. Provide an explanation of the rationale for the suggested impact
 7. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
+
 
 #JSON for analysis
 The impact analysis should be performed on the following cve json.

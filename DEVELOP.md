@@ -107,22 +107,29 @@ Aegis is configured via environment variables, typically loaded from a `.env` fi
 Here's an example `.env` configuration:
 
 ```ini
+# llm connection details
 AEGIS_LLM_HOST="https://api.anthropic.com"
-AEGIS_LLM_MODEL="anthropic:claude-sonnet-4-latest" # Recommended model for general use
+AEGIS_LLM_MODEL="anthropic:claude-sonnet-4-latest"
+
+# RAG connection details and controls embedding of RAG knowledge and RAG query embedding
+PG_CONNECTION_STRING="postgresql://youruser:yourpassword@localhost:5432/aegis""
 AEGIS_RAG_SIMILARITY_SCORE_GT=.7
 AEGIS_RAG_EMBEDDING_DIMENSION=768
 AEGIS_RAG_EMBEDDING_MODEL_NAME="sentence-transformers/all-mpnet-base-v2"
+
+# tooling connection details
 AEGIS_OSIDB_SERVER_URL="https://localhost:8000"
 # For SSL/TLS certificate bundles, if your environment requires it:
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
-**Note:** For external models, ensure to set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in this `.env` file.
+
+**Note:** For external llm models -need to set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` env vars.
 
 ---
 
 ## Testing
 
-We use **`pytest`** for our test suite, with `pytest-asyncio` for asynchronous tests and `pytest-mock` for mocking external dependencies like `osidb_bindings`.
+We use **`pytest`** for our test suite, with `pytest-asyncio` for asynchronous tests.
 
 To run all tests:
 
