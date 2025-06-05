@@ -55,6 +55,7 @@ analysis.
 
 Aegis can also be an [MCP](https://modelcontextprotocol.io/introduction) client to integrate (providing further tooling/context)
 with any compliant MCP servers.
+
 ---
 
 ## Quick Start
@@ -165,26 +166,9 @@ Which produces JSON output:
   "components": [
     "libcurl"
   ],
-  "explanation": "This vulnerability is assessed as LOW impact for the following reasons:\n\n1. The statement
-
-explicitly indicates \"This CVE is not applicable to any supported version of Red Hat Enterprise Linux since
-
-RHEL-4\"\n2. The vulnerability only affects systems using zlib 1.2.0.3 or older, which is an extremely outdated
-
-version\n3. While the vulnerability type (buffer overflow via integer overflow) could potentially be serious, the
-
-specific conditions required make this unlikely to affect any supported Red Hat products\n4. The attack requires
-
-specific conditions: libcurl must be configured to use automatic gzip decompression with CURLOPT_ACCEPT_ENCODING and
-
-must be using the vulnerable zlib version\n\nGiven that this affects only legacy, unsupported versions and
-
-configurations, the real-world impact on Red Hat customers is minimal.",
-
+  "explanation": "This vulnerability is assessed as LOW impact for the following reasons:\n\n1. The statement explicitly indicates \"This CVE is not applicable to any supported version of Red Hat Enterprise Linux sinc RHEL-4\"\n2. The vulnerability only affects systems using zlib 1.2.0.3 or older, which is an extremely outdate version\n3. While the vulnerability type (buffer overflow via integer overflow) could potentially be serious, the specific conditions required make this unlikely to affect any supported Red Hat products\n4. The attack requires specific conditions: libcurl must be configured to use automatic gzip decompression with CURLOPT_ACCEPT_ENCODING and must be using the vulnerable zlib version\n\nGiven that this affects only legacy, unsupported versions and configurations, the real-world impact on Red Hat customers is minimal.",
   "confidence": 0.95,
-
   "impact": "LOW"
-
 }
 ```
 
