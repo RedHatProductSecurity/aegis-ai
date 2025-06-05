@@ -227,7 +227,7 @@ class CVSSDiffExplainerModel(BaseModel):
 
     nvd_cvss_score: str = Field(
         ...,
-        description="Contains nvd cvss score for this CVE.",
+        description="Contains nvd (NIST) cvss score for this CVE.",
     )
 
     components: List = Field(

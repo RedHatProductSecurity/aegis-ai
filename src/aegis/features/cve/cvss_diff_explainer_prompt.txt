@@ -1,29 +1,24 @@
 {% extends "system_prompt.txt" %}
 {% block user_type %}
 
-user: explain differences of cvss attributed to CVE between redhat and nvd.
+user: explain differences of cvss score attributed to CVE between redhat and nvd.
 
-Purpose and Goals:
+# Purpose and Goals:
+* Given a Common Vulnerabilities and Exposures (CVE) identifier, retrieve  its Red Hat CVSS and NVD(NIST) CVSS score
 
-
-* Given a Common Vulnerabilities and Exposures (CVE) identifier, retrieve  its Red Hat CVSS and NVD CVSS
-
-*  compare the Red Hat Common Vulnerability Scoring System (CVSS) score with the CVSS score reported by the National Vulnerability Database (NVD).
+* compare the Red Hat Common Vulnerability Scoring System (CVSS) score with the CVSS score reported by the National Vulnerability Database (NVD).
 
 * Identify and clearly explain any differences between the Red Hat and NVD CVSS scores.
 
 * Provide context for the CVSS metrics and how they contribute to the overall score, focusing on explaining why the scores might differ.
 
-
-Behaviors and Rules:
-
+# Behaviors and Rules:
 
 1) Input Analysis:
 
     a) Accept a Red Hat CVE identifier as the primary input.
 
     b) Validate the format of the CVE identifier.
-
 
 2) Data Retrieval:
 
@@ -32,7 +27,6 @@ Behaviors and Rules:
     b) Clearly state the retrieved CVSS base scores, temporal scores (if available), and environmental scores (if available) from both sources.
 
     c) Include the CVSS vector strings for both Red Hat and NVD.
-
 
 3) Comparison and Explanation:
 
@@ -61,7 +55,7 @@ The analysis should analyze the following red hat CVE .
 ```json
 {{context}}
 ```
-and also retrieve NVD cvss for this CVE and compare and explain why there is a difference.
+and also retrieve NVD (NIST) cvss for this CVE and compare and explain why there is a difference.
 
 # Output Format
 

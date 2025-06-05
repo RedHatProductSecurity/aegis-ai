@@ -49,6 +49,7 @@ class CVE(BaseModel):
     components: List = Field(..., description="list of components")
     references: List = Field(..., description="list of references")
     affects: List = Field(..., description="list of affects")
+    cvss_scores: List = Field(..., description="list of cvss scores")
 
     @field_validator("cve_id")
     @classmethod
@@ -93,7 +94,7 @@ async def osidb_retrieve(cve_id: str):
         session = osidb_bindings.new_session(osidb_server_uri=osidb_server_uri)
         flaw = session.flaws.retrieve(
             id=cve_id,
-            include_fields="cve_id,title,cve_description,statement,components,comments,comment_zero,affects,references,",
+            include_fields="cve_id,title,cve_description,cvss_scores,statement,components,comments,comment_zero,affects,references,",
         )
 
         logger.info(f"successfully retrieved {cve_id}:{flaw.title}")
@@ -116,11 +117,21 @@ async def osidb_retrieve(cve_id: str):
             )
         references = []
         for reference in flaw.references:
-            references.append(
+            if hasattr(reference, "url") and reference.url:
+                references.append(
+                    {
+                        "url": reference.url,
+                    }
+                )
+        cvss_scores = []
+        for cvss_score in flaw.cvss_scores:
+            cvss_scores.append(
                 {
-                    "url": reference.url,
+                    "issuer": cvss_score.issuer,
+                    "vector": cvss_score.vector,
                 }
             )
+
         return CVE(
             cve_id=flaw.cve_id,
             title=f"{flaw.title}",
@@ -131,6 +142,7 @@ async def osidb_retrieve(cve_id: str):
             components=flaw.components,
             references=references,
             affects=affects,
+            cvss_scores=cvss_scores,
         )
 
     except Exception as e:
