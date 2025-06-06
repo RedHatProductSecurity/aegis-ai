@@ -11,6 +11,8 @@ Aegis leverages the power of Large Language Models (LLMs) to enhance security op
 * **Custom RAG Integrations:** We provide **private, in-context data** to the LLMs through integrations with systems like OSIDB and RHTPAv2. This Retrieval Augmented Generation (RAG) ensures LLMs have the specific, up-to-date information needed for accurate responses.
 * **Extensible Features:** Features serve as the primary mechanism for extending Aegis's capabilities, allowing for modular and scalable development.
 
+Pydantic ai provides guardrails using pydantic data models for input and defining `output-format` for all output from llm.
+
 ---
 
 ## Adding a new feature
@@ -25,6 +27,12 @@ The rough steps to creating a new feature:
 ## Getting Started
 
 Aegis development is powered by **`uv`**, the high-performance Python package installer and executor.
+
+Install uv for your user (eg. no need to create project venv as uv will do all that)
+
+```commandline
+pip install uv
+```
 
 ### Running Aegis
 
@@ -41,20 +49,17 @@ uv run uvicorn src.aegis_restapi.main:app --port 9000
 ```
 
 To launch the Aegis Command-Line Interface (CLI):
-
 ```commandline
 uv run aegis
 ```
 
 ### Setup RAG knowledgebase
-
 To run a local postgres with pgvector - which is used for additional RAG context.
 ```commandline
 cd etc/deploy && podman-compose up --build
 ```
 
 ### Managing Dependencies
-
 `uv` simplifies dependency management:
 
 * **Synchronize All Dependencies:** Install all project dependencies, including development extras:
@@ -73,11 +78,9 @@ cd etc/deploy && podman-compose up --build
 ---
 
 ## Code Quality
-
 We enforce code quality using **`ruff`** for linting and formatting.
 
 ### Linting & Formatting Checks
-
 To check for linting errors:
 
 ```commandline
@@ -101,7 +104,6 @@ uvx ruff format
 ---
 
 ## Configuration
-
 Aegis is configured via environment variables, typically loaded from a `.env` file in your project root.
 
 Here's an example `.env` configuration:
@@ -128,7 +130,6 @@ REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ---
 
 ## Testing
-
 We use **`pytest`** for our test suite, with `pytest-asyncio` for asynchronous tests.
 
 To run all tests:

@@ -19,11 +19,9 @@ Aegis helps by:
 ---
 
 ## Features
-
 Aegis features address common product security needs:
 
 ### CVE Analysis
-
 * **Suggest Impact:** Get an in context LLM-driven suggestion for a CVE's overall impact.
 * **Suggest CWE:** Get an in context LLM-driven Common Weakness Enumeration (CWE) mappings for CVE.
 * **Suggest CVSS:** Get an in context LLM-driven Common Vulnerability Scoring System (CVSS) score.
@@ -32,11 +30,9 @@ Aegis features address common product security needs:
 * **CVSS Diff Explainer:** Understand  differences between Red Hat and NVD CVSS scores with AI-generated explanations.
 
 ### Component Intelligence
-
 * **Component Intelligence:** Generate a component 'card' of information.
 
 ## Context
-
 Feature analysis requires 'context' beyond that contained by any specific llm model. 
 
 We provide 'out of the box' integrations with the following:
@@ -59,7 +55,6 @@ with any compliant MCP servers.
 ---
 
 ## Quick Start
-
 **Note**: Eventually we will have a proper package on pypi.
 
 First ensure `Aegis` can use any required ca certs:
@@ -69,7 +64,7 @@ REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 
 ### Connecting to LLMs
 
-Aegis allows you to connect to various LLM providers, from your own custom models to cloud LLM services and MaaS.
+Aegis allows you to connect to various LLM providers, from your own custom llm models to cloud LLM services and MaaS.
 
 **Using Aegis with Local Ollama:**
 Configure Aegis to use a locally running Ollama instance:
@@ -77,7 +72,7 @@ Configure Aegis to use a locally running Ollama instance:
 ```bash
 export AEGIS_LLM_HOST=http://localhost:11434
 export AEGIS_LLM_MODEL=llama3.2:3b
-# Ensure Ollama is running and 'llama3.2' model is pulled
+# Ensure Ollama is running and 'llama3.2:3b' model is pulled
 ```
 
 **Using Aegis with Anthropic:**
@@ -90,14 +85,13 @@ export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 ```
 **Note:** For other LLM providers (e.g., OpenAI, Google Gemini), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
 
-Be aware that Aegis is an agent (which autonomously invokes tools) so any llm model you use must be secure/trusted.
+Be aware that `Aegis` is an agent (which autonomously invokes tools) so any llm model you use must be secure/trusted.
 
 ### Setting up Aegis Tools
 
 Aegis provides a few 'out of the box' tools that the agent can use to enhance llm query context.
 
 #### OSIDB
-
 Integration with OSIDB is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
 OSIDB server url for Aegis with:
 ```bash
@@ -107,11 +101,9 @@ export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
 Uses kerberos built in auth with `osidb-bindings`.
 
 #### RHTPA
-
 TBA
 
 ### Setting up the RAG knowledgebase
-
 To run a local postgres with pgvector - which is used for additional RAG context.
 ```commandline
 cd etc/deploy && podman-compose up --build
@@ -122,11 +114,9 @@ Once this is running it will be consulted by the Agent for additional context.
 ---
 
 ## Using Aegis Features
-
 `Aegis` features can be invoked programmatically via Python, through its built-in Command-Line Interface (CLI), or exposed via a REST API.
 
 ### Command-Line Interface (CLI)
-
 Run features directly from your terminal using the CLI:
 
 ```bash
@@ -134,7 +124,6 @@ uv run aegis suggest-impact "CVE-2025-5399"
 ```
 
 ### Programmatic Usage (Python)
-
 First install required dependencies:
 
 ```commandline
@@ -173,8 +162,7 @@ Which produces JSON output:
 ```
 
 ### REST API Server
-
-You can also accesss all features from the example fastapi based REST API server:
+You can also accesss all features from the example `fastapi` based REST API server:
 
 ```bash
 uv run uvicorn src.aegis_restapi.main:app --port 9000

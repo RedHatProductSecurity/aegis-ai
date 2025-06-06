@@ -24,14 +24,8 @@ logger.info("starting aegis")
 
 __version__ = "0.1.0"
 
-# llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
-# llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
-
-llm_host = os.getenv("AEGIS_LLM_HOST", "http://136.243.129.250:8000")
-llm_model = os.getenv("AEGIS_LLM_MODEL", "meta-llama/Llama-3.2-3B-Instruct")
-
-# llm_model = os.getenv("AEGIS_LLM_MODEL", "microsoft/Phi-3-mini-4k-instruct")
-
+llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
+llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
 
 default_llm_model = OpenAIModel(
     model_name=llm_model,

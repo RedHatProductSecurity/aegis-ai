@@ -13,7 +13,6 @@ dependencies = [
     "jinja2>=3.1.6",
     "joblib>=1.5.1",
     "langchain-text-splitters>=0.3.8",
-    "litellm>=1.71.0",
     "osidb-bindings>=4.10.1",
     "packageurl-python>=0.16.0",
     "pgvector>=0.4.1",
@@ -23,6 +22,7 @@ dependencies = [
     "rich>=14.0.0",
     "sentence-transformers>=4.1.0",
     "transformers>=4.52.3",
+    "txtai[ann,database,graph]>=8.5.0",
     "uvicorn>=0.34.2",
     "wikipedia>=1.4.0",
 ]
@@ -38,13 +38,10 @@ build-backend = "hatchling.build"
 pythonpath = ["."]
 testpaths = "tests"
 python_files = "test_*.py"
-env = [
-    "AEGIS_OSIDB_SERVER_URL=",
-    "OPENAI_API_KEY=",
-]
 
 [dependency-groups]
 dev = [
+    "deepeval>=2.5.5",
     "detect-secrets>=1.5.0",
     "exceptiongroup>=1.3.0",
     "hatchling>=1.27.0",
