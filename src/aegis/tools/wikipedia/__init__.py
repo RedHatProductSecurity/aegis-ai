@@ -10,6 +10,8 @@ from pydantic_ai import (
     Tool,
 )
 
+from aegis.tools import BaseToolOutput
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +29,7 @@ class GetWikipediaSoftwareInfoInput(BaseModel):
     )
 
 
-class WikipediaSoftwareInfo(BaseModel):
+class WikipediaSoftwareInfo(BaseToolOutput):
     """
     Structured information retrieved about a software component from Wikipedia.
     Note: This does NOT include vulnerability or license data like SCA tools.

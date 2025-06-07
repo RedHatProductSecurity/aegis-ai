@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from aegis.features.data_models import AegisFeatureModel
 
 
-class ComponentIntelligenceModel(BaseModel):
+class ComponentIntelligenceModel(AegisFeatureModel):
     """
     Model containing information on a software component.
     """
@@ -67,11 +69,4 @@ class ComponentIntelligenceModel(BaseModel):
         description="""
         Explain rationale behind component software analysis.
         """,
-    )
-
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
     )

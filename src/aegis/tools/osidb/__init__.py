@@ -14,6 +14,8 @@ from pydantic_ai import (
 
 import osidb_bindings
 
+from aegis.tools import BaseToolOutput
+
 logger = logging.getLogger(__name__)
 
 osidb_server_uri = os.getenv("AEGIS_OSIDB_SERVER_URL", "https://localhost:8000")
@@ -24,7 +26,7 @@ class OsidbDependencies:
     test = 1
 
 
-class CVE(BaseModel):
+class CVE(BaseToolOutput):
     """ """
 
     cve_id: str = Field(
@@ -113,6 +115,8 @@ async def osidb_retrieve(cve_id: str):
                     "ps_product": affect.ps_product,
                     "ps_component": affect.ps_component,
                     "impact": affect.impact,
+                    "not_affected_justification": affect.not_affected_justification,
+                    "delegated_not_affected_justification": affect.delegated_not_affected_justification,
                 }
             )
         references = []
@@ -154,7 +158,7 @@ async def osidb_lookup(
     ctx: RunContext[OsidbDependencies], cve_lookup_input: OsidbLookupInput
 ) -> CVE:
     """
-    Searches OSIDB by cve_id performing a lookup on CVE entity on OSIDB and returns structured information about it.
+    Searches OSIDB by cve_id performing a lookup on CVE entity in OSIDB and returns structured information about it.
 
     Args:
         ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.

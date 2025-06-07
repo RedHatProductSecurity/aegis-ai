@@ -419,5 +419,46 @@ their ecosystem.",
   "confidence": 0.95,
   "redhat_statement": "This CVE is not applicable to any supported version of Red Hat Enterprise Linux since RHEL-4."
 }
+```
 
+### Component Intelligence
+
+```commandline
+aegis component-intelligence "libcap"
+```
+or
+```
+GET api/v2/component/intelligence/libcap
+```
+
+```json
+{
+  "component_name": "libcap",
+  "component_latest_version": "2.69",
+  "component_purl": "pkg:rpm/redhat/libcap@2.69?arch=x86_64",
+  "website_url": "https://sites.google.com/site/fullycapable/",
+  "repo_url": "https://git.kernel.org/pub/scm/libs/libcap/libcap.git",
+  "popularity_score": 2,
+  "stability_score": 2,
+  "recent_news": "- January 2024: libcap 2.69 released with minor improvements and bug fixes\n- October 2023: 
+Integration with newer kernel capabilities\n- Security patches addressing potential privilege escalation issues in 
+2023",
+  "active_contributors": "- Andrew G. Morgan (Google) - Primary maintainer\n- Serge Hallyn (Cisco) - Major 
+contributor\n- Christian Kastner (Debian) - Regular contributor\n- James Morris (Red Hat) - Kernel capabilities 
+maintainer",
+  "security_information": "- Total CVEs: 4 historically reported\n- Known exploits: 1 (privilege escalation, 
+patched)\n- Critical security focus on capability handling and privilege management\n- Regular security audits due to 
+its role in Linux security\n- Included in Red Hat Enterprise Linux security framework\n- No PII data exposure in CVE 
+records",
+  "further_learning": "- Official documentation: https://sites.google.com/site/fullycapable/\n- Linux capabilities 
+manual: https://man7.org/linux/man-pages/man7/capabilities.7.html\n- Red Hat Enterprise Linux Security Guide: 
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/security_hardening/index\n- Kernel.org 
+documentation: https://www.kernel.org/doc/html/latest/admin-guide/capabilities.html",
+  "explanation": "Libcap is a fundamental Linux library that implements POSIX capabilities, crucial for fine-grained 
+privilege control in Linux systems. As a core security component in Red Hat Enterprise Linux and other major 
+distributions, it maintains high stability and popularity scores. The project shows consistent maintenance, regular 
+updates, and strong security practices. The analysis confidence is high due to the project's public nature, 
+well-documented history, and clear maintenance patterns.",
+  "confidence": 0.95
+}
 ```
