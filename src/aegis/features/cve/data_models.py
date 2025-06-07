@@ -99,7 +99,10 @@ class SuggestCWEModel(BaseModel):
         description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
     )
 
-    impact: str = Field(..., description="Suggested CWE-ID.")
+    cwe: List = Field(
+        ...,
+        description="List of cwe-ids",
+    )
 
 
 class PIIReportModel(BaseModel):
