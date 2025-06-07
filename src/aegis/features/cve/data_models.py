@@ -1,9 +1,11 @@
 from typing import List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from aegis.features.data_models import AegisFeatureModel
 
 
-class SuggestImpactModel(BaseModel):
+class SuggestImpactModel(AegisFeatureModel):
     """
     Model to suggest impact of CVE.
     """
@@ -35,13 +37,6 @@ class SuggestImpactModel(BaseModel):
         """,
     )
 
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
-    )
-
     impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
         ..., description="Suggested Red Hat CVE impact."
     )
@@ -65,7 +60,7 @@ class SuggestImpactModel(BaseModel):
     )
 
 
-class SuggestCWEModel(BaseModel):
+class SuggestCWEModel(AegisFeatureModel):
     """
     Model to suggest CWE-ID of CVE.
     """
@@ -92,20 +87,13 @@ class SuggestCWEModel(BaseModel):
         """,
     )
 
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
-    )
-
     cwe: List = Field(
         ...,
         description="List of cwe-ids",
     )
 
 
-class PIIReportModel(BaseModel):
+class PIIReportModel(AegisFeatureModel):
     """
     Model to describe whether CVE contains PII and, if so, what instances of PII were found.
     """
@@ -132,20 +120,13 @@ class PIIReportModel(BaseModel):
         """,
     )
 
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the PII analysis is correct. A higher score means greater certainty.",
-    )
-
     contains_PII: bool = Field(
         ...,
         description="Set to true if any PII was identified, false otherwise.",
     )
 
 
-class RewriteDescriptionModel(BaseModel):
+class RewriteDescriptionModel(AegisFeatureModel):
     """
     Model to rewrite CVE description.
     """
@@ -177,39 +158,31 @@ class RewriteDescriptionModel(BaseModel):
         """,
     )
 
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
-    )
-
+    rewritten_title: str = Field(..., description="rewritten cve title.")
     rewritten_description: str = Field(..., description="rewritten cve description.")
 
-    rewritten_title: str = Field(..., description="rewritten cve title.")
 
-
-class RewriteStatementModel(BaseModel):
+class RewriteStatementModel(AegisFeatureModel):
     """
     Model to rewrite CVE statement.
     """
 
     cve_id: str = Field(
         ...,
-        description="Contains CVE id",
+        description="Contains Red Hat CVE id",
     )
 
     title: str = Field(
         ...,
-        description="Contains CVE title",
+        description="Contains Red Hat CVE title",
     )
 
     components: List = Field(
         ...,
-        description="List of affected components",
+        description="List of Red Hat affected components",
     )
 
-    original_statement: List = Field(
+    redhat_statement: List = Field(
         ...,
         description="Original cve statement",
     )
@@ -221,17 +194,12 @@ class RewriteStatementModel(BaseModel):
         """,
     )
 
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
+    rewritten_statement: str = Field(
+        ..., description="rewritten Red Hat cve statement."
     )
 
-    statement: str = Field(..., description="rewritten cve statement.")
 
-
-class CVSSDiffExplainerModel(BaseModel):
+class CVSSDiffExplainerModel(AegisFeatureModel):
     """
     Model to explain differences between rh and nvd CVSS scores.
     """
@@ -246,14 +214,14 @@ class CVSSDiffExplainerModel(BaseModel):
         description="Contains CVE title",
     )
 
-    redhat_cvss_score: str = Field(
+    redhat_cvss3_score: str = Field(
         ...,
-        description="Contains Red Hat cvss score for this CVE.",
+        description="Contains Red Hat CVSS3 score for this CVE.",
     )
 
-    nvd_cvss_score: str = Field(
+    nvd_cvss3_score: str = Field(
         ...,
-        description="Contains nvd (NIST) cvss score for this CVE.",
+        description="Contains nvd (NIST) CVSS3 score for this CVE.",
     )
 
     components: List = Field(
@@ -261,18 +229,11 @@ class CVSSDiffExplainerModel(BaseModel):
         description="List of affected components",
     )
 
+    statement: str = Field(..., description="redhat cve statement.")
+
     explanation: str = Field(
         ...,
         description="""
         Explain the difference between rh and nvd CVSS scores for this CVE.
         """,
     )
-
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Generate a score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis is correct. A higher score means greater certainty.",
-    )
-
-    redhat_statement: str = Field(..., description="redhat cve statement.")

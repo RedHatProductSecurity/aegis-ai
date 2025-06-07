@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Perform security analysis on security artifacts."
 requires-python = ">=3.13"
 dependencies = [
+    "aiohttp>=3.12.9",
     "asyncpg>=0.30.0",
     "click>=8.2.1",
     "click-completion>=0.5.2",
@@ -18,7 +19,9 @@ dependencies = [
     "pgvector>=0.4.1",
     "pydantic>=2.11.5",
     "pydantic-ai==0.2.9",
+    "pydantic-ai-slim[duckduckgo]>=0.2.9",
     "pydantic-graph>=0.2.6",
+    "pygithub>=2.6.1",
     "rich>=14.0.0",
     "sentence-transformers>=4.1.0",
     "transformers>=4.52.3",
