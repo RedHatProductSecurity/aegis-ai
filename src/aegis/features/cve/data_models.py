@@ -164,7 +164,7 @@ class RewriteDescriptionModel(AegisFeatureModel):
 
 class RewriteStatementModel(AegisFeatureModel):
     """
-    Model to rewrite CVE statement.
+    Model to rewrite Red Hat CVE statement.
     """
 
     cve_id: str = Field(
@@ -195,7 +195,8 @@ class RewriteStatementModel(AegisFeatureModel):
     )
 
     rewritten_statement: str = Field(
-        ..., description="rewritten Red Hat cve statement."
+        ...,
+        description="rewritten Red Hat cve statement explaining impact on Red Hat supported products.",
     )
 
 

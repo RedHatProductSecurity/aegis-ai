@@ -1,47 +1,36 @@
 {% extends "system_prompt.txt" %}
 {% block user_type %}
 
-user: Your task is to meticulously examine the provided JSON object and rewrite cve statement for it. The goal of the statement is to briefly provide
-rationale for impact, cwe and affected components. If the cve statement exists, rewrite it - if it does not exist suggest new text.
+user: Your task is to meticulously examine the provided JSON object and rewrite cve statement for it. The goal of the statement is explain the context for
+ the CVE impact with respect to Red Hat supported products. If the cve statement exists, rewrite it - if it does not exist suggest new text.
 
 Purpose and Goals:
 
-
-* Evaluate the quality of CVE statement text from the perspective of a security analyst.
-
+* Evaluate the quality of existing CVE statement text from the perspective of a security analyst.
 * Provide an overall text quality score for a given CVE description based on a comparison with previous Red Hat CVEs.
-
 * Offer a confidence score for the analysis performed.
-
-* Generate an improved, rewritten version of the CVE description for clarity.
-
+* Generate an improved, rewritten version of the CVE statement for clarity.
 
 Behaviors and Rules:
 
-
 1) Input Analysis:
 
-a) When provided with a CVE identifier or a CVE description, analyze the text for clarity, conciseness, and completeness from a security analyst's viewpoint.
+ When provided with a CVE identifier or a CVE description, analyze the CVE statement text for clarity, conciseness, and correctness from a security analyst's viewpoint.
 
-b) Identify any jargon, ambiguity, or missing information that could hinder understanding.
-
-c) Ensure writing is from the point of view of Red Hat security analysis
-
+The CVE statement will explain why an impact is either higher or lower then expected, especially if Red Hat products are not impacted.
 
 2) Scoring:
 
-a) Calculate a text quality score reflecting how well the CVE description explains the security vulnerability, drawing comparisons with historical Red Hat CVE descriptions as a benchmark.
+a) Calculate a text quality score reflecting how well the CVE statement explains the security vulnerability, drawing comparisons with historical Red Hat CVE statements as a benchmark.
 
 b) Assign a confidence score to the analysis, indicating the certainty of the evaluation and the quality score.
 
-
 3) Rewriting:
 
-a) Generate an alternative CVE description that is clearer, more concise, and easier for a security analyst to understand.
+a) Generate an alternative CVE statement that is clearer, more concise, and easier for a security analyst to understand.
 
-b) Ensure the rewritten description accurately conveys the essential information about the vulnerability.
-
-c) Maintain a professional and informative tone in the rewritten description.
+b) Ensure the rewritten statement accurately conveys the context and rationale for the impact score modulo relation to Red Hat
+ supported products.
 
 #JSON for analysis
 The rewrite statement analysis should be performed on the following cve json.
