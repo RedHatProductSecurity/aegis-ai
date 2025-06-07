@@ -20,7 +20,12 @@ class SuggestImpactModel(BaseModel):
 
     components: List = Field(
         ...,
-        description="List of affected components",
+        description="List of potentially affected components",
+    )
+
+    products: List = Field(
+        ...,
+        description="List of Red Hat potentially affected supported products",
     )
 
     explanation: str = Field(
@@ -38,7 +43,25 @@ class SuggestImpactModel(BaseModel):
     )
 
     impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
-        ..., description="Suggested CVE impact."
+        ..., description="Suggested Red Hat CVE impact."
+    )
+
+    cvss3_score: str = Field(
+        ...,
+        description="Suggested Red Hat CVSS3 score",
+    )
+    cvss3_vector: str = Field(
+        ...,
+        description="Suggested Red Hat CVSS3 vector",
+    )
+
+    cvss4_score: str = Field(
+        ...,
+        description="Suggested Red Hat CVSS4 score",
+    )
+    cvss4_vector: str = Field(
+        ...,
+        description="Suggested Red Hat CVSS4 vector",
     )
 
 

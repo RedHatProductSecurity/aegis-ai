@@ -296,18 +296,39 @@ GET api/v2/cve/suggest/impact/CVE-2025-0725
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
   "components": [
-    "libcurl"
+    "libcurl",
+    "curl",
+    "davix",
+    "netshoot",
+    "mingw-curl",
+    "s390utils"
   ],
-  "explanation": "This vulnerability is assessed as LOW impact for the following reasons:\n\n1. The statement
-explicitly indicates \"This CVE is not applicable to any supported version of Red Hat Enterprise Linux since
-RHEL-4\"\n2. The vulnerability only affects systems using zlib 1.2.0.3 or older, which is an extremely outdated
-version\n3. While the vulnerability type (buffer overflow via integer overflow) could potentially be serious, the
-specific conditions required make this unlikely to affect any supported Red Hat products\n4. The attack requires
-specific conditions: libcurl must be configured to use automatic gzip decompression with CURLOPT_ACCEPT_ENCODING and
-must be using the vulnerable zlib version\n\nGiven that this affects only legacy, unsupported versions and
-configurations, the real-world impact on Red Hat customers is minimal.",
-  "confidence": 0.95,
-  "impact": "LOW"
+  "products": [
+    "Red Hat Enterprise Linux",
+    "OpenShift Container Platform",
+    "Red Hat JBoss Core Services",
+    "Red Hat In-Vehicle OS",
+    "Confidential Compute Attestation",
+    "Ansible Services",
+    "Hosted OpenShift"
+  ],
+  "explanation": "Based on careful analysis of the CVE:\n\n1. The vulnerability requires specific conditions:\n   - 
+Affects libcurl when using automatic gzip decompression\n   - Only impacts zlib 1.2.0.3 or older\n   - Red Hat 
+statement indicates not applicable to RHEL-4 and later versions\n\n2. Attack Vector Analysis:\n   - Local access 
+required per Red Hat CVSS (AV:L)\n   - Limited impact on availability only (no integrity/confidentiality impact)\n   -
+No privilege escalation or arbitrary code execution indicated\n\n3. Product Impact:\n   - While many products are 
+listed as affected, the core vulnerability is not exploitable in supported Red Hat Enterprise Linux versions\n   - 
+Community projects (Fedora, EPEL) may be affected but are not officially supported products\n   - Container-based 
+products inherit the base RHEL security\n\n4. Mitigating Factors:\n   - Requires local access\n   - Limited to 
+availability impact\n   - Modern zlib versions are not affected\n   - Core RHEL platforms are protected\n\nGiven these
+factors, particularly the local access requirement and limited availability impact, combined with the statement about 
+RHEL version applicability, a LOW impact rating is appropriate.",
+  "confidence": 0.85,
+  "impact": "LOW",
+  "cvss3_score": "3.3",
+  "cvss3_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+  "cvss4_score": "3.1",
+  "cvss4_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N"
 }
 ```
 

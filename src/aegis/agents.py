@@ -34,7 +34,7 @@ feature_agent = Agent(
     model=default_llm_model,
     llm=llm_model,
     model_settings={
-        "temperature": 0.1,  # Lower temperature for less creative/more direct output
+        "temperature": 0.05,  # Lower temperature for less creative/more direct output
         "top_p": 0.8,
         # "repetition_penalty": 1.05,
         # "stop": ["\n\n", "###", "</s>"],
