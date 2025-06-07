@@ -250,7 +250,7 @@ or
 GET api/v2/cve/rewrite/description/CVE-2025-0725
 ```
 
-```json
+```
 {
   "cve_id": "CVE-2025-0725",
   "original_title": "Buffer Overflow in libcurl via zlib Integer Overflow",
@@ -287,7 +287,7 @@ or
 GET api/v2/cve/rewrite/statement/CVE-2025-0725
 ```
 
-```json 
+```
 {
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
@@ -319,7 +319,7 @@ or
 ```
 GET api/v2/cve/suggest/impact/CVE-2025-0725
 ```
-```json 
+```
 {
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
@@ -371,7 +371,7 @@ GET api/v2/cve/suggest/cwe/CVE-2025-0725
 
 ```
 
-```json
+```
 {
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
@@ -405,7 +405,7 @@ or
 GET api/v2/cve/identify/pii/CVE-2025-0725
 ```
 
-```json
+```
 {
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
@@ -428,7 +428,7 @@ or
 GET api/v2/cve/explain_cvss_diff/CVE-2025-0725
 ```
 
-```json
+```
 {
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
@@ -459,7 +459,7 @@ or
 GET api/v2/component/intelligence/libcap
 ```
 
-```json
+```
 {
   "component_name": "libcap",
   "component_latest_version": "2.69",
