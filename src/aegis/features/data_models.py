@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -15,9 +15,9 @@ class AegisFeatureModel(BaseModel):
         description="A score between 0.00 and 1.00 (two decimal places) indicating confidence in the analysis. A higher score means greater certainty.",
     )
 
-    tool_used: Optional[str] = Field(
-        None,
-        description="The name of the tool, if any, that was used to formulate this answer. If this is a suggest or rewrite feature then should minimally include ['osidb_lookup']",
+    tools_used: List = Field(
+        ...,
+        description="he name of the tool, if any, that was used to formulate this answer. If this is a suggest or rewrite feature then should minimally include 'osidb_tool'",
     )
 
 

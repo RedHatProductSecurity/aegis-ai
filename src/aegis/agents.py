@@ -10,23 +10,22 @@ from aegis import (
     default_llm_model,
     llm_model,
 )
-from aegis.rag.data_models import LLMAnswer
+from aegis.features.data_models import AegisAnswer
 from aegis.rag import rag_lookup, RAGResponse
-from aegis.tools import date_lookup
-from aegis.tools.wikipedia import wikipedia_lookup
+from aegis.tools import date_tool
+from aegis.tools.osidb import osidb_tool
+from aegis.tools.wikipedia import wikipedia_tool
 
 base_agent = Agent(
-    name="A RAG Agent",
-    description="An agent for Retrieval-Augmented Generation.",
+    name="Plain Agent",
+    description="An plain agent.",
     deps_type=default_data_deps,
     model=default_llm_model,
     llm=llm_model,
-    output_type=LLMAnswer,
+    output_type=AegisAnswer,
     model_settings={
-        "temperature": 0.0,  # Lower temperature for less creative/more direct output
+        "temperature": 0.05,
         "top_p": 0.8,
-        # "repetition_penalty": 1.0,
-        # "stop": ["\n\n", "###", "</s>"],
         "response_format": {"type": "json_object"},
     },
 )
@@ -37,13 +36,11 @@ component_feature_agent = Agent(
     model=default_llm_model,
     llm=llm_model,
     model_settings={
-        "temperature": 0.1,  # Lower temperature for less creative/more direct output
+        "temperature": 0.05,
         "top_p": 0.8,
-        # "repetition_penalty": 1.05,
-        # "stop": ["\n\n", "###", "</s>"],
         "response_format": {"type": "json_object"},
     },
-    tools=[date_lookup, wikipedia_lookup],
+    tools=[wikipedia_tool],
 )
 
 feature_agent = Agent(
@@ -52,10 +49,8 @@ feature_agent = Agent(
     model=default_llm_model,
     llm=llm_model,
     model_settings={
-        "temperature": 0.05,  # Lower temperature for less creative/more direct output
+        "temperature": 0.05,
         "top_p": 0.8,
-        # "repetition_penalty": 1.05,
-        # "stop": ["\n\n", "###", "</s>"],
         "response_format": {"type": "json_object"},
     },
 )
@@ -70,25 +65,21 @@ rag_agent = Agent(
     tools=[rag_lookup],
     output_type=RAGResponse,
     model_settings={
-        "temperature": 0.0,  # Lower temperature for less creative/more direct output
+        "temperature": 0.05,
         "top_p": 0.8,
-        # "repetition_penalty": 1.0,
-        # "stop": ["\n\n", "###", "</s>"],
         "response_format": {"type": "json_object"},
     },
 )
 
-chat_agent = Agent(
-    name="ChatAgent",
-    description="An agent.",
+context_agent = Agent(
+    name="ContextAgent",
+    description="An agent that pulls in all the context.",
     model=default_llm_model,
     llm=llm_model,
-    tools=[duckduckgo_search_tool()],
+    tools=[date_tool, duckduckgo_search_tool(), wikipedia_tool, osidb_tool],
     model_settings={
-        "temperature": 0.05,  # Lower temperature for less creative/more direct output
+        "temperature": 0.05,
         "top_p": 0.8,
-        # "repetition_penalty": 1.05,
-        # "stop": ["\n\n", "###", "</s>"],
         "response_format": {"type": "json_object"},
     },
 )

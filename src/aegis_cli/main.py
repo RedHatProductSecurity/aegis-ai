@@ -17,9 +17,9 @@ from pydantic_ai.agent import AgentRunResult
 
 from aegis import check_llm_status, config_logging
 from aegis.agents import (
-    component_feature_agent,
     feature_agent,
-    chat_agent,
+    context_agent,
+    base_agent,
 )
 from aegis.features import component, cve
 from aegis.features.data_models import AegisAnswer
@@ -111,18 +111,18 @@ def add_document(file_path):
 
 @aegis_cli.command()
 @click.argument("query", type=str)
-def search_norag(query):
+def search_plain(query):
     """
     Perform search query with no supplied context.
     """
 
     async def _doit():
-        return await feature_agent.run(query)
+        return await base_agent.run(query, output_type=AegisAnswer)
 
     result = asyncio.run(_doit())
     if result:
         console.print(Rule())
-        console.print(result.output.model_dump_json(indent=2))
+        console.print(result.output)
 
 
 @aegis_cli.command()
@@ -134,7 +134,7 @@ def search(query):
 
     async def _doit():
         # await initialize_rag_db()
-        return await chat_agent.run(query, output_type=AegisAnswer)
+        return await context_agent.run(query, output_type=AegisAnswer)
 
     result = asyncio.run(_doit())
     if result:
@@ -252,7 +252,7 @@ def component_intelligence(component_name):
     """
 
     async def _doit():
-        feature = component.ComponentIntelligence(component_feature_agent)
+        feature = component.ComponentIntelligence(context_agent)
         return await feature.exec(component_name)
 
     result = asyncio.run(_doit())

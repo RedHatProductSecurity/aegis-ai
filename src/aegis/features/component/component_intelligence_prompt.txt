@@ -133,7 +133,7 @@ Behaviors and Rules:
 
 
 # Component for analysis
-The  analysis should analyze the following component and identify any PII data in the cve record.
+The  analysis should analyze the following component and provide correct information card on the component.
 {{context}}
 
 # Output Format
