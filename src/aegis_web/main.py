@@ -5,11 +5,11 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from aegis.agents import feature_agent
-from aegis.features import cve
+from aegis.agents import feature_agent, component_feature_agent
+from aegis.features import cve, component
 from . import AEGIS_REST_API_VERSION
-from ..aegis.rag import add_fact_to_vector_store
-from ..aegis.rag.data_models import FactInput
+from aegis.rag import add_fact_to_vector_store
+from aegis.rag.data_models import FactInput
 
 app = FastAPI(
     title="Aegis REST API",
@@ -128,6 +128,18 @@ async def cve_rewrite_statement(cve_id: str):
 async def cve_explain_diff(cve_id: str):
     feature = cve.CVSSDiffExplainer(feature_agent)
     result = await feature.exec(cve_id)
+    if result:
+        return result.output
+    return {}
+
+
+@app.get(
+    f"/api/{AEGIS_REST_API_VERSION}/component/intelligence/{{component_name}}",
+    response_class=JSONResponse,
+)
+async def component_intelligence(component_name: str):
+    feature = component.ComponentIntelligence(component_feature_agent)
+    result = await feature.exec(component_name)
     if result:
         return result.output
     return {}

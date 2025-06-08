@@ -4,16 +4,12 @@ aegis cli
 """
 
 import json
-from typing import List, Dict
 
 import click
 import asyncio
 
 from rich.console import Console
 from rich.rule import Rule
-
-from pydantic import Field
-from pydantic_ai.agent import AgentRunResult
 
 from aegis import check_llm_status, config_logging
 from aegis.agents import (
@@ -259,78 +255,3 @@ def component_intelligence(component_name):
     if result:
         console.print(Rule())
         console.print(result.output.model_dump_json(indent=2))
-
-
-class ChatResponse(AgentRunResult):
-    """
-    Structured response from the chatbot agent.
-    """
-
-    answer: str = Field(description="The generated answer to the user's query.")
-    mood: str = Field(
-        default="neutral",
-        description="The detected mood of the chatbot's response (e.g., 'neutral', 'helpful', 'apologetic').",
-    )
-    confidence_score: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="A confidence score for the answer (0.0 to 1.0).",
-    )
-
-
-@aegis_cli.command()
-def chat():
-    """
-    A simple AI chatbot CLI using pydantic-ai.
-
-    """
-    if not feature_agent:
-        click.echo(
-            click.style(
-                "Error: Chatbot agent is not initialized. Please check logs for API key issues.",
-                fg="red",
-            )
-        )
-        return
-
-    click.echo(click.style("\n--- Welcome to the AI Chatbot! ---", fg="bright_blue"))
-    click.echo(
-        click.style("Type 'exit' or 'quit' to end the conversation.", fg="bright_blue")
-    )
-
-    # Initialize conversation history
-    # This list will hold messages in OpenAI API format: {"role": "user", "content": "...", "role": "assistant", "content": "..."}
-    # The system prompt is already handled by the Agent's system_prompt parameter.
-    conversation_history: List[Dict[str, str]] = []
-
-    while True:
-        try:
-            user_input = click.prompt(
-                click.style("\nYou: ", fg="cyan"), type=str, prompt_suffix=""
-            )
-            if user_input.lower() in ["exit", "quit"]:
-                click.echo(click.style("--- Goodbye! ---", fg="bright_blue"))
-                break
-
-            click.echo(click.style("AI Thinking...", fg="yellow"), nl=False)
-            agent_response = asyncio.run(
-                feature_agent.run(user_input, messages=conversation_history)
-            )
-            conversation_history.append({"role": "user", "content": user_input})
-
-            structured_response: ChatResponse = agent_response.output
-
-            click.echo(click.style(f"\rAI {structured_response}", fg="green"))
-            # Add AI's response to history for next turn
-            conversation_history.append(
-                {"role": "assistant", "content": structured_response}
-            )
-
-        except Exception as e:
-            click.echo(
-                click.style(f"\nError: Failed to get response from AI. {e}", fg="red")
-            )
-            # Optionally, remove the last user message if the AI failed to respond
-            if conversation_history and conversation_history[-1]["role"] == "user":
-                conversation_history.pop()
