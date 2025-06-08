@@ -19,7 +19,7 @@ dependencies = [
     "pgvector>=0.4.1",
     "pydantic>=2.11.5",
     "pydantic-ai==0.2.9",
-    "pydantic-ai-slim[duckduckgo]>=0.2.9",
+    "pydantic-ai-slim[duckduckgo,tavily]>=0.2.9",
     "pydantic-graph>=0.2.6",
     "pygithub>=2.6.1",
     "rich>=14.0.0",

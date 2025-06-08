@@ -26,6 +26,8 @@ __version__ = "0.1.0"
 llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
 llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
 
+tavily_api_key = os.getenv("TAVILY_API_KEY", "   ")
+
 default_llm_model = OpenAIModel(
     model_name=llm_model,
     provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
