@@ -14,7 +14,7 @@ class BaseToolOutput(BaseModel):
 
 
 @Tool
-async def date_lookup(ctx: RunContext) -> str:
+async def date_tool(ctx: RunContext) -> str:
     """Returns the current date."""
     logger.info("calling date_lookup")
     today = date.today()

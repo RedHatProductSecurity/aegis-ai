@@ -59,7 +59,7 @@ class WikipediaSoftwareInfo(BaseToolOutput):
 
 
 @Tool
-def wikipedia_lookup(
+def wikipedia_tool(
     ctx: RunContext[WikipediaDependencies], input: GetWikipediaSoftwareInfoInput
 ) -> WikipediaSoftwareInfo:
     """
