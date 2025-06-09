@@ -80,7 +80,9 @@ async def osidb_retrieve(cve_id: str):
         )
         logger.info(f"{cve_id}:{flaw.title}")
         comments = ""
-        for comment in flaw.comments:
+        for i, comment in enumerate(flaw.comments):
+            if i >= 15:  # TODO: remove limit of 15 comments
+                break
             if not comment.is_private:
                 comments += str(comment.text) + " "
         affects = []

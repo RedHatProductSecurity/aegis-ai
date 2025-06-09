@@ -5,11 +5,11 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from aegis.agents import feature_agent, component_feature_agent
+from aegis.agents import feature_agent, context_agent
 from aegis.features import cve, component
 from . import AEGIS_REST_API_VERSION
-from aegis.rag import add_fact_to_vector_store
-from aegis.rag.data_models import FactInput
+# from aegis.rag import add_fact_to_vector_store
+# from aegis.rag.data_models import FactInput
 
 app = FastAPI(
     title="Aegis REST API",
@@ -138,22 +138,22 @@ async def cve_explain_diff(cve_id: str):
     response_class=JSONResponse,
 )
 async def component_intelligence(component_name: str):
-    feature = component.ComponentIntelligence(component_feature_agent)
+    feature = component.ComponentIntelligence(context_agent)
     result = await feature.exec(component_name)
     if result:
         return result.output
     return {}
 
 
-@app.post(f"/api/{AEGIS_REST_API_VERSION}/kb/add-fact")
-async def kb_add_fact(fact_data: FactInput):
-    try:
-        add_fact_to_vector_store(fact_data)
-        return {"message": "Fact added successfully to Aegis."}
-    except Exception as e:
-        return {"error": f"Failed to add fact: {str(e)}"}, 500
-
-
-@app.post(f"/api/{AEGIS_REST_API_VERSION}/kb/add-document")
-async def kb_add_document(fact: str):
-    add_fact_to_vector_store(FactInput(fact=fact, metadata={"source": "aegis"}))
+# @app.post(f"/api/{AEGIS_REST_API_VERSION}/kb/add-fact")
+# async def kb_add_fact(fact_data: FactInput):
+#     try:
+#         add_fact_to_vector_store(fact_data)
+#         return {"message": "Fact added successfully to Aegis."}
+#     except Exception as e:
+#         return {"error": f"Failed to add fact: {str(e)}"}, 500
+#
+#
+# @app.post(f"/api/{AEGIS_REST_API_VERSION}/kb/add-document")
+# async def kb_add_document(fact: str):
+#     add_fact_to_vector_store(FactInput(fact=fact, metadata={"source": "aegis"}))

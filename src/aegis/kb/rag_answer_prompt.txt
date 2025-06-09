@@ -1,0 +1,28 @@
+{% extends "rag_system_prompt.txt" %}
+{% block user_type %}
+
+user: Your task is to answer the user's question precisely using provided context.
+
+If the information needed to answer is not present in the context, you MUST state that you do not have enough
+information from the context.
+
+
+# context JSON for analysis
+The analysis should analyze the following context json.
+```json
+{{context}}
+```
+
+Question: {{query}}
+
+Ensure your answer is comprehensive and directly addresses the user's question. Summarise
+the answer if supplied by context, in the answer section.
+
+# Output Format
+
+Should adhere to the following json schema:
+```json
+{{schema}}
+```
+
+{% endblock %}

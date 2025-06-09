@@ -1,7 +1,12 @@
-# Aegis built in REST-API
+# Aegis web
 
-A minimal rest-api server (based on fastapi) mostly to illustrate how to integrate Aegis and testing.
+A minimal web server (based on fastapi) mostly to illustrate how to integrate Aegis and test with it.
 
 ```commandline
-uv run uvicorn src.aegis_restapi.main:app --port 8000
+uv run uvicorn src.aegis_web.main:app --port 8000
 ```
+
+## Developer console
+
+## REST-API
+
