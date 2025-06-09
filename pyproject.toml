@@ -25,7 +25,6 @@ dependencies = [
     "rich>=14.0.0",
     "sentence-transformers>=4.1.0",
     "transformers>=4.52.3",
-    "txtai[ann,database,graph]>=8.5.0",
     "uvicorn>=0.34.2",
     "wikipedia>=1.4.0",
 ]
@@ -52,6 +51,7 @@ dev = [
     "isort>=6.0.1",
     "lxml>=5.4.0",
     "mypy>=1.15.0",
+    "pydantic-eval>=0.0.1",
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.1.1",
