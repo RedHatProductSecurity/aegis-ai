@@ -48,8 +48,8 @@ class SourceItem(BaseModel):
 
 class RAGContext(BaseModel):
     combined_context: str
-    source_items: List[Optional[SourceItem]] = Field(
-        ..., description="A list of relevant source documents or snippets."
+    sources: List[Optional[SourceItem]] = Field(
+        ..., description="A list of relevant source facts or documents or snippets."
     )
 
 
@@ -65,30 +65,8 @@ class RAGResponse(BaseModel):
     explanation: str = Field(
         ..., description="The brief rationale explaining the answer."
     )
-    sources: List[SourceItem] = Field(
-        default_factory=list, description="List of retrieved source documents/facts."
-    )
-
-
-class LLMAnswer(BaseModel):
-    """
-    The structured answer from the LLM, including quality metrics.
-    """
-
-    describe: str = Field(
+    # TODO: figure out the mystery here - as in we cannot use SourceItem ?????
+    sources: List[str] = Field(
         ...,
-        description="Provide description of entity (ex. Title of CVE) being analysed.",
+        description="A list of relevant source facts or documents or snippets. prepended with Fact: or Document:",
     )
-
-    confidence: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Confidence score (0.0 to 1.0) with 2 decimal points of precision, indicating how confident the LLM is that the answer is correct and grounded in the context.",
-    )
-    explanation: str = Field(
-        ...,
-        description="A brief rationale explaining how the answer was generated, what sources were primary, and if the answer was provided directly by the LLM or not. Do not repeat the answer here.",
-    )
-
-    answer: str = Field(..., description="The direct answer to the user's question.")

@@ -11,7 +11,7 @@ Aegis leverages the power of Large Language Models (LLMs) to enhance security op
 * **Custom RAG Integrations:** We provide **private, in-context data** to the LLMs through integrations with systems like OSIDB and RHTPAv2. This Retrieval Augmented Generation (RAG) ensures LLMs have the specific, up-to-date information needed for accurate responses.
 * **Extensible Features:** Features serve as the primary mechanism for extending Aegis's capabilities, allowing for modular and scalable development.
 
-Pydantic ai provides guardrails using pydantic data models for input and defining `output-format` for all output from llm.
+Pydantic ai provides safety and guardrails via pydantic data models for input and defining `output-format` for all output from llm.
 
 ---
 
@@ -19,14 +19,14 @@ Pydantic ai provides guardrails using pydantic data models for input and definin
 
 The rough steps to creating a new feature:
 
-1) develop a prompt
+1) develop a prompt (test prompt with developer console)
 2) identify if any new context is needed (might need a need tool integration or upload of facts/content into pgvector)
 3) add under appropriate features/ ensuring to define both prompt and pydantic data model
-4) expose example usage in cli and rest server
+4) write test, expose example usage in cli and rest server
 
 ## Getting Started
 
-Aegis development is powered by **`uv`**, the high-performance Python package installer and executor.
+Aegis development is powered by **`uv`**, the Python package installer and executor.
 
 Install uv for your user (eg. no need to create project venv as uv will do all that)
 
@@ -76,6 +76,7 @@ cd etc/deploy && podman-compose up --build
     ```
 
 ---
+
 
 ## Code Quality
 We enforce code quality using **`ruff`** for linting and formatting.

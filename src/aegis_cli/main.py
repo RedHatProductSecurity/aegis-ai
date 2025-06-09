@@ -3,8 +3,6 @@ aegis cli
 
 """
 
-import json
-
 import click
 import asyncio
 
@@ -19,13 +17,13 @@ from aegis.agents import (
 )
 from aegis.features import component, cve
 from aegis.features.data_models import AegisAnswer
-from aegis.rag import (
-    add_fact_to_vector_store,
-    FactInput,
-    initialize_rag_db,
-    DocumentInput,
-    add_document_to_vector_store,
-)
+# from aegis.rag import (
+#     add_fact_to_vector_store,
+#     FactInput,
+#     initialize_rag_db,
+#     DocumentInput,
+#     add_document_to_vector_store,
+# )
 
 from aegis_cli import print_version
 
@@ -57,52 +55,52 @@ def aegis_cli(debug):
         exit(1)
 
 
-@aegis_cli.command()
-@click.argument("fact", type=str)
-def add_fact(fact):
-    """ """
-
-    async def _doit():
-        await initialize_rag_db()
-        return await add_fact_to_vector_store(
-            FactInput(fact=fact, metadata={"source": "aegis"})
-        )
-
-    result = asyncio.run(_doit())
-    if result:
-        console.print("fact added")
-
-
-@aegis_cli.command()
-@click.argument("file_path", type=str)
-def add_document(file_path):
-    """ """
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            json_data_dict = json.load(f)
-            console.print(json.dumps(json_data_dict, indent=4))
-
-            async def _doit():
-                await initialize_rag_db()
-                return await add_document_to_vector_store(
-                    DocumentInput(
-                        text=json.dumps(json_data_dict, indent=4),
-                        metadata={"document_url": file_path},
-                    )
-                )
-
-            result = asyncio.run(_doit())
-            if result:
-                console.print("fact added")
-
-    except FileNotFoundError:
-        console.print(f"Error: The file '{file_path}' was not found.")
-    except json.JSONDecodeError:
-        console.print(
-            f"Error: Could not decode JSON from '{file_path}'. Check file format."
-        )
-    except Exception as e:
-        console.print(f"An unexpected error occurred: {e}")
+# @aegis_cli.command()
+# @click.argument("fact", type=str)
+# def add_fact(fact):
+#     """ """
+#
+#     async def _doit():
+#         await initialize_rag_db()
+#         return await add_fact_to_vector_store(
+#             FactInput(fact=fact, metadata={"source": "aegis"})
+#         )
+#
+#     result = asyncio.run(_doit())
+#     if result:
+#         console.print("fact added")
+#
+#
+# @aegis_cli.command()
+# @click.argument("file_path", type=str)
+# def add_document(file_path):
+#     """ """
+#     try:
+#         with open(file_path, "r", encoding="utf-8") as f:
+#             json_data_dict = json.load(f)
+#             console.print(json.dumps(json_data_dict, indent=4))
+#
+#             async def _doit():
+#                 await initialize_rag_db()
+#                 return await add_document_to_vector_store(
+#                     DocumentInput(
+#                         text=json.dumps(json_data_dict, indent=4),
+#                         metadata={"document_url": file_path},
+#                     )
+#                 )
+#
+#             result = asyncio.run(_doit())
+#             if result:
+#                 console.print("fact added")
+#
+#     except FileNotFoundError:
+#         console.print(f"Error: The file '{file_path}' was not found.")
+#     except json.JSONDecodeError:
+#         console.print(
+#             f"Error: Could not decode JSON from '{file_path}'. Check file format."
+#         )
+#     except Exception as e:
+#         console.print(f"An unexpected error occurred: {e}")
 
 
 @aegis_cli.command()
