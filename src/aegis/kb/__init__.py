@@ -18,7 +18,6 @@ from sentence_transformers import SentenceTransformer
 
 from pydantic_ai import (
     Agent,
-    RunContext,
 )
 
 from aegis.kb.data_models import (
@@ -325,7 +324,9 @@ class RagSystem:
                 logger.error(f"Error inserting fact into DB: {e}")
                 raise
 
-    def _generate_prompt(self, context, query: str) -> str:
+    def _generate_prompt(
+        self, context, query: str, additional_context: str = None
+    ) -> str:
         """
         Generates the prompt for the RAG agent.
         """
@@ -334,6 +335,7 @@ class RagSystem:
         prompt = template.render(
             {
                 "context": context.model_dump(),
+                "additional_context": additional_context,
                 "query": query,
                 "schema": RAGResponse.model_json_schema(),
             }
@@ -427,31 +429,6 @@ class RagSystem:
         combined_context = " ".join(context_parts)
         return RAGContext(combined_context=combined_context, sources=retrieved_sources)
 
-    async def rag_lookup_tool(
-        self, ctx: RunContext[RagDependencies], query: RAGQuery
-    ) -> RAGContext:
-        """
-        Performs RAG query when used as a pydantic_ai Tool:
-        1. Embeds the user's query.
-        2. Retrieves relevant document chunks and facts from the vector store.
-        3. returns context and sources.
-        """
-        try:
-            # Here, 'self' refers to the RagSystem instance that was registered as a dependency
-            # or implicitly available if the tool is bound to an instance.
-            # However, since get_rag_context is an instance method, you'd typically
-            # call it from the RagSystem instance itself.
-            # If `ctx.dependencies` contained the RagSystem instance, you could do:
-            # rag_system_instance = ctx.dependencies # Assuming RagSystem is a dependency
-            # rag_data = await rag_system_instance.get_rag_context(query)
-            # For simplicity, assuming this tool method is part of the RagSystem itself
-            # or has access to its internal state.
-            rag_data = await self.get_rag_context(query)
-            return rag_data
-        except Exception as e:
-            logger.error(f"Error during rag_lookup_tool: {e}")
-            return RAGContext(combined_context="n/a", source_items=[])
-
     async def perform_rag_query(self, query_input: RAGQuery, rag_agent: Agent):
         """
         Performs a full RAG query:
@@ -460,7 +437,11 @@ class RagSystem:
         3. Combines them as context.
         4. Uses the RAG Agent to generate a structured answer.
         """
+        additional_context = query_input.additional_context
+        logger.info(additional_context)
         rag_data = await self.get_rag_context(query_input)
-        prompt = self._generate_prompt(rag_data, query_input.query)
+        prompt = self._generate_prompt(
+            rag_data, query_input.query, additional_context=additional_context
+        )
         logger.debug(prompt)
         return await rag_agent.run(prompt, output_type=RAGResponse)

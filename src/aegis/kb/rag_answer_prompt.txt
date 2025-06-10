@@ -13,6 +13,11 @@ The analysis should analyze the following context json.
 {{context}}
 ```
 
+# additional context
+```
+{{additional_context}}
+```
+
 Question: {{query}}
 
 Ensure your answer is comprehensive and directly addresses the user's question. Summarise
