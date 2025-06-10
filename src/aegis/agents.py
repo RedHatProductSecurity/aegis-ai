@@ -54,8 +54,7 @@ feature_agent = AegisAgent(
 )
 
 rag_agent = AegisAgent(
-    name="A RAG Agent",
-    description="An agent for Retrieval-Augmented Generation.",
+    name="A RAG Agent", description="An agent for Retrieval-Augmented Generation."
 )
 
 context_agent = AegisAgent(

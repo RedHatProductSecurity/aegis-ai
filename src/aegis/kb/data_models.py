@@ -25,6 +25,11 @@ class RAGQuery(BaseModel):
     """Input model for a RAG query."""
 
     query: str = Field(..., description="The user's question or query.")
+
+    additional_context: Optional[str] = Field(
+        ..., description="Additional query context."
+    )
+
     top_k_documents: int = Field(
         ..., description="Number of top documents to retrieve."
     )

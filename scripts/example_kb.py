@@ -58,7 +58,9 @@ async def main():
 
         # 3. Perform RAG queries
         query_text = "What is the capital of France ?"
-        rag_query = RAGQuery(query=query_text, top_k_documents=1, top_k_facts=1)
+        rag_query = RAGQuery(
+            query=query_text, top_k_documents=1, top_k_facts=1, additional_context=""
+        )
 
         rag_response = await rag_system.perform_rag_query(rag_query, rag_agent)
         print("---------------------")
