@@ -25,7 +25,7 @@ class SuggestImpactModel(AegisFeatureModel):
         description="List of potentially affected components",
     )
 
-    products: List = Field(
+    affected_products: List = Field(
         ...,
         description="List of Red Hat potentially affected supported products",
     )
@@ -83,7 +83,7 @@ class SuggestCWEModel(AegisFeatureModel):
     explanation: str = Field(
         ...,
         description="""
-        Explain rationale behind suggested CWE-ID.
+        Explain rationale behind suggested CWE-ID(s).
         """,
     )
 
@@ -138,12 +138,12 @@ class RewriteDescriptionModel(AegisFeatureModel):
 
     original_title: str = Field(
         ...,
-        description="Contains CVE title",
+        description="Contains current CVE title",
     )
 
     original_description: List = Field(
         ...,
-        description="Original cve description",
+        description="Contains current CVE description",
     )
 
     components: List = Field(
@@ -154,12 +154,12 @@ class RewriteDescriptionModel(AegisFeatureModel):
     explanation: str = Field(
         ...,
         description="""
-        Explain rationale behind rewritten description.
+        Explain rationale behind rewritten CVE description and title.
         """,
     )
 
-    rewritten_title: str = Field(..., description="rewritten cve title.")
-    rewritten_description: str = Field(..., description="rewritten cve description.")
+    rewritten_title: str = Field(..., description="rewritten CVE title.")
+    rewritten_description: str = Field(..., description="rewritten CVE description.")
 
 
 class RewriteStatementModel(AegisFeatureModel):
@@ -169,22 +169,22 @@ class RewriteStatementModel(AegisFeatureModel):
 
     cve_id: str = Field(
         ...,
-        description="Contains Red Hat CVE id",
+        description="Contains CVE id",
     )
 
     title: str = Field(
         ...,
-        description="Contains Red Hat CVE title",
+        description="Contains CVE title",
     )
 
     components: List = Field(
         ...,
-        description="List of Red Hat affected components",
+        description="List of affected components",
     )
 
-    redhat_statement: List = Field(
+    statement: List = Field(
         ...,
-        description="Original cve statement",
+        description="Original CVE statement",
     )
 
     explanation: str = Field(
@@ -196,7 +196,7 @@ class RewriteStatementModel(AegisFeatureModel):
 
     rewritten_statement: str = Field(
         ...,
-        description="rewritten Red Hat cve statement explaining impact on Red Hat supported products.",
+        description="rewritten Red Hat CVE statement explaining impact on Red Hat supported products.",
     )
 
 
@@ -230,11 +230,16 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
         description="List of affected components",
     )
 
+    affected_products: List = Field(
+        ...,
+        description="List of Red Hat potentially affected supported products",
+    )
+
     statement: str = Field(..., description="redhat cve statement.")
 
     explanation: str = Field(
         ...,
         description="""
-        Explain the difference between rh and nvd CVSS scores for this CVE.
+        Explain the difference between Red Hat and NVD(NIST) CVSS scores for this CVE.
         """,
     )

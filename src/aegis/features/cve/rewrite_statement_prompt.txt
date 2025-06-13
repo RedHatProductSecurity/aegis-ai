@@ -33,7 +33,7 @@ b) Ensure the rewritten statement accurately conveys the context and rationale f
  supported products.
 
 
-# Guide to Writing a Comprehensive Vulnerability Statement
+# Further Guidelines to Writing a Comprehensive Vulnerability Statement
 
 This document outlines the methodology and best practices for writing a detailed vulnerability statement. A well-structured vulnerability statement enables better understanding, prioritization, and remediation of vulnerabilities. It integrates critical concepts for threat categorization and risk assessment to ensure comprehensive coverage, while also aligning with CVSS version 3.1 metrics.
 
