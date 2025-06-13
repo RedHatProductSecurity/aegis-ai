@@ -4,7 +4,7 @@
 user: Your task is to meticulously examine the provided JSON object and rewrite cve description for it. The goal of the description is to briefly
 provide an overview of the CVE. If the cve description exists, rewrite it - if it does not exist suggest new text.
 
-Purpose and Goals:
+# Purpose and Goals:
 
 * Evaluate the quality of CVE description text from the perspective of a security analyst.
 
@@ -15,8 +15,7 @@ Purpose and Goals:
 * Generate an improved, rewritten version of the CVE description for clarity.
 
 
-Behaviors and Rules:
-
+# Behaviors and Rules:
 
 1) Input Analysis:
 
@@ -26,13 +25,11 @@ b) Identify any jargon, ambiguity, or missing information that could hinder unde
 
 c) Ensure writing is from the point of view of Red Hat security analysis
 
-
 2) Scoring:
 
 a) Calculate a text quality score reflecting how well the CVE description explains the security vulnerability, drawing comparisons with historical Red Hat CVE descriptions as a benchmark.
 
 b) Assign a confidence score to the analysis, indicating the certainty of the evaluation and the quality score.
-
 
 3) Rewriting:
 
@@ -47,69 +44,65 @@ d) Generate only the vulnerability description in the following format:\n"
    "A flaw was found in [product/component]. This vulnerability allows [impact description] via [attack vector].\n"
 
    Do not include any versioning information, introductory text, or explanations. Return only the description.
-e) Generate only a short and precise title for this vulnerability.
+
+e) Generate a short and precise title for this vulnerability.
    Avoid including versioning, introductory text, or explanations.
    The title should be concise, professional, and no longer than 7 words.
    The title should contain the product name and the type of vulnerability.
 
-# Guidelines for writing CVE description
+# Further Guidelines for writing CVE description
 
-
-The CVE Description field should provide information to help customers quickly and easily understand the flaw's threat to their system.
-
-All flaws reported on Red Hat CVE pages require a description.
-
-For information on reviewing and approving descriptions, refer to the Review and approve CVE Description page.
-Definitions
+The CVE Description field should provide information to help customers quickly and easily understand the flaw's threat
+to their system.
 
 CVE Description is a basic description of the following information:
 
-    The type of vulnerability and where it exists
-    Who or what can exploit the flaw
-    How the flaw can be exploited
+    * The type of vulnerability and where it exists
+    * Who or what can exploit the flaw
+    * How the flaw can be exploited
 
 The following is a guideline for the Description structure:
 
-    The type of flaw (based on CWE) and what it can do
-    For example, "A buffer overflow", "An integer overflow", "A NULL pointer dereference", or "A privilege escalation flaw". Suggested phrasing examples:
-        "A flawed bounds check in the xxxx function leads to... "
-        "A Cross-Site Request Forgery (CSRF) issue can lead to..."
-        "A cross-site scripting (XSS) flaw leading to..."
-    Who can exploit the flaw
-    For example, local or remote attacker, authenticated or unauthenticated user or attacker, privileged or unprivileged guest user, man-in-the-middle attacker, or a malicious server. Suggested phrasing examples:
-        "An attacker with CREATE and DROP table privileges and shell access to the database server could use this issue to ..."
-        "A local attacker could use this issue to cause a denial of service by mounting a specially crafted [file system type, such as ext4] file system."
-        "This flaw allows an attacker to..."
-    How the flaw can be exploited
-    For example, "specially crafted packet or request" or "specially crafted text file". Suggested phrasing examples:
-        "An attacker could create a specially crafted image file that, when opened by a victim, could cause an application to crash or allow arbitrary code execution."
-        "If a carefully crafted file-type file was loaded by an application linked against [affected-library-name], the application could crash or allow arbitrary code execution with the privileges of the user running the application."
-    Exploitation consequences
-    For example, a denial of service, code execution, privilege escalation, or information disclosure. Suggested phrasing examples:
-        "A user in a guest could leverage this flaw to cause a denial of service (guest hang or crash) or possibly escalate their privileges within the host."
-        "This could lead to a denial of service if a user browsed a specially crafted [file system type, such as ext4] file system, for example, by running 'ls'."
+The type of flaw (based on CWE) and what it can do
+For example, "A buffer overflow", "An integer overflow", "A NULL pointer dereference", or "A privilege escalation flaw". Suggested phrasing examples:
+    "A flawed bounds check in the xxxx function leads to... "
+    "A Cross-Site Request Forgery (CSRF) issue can lead to..."
+    "A cross-site scripting (XSS) flaw leading to..."
+Who can exploit the flaw
+For example, local or remote attacker, authenticated or unauthenticated user or attacker, privileged or unprivileged guest user, man-in-the-middle attacker, or a malicious server. Suggested phrasing examples:
+    "An attacker with CREATE and DROP table privileges and shell access to the database server could use this issue to ..."
+    "A local attacker could use this issue to cause a denial of service by mounting a specially crafted [file system type, such as ext4] file system."
+    "This flaw allows an attacker to..."
+How the flaw can be exploited
+For example, "specially crafted packet or request" or "specially crafted text file". Suggested phrasing examples:
+    "An attacker could create a specially crafted image file that, when opened by a victim, could cause an application to crash or allow arbitrary code execution."
+    "If a carefully crafted file-type file was loaded by an application linked against [affected-library-name], the application could crash or allow arbitrary code execution with the privileges of the user running the application."
+Exploitation consequences
+For example, a denial of service, code execution, privilege escalation, or information disclosure. Suggested phrasing examples:
+    "A user in a guest could leverage this flaw to cause a denial of service (guest hang or crash) or possibly escalate their privileges within the host."
+    "This could lead to a denial of service if a user browsed a specially crafted [file system type, such as ext4] file system, for example, by running 'ls'."
 
-Things to do:
+## Things to do:
 
-    The description should be unique and distinguishable between similar-looking vulnerabilities. For example, if there are two CVEs reported for a component and both of them are CSRF attacks, ensure customers can differentiate one from another based on attack vector, attack surface, or data breach.
-    Follow the correct naming conventions and capitalization wherever possible, such as product names. For example, using names such as Gluster or Samba, and using protocols such as HTTPS, FTP, or TLS.
-    Use the Statement to anticipate customer questions. In particular, if our flaw impact (Severity rating) is significantly different from the NVD severity rating defined by their CVSS Base Score, this should be explained. For instance, if the NVD CVSS Base Score is in the range they define as High or Critical, but our rating is Moderate or Low, customers will seek an explanation for why our rating is lower. This explanation is also important for customers responding to reports from vulnerability scanners.
-    Severity ratings and CVSS Base Score Ranges:
-        none    0.0
-        low       0.1 - 3.9
-        medium  4.0 - 6.9
-        high     7.0 - 8.9
-        critical 9.0 - 10.0
+The description should be unique and distinguishable between similar-looking vulnerabilities. For example, if there are two CVEs reported for a component and both of them are CSRF attacks, ensure customers can differentiate one from another based on attack vector, attack surface, or data breach.
+Follow the correct naming conventions and capitalization wherever possible, such as product names. For example, using names such as Gluster or Samba, and using protocols such as HTTPS, FTP, or TLS.
+Use the Statement to anticipate customer questions. In particular, if our flaw impact (Severity rating) is significantly different from the NVD severity rating defined by their CVSS Base Score, this should be explained. For instance, if the NVD CVSS Base Score is in the range they define as High or Critical, but our rating is Moderate or Low, customers will seek an explanation for why our rating is lower. This explanation is also important for customers responding to reports from vulnerability scanners.
+Severity ratings and CVSS Base Score Ranges:
+    none    0.0
+    low       0.1 - 3.9
+    medium  4.0 - 6.9
+    high     7.0 - 8.9
+    critical 9.0 - 10.0
 
-Things not to do:
+## Things not to do:
 
-    The use of acronyms should be avoided when possible because customers might not know the acronym. When it’s necessary to use an acronym, add the corresponding full form. For example, use "Active Directory Domain Controller (AD DC)" rather than just writing “AD DC”.
-    Engineers should refrain from using generic Confidentiality, Integrity, and Availability (CIA) statement boilerplate templates. For example, "The highest threat from this vulnerability is to data confidentiality". Instead, describe what kind of restricted information can be obtained and the amount of information disclosure.
-    Information that is already included in other fields. For example, the CVE number or affected versions, which belong in Comment #0 of the flaw bug.
+The use of acronyms should be avoided when possible because customers might not know the acronym. When it’s necessary to use an acronym, add the corresponding full form. For example, use "Active Directory Domain Controller (AD DC)" rather than just writing “AD DC”.
+Engineers should refrain from using generic Confidentiality, Integrity, and Availability (CIA) statement boilerplate templates. For example, "The highest threat from this vulnerability is to data confidentiality". Instead, describe what kind of restricted information can be obtained and the amount of information disclosure.
+Information that is already included in other fields. For example, the CVE number or affected versions, which belong in Comment #0 of the flaw bug.
 
 If multiple Red Hat products are affected, do not include the name of a specific product in the description. The per-product technical description, affected state, or any other special cases belongs in the Statement.
 
-# Guidelines for CVE Title
+# Further Guidelines for CVE Title
 
 The title should describe *only* the core technical issue based *only* on the provided input.
 
@@ -132,7 +125,7 @@ The title should describe *only* the core technical issue based *only* on the pr
 5.  **DO NOT** use headings, bold text (other than the starting phrase if needed by a template), bullet points, or line breaks. It must be one single paragraph.
 
 #JSON for analysis
-The rewrite description analysis should be performed on the following cve json.
+The rewrite description and title analysis should be performed on the following cve json.
 ```json
 {{context}}
 ```
