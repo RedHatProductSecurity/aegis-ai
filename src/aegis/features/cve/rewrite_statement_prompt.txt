@@ -117,11 +117,8 @@ These impacts should be seamlessly integrated into the statement to paint a comp
 
 By embedding STRIDE-based threat categorization, CVSS alignment, and the CIA triad into a single cohesive statement, vulnerabilities can be effectively communicated and prioritized for resolution.
 
-#JSON for analysis
-The rewrite statement analysis should be performed on the following cve json.
-```json
-{{context}}
-```
+#CVE for analysis
+The rewrite statement analysis should be performed on CVE with id of {{cve_id}}.
 
 #Output Format
 

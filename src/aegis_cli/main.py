@@ -11,7 +11,7 @@ from rich.rule import Rule
 
 from aegis import check_llm_status, config_logging
 from aegis.agents import (
-    feature_agent,
+    rh_feature_agent,
     context_agent,
     base_agent,
 )
@@ -144,7 +144,7 @@ def identify_pii(cve_id):
     """
 
     async def _doit():
-        feature = cve.IdentifyPII(feature_agent)
+        feature = cve.IdentifyPII(rh_feature_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -161,7 +161,7 @@ def suggest_impact(cve_id):
     """
 
     async def _doit():
-        feature = cve.SuggestImpact(feature_agent)
+        feature = cve.SuggestImpact(rh_feature_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -178,7 +178,7 @@ def suggest_cwe(cve_id):
     """
 
     async def _doit():
-        feature = cve.SuggestCWE(feature_agent)
+        feature = cve.SuggestCWE(rh_feature_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -195,7 +195,7 @@ def rewrite_description(cve_id):
     """
 
     async def _doit():
-        feature = cve.RewriteDescriptionText(feature_agent)
+        feature = cve.RewriteDescriptionText(rh_feature_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -212,7 +212,7 @@ def rewrite_statement(cve_id):
     """
 
     async def _doit():
-        feature = cve.RewriteStatementText(feature_agent)
+        feature = cve.RewriteStatementText(rh_feature_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -229,7 +229,7 @@ def cvss_diff(cve_id):
     """
 
     async def _doit():
-        feature = cve.CVSSDiffExplainer(feature_agent)
+        feature = cve.CVSSDiffExplainer(rh_feature_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())

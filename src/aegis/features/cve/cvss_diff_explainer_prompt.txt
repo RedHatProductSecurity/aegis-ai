@@ -40,25 +40,18 @@ user: explain differences of cvss score attributed to CVE between redhat and nvd
 
 
 Format
-
 * first line should contain Red Hat CVSS
-
 * second line should contain NVD CVSS
-
 * third line should contain confidence % in explaining the difference
-
 * Next provide rationale and explain difference between Red Hat and NVD CVSS score
 
 
 # JSON for analysis
-The analysis should analyze the following red hat CVE .
-```json
-{{context}}
-```
+The cvss diff analysis performed on CVE with id of {{cve_id}}.
 and also retrieve NVD (NIST) cvss for this CVE and compare and explain why there is a difference.
 
-# Output Format
 
+# Output Format
 Should adhere to the following json schema:
 ```json
 {{schema}}

@@ -149,11 +149,9 @@ To determine how to set contains_PII:
 1. If you find at least one instance of PII, set contains_pii:True.
 2. If you do not find any PII, set contains_pii:False.
 
-# JSON for analysis
-The PII analysis should analyze the following json and identify any PII data in the cve record.
-```json
-{{context}}
-```
+
+#CVE for analysis
+The PII statement analysis should be performed on CVE with id of {{cve_id}}.
 
 # Output Format
 

@@ -9,28 +9,18 @@ from aegis.features.cve.data_models import (
     RewriteStatementModel,
     RewriteDescriptionModel,
 )
-from aegis.tools.osidb import osidb_retrieve
 
 logger = logging.getLogger(__name__)
 
 
 class SuggestImpact(Feature):
-    """Based on current CVE information and rh context assert an aggregated impact."""
+    """Based on current CVE information and context assert an aggregated impact."""
 
     async def exec(self, cve_id):
-        data = await osidb_retrieve(cve_id)
-        if data is None:
-            logger.warning(
-                f"No data retrieved for CVE ID: {cve_id}. Providing empty context to the prompt."
-            )
-            context_json = "{}"
-        else:
-            context_json = data.model_dump_json(indent=2)
-
         template = env_fs.get_template("cve/suggest_impact_prompt.txt")
         prompt = template.render(
             {
-                "context": context_json,
+                "cve_id": cve_id,
                 "schema": SuggestImpactModel.model_json_schema(),
             }
         )
@@ -39,22 +29,13 @@ class SuggestImpact(Feature):
 
 
 class SuggestCWE(Feature):
-    """Based on current CVE information and rh context assert CWE(s)."""
+    """Based on current CVE information and context assert CWE(s)."""
 
     async def exec(self, cve_id):
-        data = await osidb_retrieve(cve_id)
-        if data is None:
-            logger.warning(
-                f"No data retrieved for CVE ID: {cve_id}. Providing empty context to the prompt."
-            )
-            context_json = "{}"
-        else:
-            context_json = data.model_dump_json(indent=2)
-
         template = env_fs.get_template("cve/suggest_cwe_prompt.txt")
         prompt = template.render(
             {
-                "context": context_json,
+                "cve_id": cve_id,
                 "schema": SuggestCWEModel.model_json_schema(),
             }
         )
@@ -63,22 +44,13 @@ class SuggestCWE(Feature):
 
 
 class IdentifyPII(Feature):
-    """Based on current CVE information (public comments, description, statement) and rh context assert if it contains any PII."""
+    """Based on current CVE information (public comments, description, statement) and context assert if it contains any PII."""
 
     async def exec(self, cve_id):
-        data = await osidb_retrieve(cve_id)
-        if data is None:
-            logger.warning(
-                f"No data retrieved for CVE ID: {cve_id}. Providing empty context to the prompt."
-            )
-            context_json = "{}"
-        else:
-            context_json = data.model_dump_json(indent=2)
-
         template = env_fs.get_template("cve/identify_pii_prompt.txt")
         prompt = template.render(
             {
-                "context": context_json,
+                "cve_id": cve_id,
                 "schema": PIIReportModel.model_json_schema(),
             }
         )
@@ -87,22 +59,13 @@ class IdentifyPII(Feature):
 
 
 class RewriteDescriptionText(Feature):
-    """Based on current CVE information and rh context rewrite/create description and title."""
+    """Based on current CVE information and context rewrite/create description and title."""
 
     async def exec(self, cve_id):
-        data = await osidb_retrieve(cve_id)
-        if data is None:
-            logger.warning(
-                f"No data retrieved for CVE ID: {cve_id}. Providing empty context to the prompt."
-            )
-            context_json = "{}"
-        else:
-            context_json = data.model_dump_json(indent=2)
-
         template = env_fs.get_template("cve/rewrite_description_prompt.txt")
         prompt = template.render(
             {
-                "context": context_json,
+                "cve_id": cve_id,
                 "schema": RewriteDescriptionModel.model_json_schema(),
             }
         )
@@ -111,22 +74,13 @@ class RewriteDescriptionText(Feature):
 
 
 class RewriteStatementText(Feature):
-    """Based on current CVE information and rh context rewrite/create statement."""
+    """Based on current CVE information and context rewrite/create statement."""
 
     async def exec(self, cve_id):
-        data = await osidb_retrieve(cve_id)
-        if data is None:
-            logger.warning(
-                f"No data retrieved for CVE ID: {cve_id}. Providing empty context to the prompt."
-            )
-            context_json = "{}"
-        else:
-            context_json = data.model_dump_json(indent=2)
-
         template = env_fs.get_template("cve/rewrite_statement_prompt.txt")
         prompt = template.render(
             {
-                "context": context_json,
+                "cve_id": cve_id,
                 "schema": RewriteStatementModel.model_json_schema(),
             }
         )
@@ -135,22 +89,13 @@ class RewriteStatementText(Feature):
 
 
 class CVSSDiffExplainer(Feature):
-    """Based on current CVE information and rh context explain CVSS score diff between nvd and rh."""
+    """Based on current CVE information and context explain CVSS score diff between nvd and rh."""
 
     async def exec(self, cve_id):
-        data = await osidb_retrieve(cve_id)
-        if data is None:
-            logger.warning(
-                f"No data retrieved for CVE ID: {cve_id}. Providing empty context to the prompt."
-            )
-            context_json = "{}"
-        else:
-            context_json = data.model_dump_json(indent=2)
-
         template = env_fs.get_template("cve/cvss_diff_explainer_prompt.txt")
         prompt = template.render(
             {
-                "context": context_json,
+                "cve_id": cve_id,
                 "schema": CVSSDiffExplainerModel.model_json_schema(),
             }
         )

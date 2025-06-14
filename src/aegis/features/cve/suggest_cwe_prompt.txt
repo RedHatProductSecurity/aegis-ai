@@ -33,11 +33,9 @@ b) Provide the standard CWE identifier (e.g., CWE-119).
 
 c) Offer a concise explanation outlining the connection between the CVE description and the predicted CWE.
 
-# JSON for analysis
-The impact analysis should analyze the following cve json and suggest impact.
-```json
-{{context}}
-```
+
+#CVE for analysis
+The cwe analysis should be performed on CVE with id of {{cve_id}}.
 
 # Output Format
 
