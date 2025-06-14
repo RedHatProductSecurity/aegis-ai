@@ -29,8 +29,7 @@ class OsidbDependencies:
 class CVEID(BaseModel):
     cve_id: str = Field(
         ...,  # Make it required
-        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw. "
-        "This is the primary identifier for the vulnerability within OSIDB (e.g., 'CVE-2024-3094').",
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     @field_validator("cve_id")
@@ -39,11 +38,9 @@ class CVEID(BaseModel):
         """
         Validates that the CVE ID adheres to the CVE-YYYY-XXXXX format.
         """
-        cve_regex = r"^CVE-\d{4}-\d{4,6}$"
+        cve_regex = r"^CVE-\d{4}-\d{4,7}$"
         if not re.match(cve_regex, v):
-            raise ValueError(
-                "Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX (e.g., CVE-2024-30941)."
-            )
+            raise ValueError("Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX.")
         return v
 
 
@@ -139,9 +136,10 @@ async def osidb_tool(
 
     Args:
         ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.
-        cve_lookup_input: An object containing the validated CVE ID (e.g., CVE-2024-30941).
+        cve_lookup_input: An object containing validated CVE ID (e.g., CVE-2024-30941).
 
     Returns:
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
+    logger.debug(cve_lookup_input.cve_id)
     return await osidb_retrieve(cve_lookup_input.cve_id)

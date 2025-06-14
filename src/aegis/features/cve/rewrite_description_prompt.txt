@@ -124,11 +124,8 @@ The title should describe *only* the core technical issue based *only* on the pr
     * Any generic text, explanations, or meta-commentary not directly describing the flaw's technical nature.
 5.  **DO NOT** use headings, bold text (other than the starting phrase if needed by a template), bullet points, or line breaks. It must be one single paragraph.
 
-#JSON for analysis
-The rewrite description and title analysis should be performed on the following cve json.
-```json
-{{context}}
-```
+#CVE for analysis
+The rewrite description and title analysis should be performed on CVE with id of {{cve_id}}.
 
 #Output Format
 

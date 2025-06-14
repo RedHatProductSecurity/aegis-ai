@@ -21,6 +21,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "joblib" },
     { name = "langchain-text-splitters" },
+    { name = "mcp-nvd" },
     { name = "osidb-bindings" },
     { name = "packageurl-python" },
     { name = "pgvector" },
@@ -71,6 +72,7 @@ requires-dist = [
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "joblib", specifier = ">=1.5.1" },
     { name = "langchain-text-splitters", specifier = ">=0.3.8" },
+    { name = "mcp-nvd", specifier = ">=0.0.1" },
     { name = "osidb-bindings", specifier = ">=4.10.1" },
     { name = "packageurl-python", specifier = ">=0.16.0" },
     { name = "pgvector", specifier = ">=0.4.1" },
@@ -1679,6 +1681,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/06/f2/dc2450e566eeccf92d89a00c3e813234ad58e2ba1e31d11467a09ac4f3b9/mcp-1.9.4.tar.gz", hash = "sha256:cfb0bcd1a9535b42edaef89947b9e18a8feb49362e1cc059d6e7fc636f2cb09f", size = 333294, upload-time = "2025-06-12T08:20:30.158Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/97/fc/80e655c955137393c443842ffcc4feccab5b12fa7cb8de9ced90f90e6998/mcp-1.9.4-py3-none-any.whl", hash = "sha256:7fcf36b62936adb8e63f89346bccca1268eeca9bf6dfb562ee10b1dfbda9dac0", size = 130232, upload-time = "2025-06-12T08:20:28.551Z" },
+]
+
+[[package]]
+name = "mcp-nvd"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "mcp" },
+    { name = "python-dotenv" },
+    { name = "starlette" },
+    { name = "typer" },
+    { name = "uvicorn" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d7/1e/07f3aad16ff3f899b012d43600d2558615e9b72489d42701a3b6b59c0dbc/mcp_nvd-0.0.1.tar.gz", hash = "sha256:999b42f85221546afde5cdae4d7200f09d08eb244ce9c27c313fca176275750a", size = 25635, upload-time = "2025-03-24T01:29:10.919Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/1c/3bda45f54afe63b5399527ef3da0100ac2fd1cebcb4a63e5e9593d242d52/mcp_nvd-0.0.1-py3-none-any.whl", hash = "sha256:76038251498a92371c4b3d73db206b78af31f576da811b45c3f9b59272f10d00", size = 10690, upload-time = "2025-03-24T01:29:09.466Z" },
 ]
 
 [[package]]

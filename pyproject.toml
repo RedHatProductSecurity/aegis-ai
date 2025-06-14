@@ -14,6 +14,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "joblib>=1.5.1",
     "langchain-text-splitters>=0.3.8",
+    "mcp-nvd>=0.0.1",
     "osidb-bindings>=4.10.1",
     "packageurl-python>=0.16.0",
     "pgvector>=0.4.1",

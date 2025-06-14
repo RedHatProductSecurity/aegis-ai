@@ -15,8 +15,10 @@ from aegis import (
     tavily_api_key,
 )
 from aegis.features.data_models import AegisAnswer
+from aegis.mcp import nvd_server
 
 from aegis.tools import date_tool
+from aegis.tools.osidb import osidb_tool
 from aegis.tools.wikipedia import wikipedia_tool
 
 
@@ -43,18 +45,24 @@ class AegisAgent(Agent):
 
 
 base_agent = AegisAgent(
-    name="Plain Agent",
-    description="An plain agent.",
+    name="BaseAgent",
+    description="A plain agent.",
     output_type=AegisAnswer,
 )
 
-feature_agent = AegisAgent(
+
+rh_feature_agent = AegisAgent(
     name="FeatureAgent",
-    description="An agent.",
+    description="An agent which will consult osidb when given a query with a CVE id.",
+    tools=[osidb_tool],
 )
 
 rag_agent = AegisAgent(
     name="A RAG Agent", description="An agent for Retrieval-Augmented Generation."
+)
+
+public_feature_agent = AegisAgent(
+    name="FeatureAgent", description="An agent.", mcp_servers=[nvd_server]
 )
 
 context_agent = AegisAgent(

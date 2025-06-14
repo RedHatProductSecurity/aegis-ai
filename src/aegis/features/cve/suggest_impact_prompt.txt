@@ -39,11 +39,8 @@ any embedded declarations of impact in description, comments sections.
 9. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
 
 
-#JSON for analysis
-The impact analysis should be performed on the following cve json.
-```json
-{{context}}
-```
+#CVE for analysis
+The impact analysis should be performed on CVE with id of {{cve_id}}.
 
 #Output Format
 
