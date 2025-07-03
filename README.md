@@ -76,7 +76,7 @@ export AEGIS_LLM_MODEL=llama3.2:3b
 ```
 
 **Using Aegis with Anthropic:**
-Connect to Anthropic's powerful Claude models (replace `ANTHROPIC_API_KEY` with your actual key):
+Connect to Anthropic's powerful Claude models (replace `YOUR_ANTHROPIC_API_KEY` with your actual key):
 
 ```bash
 export AEGIS_LLM_HOST="https://api.anthropic.com"
