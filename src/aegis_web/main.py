@@ -15,7 +15,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from aegis.agents import feature_agent, context_agent, rag_agent
+# rh_feature_agent can be substituted with public_feature_agent
+from aegis.agents import rh_feature_agent as feature_agent
+
+from aegis.agents import context_agent, rag_agent
 from aegis.features import cve, component
 from aegis.kb import RagSystem, DocumentInput
 from . import AEGIS_REST_API_VERSION
