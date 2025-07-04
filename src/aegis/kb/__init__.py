@@ -1,5 +1,5 @@
 """
-aegis kb
+aegis kb (Knowledge Base)
 
 
 """
@@ -23,10 +23,10 @@ from pydantic_ai import (
 from aegis.kb.data_models import (
     DocumentInput,
     FactInput,
-    RAGQuery,
     RAGContext,
-    SourceItem,
+    RAGQuery,
     RAGResponse,
+    SourceItem,
 )
 
 from jinja2 import (
