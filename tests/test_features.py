@@ -6,10 +6,6 @@ from aegis.features import component, cve
 pytestmark = pytest.mark.asyncio
 
 
-def test_test():
-    assert 1 == 1
-
-
 async def test_suggest_impact_with_test_model():
     result = await cve.SuggestImpact(rh_feature_agent).exec("CVE-2025-0725")
     assert isinstance(result.output, cve.data_models.SuggestImpactModel)
