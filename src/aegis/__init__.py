@@ -9,6 +9,8 @@ import logging
 import os
 
 from dotenv import load_dotenv
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.models.gemini import GeminiModel
 
 from rich.logging import RichHandler
 
@@ -28,10 +30,16 @@ llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
 
 tavily_api_key = os.getenv("TAVILY_API_KEY", "   ")
 
-default_llm_model = OpenAIModel(
-    model_name=llm_model,
-    provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
-)
+# Simple logic for defining default model (we may have to make this more sophisticated).
+if "api.anthropic.com" in llm_host:
+    default_llm_model = AnthropicModel(model_name=llm_model)
+elif "generativelanguage.googleapis.com" in llm_host:
+    default_llm_model = GeminiModel(model_name=llm_model)
+else:
+    default_llm_model = OpenAIModel(
+        model_name=llm_model,
+        provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
+    )
 
 
 @dataclass
