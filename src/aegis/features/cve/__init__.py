@@ -95,6 +95,8 @@ class SuggestCWE(Feature):
                 b) Provide the standard CWE identifier (e.g., CWE-119).
                 
                 c) Offer a concise explanation outlining the connection between the CVE description and the predicted CWE.
+
+                d) Avoid predicting CWEs that are discouraged or prohibited for Vulnerability Mapping by MITRE.  In particular, do not suggest CWE-264 and CWE-269.
             """,
             context=cve_id,
             output_schema=SuggestCWEModel.model_json_schema(),

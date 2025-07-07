@@ -1,0 +1,30 @@
+import pytest
+
+from pydantic_ai.tools import RunContext, Tool
+
+from aegis import config_logging
+from aegis.agents import rh_feature_agent
+from aegis.tools.osidb import CVE, CVEID, OsidbDependencies
+
+from evals.utils.osidb_cache import osidb_cache_retrieve
+
+
+@Tool
+async def osidb_tool(
+    ctx: RunContext[OsidbDependencies], cve_lookup_input: CVEID
+) -> CVE:
+    """wrapper around aegis.tools.osidb that caches OSIDB responses"""
+    return await osidb_cache_retrieve(cve_lookup_input.cve_id)
+
+
+# enable logging to see progress
+@pytest.fixture(scope="session", autouse=True)
+def setup_logging_for_session():
+    config_logging(level="INFO")
+
+
+# We need to cache OSIDB responses (and maintain them in git) to make
+# sure that our evaluation is invariant to future changes in OSIDB data
+@pytest.fixture(scope="session", autouse=True)
+def override_rh_feature_agent():
+    rh_feature_agent._function_tools["osidb_tool"] = osidb_tool
