@@ -13,6 +13,7 @@ from aegis import (
     default_llm_model,
     llm_model,
     tavily_api_key,
+    default_llm_settings,
 )
 from aegis.features.data_models import AegisAnswer
 from aegis.mcp import nvd_server
@@ -35,7 +36,8 @@ class AegisAgent(Agent):
             deps=default_data_deps,
             llm=llm_model,
             model=default_llm_model,
-            model_settings={
+            model_settings=default_llm_settings
+            | {
                 "temperature": 0.05,
                 "top_p": 0.8,
                 "response_format": {"type": "json_object"},

@@ -66,14 +66,14 @@ REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 
 Aegis allows you to connect to various LLM providers, from your own custom llm models to cloud LLM services and MaaS.
 
-**Using Aegis with Local Ollama:**
-Configure Aegis to use a locally running Ollama instance:
+**Using Aegis with Gemini:**
+Connect to Anthropic's powerful Claude models (replace `YOUR_ANTHROPIC_API_KEY` with your actual key):
 
 ```bash
-export AEGIS_LLM_HOST=http://localhost:11434
-export AEGIS_LLM_MODEL=llama3.2:3b
-# Ensure Ollama is running and 'llama3.2:3b' model is pulled
-```
+AEGIS_LLM_HOST="https://generativelanguage.googleapis.com"
+AEGIS_LLM_MODEL="gemini-2.5-pro"
+GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+````
 
 **Using Aegis with Anthropic:**
 Connect to Anthropic's powerful Claude models (replace `YOUR_ANTHROPIC_API_KEY` with your actual key):
@@ -83,7 +83,17 @@ export AEGIS_LLM_HOST="https://api.anthropic.com"
 export AEGIS_LLM_MODEL="anthropic:claude-3-5-sonnet-latest"
 export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 ```
-**Note:** For other LLM providers (e.g., OpenAI, Google Gemini), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
+
+**Using Aegis with Local Ollama:**
+Configure Aegis to use a locally running Ollama instance:
+
+```bash
+export AEGIS_LLM_HOST=http://localhost:11434
+export AEGIS_LLM_MODEL=llama3.2:3b
+# Ensure Ollama is running and 'llama3.2:3b' model is pulled
+```
+
+**Note:** For other LLM providers (e.g., OpenAI), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
 
 Be aware that `Aegis` is an agent (which autonomously invokes tools) so any llm model you use must be secure/trusted.
 
@@ -150,41 +160,34 @@ Which produces JSON output:
 
 ```
 {
+  "confidence": 0.95,
+  "completeness": 1.0,
+  "consistency": 0.95,
+  "tools_used": [
+    "osidb_tool"
+  ],
   "cve_id": "CVE-2025-0725",
   "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
   "components": [
     "libcurl",
-    "curl",
-    "davix",
-    "netshoot",
-    "mingw-curl",
-    "s390utils"
+    "zlib"
   ],
-  "products": [
-    "Red Hat Enterprise Linux",
-    "OpenShift Container Platform",
-    "Red Hat JBoss Core Services",
-    "Red Hat In-Vehicle OS",
-    "Confidential Compute Attestation",
+  "affected_products": [
     "Ansible Services",
-    "Hosted OpenShift"
+    "Hosted OpenShift",
+    "cloud.redhat.com"
   ],
-  "explanation": "Based on careful analysis of the CVE:\n\n1. The vulnerability requires specific conditions:\n   - 
-Affects libcurl when using automatic gzip decompression\n   - Only impacts zlib 1.2.0.3 or older\n   - Red Hat 
-statement indicates not applicable to RHEL-4 and later versions\n\n2. Attack Vector Analysis:\n   - Local access 
-required per Red Hat CVSS (AV:L)\n   - Limited impact on availability only (no integrity/confidentiality impact)\n   -
-No privilege escalation or arbitrary code execution indicated\n\n3. Product Impact:\n   - While many products are 
-listed as affected, the core vulnerability is not exploitable in supported Red Hat Enterprise Linux versions\n   - 
-Community projects (Fedora, EPEL) may be affected but are not officially supported products\n   - Container-based 
-products inherit the base RHEL security\n\n4. Mitigating Factors:\n   - Requires local access\n   - Limited to 
-availability impact\n   - Modern zlib versions are not affected\n   - Core RHEL platforms are protected\n\nGiven these
-factors, particularly the local access requirement and limited availability impact, combined with the statement about 
-RHEL version applicability, a LOW impact rating is appropriate.",
-  "confidence": 0.85,
+  "explanation": "The vulnerability is a buffer overflow in libcurl, contingent on the use of a very old version of 
+zlib (1.2.0.3 or older) for gzip decompression. The official Red Hat statement clarifies that this issue is not 
+applicable to any supported version of Red Hat Enterprise Linux (RHEL), as the vulnerable code is not present. The Red 
+Hat assigned CVSS vector indicates a localized attack vector with a low impact on availability, further reducing the 
+risk.\n\nWhile some components within 'Ansible Services', 'Hosted OpenShift', and 'cloud.redhat.com' are technically 
+affected, the core enterprise products are secure. Given that the vulnerability is absent from RHEL and its 
+exploitation depends on an outdated library, the overall impact on the Red Hat ecosystem is minimal.",
   "impact": "LOW",
   "cvss3_score": "3.3",
   "cvss3_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
-  "cvss4_score": "3.1",
+  "cvss4_score": "4.5",
   "cvss4_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N"
 }
 ```
