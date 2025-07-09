@@ -9,12 +9,12 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
+from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
 
 from rich.logging import RichHandler
 
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 
 load_dotenv()
@@ -30,15 +30,25 @@ llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
 
 tavily_api_key = os.getenv("TAVILY_API_KEY", "   ")
 
-# Simple logic for defining default model (we may have to make this more sophisticated).
+# Simple logic for defining default model (TODO: we will make more sophisticated).
 if "api.anthropic.com" in llm_host:
     default_llm_model = AnthropicModel(model_name=llm_model)
+    default_llm_settings = AnthropicModelSettings(
+        anthropic_thinking={"type": "enabled", "budget_tokens": 1024},
+    )
 elif "generativelanguage.googleapis.com" in llm_host:
     default_llm_model = GeminiModel(model_name=llm_model)
+    default_llm_settings = GeminiModelSettings(
+        gemini_thinking_config={"include_thoughts": True}
+    )
 else:
     default_llm_model = OpenAIModel(
         model_name=llm_model,
         provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
+    )
+    default_llm_settings = OpenAIResponsesModelSettings(
+        openai_reasoning_effort="low",
+        openai_reasoning_summary="detailed",
     )
 
 
