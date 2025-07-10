@@ -47,7 +47,6 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [dependency-groups]
 dev = [
-    "deepeval>=2.5.5",
     "detect-secrets>=1.5.0",
     "exceptiongroup>=1.3.0",
     "hatchling>=1.27.0",
