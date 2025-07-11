@@ -19,6 +19,7 @@ from aegis.tools import BaseToolOutput
 logger = logging.getLogger(__name__)
 
 osidb_server_uri = os.getenv("AEGIS_OSIDB_SERVER_URL", "https://localhost:8000")
+osidb_retrieve_embargoed = os.getenv("AEGIS_OSIDB_RETRIEVE_EMBARGOED", False)
 
 
 @dataclass
@@ -71,10 +72,18 @@ async def osidb_retrieve(cve_id: str):
     logger.info(f"retrieving {cve_id} from osidb")
     try:
         session = osidb_bindings.new_session(osidb_server_uri=osidb_server_uri)
+
+        # Retrieval of embargoed flaws is disabled by default, to enable set env var `AEGIS_OSIDB_RETRIEVE_EMBARGOED`
         flaw = session.flaws.retrieve(
             id=cve_id,
+            embargoed=False,
             include_fields="cve_id,title,cve_description,cvss_scores,statement,components,comments,comment_zero,affects,references,",
         )
+        if osidb_retrieve_embargoed:
+            flaw = session.flaws.retrieve(
+                id=cve_id,
+                include_fields="cve_id,title,cve_description,cvss_scores,statement,components,comments,comment_zero,affects,references,",
+            )
         logger.info(f"{cve_id}:{flaw.title}")
         comments = ""
         for i, comment in enumerate(flaw.comments):
