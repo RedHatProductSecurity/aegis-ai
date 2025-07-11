@@ -67,7 +67,7 @@ REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 Aegis allows you to connect to various LLM providers, from your own custom llm models to cloud LLM services and MaaS.
 
 **Using Aegis with Gemini:**
-Connect to Anthropic's powerful Claude models (replace `YOUR_ANTHROPIC_API_KEY` with your actual key):
+Connect to Gemini (replace `YOUR_GEMINI_API_KEY` with your actual key):
 
 ```bash
 AEGIS_LLM_HOST="https://generativelanguage.googleapis.com"

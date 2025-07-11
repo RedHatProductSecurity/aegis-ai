@@ -15,12 +15,12 @@ dependencies = [
     "joblib>=1.5.1",
     "langchain-text-splitters>=0.3.8",
     "mcp-nvd>=0.0.1",
-    "osidb-bindings>=4.11.0",
+    "osidb-bindings>=4.12.0",
     "packageurl-python>=0.16.0",
     "pgvector>=0.4.1",
-    "pydantic>=2.11.6",
-    "pydantic-ai==0.2.18",
-    "pydantic-ai-slim[duckduckgo,mcp,tavily]>=0.2.18",
+    "pydantic>=2.11.7",
+    "pydantic-ai==0.4.0",
+    "pydantic-ai-slim[duckduckgo,mcp,tavily]>=0.4.0",
     "pygithub>=2.6.1",
     "rich>=14.0.0",
     "sentence-transformers>=4.1.0",
@@ -40,6 +40,10 @@ build-backend = "hatchling.build"
 pythonpath = ["."]
 testpaths = "tests"
 python_files = "test_*.py"
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [dependency-groups]
 dev = [
