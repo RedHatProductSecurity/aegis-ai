@@ -1,5 +1,4 @@
 from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -76,7 +75,7 @@ class AegisFeatureModel(BaseModel):
 
     tools_used: List = Field(
         ...,
-        description="List the names of registered tools, if any, that was used to formulate this answer. If this is a suggest or rewrite feature then should minimally include 'osidb_tool'",
+        description="List the names of registered tools, if any, that was used to formulate this answer. If this is a CVE suggest or CVE rewrite feature then should minimally include 'osidb_tool'",
     )
 
 
