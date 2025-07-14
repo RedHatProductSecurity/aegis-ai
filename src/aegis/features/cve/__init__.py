@@ -367,7 +367,7 @@ class RewriteDescriptionText(Feature):
                 
                 ### Instructions:
                 
-                1.  Start the paragraph *exactly* like this: "A flaw was found in {component\_name}."
+                1.  Start the paragraph *exactly* like this: "A flaw was found in 'component_name'."
                 2.  Continue by *briefly* summarizing from the "Original Description Snippet" and other hints:
                     * The **technical flaw** and its direct effect (e.g., 'buffer overflow leads to...').
                     * The **attacker profile** (e.g., 'local attacker can...').
