@@ -386,7 +386,9 @@ class RewriteDescriptionText(Feature):
             context=cve_id,
             output_schema=RewriteDescriptionModel.model_json_schema(),
         )
-        return await self.agent.run(prompt, output_type=RewriteDescriptionModel)
+        return await self.agent.run(
+            prompt.to_string(), output_type=RewriteDescriptionModel
+        )
 
 
 class RewriteStatementText(Feature):
@@ -509,7 +511,9 @@ class RewriteStatementText(Feature):
             context=cve_id,
             output_schema=RewriteStatementModel.model_json_schema(),
         )
-        return await self.agent.run(prompt, output_type=RewriteStatementModel)
+        return await self.agent.run(
+            prompt.to_string(), output_type=RewriteStatementModel
+        )
 
 
 class CVSSDiffExplainer(Feature):
