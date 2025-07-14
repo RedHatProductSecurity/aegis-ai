@@ -141,7 +141,8 @@ class RewriteDescriptionModel(AegisFeatureModel):
         description="Contains current CVE title",
     )
 
-    original_description: List = Field(
+    # FIXME: This field is usually empty.  Do we really need it?
+    original_description: str = Field(
         ...,
         description="Contains current CVE description",
     )

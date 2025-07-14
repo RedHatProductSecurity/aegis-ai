@@ -43,10 +43,14 @@ class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
         imp_exp = NUM_BY_IMPACT[ctx.expected_output["impact"]]
         score = 1.0 - abs(imp - imp_exp) / 10.0
 
-        # compare actual and expected cvss3_score
-        cvss3 = float(ctx.output.cvss3_score)
-        cvss3_exp = ctx.expected_output["cvss3_score"]
-        score *= 1.0 - abs(cvss3 - cvss3_exp) / 10.0
+        try:
+            # compare actual and expected cvss3_score
+            cvss3 = float(ctx.output.cvss3_score)
+            cvss3_exp = ctx.expected_output["cvss3_score"]
+            score *= 1.0 - abs(cvss3 - cvss3_exp) / 10.0
+        except ValueError:
+            # the provided cvss3_score field is not a number
+            score -= 1.0
 
         conf_diff = ctx.output.confidence - score
         if 0.0 < conf_diff:
