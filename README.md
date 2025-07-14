@@ -2,8 +2,6 @@
 
 [![Aegis Tests](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml/badge.svg)](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml)
 
-**Note: undergoing disruptive development to get to first release - 'here be dragons'**
-
 **Note: As Aegis is an agent - be careful of which llm model you use ... if you want to integrate with OSIDB/RHTPA, you MUST use a secure model**
 
 ## Overview
@@ -30,24 +28,17 @@ Aegis features address common product security needs:
 * **CVSS Diff Explainer:** Understand  differences between Red Hat and NVD CVSS scores with AI-generated explanations.
 
 ### Component Intelligence
-* **Component Intelligence:** Generate a component 'card' of information.
+* **Component Intelligence:** Generate a component information 'card'.
 
 ## Context
 Feature analysis requires 'context' beyond that contained by any specific llm model. 
 
-We provide 'out of the box' integrations with the following:
+We provide 'out of the box' integrations providing security context with the following:
 
 * [OSIDB](https://github.com/RedHatProductSecurity/osidb) 
 * [RHTPAv2](https://github.com/trustification/trustify)
 
 which perform lookups on security entities (ex. CVE).
-
-For adhoc context - we provide a simple knowledgebase, built on:
-* [postgres](https://www.postgresql.org/)
-* [pgvector](https://github.com/pgvector/pgvector)
-
-which we can ingest additional general facts and documents, which are then used to enhance context on all AI feature 
-analysis.
 
 Aegis can also be an [MCP](https://modelcontextprotocol.io/introduction) client to integrate (providing further tooling/context)
 with any compliant MCP servers.
@@ -93,13 +84,19 @@ export AEGIS_LLM_MODEL=llama3.2:3b
 # Ensure Ollama is running and 'llama3.2:3b' model is pulled
 ```
 
-**Note:** For other LLM providers (e.g., OpenAI), similar environment variables will be used. Refer to the `DEVELOP.md` for environment var information.
+**Note:** For other LLM providers (e.g., OpenAI), similar environment variables will have to set. Refer to the `DEVELOP.md` for environment var information.
 
 Be aware that `Aegis` is an agent (which autonomously invokes tools) so any llm model you use must be secure/trusted.
 
 ### Setting up Aegis Tools
 
 Aegis provides a few 'out of the box' tools that the agent can use to enhance llm query context.
+
+#### Tavily Search engine
+Integration with Tavily is achieved via built in pydantic-ai support
+```bash
+export TAVILY_API_KEY="tvly-dev-XXXXXX"
+```
 
 #### OSIDB
 Integration with OSIDB is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
@@ -193,7 +190,7 @@ exploitation depends on an outdated library, the overall impact on the Red Hat e
 ```
 
 ### REST API Server
-You can also accesss all features from the example `fastapi` based REST API server:
+You can also accesss the example `fastapi` based REST API server:
 
 ```bash
 uv run uvicorn src.aegis_restapi.main:app --port 9000
