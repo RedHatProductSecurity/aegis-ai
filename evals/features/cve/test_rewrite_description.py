@@ -7,7 +7,11 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator
 from aegis.agents import rh_feature_agent
 from aegis.features.cve import RewriteDescriptionText, RewriteDescriptionModel
 
-from evals.features.common import common_feature_evals, make_eval_reason
+from evals.features.common import (
+    common_feature_evals,
+    create_llm_judge,
+    make_eval_reason,
+)
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
@@ -88,6 +92,12 @@ cases = [
 evals = common_feature_evals + [
     OriginalTitleEvaluator(),
     PromptLeakEvaluator(),
+    create_llm_judge(
+        rubric="rewritten_title and rewritten_description do not contain any versioning info"
+    ),
+    create_llm_judge(
+        rubric="rewritten_title briefly summarizes what is described in rewritten_description"
+    ),
 ]
 
 # needed for asyncio event loop

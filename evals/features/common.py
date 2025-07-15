@@ -1,5 +1,11 @@
-from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
+from pydantic_evals.evaluators import (
+    EvaluationReason,
+    Evaluator,
+    EvaluatorContext,
+    LLMJudge,
+)
 
+from aegis import default_llm_model, default_llm_settings
 from aegis.features.data_models import AegisFeatureModel
 
 
@@ -18,6 +24,16 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
             score *= 1.0 - (float(expl_diff) / EXPLANATION_MIN_LEN)
 
         return score
+
+
+def create_llm_judge(**kwargs):
+    """construct an LLMJudge object based on the provided named arguments"""
+    return LLMJudge(
+        # TODO: we might consider using an independent LLM for evals
+        model=default_llm_model,
+        model_settings=default_llm_settings,
+        **kwargs,
+    )
 
 
 def make_eval_reason(value: bool = False, fail_reason: str = None):
