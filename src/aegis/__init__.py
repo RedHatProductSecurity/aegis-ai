@@ -33,9 +33,7 @@ tavily_api_key = os.getenv("TAVILY_API_KEY", "   ")
 # Simple logic for defining default model (TODO: we will make more sophisticated).
 if "api.anthropic.com" in llm_host:
     default_llm_model = AnthropicModel(model_name=llm_model)
-    default_llm_settings = AnthropicModelSettings(
-        anthropic_thinking={"type": "enabled", "budget_tokens": 1024},
-    )
+    default_llm_settings = AnthropicModelSettings()
 elif "generativelanguage.googleapis.com" in llm_host:
     default_llm_model = GeminiModel(model_name=llm_model)
     default_llm_settings = GeminiModelSettings(
