@@ -18,10 +18,13 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
         # FIXME: should we use separate evaluator for each of them?
         score = ctx.output.confidence * ctx.output.completeness * ctx.output.consistency
 
-        expl_diff = EXPLANATION_MIN_LEN - len(ctx.output.explanation)
-        if 0 < expl_diff:
-            # proportional penalization for explanation of length below EXPLANATION_MIN_LEN
-            score *= 1.0 - (float(expl_diff) / EXPLANATION_MIN_LEN)
+        # do not check explanation length for IdentifyPII because
+        # the explanation is empty in the most common case
+        if not hasattr(ctx.output, "contains_PII"):
+            expl_diff = EXPLANATION_MIN_LEN - len(ctx.output.explanation)
+            if 0 < expl_diff:
+                # proportional penalization for explanation of length below EXPLANATION_MIN_LEN
+                score *= 1.0 - (float(expl_diff) / EXPLANATION_MIN_LEN)
 
         return score
 
