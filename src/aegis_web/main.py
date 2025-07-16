@@ -18,7 +18,7 @@ from fastapi.templating import Jinja2Templates
 # rh_feature_agent can be substituted with public_feature_agent
 from aegis.agents import rh_feature_agent as feature_agent
 
-from aegis.agents import context_agent, rag_agent
+from aegis.agents import public_feature_agent, kb_agent
 from aegis.features import cve, component
 from aegis.kb import RagSystem, DocumentInput
 from . import AEGIS_REST_API_VERSION
@@ -176,7 +176,7 @@ async def cve_explain_diff(cve_id: str):
     response_class=JSONResponse,
 )
 async def component_intelligence(component_name: str):
-    feature = component.ComponentIntelligence(context_agent)
+    feature = component.ComponentIntelligence(public_feature_agent)
     result = await feature.exec(component_name)
     if result:
         return result.output
@@ -206,7 +206,7 @@ async def kb_add_document(request: Request, doc_text: str):
 @app.get(f"/api/{AEGIS_REST_API_VERSION}/kb/search")
 async def kb_search(request: Request, query: str):
     try:
-        context_result = await context_agent.run(query)
+        context_result = await public_feature_agent.run(query)
         additional_content = ""
         if context_result.output:
             additional_content = json.dumps(context_result.output)
@@ -218,7 +218,7 @@ async def kb_search(request: Request, query: str):
             top_k_facts=2,
             additional_context=additional_content,
         )
-        result = await request.app.state.kb.perform_rag_query(rag_query, rag_agent)
+        result = await request.app.state.kb.perform_rag_query(rag_query, kb_agent)
         return result.output
 
     except Exception as e:

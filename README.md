@@ -2,7 +2,7 @@
 
 [![Aegis Tests](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml/badge.svg)](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml)
 
-**Note: As Aegis is an agent - be careful of which llm model you use ... if you want to integrate with OSIDB/RHTPA, you MUST use a secure model**
+**Note: As Aegis is an agent - be careful of which LLM model you use ... if you want to integrate with OSIDB/RHTPA, you MUST use a secure model**
 
 ## Overview
 
@@ -31,7 +31,7 @@ Aegis features address common product security needs:
 * **Component Intelligence:** Generate a component information 'card'.
 
 ## Context
-Feature analysis requires 'context' beyond that contained by any specific llm model. 
+Feature analysis requires 'context' beyond that contained by any specific LLM model. 
 
 We provide 'out of the box' integrations providing security context with the following:
 
@@ -55,7 +55,7 @@ REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 
 ### Connecting to LLMs
 
-Aegis allows you to connect to various LLM providers, from your own custom llm models to cloud LLM services and MaaS.
+Aegis allows you to connect to various LLM providers, from your own custom LLM models to cloud LLM services and MaaS.
 
 **Using Aegis with Gemini:**
 Connect to Gemini (replace `YOUR_GEMINI_API_KEY` with your actual key):
@@ -86,11 +86,11 @@ export AEGIS_LLM_MODEL=llama3.2:3b
 
 **Note:** For other LLM providers (e.g., OpenAI), similar environment variables will have to set. Refer to the `DEVELOP.md` for environment var information.
 
-Be aware that `Aegis` is an agent (which autonomously invokes tools) so any llm model you use must be secure/trusted.
+Be aware that `Aegis` is an agent (which autonomously invokes tools) so any LLM model you use must be secure/trusted.
 
 ### Setting up Aegis Tools
 
-Aegis provides a few 'out of the box' tools that the agent can use to enhance llm query context.
+Aegis provides a few 'out of the box' tools that the agent can use to enhance LLM query context.
 
 #### Tavily Search engine
 Integration with Tavily is achieved via built in pydantic-ai support
@@ -141,11 +141,11 @@ The following programmatically invokes the `SuggestImpact` feature:
 
 ```python
 import asyncio
-from aegis.agents import feature_agent
+from aegis.agents import rh_feature_agent
 from aegis.features import cve 
 
 async def main():
-    feature = cve.SuggestImpact(feature_agent)
+    feature = cve.SuggestImpact(rh_feature_agent)
     result = await feature.exec("CVE-2025-0725")
     print(result.output.model_dump_json(indent=2))
 
@@ -189,6 +189,8 @@ exploitation depends on an outdated library, the overall impact on the Red Hat e
 }
 ```
 
+Note - Many features, like `SuggestImpact`, access OSIDB server so you will need to be kinited in with appropriate access rights.
+
 ### REST API Server
 You can also accesss the example `fastapi` based REST API server:
 
@@ -219,7 +221,7 @@ C4Context
         System(mcp_servers, "MCP Server(s)", "Managed Cluster Platform Servers (Source of incident data)")
     }
 
-    Boundary(llm_model, "LLM Model") {
+    Boundary(LLM_model, "LLM Model") {
         System(custom_model, "Custom Model", "for secure analysis")
         System(gemini, "gemini")
         System(ollama, "ollama")
@@ -228,7 +230,7 @@ C4Context
     }
     
     Rel(osim, aegis, "feature analysis", "API")
-    Rel(aegis, custom_model, "llm inference", "API")
+    Rel(aegis, custom_model, "LLM inference", "API")
 
     Rel(aegis, osidb, "fetch CVE", "API")
     Rel(aegis, rhtpav2, "", "API")

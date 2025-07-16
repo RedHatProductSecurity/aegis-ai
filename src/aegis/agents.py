@@ -39,31 +39,22 @@ class AegisAgent(Agent):
         )
 
 
-workflow_agent = AegisAgent(
-    name="WorkflowAgent",
+simple_agent = AegisAgent(
+    name="SimpleAgent",
     output_type=AegisAnswer,
 )
-
-
-base_agent = AegisAgent(
-    name="BaseAgent",
-    output_type=AegisAnswer,
-)
-
 
 rh_feature_agent = AegisAgent(
-    name="FeatureAgent",
+    name="RHFeatureAgent",
     tools=[osidb_tool],
 )
 
-rag_agent = AegisAgent(name="A RAG Agent")
-
-public_feature_agent = AegisAgent(name="FeatureAgent")
-
-context_agent = AegisAgent(
-    name="ContextAgent",
+public_feature_agent = AegisAgent(
+    name="PublicFeatureAgent",
     tools=[
         tavily_search_tool(tavily_api_key),
         wikipedia_tool,
     ],
 )
+
+kb_agent = AegisAgent(name="KBAgent")

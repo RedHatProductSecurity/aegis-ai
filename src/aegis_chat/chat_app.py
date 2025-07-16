@@ -27,7 +27,7 @@ from pydantic_ai.messages import (
 )
 from pydantic import BaseModel
 
-from aegis.agents import context_agent
+from aegis.agents import public_feature_agent
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -124,7 +124,7 @@ async def post_chat(
                 logger.error(f"Unexpected error parsing history_json: {e}")
 
         # TODO: .run_stream does not invoke tools use Agent.iter instead
-        async with context_agent.run_stream(
+        async with public_feature_agent.run_stream(
             prompt, message_history=message_history
         ) as result:
             ai_response_content = ""
