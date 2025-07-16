@@ -557,6 +557,7 @@ class CVSSDiffExplainer(Feature):
                 
                 
                 Format
+                If there is no difference in the CVSS scores, provide an empty explanation.  Otherwise:
                 * first line should contain Red Hat CVSS
                 * second line should contain NVD CVSS
                 * third line should contain confidence % in explaining the difference

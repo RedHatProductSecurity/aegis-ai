@@ -18,9 +18,11 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
         # FIXME: should we use separate evaluator for each of them?
         score = ctx.output.confidence * ctx.output.completeness * ctx.output.consistency
 
-        # do not check explanation length for IdentifyPII because
+        # do not check explanation length for IdentifyPII and CVSSDiffExplainer because
         # the explanation is empty in the most common case
-        if not hasattr(ctx.output, "contains_PII"):
+        if not hasattr(ctx.output, "contains_PII") and not hasattr(
+            ctx.output, "nvd_cvss3_score"
+        ):
             expl_diff = EXPLANATION_MIN_LEN - len(ctx.output.explanation)
             if 0 < expl_diff:
                 # proportional penalization for explanation of length below EXPLANATION_MIN_LEN
