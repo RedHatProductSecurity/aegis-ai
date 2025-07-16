@@ -12,8 +12,8 @@ from rich.rule import Rule
 from aegis import check_llm_status, config_logging
 from aegis.agents import (
     rh_feature_agent,
-    context_agent,
-    base_agent,
+    public_feature_agent,
+    simple_agent,
 )
 from aegis.features import component, cve
 from aegis.features.data_models import AegisAnswer
@@ -111,7 +111,7 @@ def search_plain(query):
     """
 
     async def _doit():
-        return await base_agent.run(query, output_type=AegisAnswer)
+        return await simple_agent.run(query, output_type=AegisAnswer)
 
     result = asyncio.run(_doit())
     if result:
@@ -128,7 +128,7 @@ def search(query):
 
     async def _doit():
         # await initialize_rag_db()
-        return await context_agent.run(query, output_type=AegisAnswer)
+        return await public_feature_agent.run(query, output_type=AegisAnswer)
 
     result = asyncio.run(_doit())
     if result:
@@ -246,7 +246,7 @@ def component_intelligence(component_name):
     """
 
     async def _doit():
-        feature = component.ComponentIntelligence(context_agent)
+        feature = component.ComponentIntelligence(public_feature_agent)
         return await feature.exec(component_name)
 
     result = asyncio.run(_doit())

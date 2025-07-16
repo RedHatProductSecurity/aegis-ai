@@ -1,6 +1,6 @@
 import logging
 
-from aegis.agents import rag_agent
+from aegis.agents import kb_agent
 from aegis.kb import RagSystem, DocumentInput, FactInput, RAGQuery
 
 
@@ -62,7 +62,7 @@ async def main():
             query=query_text, top_k_documents=1, top_k_facts=1, additional_context=""
         )
 
-        rag_response = await rag_system.perform_rag_query(rag_query, rag_agent)
+        rag_response = await rag_system.perform_rag_query(rag_query, kb_agent)
         print("---------------------")
         print(query_text)
         print("---------------------")
