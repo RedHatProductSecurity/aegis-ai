@@ -6,7 +6,7 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 from aegis.agents import rh_feature_agent
 from aegis.features.cve import SuggestImpact, SuggestImpactModel
 
-from evals.features.common import common_feature_evals
+from evals.features.common import common_feature_evals, handle_eval_report
 
 
 # dict to convert "IMPORTANT" to 8.0 etc
@@ -90,4 +90,4 @@ async def test_eval_suggest_impact():
     """suggest_impact evaluation entry point"""
     dataset = Dataset(cases=cases, evaluators=evals)
     report = await dataset.evaluate(suggest_impact)
-    report.print(include_input=True, include_output=True, include_durations=False)
+    handle_eval_report(report)

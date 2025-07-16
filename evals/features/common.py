@@ -1,3 +1,4 @@
+from pydantic_evals.dataset import EvaluationReport
 from pydantic_evals.evaluators import (
     EvaluationReason,
     Evaluator,
@@ -9,7 +10,11 @@ from aegis import default_llm_model, default_llm_settings
 from aegis.features.data_models import AegisFeatureModel
 
 
+# minimal acceptable length of an explanation (where applicable)
 EXPLANATION_MIN_LEN = 80
+
+# minimal acceptable score returned by an evaluator
+MIN_SCORE_THRESHOLD = 0.1
 
 
 class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
@@ -45,6 +50,29 @@ def make_eval_reason(value: bool = False, fail_reason: str = None):
     """construct EvaluationReason object; fail_reason is propagated only if value is False"""
     # FIXME: the reason for an assertion failure is not reported anywhere
     return EvaluationReason(value=value, reason=(fail_reason if not value else None))
+
+
+def handle_eval_report(report: EvaluationReport):
+    """print evaluation summary and trigger assertion failure in case any assertion failed"""
+    report.print(include_input=True, include_output=True, include_durations=False)
+
+    # iterate through cases
+    failures = ""
+    for case in report.cases:
+        # bool assertions
+        for result in case.assertions.values():
+            if result.value is False:
+                failures += f"{case.name}: {result.source}: {result.reason}\n"
+
+        # score threshold
+        for result in case.scores.values():
+            score = result.value
+            if score < MIN_SCORE_THRESHOLD:
+                failures += f"{case.name}: {result.source}: score below threshold: "
+                failures += f"{score} < {MIN_SCORE_THRESHOLD}\n"
+
+    # report all failures at once (if any)
+    assert not failures, f"Unsatisfied assertion(s):\n{failures}"
 
 
 class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):

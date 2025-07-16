@@ -10,6 +10,7 @@ from aegis.features.cve import RewriteDescriptionText, RewriteDescriptionModel
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
+    handle_eval_report,
     make_eval_reason,
 )
 from evals.utils.osidb_cache import osidb_cache_retrieve
@@ -108,4 +109,4 @@ async def test_eval_rewrite_description():
     """rewrite_description evaluation entry point"""
     dataset = Dataset(cases=cases, evaluators=evals)
     report = await dataset.evaluate(rewrite_description)
-    report.print(include_input=True, include_output=True, include_durations=False)
+    handle_eval_report(report)

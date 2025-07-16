@@ -6,7 +6,7 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 from aegis.agents import rh_feature_agent
 from aegis.features.cve import SuggestCWE, SuggestCWEModel
 
-from evals.features.common import common_feature_evals
+from evals.features.common import common_feature_evals, handle_eval_report
 
 
 class SuggestCweCase(Case):
@@ -86,4 +86,4 @@ async def test_eval_suggest_cwe():
     """suggest_cwe evaluation entry point"""
     dataset = Dataset(cases=cases, evaluators=evals)
     report = await dataset.evaluate(suggest_cwe)
-    report.print(include_input=True, include_output=True, include_durations=False)
+    handle_eval_report(report)

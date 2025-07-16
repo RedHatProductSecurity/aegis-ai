@@ -32,6 +32,9 @@ clean:
 eval:
 	uv run pytest -rA -vv -s evals
 
+eval-in-parallel:
+	uv run pytest -rA -vv -n auto evals
+
 test:
 	uv run pytest
 

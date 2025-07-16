@@ -8,6 +8,7 @@ from aegis.features.cve import RewriteStatementText, PIIReportModel
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
+    handle_eval_report,
 )
 
 
@@ -53,4 +54,4 @@ async def test_eval_rewrite_statement():
     """rewrite_statement evaluation entry point"""
     dataset = Dataset(cases=cases, evaluators=evals)
     report = await dataset.evaluate(rewrite_statement)
-    report.print(include_input=True, include_output=True, include_durations=False)
+    handle_eval_report(report)

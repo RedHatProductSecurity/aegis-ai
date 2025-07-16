@@ -11,6 +11,7 @@ from aegis.features.cve import CVSSDiffExplainer, CVSSDiffExplainerModel
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
+    handle_eval_report,
     make_eval_reason,
 )
 
@@ -95,4 +96,4 @@ async def test_eval_cvss_diff():
     """cvss_diff evaluation entry point"""
     dataset = Dataset(cases=cases, evaluators=evals)
     report = await dataset.evaluate(cvss_diff)
-    report.print(include_input=True, include_output=True, include_durations=False)
+    handle_eval_report(report)
