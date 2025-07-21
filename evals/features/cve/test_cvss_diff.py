@@ -1,3 +1,4 @@
+import cvss
 import pytest
 import re
 
@@ -25,12 +26,19 @@ class CVSSDiffCase(Case):
         )
 
 
-# FIXME: the check may be improved/generalized
 def is_cvss_valid(cvss_str: str) -> bool:
     """return True if cvss_str is a valid CVSS3 vector"""
-    return re.match(
-        r"([0-9]+(\.[0-9])?)?[/]?(CVSS:3\.1/AV:./AC:./PR:./UI:./S:./C:./I:./A:.)?", cvss_str
-    )
+    try:
+        # FIXME: cvss_str is *sometimes* prefixed with the actual score, which
+        # breaks the validation.  Should we canonicalize the output from Aegis
+        # instead?
+        cvss_str = re.sub(r"^[0-9]+(\.[0-9])+/", "", cvss_str)
+
+        cvss.cvss3.CVSS3(cvss_str)
+        return True
+
+    except cvss.CVSSError:
+        return False
 
 
 class CVSSDiffEvaluator(Evaluator[str, CVSSDiffExplainerModel]):

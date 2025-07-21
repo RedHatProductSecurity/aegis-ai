@@ -8,6 +8,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "click>=8.2.1",
     "click-completion>=0.5.2",
+    "cvss>=3.4",
     "dotenv>=0.9.9",
     "fastapi>=0.115.12",
     "httpx>=0.28.1",
