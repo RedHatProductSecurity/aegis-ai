@@ -59,7 +59,7 @@ cases = [
 evals = common_feature_evals + [
     IdentifyPIIEvaluator(),
     create_llm_judge(
-        rubric="If PII is found, the explanation contains a bulletted list."
+        rubric="If PII is found, the explanation contains a bulleted list."
     ),
 ]
 

@@ -41,7 +41,7 @@ cases = [
 # evaluators
 evals = common_feature_evals + [
     create_llm_judge(
-        rubric="The statement does not suggest to apply patch or rebuild the software."
+        rubric="The statement does not suggest to apply a patch or rebuild the software."
     ),
     # TODO: more evaluators
 ]

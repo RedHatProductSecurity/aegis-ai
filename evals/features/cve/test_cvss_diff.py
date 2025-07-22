@@ -44,7 +44,7 @@ def is_cvss_valid(cvss_str: str) -> bool:
 
 class CVSSDiffEvaluator(Evaluator[str, CVSSDiffExplainerModel]):
     async def evaluate(self, ctx) -> EvaluationReason:
-        """check that explanation is provided if and only if CVSS differ"""
+        """check that explanation is provided if and only if CVSS scores differ"""
         rh_cvss = ctx.output.redhat_cvss3_score
         if not is_cvss_valid(rh_cvss):
             return make_eval_reason(
