@@ -44,6 +44,7 @@ For each Aegis feature, the average score and average assertion success rate is 
 | ---- | -------- | ----------- | ------- |
 | `EXPLANATION_MIN_LEN` | [common.py](features/common.py) | minimal acceptable length of an explanation (where applicable) | 80 |
 | `MIN_SCORE_THRESHOLD` | [common.py](features/common.py) | minimal acceptable score returned by an evaluator | 0.1 |
+| `LOW_CONFIDENCE_PENALTY_DIVISOR` | [test_suggest_cwe.py](features/cve/test_suggest_cwe.py) | penalize models providing correct results but low confidence (the difference between score and confidence is divided by this number and subtracted from the final score) | 4.0 |
 
 
 ## Common evaluators

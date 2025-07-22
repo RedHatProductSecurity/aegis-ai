@@ -9,6 +9,12 @@ from aegis.features.cve import SuggestCWE, SuggestCWEModel
 from evals.features.common import common_feature_evals, handle_eval_report
 
 
+# penalize models providing correct results but low confidence (the difference
+# between score and confidence is divided by this number and subtracted from
+# the final score)
+LOW_CONFIDENCE_PENALTY_DIVISOR = 4.0
+
+
 class SuggestCweCase(Case):
     def __init__(self, cve_id, cwe_list):
         """cve_id given as CVE-YYYY-NUM is the flaw we query CWE for.  cwe_list
@@ -52,7 +58,7 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
             score -= conf_diff
         else:
             # negligibly penalize models providing correct results but low confidence
-            score += conf_diff / 4.0
+            score += conf_diff / LOW_CONFIDENCE_PENALTY_DIVISOR
 
         return score
 
