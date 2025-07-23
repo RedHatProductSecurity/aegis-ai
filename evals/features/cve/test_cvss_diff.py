@@ -1,6 +1,5 @@
 import cvss
 import pytest
-import re
 
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
@@ -30,11 +29,6 @@ class CVSSDiffCase(Case):
 def is_cvss_valid(cvss_str: str) -> bool:
     """return True if cvss_str is a valid CVSS3 vector"""
     try:
-        # FIXME: cvss_str is *sometimes* prefixed with the actual score, which
-        # breaks the validation.  Should we canonicalize the output from Aegis
-        # instead?
-        cvss_str = re.sub(r"^[0-9]+(\.[0-9])+/", "", cvss_str)
-
         cvss.cvss3.CVSS3(cvss_str)
         return True
 

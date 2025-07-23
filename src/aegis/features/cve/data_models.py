@@ -218,12 +218,12 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
 
     redhat_cvss3_score: str = Field(
         ...,
-        description="Contains Red Hat CVSS3 score for this CVE.",
+        description="Contains Red Hat CVSS3 vector for this CVE.",
     )
 
     nvd_cvss3_score: str = Field(
         ...,
-        description="Contains nvd (NIST) CVSS3 score for this CVE.",
+        description="Contains nvd (NIST) CVSS3 vector for this CVE.",
     )
 
     components: List = Field(
