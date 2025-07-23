@@ -30,7 +30,7 @@ class SuggestImpact(Feature):
                 
                 # Instructions for Analysis:
                 
-                Thorough Traversal: Recursively traverse the entire JSON object, including nested arrays and objects.                          
+                Thorough Traversal: Recursively traverse the entire JSON object, including nested arrays and objects.
             """,
             rules="""
                 1.  Analyze the provided CVE data for information related to:
@@ -95,7 +95,7 @@ class SuggestCWE(Feature):
                 b) Provide the standard CWE identifier (e.g., CWE-119).
                 
                 c) Offer a concise explanation outlining the connection between the CVE description and the predicted CWE.
-
+                
                 d) Avoid predicting CWEs that are discouraged or prohibited for Vulnerability Mapping by MITRE.  In particular, do not suggest CWE-264 and CWE-269.
             """,
             context=cve_id,
@@ -383,7 +383,7 @@ class RewriteDescriptionText(Feature):
                     * Plans for fixing it or mitigation efforts (these are handled separately).
                     * CVSS scores or specific vector strings (these are displayed separately).
                     * Any generic text, explanations, or meta-commentary not directly describing the flaw's technical nature.
-                5.  **DO NOT** use headings, bold text (other than the starting phrase if needed by a template), bullet points, or line breaks. It must be one single paragraph.            
+                5.  **DO NOT** use headings, bold text (other than the starting phrase if needed by a template), bullet points, or line breaks. It must be one single paragraph.
             """,
             context=cve_id,
             output_schema=RewriteDescriptionModel.model_json_schema(),
@@ -565,7 +565,7 @@ class CVSSDiffExplainer(Feature):
                 
                 
                 # JSON for analysis
-                The cvss diff analysis performed on supplied CVE context which means you also must retrieve NVD (NIST) cvss for this CVE 
+                The cvss diff analysis performed on supplied CVE context which means you also must retrieve NVD (NIST) cvss for this CVE
                 and compare and explain why there is a difference.
             """,
             context=cve_id,
