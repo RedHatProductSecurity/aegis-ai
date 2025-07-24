@@ -76,6 +76,8 @@ async def suggest_impact(cve_id: str) -> SuggestImpactModel:
 
 # test cases
 cases = [
+    SuggestImpactCase("CVE-2022-48701", "MODERATE", 4.9),
+    SuggestImpactCase("CVE-2024-53232", "MODERATE", 4.4),
     SuggestImpactCase("CVE-2025-23395", "MODERATE", 6.8),
     SuggestImpactCase("CVE-2025-5399", "MODERATE", 4.3),
     # TODO: add more cases

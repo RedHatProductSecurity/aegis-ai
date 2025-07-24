@@ -70,6 +70,7 @@ async def cvss_diff(cve_id: str) -> CVSSDiffExplainerModel:
 cases = [
     CVSSDiffCase("CVE-2025-47229", False),
     CVSSDiffCase("CVE-2022-48701", True),
+    CVSSDiffCase("CVE-2024-53232", True),
     # TODO: add more cases
 ]
 

@@ -72,6 +72,8 @@ async def suggest_cwe(cve_id: str) -> SuggestCWEModel:
 
 # test cases
 cases = [
+    SuggestCweCase("CVE-2022-48701", ["CWE-125", "CWE-20"]),
+    SuggestCweCase("CVE-2024-53232", ["CWE-476", "CWE-416"]),
     SuggestCweCase(
         "CVE-2025-23395", ["CWE-271", "CWE-250", "CWE-272", "CWE-273"]
     ),  # CWE-269 is discouraged by MITRE and unavailable in OSIM
