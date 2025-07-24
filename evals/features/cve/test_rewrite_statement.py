@@ -33,6 +33,7 @@ async def rewrite_statement(cve_id: str) -> PIIReportModel:
 # test cases
 cases = [
     RewriteStatementCase("CVE-2025-0725"),
+    RewriteStatementCase("CVE-2025-22097"),
     RewriteStatementCase("CVE-2025-23395"),
     RewriteStatementCase("CVE-2025-5399"),
     # TODO: add more cases
@@ -43,6 +44,10 @@ evals = common_feature_evals + [
     create_llm_judge(
         rubric="The statement does not suggest to apply a patch or rebuild the software."
     ),
+    create_llm_judge(
+        rubric="The statement does not describe the code change that was used to eliminate the flaw."
+    ),
+    create_llm_judge(rubric="The statement does not duplicate the flaw description."),
     # TODO: more evaluators
 ]
 

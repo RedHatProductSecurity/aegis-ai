@@ -422,87 +422,39 @@ class RewriteStatementText(Feature):
                 
                 # Further Guidelines to Writing a Comprehensive Vulnerability Statement
                 
-                This document outlines the methodology and best practices for writing a detailed vulnerability statement. A well-structured vulnerability statement enables better understanding, prioritization, and remediation of vulnerabilities. It integrates critical concepts for threat categorization and risk assessment to ensure comprehensive coverage, while also aligning with CVSS version 3.1 metrics.
+                A CVE's statement covers more than just the rationale behind an impact rating. Additionally it touches on:
                 
-                ---
+                  - A direct opportunity to provide value beyond what’s easily found in an internet search.
+                  - Additional technical details which clarify the scope of impact. Make it easy for the subset of unaffected customers (because of how they configure their deployment) to discover thi.
+                  - Explaining the affected function at code level is too much detail, it is better to explain:
+                      - how a vulnerable function/service impacts the system
+                      - what successful exploitation looks like
+                      - or how difficult it is to exploit
+                Do not duplicate information elsewhere on the CVE page. The flaw's technical description belongs in the CVE Description, affected products belong in the Affected Packages and Issued Red Hat Security Errata table, mitigations belong in Mitigation, and the support lifecycle is on the product pages that are automatically linked from flaws. For example, saying that a product is affected duplicates information available in the Affected table. It does not provide the customer with any new information.
                 
-                ## 1. Formula for Writing a Vulnerability Statement
+                A flaw's Statement provides additional information about Red Hat’s response to a security issue and displays prominently on the flaw's CVE page where customers are likely to see it.
                 
-                The formula for constructing a proper vulnerability statement is as follows:
+                Statements are especially important for flaws with a higher impact, which are likely to receive more customer attention because they hit the media, are in a critical component, or are more highly rated by other sources. Statements are even more important when our triage decisions may seem surprising from a naïve reading of description & CVSS.
                 
-                **In what component vulnerability was found + Where vulnerability exists + Which vulnerability was found + How it is taking place + What is its impact**
+                If a Statement prevents a support call, it has succeeded. If secalert is asked to help a customer understand a flaw, the answer can often be summarized in a Statement, and the customer or support person is asked to confirm whether the Statement answers their question. This interaction can then inform future Statements.
                 
-                **Example**
+                ## Elements of an excellent statement
                 
-                **Statement:** A vulnerability was found in **Vim** in the **xyz.c** file in the **abc() function**. It is an **out-of-bounds (OOB) read** triggered when an **input file begins with #!**, leading to a **crash and potential denial of service (DoS)**.
+                To write an effective and excellent statement, several elements are necessary. The elements provide specific information that customers will find useful.
                 
-                This structure ensures that all critical aspects of a vulnerability are covered in a concise and actionable manner.
+                  - Explains the RH impact rating and any difference between industry ratings utilizing CIA logic.
+                  - Explains any differences in CVSS vectors in a Red Hat calculated score.
+                  - References affected Red Hat components (vs upstream).
+                  - Includes conditions and technical detail specific to Red Hat configuration, patching, and build details.
+                  - Includes any statements of fact as necessary.
                 
-                ---
+                ## Language and way of speaking
                 
-                ## 2. How STRIDE, CVSS, and the CIA Triad Form a Comprehensive Statement
+                Do not worry about the complexity of language. The statement should not contain complicated, legal sounding content. Keep the statements conversational, as if one engineer is talking to another. This will make the information easier to follow and understand.
                 
-                ### STRIDE for Threat Categorization
-                
-                **STRIDE** is a framework that helps categorize threats based on their characteristics and impact. These categories are:
-                
-                * **Spoofing:** An attacker impersonates a legitimate entity to gain unauthorized access.
-                * **Tampering:** The unauthorized modification of data or code.
-                * **Repudiation:** Actions that lack proper accountability, making it difficult to trace malicious activity.
-                * **Information Disclosure:** Exposure of sensitive data to unauthorized entities.
-                * **Denial of Service (DoS):** Disruption of services, rendering them unavailable.
-                * **Elevation of Privilege:** An attacker gains access to higher-level privileges, enabling full control over a system.
-                
-                By understanding which category a vulnerability falls into, the statement can highlight the nature of the threat and its potential impact on the system.
-                
-                ### Integrating CVSS Version 3.1
-                
-                Using **CVSS** metrics ensures that the vulnerability statement addresses critical aspects such as:
-                
-                * How the issue can be accessed (e.g., via network or locally).
-                * The complexity of triggering the issue.
-                * The level of permissions required to exploit it.
-                * The potential impact on confidentiality, integrity, and availability.
-                
-                By aligning the statement with these metrics, the severity and context are immediately clear, aiding in prioritization.
-                
-                ### Incorporating the CIA Triad
-                
-                The impact of the vulnerability is assessed through its effects on:
-                
-                * **Confidentiality:** Whether sensitive information can be accessed or exposed.
-                * **Integrity:** Whether the system or its data can be altered in unauthorized ways.
-                * **Availability:** Whether the system or service can remain operational.
-                
-                These impacts should be seamlessly integrated into the statement to paint a complete picture of the vulnerability's consequences.
-                
-                ---
-                
-                ## 3. Example Statement Combining All Elements
-                
-                ### Example 1
-                
-                **Statement:** A flaw in the **OpenSSL library** in the **tls13_enc.c file** within the **process_early_data() function** arises when **specially crafted network inputs cause a buffer overflow**. This issue enables **unintended code execution**, which results in **unauthorized system access**. **Sensitive data might be exposed, critical configurations altered, and service availability significantly disrupted**.
-                
-                ### Example 2
-                
-                **Statement:** The **Apache HTTP Server’s mod_rewrite.c module mishandles overly large input strings in rewrite rules**. This leads to an **integer overflow**, causing **system crashes**. These crashes **disrupt service availability, preventing legitimate users from accessing the system**.
-                
-                ### Example 3
-                
-                **Statement:** A **session token validation issue** in the **XYZ application** arises when **malformed tokens are processed**. This allows **attackers to impersonate legitimate users, gaining access to sensitive data and modifying system settings**. Such actions **undermine both data confidentiality and system integrity**.
-                
-                ---
-                
-                ## 4. Best Practices for Writing a Statement
-                
-                * **Clarity:** Use precise and straightforward language.
-                * **Completeness:** Include all critical elements (component, location, vulnerability type, trigger, and impact).
-                * **Relevance:** Provide context to highlight the vulnerability’s significance.
-                * **Alignment:** Ensure statements address CVSS metrics, including how the issue is accessed, its complexity, and its impact on confidentiality, integrity, and availability.
-                * **Consistency:** Maintain uniform structure and terminology across statements.
-                
-                By embedding STRIDE-based threat categorization, CVSS alignment, and the CIA triad into a single cohesive statement, vulnerabilities can be effectively communicated and prioritized for resolution.
+                  - Avoid overly complicated language.
+                  - Write simply and clearly, using words that everyone can understand.
+                  - Sound confident.
             """,
             context=cve_id,
             output_schema=RewriteStatementModel.model_json_schema(),

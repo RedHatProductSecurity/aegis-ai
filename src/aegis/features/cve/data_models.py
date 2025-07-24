@@ -195,6 +195,11 @@ class RewriteStatementModel(AegisFeatureModel):
         """,
     )
 
+    description: str = Field(
+        ...,
+        description="Contains current CVE description",
+    )
+
     rewritten_statement: str = Field(
         ...,
         description="rewritten Red Hat CVE statement explaining impact on Red Hat supported products.",
