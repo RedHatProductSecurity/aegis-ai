@@ -72,3 +72,4 @@ These evaluators are used for **all** Aegis features:
 | custom `LLMJudge` | [test_rewrite_statement.py](features/cve/test_rewrite_statement.py) | | &check; | "The statement does not suggest to apply a patch or rebuild the software." |
 | `SuggestCweEvaluator` | [test_suggest_cwe.py](features/cve/test_suggest_cwe.py) | &check; | | compare the provided list of CWEs with the expected one while taking length of the list and confidence into account |
 | `SuggestImpactEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | &check; | | compare the provided impact and CVSS3 score with the expected values while taking the confidence into account |
+| custom `LLMJudge` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | &check; | "explanation does not mention which Red Hat products are affected" |

@@ -43,18 +43,12 @@ class SuggestImpact(Feature):
                     * Potential for arbitrary code execution
                     * Potential for privilege escalation
                     * Potential for denial of service
-                    * Specific affected components
-                    * Presence of inference end points on AI systems.
                   and generate a red hat specific CVSS3 and CVSS4 score to help suggest impact.
-                2. Analysis should be based on the provided json against all known CVEs affecting Red Hat products.
-                3. If the issue is already fixed in Red Hat products then reduce impact appropriately (and include in explanation).
-                4. Also adjust impact analysis based on the popularity and ubiquity of affected component(s) with emphasis on how this impacts Red Hat products.
-                5. Assess the impact for each affected product and ensure the average across all those are weighted into the final analysis
-                6. The Red Hat CVE statement should carry more weight in the final impact analysis
-                7. Based on findings from 1,2,3,4,5,6 assign an impact rating (LOW, MODERATE, IMPORTANT, CRITICAL) according to the provided definitions. Ignore
-                any embedded declarations of impact in description, comments sections.
-                8. Provide an explanation of the rationale for the suggested impact clearly indicating if any supported Red Hat products are affected or not.
-                9. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
+                2. Analysis should be based on the provided JSON against all known CVEs affecting Red Hat products.
+                3. The reasoning should not take into account which Red Hat products are affected by the flaw.
+                4. Denial of Service (DoS) flaws are usually not IMPORTANT if their scope is limited to an application.
+                5. A User Interaction is usually Required (UI:R in CVSS) in case an application connects a malicious server to trigger the flaw.
+                6. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
             """,
             context=cve_id,
             output_schema=SuggestImpactModel.model_json_schema(),

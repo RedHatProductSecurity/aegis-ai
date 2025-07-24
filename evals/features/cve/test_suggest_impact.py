@@ -6,7 +6,11 @@ from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 from aegis.agents import rh_feature_agent
 from aegis.features.cve import SuggestImpact, SuggestImpactModel
 
-from evals.features.common import common_feature_evals, handle_eval_report
+from evals.features.common import (
+    common_feature_evals,
+    create_llm_judge,
+    handle_eval_report,
+)
 
 
 # dict to convert "IMPORTANT" to 8.0 etc
@@ -80,6 +84,9 @@ cases = [
 # evaluators
 evals = common_feature_evals + [
     SuggestImpactEvaluator(),
+    create_llm_judge(
+        rubric="explanation does not mention which Red Hat products are affected"
+    ),
 ]
 
 # needed for asyncio event loop
