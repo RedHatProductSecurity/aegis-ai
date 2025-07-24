@@ -1,4 +1,5 @@
 import pytest
+import re
 
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
@@ -33,7 +34,9 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
         score = 1.0
         for cwe_exp in cwe_list_exp:
             for cwe in cwe_list_out:
-                if cwe == cwe_exp:
+                # if we get "CWE-416: Use After Free", ignore the part starting with colon
+                cwe_only = re.sub(r"^(CWE-[0-9]+): .*$", "\\1", cwe)
+                if cwe_only == cwe_exp:
                     return score
                 score *= 0.9
             score *= 0.9
@@ -74,9 +77,9 @@ async def suggest_cwe(cve_id: str) -> SuggestCWEModel:
 cases = [
     SuggestCweCase("CVE-2022-48701", ["CWE-125", "CWE-20"]),
     SuggestCweCase("CVE-2024-53232", ["CWE-476", "CWE-416"]),
-    SuggestCweCase(
-        "CVE-2025-23395", ["CWE-271", "CWE-250", "CWE-272", "CWE-273"]
-    ),  # CWE-269 is discouraged by MITRE and unavailable in OSIM
+    # CWE-269 is discouraged by MITRE and unavailable in OSIM
+    # CWE-273 and CWE-73 are incorrect: https://github.com/RedHatProductSecurity/aegis/issues/71
+    SuggestCweCase("CVE-2025-23395", ["CWE-271", "CWE-250", "CWE-272", "CWE-273"]),
     SuggestCweCase("CVE-2025-5399", ["CWE-835", "CWE-400"]),
     # TODO: add more cases
 ]
