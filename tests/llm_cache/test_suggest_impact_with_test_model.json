@@ -1,0 +1,24 @@
+{
+    "confidence": 1.0,
+    "completeness": 1.0,
+    "consistency": 1.0,
+    "tools_used": [
+        "osidb_tool"
+    ],
+    "cve_id": "CVE-2025-0725",
+    "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
+    "components": [
+        "libcurl"
+    ],
+    "affected_products": [
+        "Ansible Services",
+        "Hosted OpenShift",
+        "cloud.redhat.com"
+    ],
+    "explanation": "This vulnerability is rated as LOW impact. The flaw in libcurl requires an extremely old version of the zlib library (1.2.0.3 or older) to be exploitable. According to the Red Hat statement, no supported versions of Red Hat products, including Red Hat Enterprise Linux, ship the vulnerable version of zlib. While a few internal or testing components within some cloud services are technically affected, they do not pose a significant risk to the production environment. The Red Hat CVSS vector reflects a local attack vector, as an attacker would need to introduce the vulnerable old library into the system, making exploitation highly unlikely in any supported configuration.",
+    "impact": "LOW",
+    "cvss3_score": "3.3",
+    "cvss3_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+    "cvss4_score": "3.8",
+    "cvss4_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N"
+}

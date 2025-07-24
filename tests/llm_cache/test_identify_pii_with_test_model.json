@@ -1,0 +1,15 @@
+{
+    "confidence": 1.0,
+    "completeness": 1.0,
+    "consistency": 1.0,
+    "tools_used": [
+        "osidb_tool"
+    ],
+    "cve_id": "CVE-2025-0725",
+    "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
+    "components": [
+        "libcurl"
+    ],
+    "explanation": "",
+    "contains_PII": false
+}

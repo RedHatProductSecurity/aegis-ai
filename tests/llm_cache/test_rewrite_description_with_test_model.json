@@ -1,0 +1,17 @@
+{
+    "confidence": 0.95,
+    "completeness": 1.0,
+    "consistency": 1.0,
+    "tools_used": [
+        "osidb_tool"
+    ],
+    "cve_id": "CVE-2025-0725",
+    "original_title": "Buffer Overflow in libcurl via zlib Integer Overflow",
+    "original_description": "A flaw was found in libcurl. This vulnerability allows an attacker to trigger a buffer overflow via an integer overflow in zlib 1.2.0.3 or older when libcurl performs automatic gzip decompression.",
+    "components": [
+        "libcurl"
+    ],
+    "explanation": "The original description was technically correct but lacked clarity on the attack vector and the attacker's position. The rewritten description explicitly states that a 'remote attacker' can use a 'specially crafted, gzip-compressed HTTP response' to initiate the attack. It also clarifies the causal link: the integer overflow occurs in the zlib library, which then leads to the buffer overflow in libcurl, providing a more precise and understandable narrative for analysts. The title was revised for conciseness while retaining the core components of the vulnerability.",
+    "rewritten_title": "libcurl: integer overflow in zlib decompression",
+    "rewritten_description": "A flaw was found in libcurl. This vulnerability allows a remote attacker to trigger a buffer overflow by sending a specially crafted, gzip-compressed HTTP response. This issue is caused by an integer overflow in the underlying zlib library during the decompression process."
+}

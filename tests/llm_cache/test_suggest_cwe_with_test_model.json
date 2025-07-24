@@ -1,0 +1,18 @@
+{
+    "confidence": 0.95,
+    "completeness": 1.0,
+    "consistency": 1.0,
+    "tools_used": [
+        "osidb_tool"
+    ],
+    "cve_id": "CVE-2025-0725",
+    "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
+    "components": [
+        "libcurl"
+    ],
+    "explanation": "The CVE description explicitly states that an integer overflow leads to a buffer overflow. The root cause is the integer overflow, which maps to CWE-190 (Integer Overflow or Wraparound). This flaw subsequently results in a classic buffer overflow, which is categorized as CWE-120 (Buffer Copy without Checking Size of Input).",
+    "cwe": [
+        "CWE-190",
+        "CWE-120"
+    ]
+}
