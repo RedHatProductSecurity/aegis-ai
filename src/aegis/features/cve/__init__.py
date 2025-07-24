@@ -392,7 +392,7 @@ class RewriteStatementText(Feature):
 
     async def exec(self, cve_id):
         prompt = AegisPrompt(
-            user_instruction="Your task is to meticulously examine the provided JSON object and rewrite cve statement for it. The goal of the statement is explain the context for the CVE impact with respect to Red Hat supported products. If the cve statement exists, rewrite it - if it does not exist suggest new text.",
+            user_instruction="Your task is to meticulously examine the provided JSON object and rewrite CVE statement for it. The goal of the statement is explain the context for the CVE impact with respect to Red Hat supported products. If the CVE statement exists, rewrite it - if it does not exist suggest new text.",
             goals="""
                 * Evaluate the quality of existing CVE statement text from the perspective of a security analyst.
                 * Provide an overall text quality score for a given CVE description based on a comparison with previous Red Hat CVEs.
@@ -402,7 +402,7 @@ class RewriteStatementText(Feature):
             rules="""
                 1) Input Analysis:
                 
-                 When provided with a CVE identifier or a CVE description, analyze the CVE statement text for clarity, conciseness, and correctness from a security analyst's viewpoint.
+                When provided with a CVE identifier or a CVE description, analyze the CVE statement text for clarity, conciseness, and correctness from a security analyst's viewpoint.
                 
                 The CVE statement will explain why an impact is either higher or lower than expected, especially if Red Hat products are not impacted.
                 
@@ -419,18 +419,19 @@ class RewriteStatementText(Feature):
                 b) Ensure the rewritten statement accurately conveys the context and rationale for the impact score modulo relation to Red Hat
                  supported products.
                 
+                c) Do not duplicate information available in other fields, such as flaw description.  Do not describe low-level technical details.
+                
                 
                 # Further Guidelines to Writing a Comprehensive Vulnerability Statement
                 
                 A CVE's statement covers more than just the rationale behind an impact rating. Additionally it touches on:
                 
                   - A direct opportunity to provide value beyond what’s easily found in an internet search.
-                  - Additional technical details which clarify the scope of impact. Make it easy for the subset of unaffected customers (because of how they configure their deployment) to discover thi.
+                  - Additional technical details which clarify the scope of impact. Make it easy for the subset of unaffected customers (because of how they configure their deployment) to discover this.
                   - Explaining the affected function at code level is too much detail, it is better to explain:
                       - how a vulnerable function/service impacts the system
                       - what successful exploitation looks like
                       - or how difficult it is to exploit
-                Do not duplicate information elsewhere on the CVE page. The flaw's technical description belongs in the CVE Description, affected products belong in the Affected Packages and Issued Red Hat Security Errata table, mitigations belong in Mitigation, and the support lifecycle is on the product pages that are automatically linked from flaws. For example, saying that a product is affected duplicates information available in the Affected table. It does not provide the customer with any new information.
                 
                 A flaw's Statement provides additional information about Red Hat’s response to a security issue and displays prominently on the flaw's CVE page where customers are likely to see it.
                 
