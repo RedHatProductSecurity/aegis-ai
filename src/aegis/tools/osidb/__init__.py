@@ -14,6 +14,7 @@ from pydantic_ai import (
 
 import osidb_bindings
 
+from aegis.data_models import CVEID
 from aegis.tools import BaseToolOutput
 
 logger = logging.getLogger(__name__)
@@ -30,8 +31,9 @@ class OsidbDependencies:
 
 
 class CVEID(BaseModel):
-    cve_id: str = Field(
+    cve_id: CVEID = Field(
         ...,  # Make it required
+        strict=True,
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 

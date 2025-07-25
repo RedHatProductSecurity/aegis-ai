@@ -1,8 +1,13 @@
 from typing import List, Literal
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 
+from aegis.data_models import CVEID
 from aegis.features.data_models import AegisFeatureModel
+
+
+class CVEFeatureInput(BaseModel):
+    cve_id: CVEID = Field(..., description="CVE ID input")
 
 
 class SuggestImpactModel(AegisFeatureModel):
@@ -10,9 +15,9 @@ class SuggestImpactModel(AegisFeatureModel):
     Model to suggest impact of CVE.
     """
 
-    cve_id: str = Field(
-        ...,
-        description="Contains CVE id",
+    cve_id: CVEID = Field(
+        ...,  # Make it required
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     title: str = Field(
@@ -65,9 +70,9 @@ class SuggestCWEModel(AegisFeatureModel):
     Model to suggest CWE-ID of CVE.
     """
 
-    cve_id: str = Field(
-        ...,
-        description="Contains CVE id",
+    cve_id: CVEID = Field(
+        ...,  # Make it required
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     title: str = Field(
@@ -98,9 +103,9 @@ class PIIReportModel(AegisFeatureModel):
     Model to describe whether CVE contains PII and, if so, what instances of PII were found.
     """
 
-    cve_id: str = Field(
-        ...,
-        description="Contains CVE id",
+    cve_id: CVEID = Field(
+        ...,  # Make it required
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     title: str = Field(
@@ -131,20 +136,20 @@ class RewriteDescriptionModel(AegisFeatureModel):
     Model to rewrite CVE description.
     """
 
-    cve_id: str = Field(
-        ...,
-        description="Contains CVE id",
+    cve_id: CVEID = Field(
+        ...,  # Make it required
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     original_title: str = Field(
         ...,
-        description="Contains current CVE title",
+        description="Original CVE title",
     )
 
     # FIXME: This field is usually empty.  Do we really need it?
     original_description: str = Field(
         ...,
-        description="Contains current CVE description",
+        description="Original CVE description",
     )
 
     components: List = Field(
@@ -168,9 +173,9 @@ class RewriteStatementModel(AegisFeatureModel):
     Model to rewrite Red Hat CVE statement.
     """
 
-    cve_id: str = Field(
-        ...,
-        description="Contains CVE id",
+    cve_id: CVEID = Field(
+        ...,  # Make it required
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     title: str = Field(
@@ -211,9 +216,9 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
     Model to explain differences between rh and nvd CVSS scores.
     """
 
-    cve_id: str = Field(
-        ...,
-        description="Contains CVE id",
+    cve_id: CVEID = Field(
+        ...,  # Make it required
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
     title: str = Field(

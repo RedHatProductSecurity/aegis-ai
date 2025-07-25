@@ -1,5 +1,6 @@
 import logging
 
+from aegis.data_models import CVEID
 from aegis.features import Feature
 from aegis.features.cve.data_models import (
     CVSSDiffExplainerModel,
@@ -9,6 +10,7 @@ from aegis.features.cve.data_models import (
     RewriteStatementModel,
     RewriteDescriptionModel,
 )
+from aegis.features.cve.data_models import CVEFeatureInput
 from aegis.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SuggestImpact(Feature):
     """Based on current CVE information and context assert an aggregated impact."""
 
-    async def exec(self, cve_id):
+    async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
             user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest an overall impact rating for the CVE",
             goals="""
@@ -50,7 +52,7 @@ class SuggestImpact(Feature):
                 5. A User Interaction is usually Required (UI:R in CVSS) in case an application connects a malicious server to trigger the flaw.
                 6. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
             """,
-            context=cve_id,
+            context=CVEFeatureInput(cve_id=cve_id),
             output_schema=SuggestImpactModel.model_json_schema(),
         )
         return await self.agent.run(prompt.to_string(), output_type=SuggestImpactModel)
@@ -59,7 +61,7 @@ class SuggestImpact(Feature):
 class SuggestCWE(Feature):
     """Based on current CVE information and context assert CWE(s)."""
 
-    async def exec(self, cve_id):
+    async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
             user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest CWE-ID(s) for the CVE",
             goals="""
@@ -92,7 +94,7 @@ class SuggestCWE(Feature):
                 
                 d) Avoid predicting CWEs that are discouraged or prohibited for Vulnerability Mapping by MITRE.  In particular, do not suggest CWE-264 and CWE-269.
             """,
-            context=cve_id,
+            context=CVEFeatureInput(cve_id=cve_id),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
         return await self.agent.run(prompt.to_string(), output_type=SuggestCWEModel)
@@ -101,7 +103,7 @@ class SuggestCWE(Feature):
 class IdentifyPII(Feature):
     """Based on current CVE information (public comments, description, statement) and context assert if it contains any PII."""
 
-    async def exec(self, cve_id):
+    async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
             user_instruction="Your task is to meticulously examine the provided CVE JSON object and identify any instances of Personally Identifiable Information (PII).",
             goals="""
@@ -253,7 +255,7 @@ class IdentifyPII(Feature):
             2. If you do not find any PII, set contains_pii:False.
 
             """,
-            context=cve_id,
+            context=CVEFeatureInput(cve_id=cve_id),
             output_schema=PIIReportModel.model_json_schema(),
         )
         return await self.agent.run(prompt.to_string(), output_type=PIIReportModel)
@@ -262,7 +264,7 @@ class IdentifyPII(Feature):
 class RewriteDescriptionText(Feature):
     """Based on current CVE information and context rewrite/create description and title."""
 
-    async def exec(self, cve_id):
+    async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
             user_instruction="Your task is to meticulously examine the provided JSON object and rewrite cve description for it. The goal of the description is to briefly provide an overview of the CVE. If the cve description exists, rewrite it - if it does not exist suggest new text.",
             goals="""
@@ -379,7 +381,7 @@ class RewriteDescriptionText(Feature):
                     * Any generic text, explanations, or meta-commentary not directly describing the flaw's technical nature.
                 5.  **DO NOT** use headings, bold text (other than the starting phrase if needed by a template), bullet points, or line breaks. It must be one single paragraph.
             """,
-            context=cve_id,
+            context=CVEFeatureInput(cve_id=cve_id),
             output_schema=RewriteDescriptionModel.model_json_schema(),
         )
         return await self.agent.run(
@@ -390,7 +392,7 @@ class RewriteDescriptionText(Feature):
 class RewriteStatementText(Feature):
     """Based on current CVE information and context rewrite/create statement."""
 
-    async def exec(self, cve_id):
+    async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
             user_instruction="Your task is to meticulously examine the provided JSON object and rewrite CVE statement for it. The goal of the statement is explain the context for the CVE impact with respect to Red Hat supported products. If the CVE statement exists, rewrite it - if it does not exist suggest new text.",
             goals="""
@@ -461,7 +463,7 @@ class RewriteStatementText(Feature):
                   - Write simply and clearly, using words that everyone can understand.
                   - Sound confident.
             """,
-            context=cve_id,
+            context=CVEFeatureInput(cve_id=cve_id),
             output_schema=RewriteStatementModel.model_json_schema(),
         )
         return await self.agent.run(
@@ -472,7 +474,7 @@ class RewriteStatementText(Feature):
 class CVSSDiffExplainer(Feature):
     """Based on current CVE information and context explain CVSS score diff between nvd and rh."""
 
-    async def exec(self, cve_id):
+    async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
             user_instruction="Explain the differences of cvss score attributed to CVE between supplied redhat CVE context and nvd CVE.",
             goals="""
@@ -523,7 +525,7 @@ class CVSSDiffExplainer(Feature):
                 The cvss diff analysis performed on supplied CVE context which means you also must retrieve NVD (NIST) cvss for this CVE
                 and compare and explain why there is a difference.
             """,
-            context=cve_id,
+            context=CVEFeatureInput(cve_id=cve_id),
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
         return await self.agent.run(
