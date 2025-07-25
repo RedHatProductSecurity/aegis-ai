@@ -79,7 +79,7 @@ async def test_cvss_diff_explain_with_test_model():
     cvssdiffexplain = cve.data_models.CVSSDiffExplainerModel.model_validate_json(result)
     assert isinstance(cvssdiffexplain, cve.data_models.CVSSDiffExplainerModel)
     assert (
-        cvssdiffexplain.redhat_cvss3_score
+        cvssdiffexplain.redhat_cvss3_vector
         == "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
     )
 
