@@ -4,6 +4,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features.cve import IdentifyPII, PIIReportModel
 
 from evals.features.common import (
@@ -40,7 +41,7 @@ class IdentifyPIIEvaluator(Evaluator[str, PIIReportModel]):
         )
 
 
-async def identify_pii(cve_id: str) -> PIIReportModel:
+async def identify_pii(cve_id: CVEID) -> PIIReportModel:
     """use rh_feature_agent to rewrite description for the given CVE"""
     feature = IdentifyPII(rh_feature_agent)
     result = await feature.exec(cve_id)

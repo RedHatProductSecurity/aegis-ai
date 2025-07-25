@@ -3,6 +3,7 @@ import pytest
 from pydantic_evals import Case, Dataset
 
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features.cve import RewriteStatementText, PIIReportModel
 
 from evals.features.common import (
@@ -23,7 +24,7 @@ class RewriteStatementCase(Case):
         )
 
 
-async def rewrite_statement(cve_id: str) -> PIIReportModel:
+async def rewrite_statement(cve_id: CVEID) -> PIIReportModel:
     """use rh_feature_agent to rewrite description for the given CVE"""
     feature = RewriteStatementText(rh_feature_agent)
     result = await feature.exec(cve_id)

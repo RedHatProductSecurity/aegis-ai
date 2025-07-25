@@ -10,11 +10,9 @@ from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
 @Tool
-async def osidb_tool(
-    ctx: RunContext[OsidbDependencies], cve_lookup_input: CVEID
-) -> CVE:
+async def osidb_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
-    return await osidb_cache_retrieve(cve_lookup_input.cve_id)
+    return await osidb_cache_retrieve(cve_id)
 
 
 # enable logging to see progress

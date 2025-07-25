@@ -40,8 +40,8 @@ class AegisPrompt(BaseModel):
     goals: str
     rules: str
 
-    # Contextual information
-    context: str
+    # Contextual information should always come in as structured input
+    context: BaseModel
 
     # Output data schema
     output_schema: Optional[dict] = None

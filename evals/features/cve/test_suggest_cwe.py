@@ -5,6 +5,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features.cve import SuggestCWE, SuggestCWEModel
 
 from evals.features.common import common_feature_evals, handle_eval_report
@@ -66,7 +67,7 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
         return score
 
 
-async def suggest_cwe(cve_id: str) -> SuggestCWEModel:
+async def suggest_cwe(cve_id: CVEID) -> SuggestCWEModel:
     """use rh_feature_agent to suggest CWE(s) for the given CVE"""
     feature = SuggestCWE(rh_feature_agent)
     result = await feature.exec(cve_id)
