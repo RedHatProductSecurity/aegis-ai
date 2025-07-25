@@ -5,6 +5,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features.cve import RewriteDescriptionText, RewriteDescriptionModel
 
 from evals.features.common import (
@@ -75,7 +76,7 @@ class PromptLeakEvaluator(Evaluator[str, RewriteDescriptionModel]):
         return EvaluationReason(True)
 
 
-async def rewrite_description(cve_id: str) -> RewriteDescriptionModel:
+async def rewrite_description(cve_id: CVEID) -> RewriteDescriptionModel:
     """use rh_feature_agent to rewrite description for the given CVE"""
     feature = RewriteDescriptionText(rh_feature_agent)
     result = await feature.exec(cve_id)

@@ -1,11 +1,9 @@
 import logging
 import os
-import re
 from dataclasses import dataclass
 from typing import List
 
-from pydantic import BaseModel, Field
-from pydantic import field_validator
+from pydantic import Field
 
 from pydantic_ai import (
     RunContext,
@@ -14,7 +12,7 @@ from pydantic_ai import (
 
 import osidb_bindings
 
-from aegis.data_models import CVEID
+from aegis.data_models import CVEID, cveid_validator
 from aegis.tools import BaseToolOutput
 
 logger = logging.getLogger(__name__)
@@ -30,27 +28,13 @@ class OsidbDependencies:
     test = 1
 
 
-class CVEID(BaseModel):
+class CVE(BaseToolOutput):
+    """ """
+
     cve_id: CVEID = Field(
-        ...,  # Make it required
-        strict=True,
+        ...,
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
-
-    @field_validator("cve_id")
-    @classmethod
-    def validate_cve_id_format(cls, v: str) -> str:
-        """
-        Validates that the CVE ID adheres to the CVE-YYYY-XXXXX format.
-        """
-        cve_regex = r"^CVE-\d{4}-\d{4,7}$"
-        if not re.match(cve_regex, v):
-            raise ValueError("Invalid CVE ID format. Expected format: CVE-YYYY-XXXXX.")
-        return v
-
-
-class CVE(CVEID, BaseToolOutput):
-    """ """
 
     title: str = Field(
         ...,  # Make it required
@@ -72,15 +56,16 @@ class CVE(CVEID, BaseToolOutput):
     cvss_scores: List = Field(..., description="list of cvss scores")
 
 
-async def osidb_retrieve(cve_id: str):
+async def osidb_retrieve(cve_id: CVEID):
     logger.info(f"retrieving {cve_id} from osidb")
+    validated_cve_id = cveid_validator.validate_python(cve_id)
 
     try:
         session = osidb_bindings.new_session(osidb_server_uri=osidb_server_uri)
 
         # Retrieval of embargoed flaws is disabled by default, to enable set env var `AEGIS_OSIDB_RETRIEVE_EMBARGOED`
         flaw = session.flaws.retrieve(
-            id=cve_id,
+            id=validated_cve_id,
             include_fields="cve_id,title,cve_description,cvss_scores,statement,components,comments,comment_zero,affects,references,embargoed",
         )
 
@@ -88,14 +73,14 @@ async def osidb_retrieve(cve_id: str):
         # dictates if a user has access or not.
         if not osidb_retrieve_embargoed and flaw.embargoed:
             logger.info(
-                f"retrieved {cve_id} from osidb but it is under embargo and AEGIS_OSIDB_RETRIEVE_EMBARGOED is set 'false'."
+                f"retrieved {validated_cve_id} from osidb but it is under embargo and AEGIS_OSIDB_RETRIEVE_EMBARGOED is set 'false'."
             )
             return None
 
-        logger.info(f"{cve_id}:{flaw.title}")
+        logger.info(f"{validated_cve_id}:{flaw.title}")
         comments = ""
         for i, comment in enumerate(flaw.comments):
-            if i >= 15:  # TODO: remove limit of 15 comments
+            if i >= 15:  # FIXME: remove limit of 15 comments
                 break
             if not comment.is_private:
                 comments += str(comment.text) + " "
@@ -141,13 +126,13 @@ async def osidb_retrieve(cve_id: str):
             cvss_scores=cvss_scores,
         )
     except Exception as e:
-        logger.error(f"We encountered an error during OSIDB retrieval: {e}")
+        logger.error(
+            f"We encountered an error during OSIDB retrieval of {validated_cve_id}: {e}"
+        )
 
 
 @Tool
-async def osidb_tool(
-    ctx: RunContext[OsidbDependencies], cve_lookup_input: CVEID
-) -> CVE:
+async def osidb_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
     """
     Searches OSIDB by cve_id performing a lookup on CVE entity in OSIDB and returns structured information about it.
 
@@ -158,5 +143,5 @@ async def osidb_tool(
     Returns:
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
-    logger.debug(cve_lookup_input.cve_id)
-    return await osidb_retrieve(cve_lookup_input.cve_id)
+    logger.debug(cve_id)
+    return await osidb_retrieve(cve_id)

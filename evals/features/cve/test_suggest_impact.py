@@ -4,6 +4,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features.cve import SuggestImpact, SuggestImpactModel
 
 from evals.features.common import (
@@ -67,7 +68,7 @@ class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
         return score
 
 
-async def suggest_impact(cve_id: str) -> SuggestImpactModel:
+async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
     """use rh_feature_agent to suggest Impact for the given CVE"""
     feature = SuggestImpact(rh_feature_agent)
     result = await feature.exec(cve_id)

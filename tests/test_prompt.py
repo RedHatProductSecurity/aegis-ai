@@ -1,3 +1,4 @@
+from aegis.features.data_models import FeatureQueryInput
 from aegis.prompt import AegisPrompt
 
 
@@ -14,7 +15,9 @@ def test_prompt():
             * ensure birds considered are actually existing 'known' birds
             * do not make up new birds
         """,
-        context="Blue beak, 2 wings with long feathers, yellow legs, spotted",
+        context=FeatureQueryInput(
+            query="Blue beak, 2 wings with long feathers, yellow legs, spotted"
+        ),
     )
 
     expected = """system: You are a world expert in bird identification.
@@ -37,6 +40,5 @@ Behavior and Rules:
         
 
 Context:
-Blue beak, 2 wings with long feathers, yellow legs, spotted"""
-
+query='Blue beak, 2 wings with long feathers, yellow legs, spotted'"""
     assert prompt.to_string() == expected

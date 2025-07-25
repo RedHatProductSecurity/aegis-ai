@@ -5,6 +5,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features.cve import CVSSDiffExplainer, CVSSDiffExplainerModel
 
 from evals.features.common import (
@@ -59,7 +60,7 @@ class CVSSDiffEvaluator(Evaluator[str, CVSSDiffExplainerModel]):
         )
 
 
-async def cvss_diff(cve_id: str) -> CVSSDiffExplainerModel:
+async def cvss_diff(cve_id: CVEID) -> CVSSDiffExplainerModel:
     """use rh_feature_agent to rewrite description for the given CVE"""
     feature = CVSSDiffExplainer(rh_feature_agent)
     result = await feature.exec(cve_id)

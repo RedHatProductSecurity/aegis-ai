@@ -2,6 +2,10 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
+class FeatureQueryInput(BaseModel):
+    query: str = Field(..., description="General LLM query.")
+
+
 class AegisFeatureModel(BaseModel):
     """
     Metadata for Aegis features, nested within the main feature model.

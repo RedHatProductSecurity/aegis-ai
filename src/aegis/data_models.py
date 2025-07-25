@@ -4,7 +4,7 @@ import re
 from typing import Annotated
 
 import cvss
-from pydantic import StringConstraints, AfterValidator
+from pydantic import StringConstraints, AfterValidator, TypeAdapter
 
 
 def is_cvss3_valid(cvss_str: str) -> bool:
@@ -28,6 +28,7 @@ def validate_with_is_cvss3(v: str) -> str:
     return v
 
 
+# cvss3 field
 CVSS3Vector = Annotated[
     str,
     StringConstraints(
@@ -38,6 +39,7 @@ CVSS3Vector = Annotated[
     AfterValidator(validate_with_is_cvss3),
 ]
 
+# cve id field
 CVEID = Annotated[
     str,
     StringConstraints(
@@ -46,3 +48,6 @@ CVEID = Annotated[
         strip_whitespace=True,
     ),
 ]
+
+# create dynamic CVEID validator
+cveid_validator = TypeAdapter(CVEID)

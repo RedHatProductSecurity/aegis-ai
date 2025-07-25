@@ -15,6 +15,7 @@ from aegis.agents import (
     public_feature_agent,
     simple_agent,
 )
+from aegis.data_models import CVEID
 from aegis.features import component, cve
 from aegis.features.data_models import AegisAnswer
 # from aegis.rag import (
@@ -137,7 +138,7 @@ def search(query):
 
 
 @aegis_cli.command()
-@click.argument("cve_id", type=str)
+@click.argument("cve_id", type=CVEID)
 def identify_pii(cve_id):
     """
     Identify PII contained in CVE record.
@@ -154,7 +155,7 @@ def identify_pii(cve_id):
 
 
 @aegis_cli.command()
-@click.argument("cve_id", type=str)
+@click.argument("cve_id", type=CVEID)
 def suggest_impact(cve_id):
     """
     Suggest overall impact of CVE.
@@ -171,7 +172,7 @@ def suggest_impact(cve_id):
 
 
 @aegis_cli.command()
-@click.argument("cve_id", type=str)
+@click.argument("cve_id", type=CVEID)
 def suggest_cwe(cve_id):
     """
     Suggest CWE.
@@ -188,7 +189,7 @@ def suggest_cwe(cve_id):
 
 
 @aegis_cli.command()
-@click.argument("cve_id", type=str)
+@click.argument("cve_id", type=CVEID)
 def rewrite_description(cve_id):
     """
     Rewrite CVE description text.
@@ -205,7 +206,7 @@ def rewrite_description(cve_id):
 
 
 @aegis_cli.command()
-@click.argument("cve_id", type=str)
+@click.argument("cve_id", type=CVEID)
 def rewrite_statement(cve_id):
     """
     Rewrite CVE statement text.
@@ -222,7 +223,7 @@ def rewrite_statement(cve_id):
 
 
 @aegis_cli.command()
-@click.argument("cve_id", type=str)
+@click.argument("cve_id", type=CVEID)
 def cvss_diff(cve_id):
     """
     CVSS Diff explainer.
