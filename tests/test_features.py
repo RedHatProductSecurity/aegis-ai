@@ -1,6 +1,9 @@
 import pytest
 
+from pydantic_core import ValidationError
+
 from aegis.agents import rh_feature_agent
+from aegis.data_models import CVEID
 from aegis.features import component, cve
 from tests.utils.llm_cache import llm_cache_retrieve
 
@@ -29,7 +32,10 @@ async def test_suggest_cwe_with_test_model():
 
 async def test_identify_pii_with_test_model():
     def feature():
-        return cve.IdentifyPII(rh_feature_agent).exec("CVE-2025-0725")
+        cve_id = CVEID(
+            "CVE-2025-0725"
+        )  # we can directly use custom fields though auto validation happens during feature input
+        return cve.IdentifyPII(rh_feature_agent).exec(cve_id)
 
     result = await llm_cache_retrieve(feature)
     piireport = cve.data_models.PIIReportModel.model_validate_json(result)
@@ -91,3 +97,13 @@ async def test_component_intelligence_test_model():
     )
     assert componentintelligence.popularity_score == 1
     assert componentintelligence.confidence == 0.95
+
+
+async def test_suggest_impact_with_bad_cve_test_model():
+    def feature():
+        return cve.SuggestImpact(rh_feature_agent).exec("BAD-CVE-ID")
+
+    with pytest.raises(ValidationError) as excinfo:
+        await feature()
+
+    assert "String should match pattern" in str(excinfo)
