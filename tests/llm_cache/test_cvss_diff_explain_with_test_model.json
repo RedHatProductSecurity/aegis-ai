@@ -1,5 +1,5 @@
 {
-    "confidence": 0.95,
+    "confidence": 0.9,
     "completeness": 1.0,
     "consistency": 1.0,
     "tools_used": [
@@ -7,8 +7,10 @@
     ],
     "cve_id": "CVE-2025-0725",
     "title": "Buffer Overflow in libcurl via zlib Integer Overflow",
-    "redhat_cvss3_score": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
-    "nvd_cvss3_score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+    "redhat_cvss3_score": "3.3",
+    "redhat_cvss3_vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+    "nvd_cvss3_score": "7.3",
+    "nvd_cvss3_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
     "components": [
         "libcurl"
     ],
@@ -18,5 +20,5 @@
         "cloud.redhat.com"
     ],
     "statement": "This CVE is not applicable to any supported version of Red Hat Enterprise Linux since RHEL-4.",
-    "explanation": "The fundamental difference in the CVSS scores between Red Hat and NVD for CVE-2025-0725 lies in the assessment of the 'Attack Vector' (AV) metric. Red Hat has assigned an AV of 'Local' (AV:L), whereas NVD has assigned 'Network' (AV:N).\n\nRed Hat's 'Local' rating is based on the context of its products, where the vulnerable component is not directly exposed to the network, thus requiring an attacker to have prior local access to the system to exploit the vulnerability.\n\nIn contrast, NVD's 'Network' rating reflects a more general assessment of the vulnerability, considering that `libcurl` is a library that can be and is often used in network-facing applications. This difference in the Attack Vector is the primary reason for the variance in the CVSS scores."
+    "explanation": "The CVSSv3 score provided by Red Hat for CVE-2025-0725 is 3.3, while the score from NVD is 7.3. The primary reason for this difference lies in the assessment of the 'Attack Vector' (AV) metric.\n\nRed Hat has assigned an AV of 'Local' (AV:L), which results in a lower base score. This is because Red Hat's analysis is specific to its products. In the context of Red Hat Enterprise Linux, the vulnerable code is not in the execution path of the curl command, meaning a successful exploit would require some form of local user interaction to trigger the vulnerability.\n\nOn the other hand, NVD has assigned an AV of 'Network' (AV:N). This reflects a more general assessment of the vulnerability, where the most common use case is a client application (like curl) fetching data from a malicious server over a network. This scenario does not require any local access, hence the higher severity rating."
 }

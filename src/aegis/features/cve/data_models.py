@@ -2,7 +2,7 @@ from typing import List, Literal
 
 from pydantic import Field, BaseModel
 
-from aegis.data_models import CVEID
+from aegis.data_models import CVEID, CVSS3Vector
 from aegis.features.data_models import AegisFeatureModel
 
 
@@ -228,10 +228,20 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
 
     redhat_cvss3_score: str = Field(
         ...,
+        description="Red Hat CVSS3 score for this CVE",
+    )
+
+    redhat_cvss3_vector: CVSS3Vector = Field(
+        ...,
         description="Contains Red Hat CVSS3 vector for this CVE.",
     )
 
     nvd_cvss3_score: str = Field(
+        ...,
+        description="nvd (NIST) CVSS3 score for this CVE",
+    )
+
+    nvd_cvss3_vector: CVSS3Vector = Field(
         ...,
         description="Contains nvd (NIST) CVSS3 vector for this CVE.",
     )

@@ -40,16 +40,16 @@ def is_cvss_valid(cvss_str: str) -> bool:
 class CVSSDiffEvaluator(Evaluator[str, CVSSDiffExplainerModel]):
     async def evaluate(self, ctx) -> EvaluationReason:
         """check that explanation is provided if and only if CVSS scores differ"""
-        rh_cvss = ctx.output.redhat_cvss3_score
+        rh_cvss = ctx.output.redhat_cvss3_vector
         if not is_cvss_valid(rh_cvss):
             return make_eval_reason(
-                fail_reason=f"invalid RH CVSS score returned by the agent: {rh_cvss}"
+                fail_reason=f"invalid RH CVSS vector returned by the agent: {rh_cvss}"
             )
 
-        nvd_cvss = ctx.output.nvd_cvss3_score
+        nvd_cvss = ctx.output.nvd_cvss3_vector
         if not is_cvss_valid(nvd_cvss):
             return make_eval_reason(
-                fail_reason=f"invalid NVD CVSS score returned by the agent: {nvd_cvss}"
+                fail_reason=f"invalid NVD CVSS vector returned by the agent: {nvd_cvss}"
             )
 
         empty_explanation = len(ctx.output.explanation) == 0
@@ -79,7 +79,7 @@ cases = [
 evals = common_feature_evals + [
     CVSSDiffEvaluator(),
     create_llm_judge(
-        rubric="Unless the explanation field is empty, it elaborates on the reason why Red Hat assigned a different CVSS score."
+        rubric="Unless the explanation field is empty, it elaborates on the reason why Red Hat assigned a different CVSS vector."
     ),
     # TODO: more evaluators
 ]

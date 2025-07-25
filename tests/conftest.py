@@ -2,11 +2,8 @@ import os
 
 import pytest
 from pydantic_ai import models
-from pydantic_ai.models.test import TestModel
-
 
 from aegis import config_logging
-from aegis.agents import rh_feature_agent
 
 test_allow_recapture: bool = os.getenv("TEST_ALLOW_CAPTURE", "false").lower() in (
     "true",
@@ -29,7 +26,3 @@ def disable_model_requests():
         models.ALLOW_MODEL_REQUESTS = True
     else:
         models.ALLOW_MODEL_REQUESTS = False
-        m = TestModel()
-        # m.call_tools = ""
-        with rh_feature_agent.override(model=m):
-            yield
