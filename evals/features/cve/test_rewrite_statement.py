@@ -47,7 +47,9 @@ evals = common_feature_evals + [
     create_llm_judge(
         rubric="The statement does not describe the code change that was used to eliminate the flaw."
     ),
-    create_llm_judge(rubric="The statement does not duplicate the flaw description."),
+    create_llm_judge(
+        rubric="The statement does not duplicate the flaw description.  A brief summary to provide context is acceptable though."
+    ),
     # TODO: more evaluators
 ]
 

@@ -398,6 +398,10 @@ class RewriteStatementText(Feature):
                 * Provide an overall text quality score for a given CVE description based on a comparison with previous Red Hat CVEs.
                 * Offer a confidence score for the analysis performed.
                 * Generate an improved, rewritten version of the CVE statement for clarity.
+                * The rewritten statement does not duplicate information provided in the description field.
+                * The rewritten statement does not include any low-level technical details, such as specific code changes.
+                * The rewritten statement does not suggest customers to apply upstream patches or to rebuild software from source code.
+                * If no additional context is available, the rewritten statement is empty.
             """,
             rules="""
                 1) Input Analysis:
@@ -414,7 +418,7 @@ class RewriteStatementText(Feature):
                 
                 3) Rewriting:
                 
-                a) Generate an alternative CVE statement that is clearer, more concise, and easier for a security analyst to understand.
+                a) Generate an alternative CVE statement that is clearer, more concise, and easier for customers to understand.
                 
                 b) Ensure the rewritten statement accurately conveys the context and rationale for the impact score modulo relation to Red Hat
                  supported products.
@@ -477,6 +481,8 @@ class CVSSDiffExplainer(Feature):
                 * Identify and clearly explain any differences between the Red Hat and NVD CVSS scores.
                 * Provide context for the CVSS metrics and how they contribute to the overall score, focusing on explaining why the scores might differ.
             """,
+            # FIXME: Do we ever track temporal and environmental scores in OSIM?
+            # I have never seen these metrics included in the cvss3/cvss4 fields.
             rules="""
                 1) Input Analysis:
                 
@@ -501,6 +507,8 @@ class CVSSDiffExplainer(Feature):
                     c) Explain the potential reasons for these differences, such as variations in vulnerability assessment, data interpretation, or the timing of the analysis by each organization.
                 
                     d) Use clear and concise language, avoiding technical jargon where possible, or explaining it when necessary.
+                
+                    e) If there is no difference in the CVSS scores, or the information is not available, return an empty explanation.
                 
                 
                 Format
