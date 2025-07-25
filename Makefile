@@ -41,6 +41,13 @@ test:
 upgrade-deps:
 	uv sync --upgrade
 
+build-dist:
+	uv run python3 -m build
+
+publish-dist:
+	uv run python3 -m twine upload dist/*
+
+
 ############################################################################
 # container
 ############################################################################
