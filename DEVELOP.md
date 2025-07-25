@@ -139,5 +139,26 @@ We use **`pytest`** for our test suite, with `pytest-asyncio` for asynchronous t
 To run all tests:
 
 ```commandline
-uv run pytest
+make test
+```
+
+Run a specific test:
+```commandline
+uv run pytest -k "test_suggest_impact_with_bad_cve_test_model"
+```
+
+
+## Build and Publish to pypi
+
+```commandline
+make build-dist
+```
+
+and to push to pypi:
+
+```commandline
+export TWINE_USERNAME=__token__
+export TWINE_PASSWORD=pypi-your-long-api-token-string-here
+
+make publish-dist
 ```
