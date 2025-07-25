@@ -1,8 +1,8 @@
 import logging
 
-from aegis.features import Feature
-from aegis.features.component.data_models import ComponentIntelligenceModel
-from aegis.prompt import AegisPrompt
+from aegis_ai.features import Feature
+from aegis_ai.features.component.data_models import ComponentIntelligenceModel
+from aegis_ai.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,8 @@ from pydantic_evals.evaluators import (
     LLMJudge,
 )
 
-from aegis import default_llm_model, default_llm_settings
-from aegis.features.data_models import AegisFeatureModel
+from aegis_ai import default_llm_model, default_llm_settings
+from aegis_ai.features.data_models import AegisFeatureModel
 
 
 # minimal acceptable length of an explanation (where applicable)

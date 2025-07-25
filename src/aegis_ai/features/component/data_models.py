@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from aegis.features.data_models import AegisFeatureModel
+from aegis_ai.features.data_models import AegisFeatureModel
 
 
 class ComponentIntelligenceModel(AegisFeatureModel):

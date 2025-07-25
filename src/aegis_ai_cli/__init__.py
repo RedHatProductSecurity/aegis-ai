@@ -3,7 +3,7 @@ aegis cli
 
 """
 
-from aegis import __version__
+from aegis_ai import __version__
 
 
 def print_version(ctx, param, value):

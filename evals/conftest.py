@@ -2,9 +2,9 @@ import pytest
 
 from pydantic_ai.tools import RunContext, Tool
 
-from aegis import config_logging
-from aegis.agents import rh_feature_agent
-from aegis.tools.osidb import CVE, CVEID, OsidbDependencies
+from aegis_ai import config_logging
+from aegis_ai.agents import rh_feature_agent
+from aegis_ai.tools.osidb import CVE, CVEID, OsidbDependencies
 
 from evals.utils.osidb_cache import osidb_cache_retrieve
 

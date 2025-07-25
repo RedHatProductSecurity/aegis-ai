@@ -2,8 +2,8 @@ from typing import List, Literal
 
 from pydantic import Field, BaseModel
 
-from aegis.data_models import CVEID, CVSS3Vector
-from aegis.features.data_models import AegisFeatureModel
+from aegis_ai.data_models import CVEID, CVSS3Vector
+from aegis_ai.features.data_models import AegisFeatureModel
 
 
 class CVEFeatureInput(BaseModel):

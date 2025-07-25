@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 
-from aegis.tools.osidb import CVE, CVEID, osidb_retrieve
+from aegis_ai.tools.osidb import CVE, CVEID, osidb_retrieve
 
 logger = logging.getLogger(__name__)
 

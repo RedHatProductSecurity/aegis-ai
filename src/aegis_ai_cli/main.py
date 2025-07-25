@@ -9,15 +9,15 @@ import asyncio
 from rich.console import Console
 from rich.rule import Rule
 
-from aegis import check_llm_status, config_logging
-from aegis.agents import (
+from aegis_ai import check_llm_status, config_logging
+from aegis_ai.agents import (
     rh_feature_agent,
     public_feature_agent,
     simple_agent,
 )
-from aegis.data_models import CVEID
-from aegis.features import component, cve
-from aegis.features.data_models import AegisAnswer
+from aegis_ai.data_models import CVEID
+from aegis_ai.features import component, cve
+from aegis_ai.features.data_models import AegisAnswer
 # from aegis.rag import (
 #     add_fact_to_vector_store,
 #     FactInput,
@@ -26,7 +26,7 @@ from aegis.features.data_models import AegisAnswer
 #     add_document_to_vector_store,
 # )
 
-from aegis_cli import print_version
+from aegis_ai_cli import print_version
 
 console = Console()
 

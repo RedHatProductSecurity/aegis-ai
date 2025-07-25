@@ -20,7 +20,7 @@ from pydantic_ai import (
     Agent,
 )
 
-from aegis.kb.data_models import (
+from aegis_ai.kb.data_models import (
     DocumentInput,
     FactInput,
     RAGContext,

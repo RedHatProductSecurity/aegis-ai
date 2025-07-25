@@ -1,8 +1,8 @@
 import logging
 
-from aegis.data_models import CVEID
-from aegis.features import Feature
-from aegis.features.cve.data_models import (
+from aegis_ai.data_models import CVEID
+from aegis_ai.features import Feature
+from aegis_ai.features.cve.data_models import (
     CVSSDiffExplainerModel,
     SuggestImpactModel,
     SuggestCWEModel,
@@ -10,8 +10,8 @@ from aegis.features.cve.data_models import (
     RewriteStatementModel,
     RewriteDescriptionModel,
 )
-from aegis.features.cve.data_models import CVEFeatureInput
-from aegis.prompt import AegisPrompt
+from aegis_ai.features.cve.data_models import CVEFeatureInput
+from aegis_ai.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
 

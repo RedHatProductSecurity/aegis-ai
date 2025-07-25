@@ -2,9 +2,9 @@ import pytest
 
 from pydantic_evals import Case, Dataset
 
-from aegis.agents import rh_feature_agent
-from aegis.data_models import CVEID
-from aegis.features.cve import RewriteStatementText, PIIReportModel
+from aegis_ai.agents import rh_feature_agent
+from aegis_ai.data_models import CVEID
+from aegis_ai.features.cve import RewriteStatementText, PIIReportModel
 
 from evals.features.common import (
     common_feature_evals,

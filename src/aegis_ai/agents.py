@@ -7,15 +7,15 @@ from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai.common_tools.tavily import tavily_search_tool
 
-from aegis import (
+from aegis_ai import (
     default_llm_model,
     tavily_api_key,
     default_llm_settings,
 )
-from aegis.features.data_models import AegisAnswer
+from aegis_ai.features.data_models import AegisAnswer
 
-from aegis.tools.osidb import osidb_tool
-from aegis.tools.wikipedia import wikipedia_tool
+from aegis_ai.tools.osidb import osidb_tool
+from aegis_ai.tools.wikipedia import wikipedia_tool
 
 
 class AegisAgent(Agent):

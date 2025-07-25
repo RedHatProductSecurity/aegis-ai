@@ -2,9 +2,9 @@ import pytest
 
 from pydantic_core import ValidationError
 
-from aegis.agents import rh_feature_agent
-from aegis.data_models import CVEID
-from aegis.features import component, cve
+from aegis_ai.agents import rh_feature_agent
+from aegis_ai.data_models import CVEID
+from aegis_ai.features import component, cve
 from tests.utils.llm_cache import llm_cache_retrieve
 
 pytestmark = pytest.mark.asyncio

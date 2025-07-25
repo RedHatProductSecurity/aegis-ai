@@ -1,5 +1,5 @@
-from aegis.features.data_models import FeatureQueryInput
-from aegis.prompt import AegisPrompt
+from aegis_ai.features.data_models import FeatureQueryInput
+from aegis_ai.prompt import AegisPrompt
 
 
 def test_prompt():

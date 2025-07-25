@@ -16,13 +16,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # rh_feature_agent can be substituted with public_feature_agent
-from aegis.agents import rh_feature_agent as feature_agent
+from aegis_ai.agents import rh_feature_agent as feature_agent
 
-from aegis.agents import public_feature_agent, kb_agent
-from aegis.features import cve, component
-from aegis.kb import RagSystem, DocumentInput
+from aegis_ai.agents import public_feature_agent, kb_agent
+from aegis_ai.features import cve, component
+from aegis_ai.kb import RagSystem, DocumentInput
 from . import AEGIS_REST_API_VERSION
-from aegis.kb.data_models import FactInput, RAGQuery
+from aegis_ai.kb.data_models import FactInput, RAGQuery
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
