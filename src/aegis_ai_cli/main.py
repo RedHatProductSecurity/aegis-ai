@@ -18,13 +18,6 @@ from aegis_ai.agents import (
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import component, cve
 from aegis_ai.features.data_models import AegisAnswer
-# from aegis.rag import (
-#     add_fact_to_vector_store,
-#     FactInput,
-#     initialize_rag_db,
-#     DocumentInput,
-#     add_document_to_vector_store,
-# )
 
 from aegis_ai_cli import print_version
 
