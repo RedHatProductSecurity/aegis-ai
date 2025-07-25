@@ -25,4 +25,4 @@ def setup_logging_for_session():
 # sure that our evaluation is invariant to future changes in OSIDB data
 @pytest.fixture(scope="session", autouse=True)
 def override_rh_feature_agent():
-    rh_feature_agent._function_tools["osidb_tool"] = osidb_tool
+    rh_feature_agent._function_toolset.tools["osidb_tool"] = osidb_tool
