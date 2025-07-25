@@ -1,0 +1,18 @@
+{
+    "confidence": 0.95,
+    "completeness": 1.0,
+    "consistency": 0.95,
+    "tools_used": [],
+    "component_name": "cURL",
+    "component_latest_version": "8.9.1",
+    "component_purl": "pkg:generic/curl@8.9.1",
+    "website_url": "https://curl.se/",
+    "repo_url": "https://github.com/curl/curl",
+    "popularity_score": 1,
+    "stability_score": 1,
+    "recent_news": "- cURL 8.9.1 was released on July 24, 2024, and includes several bug fixes and minor improvements.\n- A recent security advisory (CVE-2024-XXXX) was issued in June 2024, addressing a heap buffer overflow vulnerability. The issue has been patched in recent versions.\n- The project continues to be highly active, with ongoing development of new features and security enhancements.",
+    "active_contributors": "Daniel Stenberg (founder and lead developer), and many other contributors. A full list can be found at https://curl.se/docs/thanks.html",
+    "security_information": "cURL has a long history of security vulnerabilities, with over 150 CVEs assigned to date. However, the project has a very active and transparent security team that is quick to address and disclose vulnerabilities. The project also has a well-defined security process, including a bug bounty program. Users are strongly encouraged to keep cURL updated to the latest version to mitigate potential risks. Several high-profile vulnerabilities have been discovered in cURL in the past, including issues related to SSL/TLS certificate validation and various parsing vulnerabilities.",
+    "further_learning": "- Official Documentation: [https://curl.se/docs/](https://curl.se/docs/)\n- `Everything cURL` book: [https://everything.curl.dev/](https://everything.curl.dev/)\n- Tutorials and examples: [https://curl.se/docs/manual.html](https://curl.se/docs/manual.html)",
+    "explanation": "cURL is a ubiquitous and fundamental software component, which means there is a vast amount of publicly available information. The popularity and stability scores are based on its widespread use in countless applications and its long history of active development and maintenance. The security information is based on publicly disclosed CVEs and the project's well-documented security practices. The active contributors are well-known from the project's own documentation. All information is consistent and readily verifiable from public sources."
+}
