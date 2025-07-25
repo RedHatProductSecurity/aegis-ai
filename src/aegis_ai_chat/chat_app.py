@@ -27,7 +27,7 @@ from pydantic_ai.messages import (
 )
 from pydantic import BaseModel
 
-from aegis.agents import public_feature_agent
+from aegis_ai.agents import public_feature_agent
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(

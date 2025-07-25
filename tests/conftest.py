@@ -3,7 +3,7 @@ import os
 import pytest
 from pydantic_ai import models
 
-from aegis import config_logging
+from aegis_ai import config_logging
 
 test_allow_recapture: bool = os.getenv("TEST_ALLOW_CAPTURE", "false").lower() in (
     "true",

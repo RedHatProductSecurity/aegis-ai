@@ -1,7 +1,7 @@
 import logging
 
-from aegis.agents import kb_agent
-from aegis.kb import RagSystem, DocumentInput, FactInput, RAGQuery
+from aegis_ai.agents import kb_agent
+from aegis_ai.kb import RagSystem, DocumentInput, FactInput, RAGQuery
 
 
 async def main():

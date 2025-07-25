@@ -1,4 +1,4 @@
-# <img src="docs/logo.png" alt="logo" width="50"> Aegis - Red Hat Product Security Agent
+# <img src="docs/logo.png" alt="logo" width="50"> Aegis-AI - Red Hat Product Security Agent
 
 [![Aegis Tests](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml/badge.svg)](https://github.com/RedHatProductSecurity/aegis/actions/workflows/tests.yml)
 
@@ -141,13 +141,15 @@ The following programmatically invokes the `SuggestImpact` feature:
 
 ```python
 import asyncio
-from aegis.agents import rh_feature_agent
-from aegis.features import cve 
+from aegis_ai.agents import rh_feature_agent
+from aegis_ai.features import cve
+
 
 async def main():
     feature = cve.SuggestImpact(rh_feature_agent)
     result = await feature.exec("CVE-2025-0725")
     print(result.output.model_dump_json(indent=2))
+
 
 if __name__ == "__main__":
     asyncio.run(main())

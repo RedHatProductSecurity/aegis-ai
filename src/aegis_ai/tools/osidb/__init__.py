@@ -12,8 +12,8 @@ from pydantic_ai import (
 
 import osidb_bindings
 
-from aegis.data_models import CVEID, cveid_validator
-from aegis.tools import BaseToolOutput
+from aegis_ai.data_models import CVEID, cveid_validator
+from aegis_ai.tools import BaseToolOutput
 
 logger = logging.getLogger(__name__)
 

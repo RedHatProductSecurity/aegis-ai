@@ -1,5 +1,5 @@
 [project]
-name = "aegis"
+name = "aegis-ai"
 version = "0.1.0"
 description = "Perform security analysis on security artifacts."
 requires-python = ">=3.13"
@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.scripts]
-aegis = "aegis_cli.main:aegis_cli"
+aegis = "aegis_ai_cli.main:aegis_cli"
 
 [build-system]
 requires = ["hatchling"]
