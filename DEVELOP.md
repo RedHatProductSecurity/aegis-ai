@@ -170,6 +170,7 @@ Aegis uses semantic versioning for all releases.
 1. Create new branch (ex. v1.1.2) which is not a release branch!
   * update `aegis_ai/__init__.py#version` 
   * update `docs/CHANGELOG.md` 
+  * update `pyproject.toml` version
 2. Raise prep PR, review and merge 
 3. Create new github release with new tag ( ex. 1.1.2 ) based on previously created branch
    * new tag triggers CI for pushing to prod
