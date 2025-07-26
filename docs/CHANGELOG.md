@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.2.4] - 2025-26-07
+### Added
+- Test aegis-ai publishing to pypi
+
 ## [0.2.3] - 2025-26-07
 ### Added
 - Initial aegis-ai development release
