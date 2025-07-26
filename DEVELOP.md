@@ -162,3 +162,15 @@ export TWINE_PASSWORD=pypi-your-long-api-token-string-here
 
 make publish-dist
 ```
+
+## Make a Release
+
+Aegis uses semantic versioning for all releases.
+
+1. Create new branch (ex. v1.1.2) which is not a release branch!
+  * update `aegis_ai/__init__.py#version` 
+  * update `docs/CHANGELOG.md` 
+2. Raise prep PR, review and merge 
+3. Create new github release with new tag ( ex. 1.1.2 ) based on previously created branch
+   * new tag triggers CI for pushing to prod
+   * publishing to pypi 
