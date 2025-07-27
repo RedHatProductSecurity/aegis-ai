@@ -1,6 +1,10 @@
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from aegis_ai.features.data_models import AegisFeatureModel
+
+
+class ComponentFeatureInput(BaseModel):
+    component_name: str = Field(..., description="component name")
 
 
 class ComponentIntelligenceModel(AegisFeatureModel):
