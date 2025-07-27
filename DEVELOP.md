@@ -1,178 +1,168 @@
 # Aegis Development Guide
 
-This document outlines the core architectural principles and development practices for the Aegis project.
+This document outlines the core principles, architecture, and development practices for the Aegis project.
 
-## Architecture Highlights
+-----
 
-Aegis leverages the power of Large Language Models (LLMs) to enhance security operations, built upon these key principles:
+## Architecture
 
-* **Pydantic Data Models:** We use Pydantic to define the **expected structure of LLM outputs**. This significantly reduces prompt engineering complexity, ensuring our agents receive reliable, structured data.
-* **`pydantic-ai` Agents:** Our custom `pydantic-ai` Agents orchestrate all interactions with the LLM. They autonomously decide when and how to utilize available tools, making them adaptable for diverse conversational and analytical tasks.
-* **Custom RAG Integrations:** We provide **private, in-context data** to the LLMs through integrations with systems like OSIDB and RHTPAv2. This Retrieval Augmented Generation (RAG) ensures LLMs have the specific, up-to-date information needed for accurate responses.
-* **Extensible Features:** Features serve as the primary mechanism for extending Aegis's capabilities, allowing for modular and scalable development.
+Aegis uses Large Language Models (LLMs) to perform advanced security analysis and operations. Its architecture is built on four key principles:
 
-Pydantic ai provides safety and guardrails via pydantic data models for input and defining `output-format` for all output from llm.
+  * **Pydantic Data Models**: We enforce data integrity by using Pydantic models to define the expected structure for both LLM inputs and outputs. This provides type safety, validation, and reduces prompt engineering complexity.
 
----
+  * **Autonomous Agents**: Aegis Agents, built with `pydantic-ai`, orchestrate all interactions with the LLM. They autonomously decide when and how to use available tools, making them adaptable for diverse tasks.
 
-## Adding a new feature
+  * **RAG for In-Context Data**: We use Retrieval Augmented Generation (RAG) to provide private, up-to-date information to the LLM. By integrating with systems like OSIDB and a `pgvector` knowledge base, we ensure our agents have the specific context needed for accurate, relevant responses.
 
-The rough steps to creating a new feature:
+  * **Extensible Features**: Features are self-contained capabilities that an agent can use. They bundle a specific prompt, an output model, and any necessary logic, allowing for modular and scalable development.
 
-1) develop a prompt (test prompt with developer console)
-2) identify if any new context is needed (might need a need tool integration or upload of facts/content into pgvector)
-3) add under appropriate features/ ensuring to define both prompt and pydantic data model
-4) write test, expose example usage in cli and rest server
+-----
+
+## Adding a New Feature
+
+Follow these steps to create and integrate a new feature:
+
+1.  **Define the Goal & Prompt**: Clearly define what the feature should accomplish and write a precise prompt to instruct the LLM. Test the prompt iteratively.
+2.  **Define the Output Model**: Create a Pydantic `BaseModel` that defines the structure of the data you expect back from the LLM.
+3.  **Implement the Feature**: Add a new module under the `src/aegis/features/` directory that combines the prompt and the Pydantic output model.
+4.  **Provide Context (If Needed)**: If the feature requires external data, either integrate a new tool or add relevant documents to the RAG knowledge base.
+5.  **Write Tests & Expose**: Add unit tests for the feature. Expose the new capability through the project's CLI and/or REST API.
+
+-----
 
 ## Getting Started
 
-Aegis development is powered by **`uv`**, the Python package installer and executor.
+Aegis development is managed with **`uv`**, a fast Python package installer and resolver.
 
-Install uv for your user (eg. no need to create project venv as uv will do all that)
+#### \#\#\# Setup
 
-```commandline
-pip install uv
-```
+1.  **Install `uv`**:
 
-### Running Aegis
-
-You can execute any application script with `uv run`:
-
-```commandline
-uv run python scripts/<script-name>
-```
-
-To start the Aegis REST API service:
-
-```commandline
-uv run uvicorn src.aegis_restapi.main:app --port 9000
-```
-
-To launch the Aegis Command-Line Interface (CLI):
-```commandline
-uv run aegis
-```
-
-### Setup RAG knowledgebase
-To run a local postgres with pgvector - which is used for additional RAG context.
-```commandline
-cd etc/deploy && podman-compose up --build
-```
-
-### Managing Dependencies
-`uv` simplifies dependency management:
-
-* **Synchronize All Dependencies:** Install all project dependencies, including development extras:
-    ```commandline
-    uv sync --all-extras --dev
-    ```
-* **Add a New Dependency:**
-    ```commandline
-    uv add numpy
-    ```
-* **Add a Development-Only Dependency:**
-    ```commandline
-    uv add --dev mypy
+    ```bash
+    pip install uv
     ```
 
----
+2.  **Sync Dependencies**: Install all project dependencies, including development tools. `uv` will create and manage a virtual environment automatically in `.venv`.
 
+    ```bash
+    uv sync --all-extras
+    ```
+
+3.  **Setup RAG Knowledge Base**: To run a local PostgreSQL instance with `pgvector` for RAG context:
+
+    ```bash
+    cd etc/deploy && podman-compose up --build
+    ```
+
+#### \#\#\# Running Aegis
+
+  * **Run a Script**:
+    ```bash
+    uv run python scripts/<script_name>.py
+    ```
+  * **Start the REST API**:
+    ```bash
+    uv run uvicorn src.aegis_restapi.main:app --port 9000
+    ```
+  * **Launch the CLI**:
+    ```bash
+    uv run aegis --help
+    ```
+
+#### \#\#\# Managing Dependencies
+
+  * **Add a New Dependency**:
+    ```bash
+    uv pip install numpy
+    ```
+  * **Add a Development-Only Dependency**:
+    ```bash
+    uv pip install --dev mypy
+    ```
+
+-----
 
 ## Code Quality
-We enforce code quality using **`ruff`** for linting and formatting.
 
-### Linting & Formatting Checks
-To check for linting errors:
+We enforce code quality using **`ruff`** for linting and formatting. These checks are run automatically in CI.
 
-```commandline
-uvx ruff check
-```
+  * **Check for Linting Errors**:
+    ```bash
+    uvx ruff check .
+    ```
+  * **Apply Formatting**:
+    ```bash
+    uvx ruff format .
+    ```
 
-To verify code formatting:
-
-```commandline
-uvx ruff format --check
-```
-
-### Automatic Formatting
-
-If `ruff format --check` reports issues, you can automatically fix them:
-
-```commandline
-uvx ruff format
-```
-
----
+-----
 
 ## Configuration
-Aegis is configured via environment variables, typically loaded from a `.env` file in your project root.
 
-Here's an example `.env` configuration:
+Configure Aegis via environment variables, typically loaded from a `.env` file in the project root. For LLM authentication, set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` as environment variables.
+
+**Example `.env` file:**
 
 ```ini
-# llm connection details
+# LLM Connection Details
 AEGIS_LLM_HOST="https://api.anthropic.com"
-AEGIS_LLM_MODEL="anthropic:claude-sonnet-4-latest"
+AEGIS_LLM_MODEL="anthropic:claude-3-sonnet-20240229"
 
-# RAG connection details and controls embedding of RAG knowledge and RAG query embedding
-PG_CONNECTION_STRING="postgresql://youruser:yourpassword@localhost:5432/aegis""
-AEGIS_RAG_SIMILARITY_SCORE_GT=.7
+# RAG Knowledge Base Configuration
+PG_CONNECTION_STRING="postgresql://youruser:yourpassword@localhost:5432/aegis"
+AEGIS_RAG_SIMILARITY_SCORE_GT=0.7
 AEGIS_RAG_EMBEDDING_DIMENSION=768
 AEGIS_RAG_EMBEDDING_MODEL_NAME="sentence-transformers/all-mpnet-base-v2"
 
-# tooling
+# Tooling API Keys and URLs
 TAVILY_API_KEY="tvly-dev-XXXXXX"
-AEGIS_OSIDB_SERVER_URL="https://localhost:8000"
-AEGIS_OSIDB_RETRIEVE_EMBARGOED='false'
+AEGIS_OSIDB_SERVER_URL="https://osidb-stage.example.com"
+AEGIS_OSIDB_RETRIEVE_EMBARGOED=false
 
-# For SSL/TLS certificate bundles, if your environment requires it:
+# Required for environments with custom SSL certificates
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
 
-**Note:** For external llm models -need to set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` env vars.
-
----
+-----
 
 ## Testing
-We use **`pytest`** for our test suite, with `pytest-asyncio` for asynchronous tests.
 
-To run all tests:
+Our test suite uses **`pytest`** and `pytest-asyncio`.
 
-```commandline
-make test
-```
+  * **Run All Tests**:
+    ```bash
+    make test
+    ```
+  * **Run a Specific Test by Name**:
+    ```bash
+    uv run pytest -k "test_suggest_impact_with_bad_cve"
+    ```
 
-Run a specific test:
-```commandline
-uv run pytest -k "test_suggest_impact_with_bad_cve_test_model"
-```
+-----
 
+## Publishing & Releasing
 
-## Build and Publish to pypi
+#### Build and Publish to PyPI
 
-```commandline
-make build-dist
-```
+1.  **Build the Distribution**:
+    ```bash
+    make build-dist
+    ```
+2.  **Publish to PyPI**: Set your credentials and run the publish command.
+    ```bash
+    export TWINE_USERNAME=__token__
+    export TWINE_PASSWORD=pypi-your-long-api-token-string-here
 
-and to push to pypi:
+    make publish-dist
+    ```
 
-```commandline
-export TWINE_USERNAME=__token__
-export TWINE_PASSWORD=pypi-your-long-api-token-string-here
+####  Making a Release
 
-make publish-dist
-```
+Aegis uses semantic versioning.
 
-## Make a Release
-
-Aegis uses semantic versioning for all releases.
-
-1. Create new branch (ex. v1.1.2) which is not a release branch!
-  * update `aegis_ai/__init__.py#version` 
-  * update `docs/CHANGELOG.md` 
-  * update `pyproject.toml` version
-  * update `uv.lock` by running `make`
-2. Raise prep PR, review and merge 
-3. Create new github release with new tag ( ex. 1.1.2 ) based on previously created branch
-   * new tag triggers CI for pushing to prod
-   * publishing to pypi 
+1.  **Create a Release Branch**: Create a new branch for the release (e.g., `release-prep/v1.1.2`).
+2.  **Update Version**: Increment the version number in `pyproject.toml`.
+3.  **Update Changelog**: Add the release notes to `docs/CHANGELOG.md`.
+4.  **Sync Lockfile**: Update `uv.lock` by running `make` or `uv lock`.
+5.  **Submit PR**: Create a pull request, get it reviewed, and merge it into the main branch.
+6.  **Tag and Release**: Create a new tag and release on GitHub from the main branch. The tag (e.g., `v1.1.2`) will trigger the CI pipeline to build and publish the package to PyPI.
