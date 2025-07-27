@@ -31,8 +31,9 @@ class AegisAgent(Agent):
             model=default_llm_model,
             model_settings=default_llm_settings
             | {
-                "temperature": 0.05,
+                "temperature": 0.06,
                 "top_p": 0.8,
+                "seed": 42,
                 "response_format": {"type": "json_object"},
             },
             **kwargs,

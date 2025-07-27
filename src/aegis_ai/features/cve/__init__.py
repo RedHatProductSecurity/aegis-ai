@@ -63,10 +63,10 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
-            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest CWE-ID(s) for the CVE",
-            goals="""
-                Given a description of a Common Vulnerabilities and Exposures (CVE), accurately predict its Common Weakness Enumeration (CWE). List all CWE that are applicable.
-                
+            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest the most precise and specific CWE that describes the vulnerability",
+            goals="""                
+                Given the CVE json data, identify the most precise and specific CWE that describes the vulnerability.
+
                 Provide the predicted CWE identifier and a brief explanation for the reasoning behind the prediction.
                 
                 Provide a confidence % representing how confident you are this is correct CWE.
@@ -89,11 +89,17 @@ class SuggestCWE(Feature):
                 a) Based on the analysis of the CVE description, predict the most likely CWE.
                 
                 b) Provide the standard CWE identifier (e.g., CWE-119).
+
+                c) When making CWE assessment, prioritize the correct level CWE in the hierarchy that accurately describes the direct root cause of the flaw, rather than a more general parent category. For example
+                if there is a choice between CWE-272 and CWE-271, return CWE-271 if it is more appropriate (if it is more general).            
                 
-                c) Offer a concise explanation outlining the connection between the CVE description and the predicted CWE.
+                d) Offer a concise explanation outlining the connection between the CVE description and the predicted CWE.
                 
-                d) Avoid predicting CWEs that are discouraged or prohibited for Vulnerability Mapping by MITRE.  In particular, do not suggest CWE-264 and CWE-269.
-            """,
+                e) Avoid predicting CWEs that are discouraged or prohibited for Vulnerability Mapping by MITRE.  In particular, do not suggest CWE-264 and CWE-269.
+                
+                f) compare other CVEs with the same CWE to help provide higher confidence in the analysis
+                
+                """,
             context=CVEFeatureInput(cve_id=cve_id),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
