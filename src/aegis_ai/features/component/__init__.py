@@ -1,7 +1,10 @@
 import logging
 
 from aegis_ai.features import Feature
-from aegis_ai.features.component.data_models import ComponentIntelligenceModel
+from aegis_ai.features.component.data_models import (
+    ComponentIntelligenceModel,
+    ComponentFeatureInput,
+)
 from aegis_ai.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
@@ -53,7 +56,7 @@ class ComponentIntelligence(Feature):
                     * For dependencies, clearly label their security information separately.
                     * Further learning section should include links to tutorials and docs
             """,
-            context=component_name,
+            context=ComponentFeatureInput(component_name=component_name),
             output_schema=ComponentIntelligenceModel.model_json_schema(),
         )
         logger.debug(prompt.to_string())
