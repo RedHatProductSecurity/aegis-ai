@@ -24,4 +24,8 @@ http://localhost:9000/docs
 ## Developer console
 
 
-## Running endpoint Tests
+## Running endpoint tests
+
+```commandline
+make test-web
+```
