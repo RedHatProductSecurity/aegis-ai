@@ -7,7 +7,7 @@ run-chat:
 	uv run uvicorn aegis_ai_chat.chat_app:app --port 9001 --reload
 
 run-web:
-	uv run uvicorn aegis_ai_web.main:app --port 9000 --reload
+	uv run uvicorn aegis_ai_web.src.main:app --port 9000 --reload
 
 run-vllm:
 	vllm serve RedHatAI/Mistral-Small-24B-Instruct-2501-quantized.w4a16 --max_model_len 4048 --enable-auto-tool-choice --tool-call-parser mistral --enable-reasoning  --dtype auto --gpu-memory-utilization .96 --quantization compressed-tensors
@@ -36,7 +36,7 @@ eval-in-parallel:
 	uv run pytest -rA -vv -n auto evals
 
 test:
-	uv run pytest
+	uv run pytest tests
 
 upgrade-deps:
 	uv sync --upgrade
