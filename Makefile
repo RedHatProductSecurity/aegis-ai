@@ -38,6 +38,9 @@ eval-in-parallel:
 test:
 	uv run pytest tests
 
+test-web:
+	uv run pytest src/aegis_ai_web/tests
+
 upgrade-deps:
 	uv sync --upgrade
 
