@@ -6,8 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
+- added AI disclaimer to all responses
+- added minimal OTEL support
 ### Changed
+- refactored aegis_ai_web REST API endpoints
+- updated to pydantic-ai 0.4.8
+- removed a lot of stale code
+
 ### Fixed
+- made suggest-cwe more accurate
 
 ## [0.2.4] - 2025-26-07
 ### Added

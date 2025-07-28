@@ -1,4 +1,4 @@
-all: check test
+all: check test test-web
 
 install:
 	pip install . --force
