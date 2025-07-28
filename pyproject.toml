@@ -27,7 +27,7 @@ dependencies = [
     "rich>=14.0.0",
     "uvicorn>=0.34.3",
     "wikipedia>=1.4.0",
-    "logfire[fastapi,httpx]>=4.0.0",
+    "logfire[fastapi,httpx,sqlite3]>=4.0.0",
 ]
 
 [project.scripts]
