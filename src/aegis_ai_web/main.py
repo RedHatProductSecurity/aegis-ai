@@ -4,13 +4,17 @@ aegis web example
 
 """
 
-import logging
+import os
 from pathlib import Path
 
+import logfire
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+from aegis_ai import config_logging
 
 # rh_feature_agent can be substituted with public_feature_agent
 from aegis_ai.agents import rh_feature_agent as feature_agent
@@ -19,14 +23,15 @@ from aegis_ai.agents import public_feature_agent
 from aegis_ai.features import cve, component
 from . import AEGIS_REST_API_VERSION
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+config_logging()
 
 app = FastAPI(
     title="Aegis web",
     description="A simple web console and REST API for Aegis.",
     version=AEGIS_REST_API_VERSION,
 )
+
+logfire.instrument_fastapi(app)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -37,6 +42,13 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+favicon_path = os.path.join(STATIC_DIR, "favicon.ico")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(favicon_path)
 
 
 @app.get("/", response_class=HTMLResponse)

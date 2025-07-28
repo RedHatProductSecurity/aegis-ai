@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import logging
 import os
 
+import logfire
 from dotenv import load_dotenv
 from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
 from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
@@ -24,6 +25,14 @@ logger = logging.getLogger("aegis")
 logger.info("starting aegis")
 
 __version__ = "0.2.4"
+
+otel_enable = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in (
+    "true",
+    "1",
+    "t",
+    "y",
+    "yes",
+)
 
 llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
 llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
@@ -73,6 +82,12 @@ def config_logging(level="INFO"):
     logging.basicConfig(
         level=level, format=message_format, datefmt="[%X]", handlers=[RichHandler()]
     )
+
+    if otel_enable:
+        logfire.configure(send_to_logfire=False)
+        logfire.instrument_pydantic_ai(event_mode="logs")
+        logfire.instrument_pydantic_ai()
+        logfire.instrument_httpx(capture_all=True)
 
 
 def check_llm_status() -> bool:

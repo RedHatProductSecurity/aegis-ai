@@ -12,6 +12,8 @@ run-web:
 run-vllm:
 	vllm serve RedHatAI/Mistral-Small-24B-Instruct-2501-quantized.w4a16 --max_model_len 4048 --enable-auto-tool-choice --tool-call-parser mistral --enable-reasoning  --dtype auto --gpu-memory-utilization .96 --quantization compressed-tensors
 
+run-otel:
+	podman run --rm -it -p 4318:4318 --name otel-tui ymtdzzz/otel-tui:latest
 
 ############################################################################
 # dev
