@@ -21,12 +21,13 @@ dependencies = [
     "osidb-bindings>=4.12.0",
     "packageurl-python>=0.16.0",
     "pydantic>=2.11.7",
-    "pydantic-ai>=0.4.4",
+    "pydantic-ai[logfire]>=0.4.4",
     "pydantic-ai-slim[duckduckgo,mcp,tavily]>=0.4.2",
     "pygithub>=2.6.1",
     "rich>=14.0.0",
     "uvicorn>=0.34.3",
     "wikipedia>=1.4.0",
+    "logfire[fastapi,httpx]>=4.0.0",
 ]
 
 [project.scripts]
