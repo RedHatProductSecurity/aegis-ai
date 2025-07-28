@@ -1,12 +1,25 @@
 # Aegis web
 
-A minimal web server (based on fastapi) mostly to illustrate how to integrate Aegis and test with it.
+A minimal web server (based on fastapi) that can be used for integration and testing.
+
+```commandline
+make run-web
+```
+or directly via
 
 ```commandline
 uv run uvicorn src.aegis_ai_web.main:app --port 8000
 ```
+## REST-API
+
+Open api definition is available dynamically:
+http://localhost:9000/openapi.json
+
+REST API documentation is available via
+http://localhost:9000/redoc
+or
+http://localhost:9000/docs
+
 
 ## Developer console
-
-## REST-API
 
