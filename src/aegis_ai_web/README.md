@@ -8,7 +8,7 @@ make run-web
 or directly via
 
 ```commandline
-uv run uvicorn src.aegis_ai_web.main:app --port 8000
+uv run uvicorn src.aegis_ai_web.src.main:app --port 8000
 ```
 ## REST-API
 
@@ -23,3 +23,5 @@ http://localhost:9000/docs
 
 ## Developer console
 
+
+## Running endpoint Tests
