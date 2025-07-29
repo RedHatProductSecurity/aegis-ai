@@ -1,5 +1,6 @@
 # Example chat
 
+Note this is not a production quality (or secure) chat application but provided as example.
 
 To start up chat web application:
 ```commandline
