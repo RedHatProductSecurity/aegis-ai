@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - added AI disclaimer to all responses
 - added minimal OTEL support
+- enable nvd-mcp tool (requires NVD_API_KEY to be set)
+
 ### Changed
 - removed a lot of stale code
 - refactored aegis_ai_web REST API endpoints
