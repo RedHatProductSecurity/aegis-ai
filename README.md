@@ -100,13 +100,23 @@ Be aware that `Aegis` is an agent (which autonomously invokes tools) so any LLM 
 
 Aegis provides a few 'out of the box' tools that the agent can use to enhance LLM query context.
 
-#### Tavily Search engine
+#### Public tools
+
+##### NVD
+Integration with Tavily is achieved via built in pydantic-ai support
+```bash
+export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
+```
+
+##### Tavily Search engine
 Integration with Tavily is achieved via built in pydantic-ai support
 ```bash
 export TAVILY_API_KEY="tvly-dev-XXXXXX"
 ```
 
-#### OSIDB
+#### RedHat tools
+
+##### OSIDB
 Integration with OSIDB is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
 OSIDB server url for Aegis with:
 ```bash
@@ -115,8 +125,9 @@ export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
 
 Uses kerberos built in auth with `osidb-bindings`.
 
-#### RHTPA
+##### RHTPA
 TBA
+
 
 #### More Context
 TBA

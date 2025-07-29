@@ -3,7 +3,11 @@ aegis cli
 
 """
 
+import os
+
 from aegis_ai import __version__
+
+feature_agent = os.getenv("AEGIS_CLI_FEATURE_AGENT", "public")
 
 
 def print_version(ctx, param, value):
