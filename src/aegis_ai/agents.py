@@ -13,6 +13,7 @@ from aegis_ai import (
     default_llm_settings,
 )
 from aegis_ai.features.data_models import AegisAnswer
+from aegis_ai.mcp import nvd_stdio_server
 
 from aegis_ai.tools.osidb import osidb_tool
 from aegis_ai.tools.wikipedia import wikipedia_tool
@@ -56,6 +57,7 @@ public_feature_agent = AegisAgent(
         tavily_search_tool(tavily_api_key),
         wikipedia_tool,
     ],
+    toolsets=[nvd_stdio_server],
 )
 
 kb_agent = AegisAgent(name="KBAgent")

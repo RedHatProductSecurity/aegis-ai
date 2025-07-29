@@ -36,3 +36,6 @@ jobs:
 
       - name: Run tests
         run: uv run pytest tests
+
+      - name: Run tests-web
+        run: uv run pytest src/aegis_ai_web/tests

@@ -19,9 +19,14 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features import component, cve
 from aegis_ai.features.data_models import AegisAnswer
 
-from aegis_ai_cli import print_version
+from aegis_ai_cli import print_version, feature_agent
 
 console = Console()
+
+if "public" in feature_agent:
+    cli_agent = public_feature_agent
+else:
+    cli_agent = rh_feature_agent
 
 
 @click.group()
@@ -90,7 +95,7 @@ def identify_pii(cve_id):
     """
 
     async def _doit():
-        feature = cve.IdentifyPII(rh_feature_agent)
+        feature = cve.IdentifyPII(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -107,7 +112,7 @@ def suggest_impact(cve_id):
     """
 
     async def _doit():
-        feature = cve.SuggestImpact(rh_feature_agent)
+        feature = cve.SuggestImpact(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -124,7 +129,7 @@ def suggest_cwe(cve_id):
     """
 
     async def _doit():
-        feature = cve.SuggestCWE(rh_feature_agent)
+        feature = cve.SuggestCWE(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -141,7 +146,7 @@ def rewrite_description(cve_id):
     """
 
     async def _doit():
-        feature = cve.RewriteDescriptionText(rh_feature_agent)
+        feature = cve.RewriteDescriptionText(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -158,7 +163,7 @@ def rewrite_statement(cve_id):
     """
 
     async def _doit():
-        feature = cve.RewriteStatementText(rh_feature_agent)
+        feature = cve.RewriteStatementText(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -175,7 +180,7 @@ def cvss_diff(cve_id):
     """
 
     async def _doit():
-        feature = cve.CVSSDiffExplainer(rh_feature_agent)
+        feature = cve.CVSSDiffExplainer(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
