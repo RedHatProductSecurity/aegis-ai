@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Added
 ### Changed
+- use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 
 ### Fixed
 
 ## [0.2.45 - 2025-29-07

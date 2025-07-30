@@ -5,18 +5,14 @@ aegis agents
 from typing import Any
 
 from pydantic_ai import Agent
-from pydantic_ai.common_tools.tavily import tavily_search_tool
 
 from aegis_ai import (
     default_llm_model,
-    tavily_api_key,
     default_llm_settings,
 )
 from aegis_ai.features.data_models import AegisAnswer
-from aegis_ai.mcp import nvd_stdio_server
-
 from aegis_ai.tools.osidb import osidb_tool
-from aegis_ai.tools.wikipedia import wikipedia_tool
+from aegis_ai.toolsets import public_toolset
 
 
 class AegisAgent(Agent):
@@ -32,7 +28,7 @@ class AegisAgent(Agent):
             model=default_llm_model,
             model_settings=default_llm_settings
             | {
-                "temperature": 0.06,
+                "temperature": 0.055,
                 "top_p": 0.8,
                 "seed": 42,
                 "response_format": {"type": "json_object"},
@@ -46,18 +42,13 @@ simple_agent = AegisAgent(
     output_type=AegisAnswer,
 )
 
-rh_feature_agent = AegisAgent(
-    name="RHFeatureAgent",
-    tools=[osidb_tool],
-)
+
+rh_feature_agent = AegisAgent(name="RHFeatureAgent", tools=[osidb_tool])
+
 
 public_feature_agent = AegisAgent(
     name="PublicFeatureAgent",
-    tools=[
-        tavily_search_tool(tavily_api_key),
-        wikipedia_tool,
-    ],
-    toolsets=[nvd_stdio_server],
+    toolsets=[public_toolset],
 )
 
 kb_agent = AegisAgent(name="KBAgent")

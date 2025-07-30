@@ -145,6 +145,12 @@ Our test suite uses **`pytest`** and `pytest-asyncio`.
 
 -----
 
+## Registering MCP
+
+Add MCP servers to aegis_ai.toolsets
+
+-----
+
 ## Publishing & Releasing
 
 #### Build and Publish to PyPI

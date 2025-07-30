@@ -433,7 +433,8 @@ class RewriteStatementText(Feature):
                 
                 c) Do not duplicate information available in other fields, such as flaw description.  Do not describe low-level technical details.
                 
-                
+                d) The rewritten statement should not be a rephrasing of the flaw description. Do not duplicate Flaw description.
+
                 # Further Guidelines to Writing a Comprehensive Vulnerability Statement
                 
                 A CVE's statement covers more than just the rationale behind an impact rating. Additionally it touches on:
