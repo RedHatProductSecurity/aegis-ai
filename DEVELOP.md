@@ -2,6 +2,7 @@
 
 This document outlines the core principles, architecture, and development practices for the Aegis project.
 
+[Review adrs](docs/adrs)
 -----
 
 ## Architecture
@@ -48,12 +49,6 @@ Aegis development is managed with **`uv`**, a fast Python package installer and 
     uv sync --all-extras
     ```
 
-3.  **Setup RAG Knowledge Base**: To run a local PostgreSQL instance with `pgvector` for RAG context:
-
-    ```bash
-    cd etc/deploy && podman-compose up --build
-    ```
-
 #### \#\#\# Running Aegis
 
   * **Run a Script**:
@@ -62,7 +57,7 @@ Aegis development is managed with **`uv`**, a fast Python package installer and 
     ```
   * **Start the REST API**:
     ```bash
-    uv run uvicorn src.aegis_restapi.main:app --port 9000
+    uv run uvicorn src.aegis_ai_web.src.main:app --port 9000
     ```
   * **Launch the CLI**:
     ```bash
@@ -73,11 +68,11 @@ Aegis development is managed with **`uv`**, a fast Python package installer and 
 
   * **Add a New Dependency**:
     ```bash
-    uv pip install numpy
+    uv add numpy
     ```
   * **Add a Development-Only Dependency**:
     ```bash
-    uv pip install --dev mypy
+    uv add --dev mypy
     ```
 
 -----
@@ -104,23 +99,33 @@ Configure Aegis via environment variables, typically loaded from a `.env` file i
 **Example `.env` file:**
 
 ```ini
-# LLM Connection Details
-AEGIS_LLM_HOST="https://api.anthropic.com"
-AEGIS_LLM_MODEL="anthropic:claude-3-sonnet-20240229"
+# AEGIS CLI default agent
+AEGIS_CLI_FEATURE_AGENT="redhat"
 
-# RAG Knowledge Base Configuration
-PG_CONNECTION_STRING="postgresql://youruser:yourpassword@localhost:5432/aegis"
-AEGIS_RAG_SIMILARITY_SCORE_GT=0.7
-AEGIS_RAG_EMBEDDING_DIMENSION=768
-AEGIS_RAG_EMBEDDING_MODEL_NAME="sentence-transformers/all-mpnet-base-v2"
+# LLM Connection Details
+AEGIS_LLM_HOST="https://generativelanguage.googleapis.com"
+AEGIS_LLM_MODEL="gemini-2.5-pro"
+GEMINI_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# Enable OTEL
+AEGIS_OTEL_ENABLED="true"
+OTEL_EXPORTER_OTLP_ENDPOINT='http://localhost:4318'
+
+# Recapture LLM results to cache in tests
+TEST_ALLOW_CAPTURE="true"
 
 # Tooling API Keys and URLs
+NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXX"
 TAVILY_API_KEY="tvly-dev-XXXXXX"
+
+# OSIDB bindings conn details
 AEGIS_OSIDB_SERVER_URL="https://osidb-stage.example.com"
 AEGIS_OSIDB_RETRIEVE_EMBARGOED=false
 
 # Required for environments with custom SSL certificates
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
+
+
 ```
 
 -----

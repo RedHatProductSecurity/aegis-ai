@@ -17,7 +17,7 @@ Aegis helps by:
 ---
 
 ## Features
-Aegis features address common product security needs:
+Aegis features provide common product security analysis:
 
 ### CVE Analysis
 * **Suggest Impact:** Get an in context LLM-driven suggestion for a CVE's overall impact.
@@ -30,26 +30,26 @@ Aegis features address common product security needs:
 ### Component Intelligence
 * **Component Intelligence:** Generate a component information 'card'.
 
-## Context
+## Security Context
 Feature analysis requires 'context' beyond that contained by any specific LLM model. 
 
 We provide 'out of the box' integrations providing security context with the following:
 
 * [OSIDB](https://github.com/RedHatProductSecurity/osidb) 
 * [RHTPAv2](https://github.com/trustification/trustify)
+* NVD
 
 which perform lookups on security entities (ex. CVE).
 
-Aegis can also be an [MCP](https://modelcontextprotocol.io/introduction) client to integrate (providing further tooling/context)
-with any compliant MCP servers.
+Aegis is also a [MCP](https://modelcontextprotocol.io/introduction) client allowing it to easily integrate with any compliant MCP server.
 
 ---
 
 ## Quick Start
 
-Either clone this repo 
+Clone this repo 
 
-or install with pypi
+or install via [pypi](https://pypi.org/project/aegis-ai/):
 
 ```commandline
 pip install aegis-ai
@@ -103,7 +103,7 @@ Aegis provides a few 'out of the box' tools that the agent can use to enhance LL
 #### Public tools
 
 ##### NVD
-Integration with Tavily is achieved via built in pydantic-ai support
+Integration with NVD for looking up NIST CVE:
 ```bash
 export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
 ```
