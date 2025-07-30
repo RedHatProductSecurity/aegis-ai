@@ -50,7 +50,7 @@ class SuggestImpactModel(AegisFeatureModel):
         ...,
         description="Suggested Red Hat CVSS3 score",
     )
-    cvss3_vector: str = Field(
+    cvss3_vector: CVSS3Vector = Field(
         ...,
         description="Suggested Red Hat CVSS3 vector",
     )
