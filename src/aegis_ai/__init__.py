@@ -53,10 +53,7 @@ else:
         model_name=llm_model,
         provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
     )
-    default_llm_settings = OpenAIResponsesModelSettings(
-        openai_reasoning_effort="low",
-        openai_reasoning_summary="detailed",
-    )
+    default_llm_settings = OpenAIResponsesModelSettings()
 
 
 @dataclass
