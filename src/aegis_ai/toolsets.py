@@ -29,7 +29,7 @@ rhtpa_sse_server = MCPServerSSE(url="http://localhost:8081/sse")
 # Toolset containing public tools
 public_toolset = CombinedToolset(
     [
-        FunctionToolset(tools=[tavily_search_tool(tavily_api_key), wikipedia_tool]),
         nvd_stdio_server,
+        FunctionToolset(tools=[tavily_search_tool(tavily_api_key), wikipedia_tool]),
     ]
 )
