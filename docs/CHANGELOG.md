@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 
-- update to pydantic-ai 0.4.9
 - ensure suggest-impact uses CVSS3 validation
+- update to pydantic-ai 0.4.10
+- update to osidb-bindings 4.14.0
+
 ### Fixed
 
 ## [0.2.45 - 2025-29-07
