@@ -233,7 +233,35 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
 
     redhat_cvss3_vector: CVSS3Vector = Field(
         ...,
-        description="Contains Red Hat CVSS3 vector for this CVE.",
+        description="""
+        Includes Red Hat CVSS3 severity vector details for the specified Common Vulnerabilities and Exposures (CVE) identifier.
+        Always include CVSS:3.1 prefix.
+        
+        Vector Example: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+        
+        Vector Breakdown:
+        - Version: CVSS:3.1 (Common Vulnerability Scoring System)
+        - Attack Characteristics:
+          • Vector (AV:N): Network-based attack
+          • Complexity (AC:L): Low complexity
+          • Privileges (PR:N): No authentication required
+          • User Interaction (UI:N): No user interaction needed
+        
+        Impact Metrics:
+        - Confidentiality Impact (C:H): High data exposure risk
+        - Integrity Impact (I:H): High system modification potential
+        - Availability Impact (A:H): High service disruption likelihood
+        
+        Severity Assessment:
+        - CVSS Score: 9.8/10.0 (Critical)
+        - Risk Profile: Maximum severity
+        - Potential Consequences: Remote, comprehensive system compromise
+        
+        Recommended Actions:
+        - Immediate patch/mitigation required
+        - Urgent security review
+        - Comprehensive system vulnerability assessment
+        """,
     )
 
     nvd_cvss3_score: str = Field(
@@ -243,7 +271,35 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
 
     nvd_cvss3_vector: CVSS3Vector = Field(
         ...,
-        description="Contains nvd (NIST) CVSS3 vector for this CVE.",
+        description="""        
+        Includes NVD (NIST) CVSS3 severity vector details for the specified Common Vulnerabilities and Exposures (CVE) identifier.
+        Always include CVSS:3.1 prefix.
+
+        Vector Example: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+        
+        Vector Breakdown:
+        - Version: CVSS:3.1 (Common Vulnerability Scoring System)
+        - Attack Characteristics:
+          • Vector (AV:N): Network-based attack
+          • Complexity (AC:L): Low complexity
+          • Privileges (PR:N): No authentication required
+          • User Interaction (UI:N): No user interaction needed
+        
+        Impact Metrics:
+        - Confidentiality Impact (C:H): High data exposure risk
+        - Integrity Impact (I:H): High system modification potential
+        - Availability Impact (A:H): High service disruption likelihood
+        
+        Severity Assessment:
+        - CVSS Score: 9.8/10.0 (Critical)
+        - Risk Profile: Maximum severity
+        - Potential Consequences: Remote, comprehensive system compromise
+        
+        Recommended Actions:
+        - Immediate patch/mitigation required
+        - Urgent security review
+        - Comprehensive system vulnerability assessment
+        """,
     )
 
     components: List = Field(

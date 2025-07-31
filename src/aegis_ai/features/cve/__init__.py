@@ -21,7 +21,7 @@ class SuggestImpact(Feature):
 
     async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
-            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest an overall impact rating for the CVE as well as suggest a related CVSS3 and CVSS4 score/vector.",
+            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest an overall impact rating for the CVE as well as suggest a related CVSS3 and CVSS4 score/vector. Ignore any mention of specific impact/severity (or CVSS) and come to independent conclusion.",
             goals="""
                 # Task:
                 Given a CVE ID or CVE description containing a description of a vulnerability, draft CVSS, affected components and other information generate an impact rating based on the following four-point scale used by Red Hat:
@@ -65,26 +65,40 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
-            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest the most precise and specific CWE that describes the vulnerability",
+            user_instruction="Conduct a precise, systematic identification of the most appropriate Common Weakness Enumeration (CWE) for a given Common Vulnerabilities and Exposures (CVE) JSON object. Ignore any mention of specific CWE and come to independent conclusion.",
             goals="""                
-                Given the CVE json data, identify the most precise and specific CWE that describes the vulnerability.
-
-                Provide the predicted CWE identifier and a brief explanation for the reasoning behind the prediction.
-                
-                Provide a confidence % representing how confident you are this is correct CWE.
-                
-                Assist users in understanding the potential software weakness associated with a given vulnerability.
-                
-                # Instructions for Analysis:
-                
-                Thorough Traversal: Recursively traverse the entire provided JSON object, including nested arrays and objects.
-            """,
+            Core Analysis Methodology:
+            1. Comprehensive JSON Examination
+               - Perform exhaustive traversal of entire JSON structure
+               - Extract and analyze all relevant vulnerability descriptors
+               - Identify nuanced characteristics indicating specific software weakness
+            
+            2. CWE Identification Protocol
+               - Predict most precise CWE identifier
+               - Prioritize specific, hierarchically accurate weakness representation
+               - Avoid overly broad or discouraged CWE classifications
+            
+            Mandatory Analysis Components:
+            - CWE Identifier: Standard numeric classification (e.g., CWE-119)
+            - Confidence Percentage: Quantitative assessment of prediction reliability
+            - Reasoning Explanation: Concise rationale linking CVE description to selected CWE            """,
             rules="""
-                Input Processing:
+                Critical Selection Guidelines:
+                a) Prioritize most specific CWE matching vulnerability's root cause
+                b) Reject generalized or prohibited CWEs (specifically CWE-264, CWE-269)
+                c) Cross-reference similar historical CVE classifications
+                d) Emphasize technical precision over generalization
                 
-                a) Receive and process textual descriptions of CVEs.
+                Confidence Scoring Criteria:
+                - Low (25-49%): Tentative match, significant uncertainty
+                - Medium (50-74%): Strong indicative correlation
+                - High (75-100%): Highly precise, well-substantiated mapping
                 
-                b) Identify key characteristics and patterns within the CVE description relevant to potential software weaknesses.
+                Prohibited Practices:
+                - Avoid vague or overly broad weakness descriptions
+                - Reject CWE classifications lacking clear technical justification
+                - Prevent speculative or unsupported weakness assignments
+                    
                 
                 # CWE Prediction:
                 
@@ -487,7 +501,7 @@ class CVSSDiffExplainer(Feature):
         prompt = AegisPrompt(
             user_instruction="Explain the differences of cvss score attributed to CVE between supplied redhat CVE context and nvd CVE.",
             goals="""
-                * Given a Common Vulnerabilities and Exposures (CVE) identifier, retrieve  its Red Hat CVSS and NVD(NIST) CVSS score
+                * Given a Common Vulnerabilities and Exposures (CVE) identifier, retrieve  its Red Hat CVSS3 score and vector and NVD(NIST) CVSS3 score
                 * compare the Red Hat Common Vulnerability Scoring System (CVSS) score with the CVSS score reported by the National Vulnerability Database (NVD).
                 * Identify and clearly explain any differences between the Red Hat and NVD CVSS scores.
                 * Provide context for the CVSS metrics and how they contribute to the overall score, focusing on explaining why the scores might differ.
