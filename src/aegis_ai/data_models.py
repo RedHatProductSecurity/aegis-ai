@@ -34,7 +34,7 @@ CVSS3Vector = Annotated[
 
 
 def is_cvss4_valid(cvss_str: str) -> bool:
-    """return True if cvss_str is a valid CVSS3 vector"""
+    """return True if cvss_str is a valid CVSS4 vector"""
     try:
         cvss.cvss4.CVSS4(cvss_str)
         return True
@@ -45,7 +45,7 @@ def is_cvss4_valid(cvss_str: str) -> bool:
 
 def validate_with_is_cvss4(v: str) -> str:
     if not is_cvss4_valid(v):
-        raise ValueError(f"'{v}' is not a valid CVSS3 vector.")
+        raise ValueError(f"'{v}' is not a valid CVSS4 vector.")
     return v
 
 
