@@ -2,7 +2,7 @@ from typing import List, Literal
 
 from pydantic import Field, BaseModel
 
-from aegis_ai.data_models import CVEID, CVSS3Vector, CVSS4Vector
+from aegis_ai.data_models import CVEID, CVSS3Vector, CVSS4Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -92,7 +92,7 @@ class SuggestCWEModel(AegisFeatureModel):
         """,
     )
 
-    cwe: List = Field(
+    cwe: List[CWEID] = Field(
         ...,
         description="List of cwe-ids",
     )

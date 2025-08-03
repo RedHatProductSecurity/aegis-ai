@@ -37,7 +37,8 @@ We provide 'out of the box' integrations providing security context with the fol
 
 * [OSIDB](https://github.com/RedHatProductSecurity/osidb) 
 * [RHTPAv2](https://github.com/trustification/trustify)
-* NVD
+* NVD (https://github.com/marcoeg/mcp-nvd)
+* CWE (https://cwe.mitre.org)
 
 which perform lookups on security entities (ex. CVE).
 
