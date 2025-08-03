@@ -7,11 +7,17 @@ import datetime
 from dataclasses import dataclass, field
 import logging
 import os
+from pathlib import Path
+from typing import Dict
+
+from platformdirs import user_config_dir
+from functools import lru_cache
 
 import logfire
 from dotenv import load_dotenv
 from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
 from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
+from pydantic_settings import BaseSettings
 
 from rich.logging import RichHandler
 
@@ -22,9 +28,10 @@ load_dotenv()
 
 logger = logging.getLogger("aegis")
 
-logger.info("starting aegis")
+logger.debug("starting aegis")
 
 __version__ = "0.2.5"
+
 
 otel_enable = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in (
     "true",
@@ -33,7 +40,6 @@ otel_enable = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in (
     "y",
     "yes",
 )
-
 llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
 llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
 
@@ -55,6 +61,18 @@ else:
     )
     default_llm_settings = OpenAIResponsesModelSettings()
 
+# aegis app settings
+APP_NAME = "aegis_ai"
+config_dir = Path(user_config_dir(appname=APP_NAME))
+config_dir.mkdir(parents=True, exist_ok=True)
+
+
+class AppSettings(BaseSettings):
+    default_llm_host: str = llm_host
+    default_llm_model: str = llm_model
+    default_llm_settings: Dict = default_llm_settings
+    otel_enabled: bool = otel_enable
+
 
 @dataclass
 class default_data_deps:
@@ -66,6 +84,15 @@ class default_data_deps:
     current_dt: str = field(
         default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
+
+
+@lru_cache
+def get_settings() -> AppSettings:
+    """
+    Returns a cached instance of the AppSettings.
+    The settings object is only created the first time this is called.
+    """
+    return AppSettings()
 
 
 def config_logging(level="INFO"):
@@ -80,7 +107,7 @@ def config_logging(level="INFO"):
         level=level, format=message_format, datefmt="[%X]", handlers=[RichHandler()]
     )
 
-    if otel_enable:
+    if get_settings().otel_enabled:
         logfire.configure(send_to_logfire=False)
         logfire.instrument_pydantic_ai(event_mode="logs")
         logfire.instrument_pydantic_ai()
