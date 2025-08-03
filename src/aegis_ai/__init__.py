@@ -32,7 +32,6 @@ logger.debug("starting aegis")
 
 __version__ = "0.2.5"
 
-
 otel_enable = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in (
     "true",
     "1",

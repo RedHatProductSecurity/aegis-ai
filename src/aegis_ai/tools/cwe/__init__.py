@@ -12,6 +12,7 @@ from pydantic import Field
 from pydantic_ai import Tool, RunContext
 
 from aegis_ai import config_dir
+from aegis_ai.data_models import CWEID, cweid_validator
 from aegis_ai.tools import BaseToolOutput
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ class CWEDependencies:
 class CWE(BaseToolOutput):
     """ """
 
-    cwe_id: str = Field(
+    cwe_id: CWEID = Field(
         ...,
         description="The unique CWE identifier for the security CWE.",
     )
@@ -70,19 +71,20 @@ def retrieve_cwe_definitions():
     return defs
 
 
-async def cwe_lookup(cwe_id: str):
+async def cwe_lookup(cwe_id: CWEID):
     """
-    lazy load cwe from mitre and retrieve specific cwe.
+    Get cwe-id name, description from mitre.
 
     :param cwe_id:
     :return CWE:
     """
+    logger.info(f"retrieving {cwe_id} from cve.mitre.org cwe tool.")
+    validated_cwe_id = cweid_validator.validate_python(cwe_id)
+
+    # lazy load CWE
     CACHE_DIR = config_dir
     CACHE_FILE = "cwe_full_defs.json"
-
     os.makedirs(CACHE_DIR, exist_ok=True)
-
-    # Construct full path to cwe cache
     file_path = os.path.join(CACHE_DIR, CACHE_FILE)
 
     try:
@@ -96,14 +98,14 @@ async def cwe_lookup(cwe_id: str):
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-        return data[cwe_id]
+        return data[validated_cwe_id]
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
 
 @Tool
-async def cwe_tool(ctx: RunContext[CWEDependencies], cwe_id: str) -> str:
+async def cwe_tool(ctx: RunContext[CWEDependencies], cwe_id: CWEID) -> str:
     """ """
     logger.debug(cwe_id)
     return await cwe_lookup(cwe_id)

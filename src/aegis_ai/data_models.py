@@ -68,6 +68,17 @@ CVEID = Annotated[
         strip_whitespace=True,
     ),
 ]
-
 # create dynamic CVEID validator
 cveid_validator = TypeAdapter(CVEID)
+
+# cwe id field
+CWEID = Annotated[
+    str,
+    StringConstraints(
+        pattern=r"^CWE-\d+$",
+        strict=True,
+        strip_whitespace=True,
+    ),
+]
+# create dynamic CWEID validator
+cweid_validator = TypeAdapter(CWEID)

@@ -74,7 +74,7 @@ class SuggestCWE(Feature):
                - Identify nuanced characteristics indicating specific software weakness
             
             2. CWE Identification Protocol
-                - use cwe_tool to lookup canonical CWE definitions
+               - Always use cwe_tool to retrieve canonical CWE definitions
                - Predict most precise CWE identifier
                - Prioritize specific, hierarchically accurate weakness representation
                - Avoid overly broad or discouraged CWE classifications
