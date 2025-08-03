@@ -8,6 +8,7 @@ from pydantic_ai.mcp import MCPServerStdio, MCPServerSSE
 from pydantic_ai.toolsets import FunctionToolset, CombinedToolset
 
 from aegis_ai import tavily_api_key
+from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.wikipedia import wikipedia_tool
 
 # register any MCP tools here
@@ -26,10 +27,16 @@ nvd_stdio_server = MCPServerStdio(
 
 rhtpa_sse_server = MCPServerSSE(url="http://localhost:8081/sse")
 
+# these are tools 'baked in' with pydantic-ai itself
+pydantic_ai_toolset = FunctionToolset(
+    tools=[tavily_search_tool(tavily_api_key), wikipedia_tool]
+)
+
 # Toolset containing public tools
 public_toolset = CombinedToolset(
     [
         nvd_stdio_server,
-        FunctionToolset(tools=[tavily_search_tool(tavily_api_key), wikipedia_tool]),
+        FunctionToolset(tools=[cwe_tool]),
+        pydantic_ai_toolset,
     ]
 )

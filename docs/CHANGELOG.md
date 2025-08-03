@@ -6,11 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
+- added cwe_tool
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 
 - ensure suggest-impact uses CVSS3 validation
-- update to pydantic-ai 0.4.10
+- update to pydantic-ai 0.4.11
 - update to osidb-bindings 4.14.0
+- cleaned up settings aegis_ai app settings (~/.config/aegis_ai)
 
 ### Fixed
 
