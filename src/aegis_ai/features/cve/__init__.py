@@ -65,24 +65,29 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID):
         prompt = AegisPrompt(
-            user_instruction="Conduct a precise, systematic identification of the most appropriate Common Weakness Enumeration (CWE) for a given Common Vulnerabilities and Exposures (CVE) JSON object. Ignore any mention of specific CWE and come to independent conclusion.",
+            user_instruction="""
+                Conduct a precise, systematic identification of the most appropriate Common Weakness Enumeration (CWE) for a given 
+                Common Vulnerabilities and Exposures (CVE) JSON object. Ignore any mention of specific CWE and come to 
+                independent conclusion.
+                """,
             goals="""                
-            Core Analysis Methodology:
-            1. Comprehensive JSON Examination
-               - Perform exhaustive traversal of entire JSON structure
-               - Extract and analyze all relevant vulnerability descriptors
-               - Identify nuanced characteristics indicating specific software weakness
-            
-            2. CWE Identification Protocol
-               - Always use cwe_tool to retrieve canonical CWE definitions
-               - Predict most precise CWE identifier
-               - Prioritize specific, hierarchically accurate weakness representation
-               - Avoid overly broad or discouraged CWE classifications
-            
-            Mandatory Analysis Components:
-            - CWE Identifier: Standard numeric classification (e.g., CWE-119)
-            - Confidence Percentage: Quantitative assessment of prediction reliability
-            - Reasoning Explanation: Concise rationale linking CVE description to selected CWE            """,
+                Core Analysis Methodology:
+                1. Comprehensive JSON Examination
+                   - Perform exhaustive traversal of entire JSON structure
+                   - Extract and analyze all relevant vulnerability descriptors
+                   - Identify nuanced characteristics indicating specific software weakness
+                
+                2. CWE Identification Protocol
+                   - Always use cwe_tool to retrieve canonical CWE definitions
+                   - Predict most precise CWE identifier
+                   - Prioritize specific, hierarchically accurate weakness representation
+                   - Avoid overly broad or discouraged CWE classifications
+                
+                Mandatory Analysis Components:
+                - CWE Identifier: Standard numeric classification (e.g., CWE-119)
+                - Confidence Percentage: Quantitative assessment of prediction reliability
+                - Reasoning Explanation: Concise rationale linking CVE description to selected CWE            
+            """,
             rules="""
                 Critical Selection Guidelines:
                 a) Prioritize most specific CWE matching vulnerability's root cause
