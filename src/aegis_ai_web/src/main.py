@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Dict, Type
 
 import logfire
+import yaml
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -29,7 +30,7 @@ from . import AEGIS_REST_API_VERSION
 config_logging()
 
 app = FastAPI(
-    title="Aegis web",
+    title="Aegis REST-API",
     description="A simple web console and REST API for Aegis.",
     version=AEGIS_REST_API_VERSION,
 )
@@ -52,6 +53,16 @@ favicon_path = os.path.join(STATIC_DIR, "favicon.ico")
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     return FileResponse(favicon_path)
+
+
+@app.get("/openapi.yml", include_in_schema=False)
+async def get_openapi_yaml() -> Response:
+    """
+    Return OpenAPI specification in YAML format.
+    """
+    openapi_schema = app.openapi()
+    yaml_schema = yaml.dump(openapi_schema)
+    return Response(content=yaml_schema, media_type="application/vnd.oai.openapi")
 
 
 @app.get("/", response_class=HTMLResponse)
