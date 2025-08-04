@@ -15,8 +15,8 @@ async def test_suggest_impact_with_test_model():
         return cve.SuggestImpact(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    suggestimpact = cve.data_models.SuggestImpactModel.model_validate_json(result)
-    assert isinstance(suggestimpact, cve.data_models.SuggestImpactModel)
+    suggestimpact = cve.SuggestImpactModel.model_validate_json(result)
+    assert isinstance(suggestimpact, cve.SuggestImpactModel)
     assert suggestimpact.impact == "LOW"
     assert (
         suggestimpact.disclaimer
@@ -29,8 +29,8 @@ async def test_suggest_cwe_with_test_model():
         return cve.SuggestCWE(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    suggestcwe = cve.data_models.SuggestCWEModel.model_validate_json(result)
-    assert isinstance(suggestcwe, cve.data_models.SuggestCWEModel)
+    suggestcwe = cve.SuggestCWEModel.model_validate_json(result)
+    assert isinstance(suggestcwe, cve.SuggestCWEModel)
     assert suggestcwe.cwe == ["CWE-680"]
 
 
@@ -42,8 +42,8 @@ async def test_identify_pii_with_test_model():
         return cve.IdentifyPII(rh_feature_agent).exec(cve_id)
 
     result = await llm_cache_retrieve(feature)
-    piireport = cve.data_models.PIIReportModel.model_validate_json(result)
-    assert isinstance(piireport, cve.data_models.PIIReportModel)
+    piireport = cve.PIIReportModel.model_validate_json(result)
+    assert isinstance(piireport, cve.PIIReportModel)
     assert not piireport.contains_PII  # is false
 
 
@@ -52,10 +52,8 @@ async def test_rewrite_description_with_test_model():
         return cve.RewriteDescriptionText(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    rewritedescription = cve.data_models.RewriteDescriptionModel.model_validate_json(
-        result
-    )
-    assert isinstance(rewritedescription, cve.data_models.RewriteDescriptionModel)
+    rewritedescription = cve.RewriteDescriptionModel.model_validate_json(result)
+    assert isinstance(rewritedescription, cve.RewriteDescriptionModel)
     assert (
         rewritedescription.rewritten_title
         == "libcurl: gzip decompression buffer overflow"
@@ -67,8 +65,8 @@ async def test_rewrite_statement_with_test_model():
         return cve.RewriteStatementText(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    rewritestatement = cve.data_models.RewriteStatementModel.model_validate_json(result)
-    assert isinstance(rewritestatement, cve.data_models.RewriteStatementModel)
+    rewritestatement = cve.RewriteStatementModel.model_validate_json(result)
+    assert isinstance(rewritestatement, cve.RewriteStatementModel)
     assert (
         rewritestatement.rewritten_statement
         == "This flaw is only exploitable when libcurl uses zlib version 1.2.0.3 or older for gzip decompression. Supported versions of Red Hat Enterprise Linux are not affected as they ship with newer versions of the zlib library. Some Red Hat services that bundle older third-party tools may be affected."
@@ -80,8 +78,8 @@ async def test_cvss_diff_explain_with_test_model():
         return cve.CVSSDiffExplainer(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    cvssdiffexplain = cve.data_models.CVSSDiffExplainerModel.model_validate_json(result)
-    assert isinstance(cvssdiffexplain, cve.data_models.CVSSDiffExplainerModel)
+    cvssdiffexplain = cve.CVSSDiffExplainerModel.model_validate_json(result)
+    assert isinstance(cvssdiffexplain, cve.CVSSDiffExplainerModel)
     assert (
         cvssdiffexplain.redhat_cvss3_vector
         == "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
@@ -93,12 +91,10 @@ async def test_component_intelligence_test_model():
         return component.ComponentIntelligence(rh_feature_agent).exec("curl")
 
     result = await llm_cache_retrieve(feature)
-    componentintelligence = (
-        component.data_models.ComponentIntelligenceModel.model_validate_json(result)
+    componentintelligence = component.ComponentIntelligenceModel.model_validate_json(
+        result
     )
-    assert isinstance(
-        componentintelligence, component.data_models.ComponentIntelligenceModel
-    )
+    assert isinstance(componentintelligence, component.ComponentIntelligenceModel)
     assert componentintelligence.popularity_score == 1
     assert componentintelligence.confidence == 0.95
 

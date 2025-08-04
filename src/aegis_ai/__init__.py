@@ -81,7 +81,7 @@ class default_data_deps:
     """
 
     current_dt: str = field(
-        default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        default_factory=lambda: datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
 
 
@@ -120,5 +120,5 @@ def check_llm_status() -> bool:
     if default_llm_model:
         return True  # TODO - this check needs to compatible across all llm model types
     else:
-        logging.warn("llm model health check failed")
+        logging.warning("llm model health check failed")
         return False

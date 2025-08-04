@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - added cwe_tool
 - added /openapi.yml 
+- added `make check-type`
+
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 
 - ensure suggest-impact uses CVSS3 validation

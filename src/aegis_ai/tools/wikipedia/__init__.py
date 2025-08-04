@@ -89,7 +89,7 @@ def wikipedia_tool(
         # Attempt to get the page content for the first search result.
         try:
             page = wikipedia.page(search_results[0], auto_suggest=False)
-        except wikipedia.exceptions.DisambiguationError as e:
+        except wikipedia.DisambiguationError as e:
             # Handle disambiguation explicitly
             return WikipediaSoftwareInfo(
                 query_component_name=component_name,
@@ -103,7 +103,7 @@ def wikipedia_tool(
                 status="disambiguation",
                 error_message=f"Ambiguous query. Options: {e.options}",
             )
-        except wikipedia.exceptions.PageError:
+        except wikipedia.PageError:
             # This might happen if the first search result is somehow invalid or redirects to nowhere
             return WikipediaSoftwareInfo(
                 query_component_name=component_name,

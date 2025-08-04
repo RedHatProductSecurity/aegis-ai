@@ -43,7 +43,7 @@ class CWE(BaseToolOutput):
         description="CWE name.",
     )
     description: str = Field(
-        None,
+        ...,
         description="CWE description.",
     )
 

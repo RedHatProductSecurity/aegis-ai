@@ -25,9 +25,9 @@ format:
 	uvx ruff format
 
 check-type:
-	uvx ty check
+	uvx ty check --exit-zero
     
-check: format lint
+check: format lint check-type
 
 clean:
 	uv clean

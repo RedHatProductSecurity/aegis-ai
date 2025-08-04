@@ -28,7 +28,7 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
         if not hasattr(ctx.output, "contains_PII") and not hasattr(
             ctx.output, "nvd_cvss3_score"
         ):
-            expl_diff = EXPLANATION_MIN_LEN - len(ctx.output.explanation)
+            expl_diff = EXPLANATION_MIN_LEN - len(ctx.output.explanation)  # type: ignore
             if 0 < expl_diff:
                 # proportional penalization for explanation of length below EXPLANATION_MIN_LEN
                 score *= 1.0 - (float(expl_diff) / EXPLANATION_MIN_LEN)
@@ -43,10 +43,10 @@ def create_llm_judge(**kwargs):
         model=default_llm_model,
         model_settings=default_llm_settings,
         **kwargs,
-    )
+    )  # type: ignore
 
 
-def make_eval_reason(value: bool = False, fail_reason: str = None):
+def make_eval_reason(value: bool = False, fail_reason: str = None):  # type: ignore
     """construct EvaluationReason object; fail_reason is propagated only if value is False"""
     # FIXME: the reason for an assertion failure is not reported anywhere
     return EvaluationReason(value=value, reason=(fail_reason if not value else None))

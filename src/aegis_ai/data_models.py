@@ -9,7 +9,7 @@ from pydantic import StringConstraints, TypeAdapter, BeforeValidator
 def is_cvss3_valid(cvss_str: str) -> bool:
     """return True if cvss_str is a valid CVSS3 vector"""
     try:
-        cvss.cvss3.CVSS3(cvss_str)
+        cvss.CVSS3(cvss_str)
         return True
 
     except cvss.CVSSError:
@@ -36,7 +36,7 @@ CVSS3Vector = Annotated[
 def is_cvss4_valid(cvss_str: str) -> bool:
     """return True if cvss_str is a valid CVSS4 vector"""
     try:
-        cvss.cvss4.CVSS4(cvss_str)
+        cvss.CVSS4(cvss_str)
         return True
 
     except cvss.CVSSError:

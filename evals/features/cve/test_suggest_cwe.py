@@ -51,7 +51,7 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
         score = self._base_score(cwe_list_out, ctx.expected_output)
 
         # check how many CWEs were suggested and how man CWEs are accepted
-        len_diff = len(cwe_list_out) - len(ctx.expected_output)
+        len_diff = len(cwe_list_out) - len(ctx.expected_output)  # type: ignore
         if 0 < len_diff:
             # penalize too many suggested CWEs for a CVE
             score *= 0.9**len_diff

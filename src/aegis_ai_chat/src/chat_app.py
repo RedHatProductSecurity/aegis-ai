@@ -211,7 +211,10 @@ class Database:
         return cur
 
     async def _asyncify(
-        self, func: Callable[P, R], *args: P.args, **kwargs: P.kwargs
+        self,
+        func: Callable[P, R],  # type: ignore
+        *args: P.args,
+        **kwargs: P.kwargs,
     ) -> R:
         return await self._loop.run_in_executor(  # type: ignore
             self._executor,
