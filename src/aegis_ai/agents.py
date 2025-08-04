@@ -41,12 +41,15 @@ simple_agent = AegisAgent(
 )
 
 
-rh_feature_agent = AegisAgent(name="RHFeatureAgent", tools=[osidb_tool, cwe_tool])
+rh_feature_agent = AegisAgent(
+    name="RHFeatureAgent",
+    retries=2,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
+    tools=[osidb_tool, cwe_tool],
+)
 
 
 public_feature_agent = AegisAgent(
     name="PublicFeatureAgent",
+    retries=5,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
     toolsets=[public_toolset],
 )
-
-kb_agent = AegisAgent(name="KBAgent")

@@ -78,6 +78,7 @@ class AegisPrompt(BaseModel):
 
     # Contextual information should always come in as structured input
     context: BaseModel
+    static_context: Optional[str] = None
 
     # Output data schema
     output_schema: Optional[dict] = None
@@ -100,5 +101,13 @@ class AegisPrompt(BaseModel):
 
         if self.context:
             prompt_parts.append(f"Context:\n{self.context}")
+
+        if self.static_context:
+            prompt_parts.append(f"Context:\n{self.static_context}")
+
+        if self.output_schema:
+            prompt_parts.append(
+                f"Format: Should adhere to the following schema\n {self.output_schema}"
+            )
 
         return "\n\n".join(prompt_parts)
