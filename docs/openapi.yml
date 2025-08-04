@@ -1,0 +1,159 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    aegis_ai_web__src__main__ComponentFeatureName__1:
+      enum:
+      - suggest-impact
+      - suggest-cwe
+      - rewrite-description
+      - rewrite-statement
+      - identify-pii
+      - cvss-diff-explainer
+      title: ComponentFeatureName
+      type: string
+    aegis_ai_web__src__main__ComponentFeatureName__2:
+      enum:
+      - component-intelligence
+      title: ComponentFeatureName
+      type: string
+info:
+  description: A simple web console and REST API for Aegis.
+  title: Aegis REST-API
+  version: v1
+openapi: 3.1.0
+paths:
+  /:
+    get:
+      operationId: home__get
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Successful Response
+      summary: Home
+  /api/v1/analysis/component:
+    get:
+      operationId: component_analysis_api_v1_analysis_component_get
+      parameters:
+      - in: query
+        name: feature
+        required: true
+        schema:
+          $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName__2'
+      - in: query
+        name: component_name
+        required: true
+        schema:
+          title: Component Name
+          type: string
+      - in: query
+        name: detail
+        required: false
+        schema:
+          default: false
+          title: Detail
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Component Analysis
+  /api/v1/analysis/cve:
+    get:
+      operationId: cve_analysis_api_v1_analysis_cve_get
+      parameters:
+      - in: query
+        name: feature
+        required: true
+        schema:
+          $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName__1'
+      - in: query
+        name: cve_id
+        required: true
+        schema:
+          pattern: ^CVE-\d{4}-\d{4,7}$
+          title: Cve Id
+          type: string
+      - in: query
+        name: detail
+        required: false
+        schema:
+          default: false
+          title: Detail
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Cve Analysis
+  /console:
+    get:
+      operationId: console_console_get
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Successful Response
+      summary: Console
+  /generate_response:
+    post:
+      description: 'Handles the submission of a prompt, simulates an LLM response,
+
+        and re-renders the console with the results.'
+      operationId: generate_response_generate_response_post
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Generate Response
