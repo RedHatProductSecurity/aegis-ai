@@ -24,6 +24,9 @@ lint:
 format:
 	uvx ruff format
 
+check-type:
+	uvx ty check
+    
 check: format lint
 
 clean:
