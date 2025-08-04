@@ -41,15 +41,15 @@ class CVE(BaseToolOutput):
         description="CVE title.",
     )
     statement: str = Field(
-        None,
+        ...,
         description="CVE statement.",
     )
-    comment_zero: str = Field(None, description="CVE comment_zero.")
+    comment_zero: str = Field(..., description="CVE comment_zero.")
     comments: str = Field(
-        None,
+        ...,
         description="all public comments.",
     )
-    description: str = Field(None, description="CVE cve_description.")
+    description: str = Field(..., description="CVE cve_description.")
     components: List = Field(..., description="list of components")
     references: List = Field(..., description="list of references")
     affects: List = Field(..., description="list of affects")

@@ -30,7 +30,7 @@ class CVSSDiffCase(Case):
 def is_cvss_valid(cvss_str: str) -> bool:
     """return True if cvss_str is a valid CVSS3 vector"""
     try:
-        cvss.cvss3.CVSS3(cvss_str)
+        cvss.CVSS3(cvss_str)
         return True
 
     except cvss.CVSSError:

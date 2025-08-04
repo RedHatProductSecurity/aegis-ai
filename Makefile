@@ -24,7 +24,10 @@ lint:
 format:
 	uvx ruff format
 
-check: format lint
+check-type:
+	uvx ty check --exit-zero
+    
+check: format lint check-type
 
 clean:
 	uv clean

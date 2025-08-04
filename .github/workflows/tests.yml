@@ -34,8 +34,6 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Run tests
-        run: uv run pytest tests
+      - name: Run checks and tests
+        run: make all
 
-      - name: Run tests-web
-        run: uv run pytest src/aegis_ai_web/tests
