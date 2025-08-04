@@ -32,17 +32,12 @@ logger.debug("starting aegis")
 
 __version__ = "0.2.5"
 
-otel_enable = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in (
-    "true",
-    "1",
-    "t",
-    "y",
-    "yes",
-)
 llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
 llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
 
-tavily_api_key = os.getenv("TAVILY_API_KEY", "   ")
+tavily_api_key = os.getenv(
+    "TAVILY_API_KEY", "   "
+)  # we do not want to persist in appsettings
 
 # Simple logic for defining default model (TODO: we will make more sophisticated).
 if "api.anthropic.com" in llm_host:
@@ -65,12 +60,28 @@ APP_NAME = "aegis_ai"
 config_dir = Path(user_config_dir(appname=APP_NAME))
 config_dir.mkdir(parents=True, exist_ok=True)
 
+truthy = (
+    "true",
+    "1",
+    "t",
+    "y",
+    "yes",
+)
+
 
 class AppSettings(BaseSettings):
     default_llm_host: str = llm_host
     default_llm_model: str = llm_model
     default_llm_settings: Dict = default_llm_settings
-    otel_enabled: bool = otel_enable
+
+    otel_enabled: bool = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in truthy
+
+    # enables prompt.is_safe() usage
+    safety_enabled: bool = os.getenv("AEGIS_SAFETY_ENABLED", "false").lower() in truthy
+
+    safety_llm_host: str = os.getenv("AEGIS_SAFETY_LLM_HOST", "localhost:11434")
+    safety_llm_model: str = os.getenv("AEGIS_SAFETY_LLM_MODEL", "granite3-guardian-2b")
+    safety_llm_openapi_key: str = os.getenv("AEGIS_SAFETY_OPENAPI_KEY", "")
 
 
 @dataclass

@@ -60,6 +60,9 @@ class ComponentIntelligence(Feature):
             output_schema=ComponentIntelligenceModel.model_json_schema(),
         )
         logger.debug(prompt.to_string())
-        return await self.agent.run(
-            prompt.to_string(), output_type=ComponentIntelligenceModel
-        )
+        if await prompt.is_safe():
+            return await self.agent.run(
+                prompt.to_string(), output_type=ComponentIntelligenceModel
+            )
+        else:
+            logger.info("Problem with query.")
