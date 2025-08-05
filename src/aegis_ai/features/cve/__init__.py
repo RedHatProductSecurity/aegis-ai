@@ -84,7 +84,7 @@ class SuggestCWE(Feature):
                    - Avoid overly broad or discouraged CWE classifications
                 
                 Mandatory Analysis Components:
-                - CWE Identifier: Standard numeric classification (e.g., CWE-119)
+                - CWE Identifier: Standard numeric classification (e.g., CWE-125)
                 - Confidence Percentage: Quantitative assessment of prediction reliability
                 - Reasoning Explanation: Concise rationale linking CVE description to selected CWE            
             """,
@@ -110,7 +110,7 @@ class SuggestCWE(Feature):
                 
                 a) Based on the analysis of the CVE description, predict the most likely CWE.
                 
-                b) Provide the standard CWE identifier (e.g., CWE-119).
+                b) Provide the standard CWE identifier (e.g., CWE-125).
 
                 c) When making CWE assessment, prioritize the correct level CWE in the hierarchy that accurately describes the direct root cause of the flaw, rather than a more general parent category. For example
                 if there is a choice between CWE-272 and CWE-271, return CWE-271 if it is more appropriate (if it is more general).            
