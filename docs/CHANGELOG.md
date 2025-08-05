@@ -19,7 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-## [0.2.45 - 2025-07-29
+
+## [0.2.5] - 2025-07-29
+
 ### Added
 - added AI disclaimer to all responses
 - added minimal OTEL support
@@ -30,14 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactored aegis_ai_web REST API endpoints
 - updated to pydantic-ai 0.4.8
 - refactored chat app
+
 ### Fixed
 - made suggest-cwe more accurate
 
+
 ## [0.2.4] - 2025-07-26
+
 ### Added
 - Test aegis-ai publishing to pypi
 
+
 ## [0.2.3] - 2025-07-26
+
 ### Added
 - Initial aegis-ai development release
-
