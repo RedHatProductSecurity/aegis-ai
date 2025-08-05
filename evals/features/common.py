@@ -1,3 +1,7 @@
+import os
+
+from pydantic_ai.models.openai import OpenAIModel, OpenAIResponsesModelSettings
+from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals.dataset import EvaluationReport
 from pydantic_evals.evaluators import (
     EvaluationReason,
@@ -6,7 +10,7 @@ from pydantic_evals.evaluators import (
     LLMJudge,
 )
 
-from aegis_ai import default_llm_model, default_llm_settings
+from aegis_ai import default_llm_model, default_llm_settings, llm_model
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -15,6 +19,26 @@ EXPLANATION_MIN_LEN = 80
 
 # minimal acceptable score returned by an evaluator
 MIN_SCORE_THRESHOLD = 0.1
+
+
+# if AEGIS_EVALS_LLM_HOST is set, use an independent LLM for evals
+evals_llm_host = os.getenv("AEGIS_EVALS_LLM_HOST")
+if evals_llm_host:
+    # use an independent LLM for evals
+    evals_llm_model_name = os.getenv("AEGIS_EVALS_LLM_MODEL", llm_model)
+    evals_llm_api_key = os.getenv("AEGIS_EVALS_LLM_API_KEY", "")
+    evals_llm_model = OpenAIModel(
+        model_name=evals_llm_model_name,
+        provider=OpenAIProvider(
+            base_url=f"{evals_llm_host}/v1/",
+            api_key=evals_llm_api_key,
+        ),
+    )
+    evals_llm_settings = OpenAIResponsesModelSettings()
+else:
+    # fallback to use the same LLM for evals
+    evals_llm_model = default_llm_model
+    evals_llm_settings = default_llm_settings
 
 
 class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
@@ -39,16 +63,14 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
 def create_llm_judge(**kwargs):
     """construct an LLMJudge object based on the provided named arguments"""
     return LLMJudge(
-        # TODO: we might consider using an independent LLM for evals
-        model=default_llm_model,
-        model_settings=default_llm_settings,
+        model=evals_llm_model,
+        model_settings=evals_llm_settings,
         **kwargs,
     )  # type: ignore
 
 
 def make_eval_reason(value: bool = False, fail_reason: str = None):  # type: ignore
     """construct EvaluationReason object; fail_reason is propagated only if value is False"""
-    # FIXME: the reason for an assertion failure is not reported anywhere
     return EvaluationReason(value=value, reason=(fail_reason if not value else None))
 
 

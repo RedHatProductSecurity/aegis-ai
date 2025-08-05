@@ -5,6 +5,13 @@ This evaluation suite is designed to systematically test and validate the featur
 
 ## Running the evaluation suite
 
+Optionally, you can enable an independent LLM for evaluation:
+```
+export AEGIS_EVALS_LLM_HOST="https://mistral-small-24b-w8a8-maas-apicast-production.apps.prod.rhoai.rh-aiservices-bu.com:443"
+export AEGIS_EVALS_LLM_MODEL="mistral-small-24b-w8a8"
+export AEGIS_EVALS_LLM_API_KEY="XXX"
+```
+
 To run the evaluation suite, run the following command in the top-level directory of this repository:
 ```
 make eval
