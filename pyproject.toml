@@ -29,6 +29,13 @@ dependencies = [
     "wikipedia>=1.4.0",
     "logfire[fastapi,httpx,sqlite3]>=4.0.0",
     "platformdirs>=4.3.8",
+    "pandas>=1.5.0",
+    "xgboost>=1.7.0",
+    "scikit-learn>=1.1.0",
+    "numpy>=2.3.2",
+    "imbalanced-learn>=0.13.0",
+    "matplotlib>=3.10.5",
+    "seaborn>=0.13.2",
 ]
 classifiers = [
     "Topic :: Security",
@@ -100,4 +107,6 @@ ml_deps = [
     "huggingface-hub>=0.8.0",
     "accelerate>=0.20.0",
     "nltk>=3.9.1",
+    "xgboost>=1.7.0",
+    "imbalanced-learn>=0.10.0",
 ]
