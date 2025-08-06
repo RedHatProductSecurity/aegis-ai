@@ -30,6 +30,12 @@ dependencies = [
     "logfire[fastapi,httpx,sqlite3]>=4.0.0",
     "platformdirs>=4.3.8",
 ]
+classifiers = [
+    "Topic :: Security",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
 
 [project.scripts]
 aegis = "aegis_ai_cli.main:aegis_cli"
@@ -73,3 +79,25 @@ dev = [
     "ty>=0.0.1a16",
 ]
 lint = []
+
+[project.urls]
+Homepage = "https://github.com/RedHatProductSecurity/aegis-ai"
+Documentation = "https://github.com/RedHatProductSecurity/aegis-ai/tree/main/README.md"
+Changelog = "https://github.com/RedHatProductSecurity/aegis-ai/blob/main/docs/CHANGELOG.md"
+Issues = "https://github.com/RedHatProductSecurity/aegis-ai/issues"
+
+[project.optional-dependencies]
+ml_deps = [
+    "torch>=1.9.0",
+    "transformers>=4.20.0",
+    "datasets>=2.0.0",
+    "scikit-learn>=1.0.0",
+    "pandas>=1.3.0",
+    "numpy>=1.21.0",
+    "matplotlib>=3.5.0",
+    "seaborn>=0.11.0",
+    "tqdm>=4.60.0",
+    "huggingface-hub>=0.8.0",
+    "accelerate>=0.20.0",
+    "nltk",
+]

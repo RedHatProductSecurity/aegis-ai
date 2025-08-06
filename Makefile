@@ -47,6 +47,9 @@ test-web:
 upgrade-deps:
 	uv sync --upgrade
 
+install-ml-deps:
+	uv pip install .[ml_deps]
+
 build-dist:
 	uv run python3 -m build
 
