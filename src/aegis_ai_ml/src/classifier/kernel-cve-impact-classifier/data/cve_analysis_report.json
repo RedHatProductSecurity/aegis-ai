@@ -1,0 +1,238 @@
+{
+  "generation_time": 1754603059.959647,
+  "summary_statistics": {
+    "total_cves": 7285,
+    "processed_cves": 5,
+    "cves_with_commits": 5,
+    "total_commits": 32,
+    "found_commits": 8,
+    "missing_commits": 23,
+    "cves_with_files": 5
+  },
+  "missing_commits_analysis": {
+    "total_missing": 23,
+    "cves_with_missing": 5,
+    "missing_by_cve": {
+      "CVE-2024-58093": [
+        {
+          "commit_hash": "666e7f9d60cee23077ea3e6331f6f8a19f7ea03f",
+          "commit_url": "https://git.kernel.org/stable/c/666e7f9d60cee23077ea3e6331f6f8a19f7ea03f"
+        },
+        {
+          "commit_hash": "7aecdd47910c51707696e8b0e045b9f88bd4230f",
+          "commit_url": "https://git.kernel.org/stable/c/7aecdd47910c51707696e8b0e045b9f88bd4230f"
+        },
+        {
+          "commit_hash": "4203722d51afe3d239e03f15cc73efdf023a7103",
+          "commit_url": "https://git.kernel.org/stable/c/4203722d51afe3d239e03f15cc73efdf023a7103"
+        },
+        {
+          "commit_hash": "9856c0de49052174ab474113f4ba40c02aaee086",
+          "commit_url": "https://git.kernel.org/stable/c/9856c0de49052174ab474113f4ba40c02aaee086"
+        },
+        {
+          "commit_hash": "7badf4d6f49a358a01ab072bbff88d3ee886c33b",
+          "commit_url": "https://git.kernel.org/stable/c/7badf4d6f49a358a01ab072bbff88d3ee886c33b"
+        },
+        {
+          "commit_hash": "d51d2eeae4ce54d542909c4d9d07bf371a78592c",
+          "commit_url": "https://git.kernel.org/stable/c/d51d2eeae4ce54d542909c4d9d07bf371a78592c"
+        }
+      ],
+      "CVE-2022-49200": [
+        {
+          "commit_hash": "4d3d1f2c35a19988d3c5f0ee86038b525e830840",
+          "commit_url": "https://git.kernel.org/stable/c/4d3d1f2c35a19988d3c5f0ee86038b525e830840"
+        },
+        {
+          "commit_hash": "770a97d3f34b801de1b04737b43e02c55118c41a",
+          "commit_url": "https://git.kernel.org/stable/c/770a97d3f34b801de1b04737b43e02c55118c41a"
+        },
+        {
+          "commit_hash": "874eca93966a786eace87fa6dfb206c2dd9519b1",
+          "commit_url": "https://git.kernel.org/stable/c/874eca93966a786eace87fa6dfb206c2dd9519b1"
+        },
+        {
+          "commit_hash": "6d7be5afbb41c918d2f12f857f8c7efa50500be2",
+          "commit_url": "https://git.kernel.org/stable/c/6d7be5afbb41c918d2f12f857f8c7efa50500be2"
+        },
+        {
+          "commit_hash": "70a6cf749d9ff9f463490248322e5343199bc267",
+          "commit_url": "https://git.kernel.org/stable/c/70a6cf749d9ff9f463490248322e5343199bc267"
+        }
+      ],
+      "CVE-2025-38215": [
+        {
+          "commit_hash": "0909b2b49c4546a7a08c80f53d93736b63270827",
+          "commit_url": "https://git.kernel.org/stable/c/0909b2b49c4546a7a08c80f53d93736b63270827"
+        },
+        {
+          "commit_hash": "3f2098f4fba7718eb2501207ca6e99d22427f25a",
+          "commit_url": "https://git.kernel.org/stable/c/3f2098f4fba7718eb2501207ca6e99d22427f25a"
+        },
+        {
+          "commit_hash": "908c5bb64f9c4319902b8ca1aa3fef8f83302520",
+          "commit_url": "https://git.kernel.org/stable/c/908c5bb64f9c4319902b8ca1aa3fef8f83302520"
+        },
+        {
+          "commit_hash": "d803c4c2a4ac8ce2be6d899d5c7ab0bf7ec355e9",
+          "commit_url": "https://git.kernel.org/stable/c/d803c4c2a4ac8ce2be6d899d5c7ab0bf7ec355e9"
+        }
+      ],
+      "CVE-2025-21936": [
+        {
+          "commit_hash": "7841180342c9a0fd97d54f3e62c7369309b5cd84",
+          "commit_url": "https://git.kernel.org/stable/c/7841180342c9a0fd97d54f3e62c7369309b5cd84"
+        },
+        {
+          "commit_hash": "dc516e66fb28c61b248b393e2ddd63bd7f104969",
+          "commit_url": "https://git.kernel.org/stable/c/dc516e66fb28c61b248b393e2ddd63bd7f104969"
+        },
+        {
+          "commit_hash": "bdb1805c248e9694dbb3ffa8867cef2e52cf7261",
+          "commit_url": "https://git.kernel.org/stable/c/bdb1805c248e9694dbb3ffa8867cef2e52cf7261"
+        },
+        {
+          "commit_hash": "7d39387886ffe220323cbed5c155233c3276926b",
+          "commit_url": "https://git.kernel.org/stable/c/7d39387886ffe220323cbed5c155233c3276926b"
+        }
+      ],
+      "CVE-2025-37853": [
+        {
+          "commit_hash": "f84c57906f0fd2185e557d2552b20aa8430a4677",
+          "commit_url": "https://git.kernel.org/stable/c/f84c57906f0fd2185e557d2552b20aa8430a4677"
+        },
+        {
+          "commit_hash": "24b9e0e2e6147314c22d821f0542c4dd9a320c40",
+          "commit_url": "https://git.kernel.org/stable/c/24b9e0e2e6147314c22d821f0542c4dd9a320c40"
+        },
+        {
+          "commit_hash": "1a322b330dc0b775d1d7a84e55c752d9451bfe7d",
+          "commit_url": "https://git.kernel.org/stable/c/1a322b330dc0b775d1d7a84e55c752d9451bfe7d"
+        },
+        {
+          "commit_hash": "a36f8d544522a19ef06ed9e84667d154dcb6be52",
+          "commit_url": "https://git.kernel.org/stable/c/a36f8d544522a19ef06ed9e84667d154dcb6be52"
+        }
+      ]
+    }
+  },
+  "cve_details": {
+    "CVE-2024-58093": {
+      "total_commit_urls": 8,
+      "found_commits": [
+        "456d8aa37d0f56fc9e985e812496e861dcd6f2f2",
+        "cbf937dcadfd571a434f8074d057b32cd14fbea5"
+      ],
+      "missing_commits": [
+        "666e7f9d60cee23077ea3e6331f6f8a19f7ea03f",
+        "7aecdd47910c51707696e8b0e045b9f88bd4230f",
+        "4203722d51afe3d239e03f15cc73efdf023a7103",
+        "9856c0de49052174ab474113f4ba40c02aaee086",
+        "7badf4d6f49a358a01ab072bbff88d3ee886c33b",
+        "d51d2eeae4ce54d542909c4d9d07bf371a78592c"
+      ],
+      "affected_files": [
+        "drivers/pci/pcie/aspm.c"
+      ],
+      "source_files": [
+        "data/linux_security_vulns/cve/published/2024/CVE-2024-58093.json",
+        "data/linux_security_vulns/cve/published/2024/CVE-2024-58093.mbox",
+        "data/linux_security_vulns/cve/published/2024/CVE-2024-58093",
+        "data/linux_security_vulns/cve/published/2024/CVE-2024-58093.sha1",
+        "data/linux_security_vulns/cve/published/2024/CVE-2024-58093.dyad"
+      ]
+    },
+    "CVE-2022-49200": {
+      "total_commit_urls": 7,
+      "found_commits": [
+        "b062a0b9c1dc1ff63094337dccfe1568d5b62023",
+        "9aebfd4a2200ab8075e44379c758bccefdc589bb"
+      ],
+      "missing_commits": [
+        "4d3d1f2c35a19988d3c5f0ee86038b525e830840",
+        "770a97d3f34b801de1b04737b43e02c55118c41a",
+        "874eca93966a786eace87fa6dfb206c2dd9519b1",
+        "6d7be5afbb41c918d2f12f857f8c7efa50500be2",
+        "70a6cf749d9ff9f463490248322e5343199bc267"
+      ],
+      "affected_files": [
+        "drivers/bluetooth/btmtksdio.c"
+      ],
+      "source_files": [
+        "data/linux_security_vulns/cve/published/2022/CVE-2022-49200.json",
+        "data/linux_security_vulns/cve/published/2022/CVE-2022-49200.mbox",
+        "data/linux_security_vulns/cve/published/2022/CVE-2022-49200",
+        "data/linux_security_vulns/cve/published/2022/CVE-2022-49200.dyad",
+        "data/linux_security_vulns/cve/published/2022/CVE-2022-49200.sha1"
+      ]
+    },
+    "CVE-2025-38215": {
+      "total_commit_urls": 6,
+      "found_commits": [
+        "17186f1f90d34fa701e4f14e6818305151637b9e"
+      ],
+      "missing_commits": [
+        "0909b2b49c4546a7a08c80f53d93736b63270827",
+        "3f2098f4fba7718eb2501207ca6e99d22427f25a",
+        "908c5bb64f9c4319902b8ca1aa3fef8f83302520",
+        "d803c4c2a4ac8ce2be6d899d5c7ab0bf7ec355e9"
+      ],
+      "affected_files": [
+        "drivers/video/fbdev/core/fbmem.c"
+      ],
+      "source_files": [
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-38215.json",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-38215.mbox",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-38215",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-38215.sha1",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-38215.dyad"
+      ]
+    },
+    "CVE-2025-21936": {
+      "total_commit_urls": 6,
+      "found_commits": [
+        "d8df010f72b8a32aaea393e36121738bb53ed905",
+        "e96741437ef0a5d18144e790ac894397efda0924"
+      ],
+      "missing_commits": [
+        "7841180342c9a0fd97d54f3e62c7369309b5cd84",
+        "dc516e66fb28c61b248b393e2ddd63bd7f104969",
+        "bdb1805c248e9694dbb3ffa8867cef2e52cf7261",
+        "7d39387886ffe220323cbed5c155233c3276926b"
+      ],
+      "affected_files": [
+        "net/bluetooth/mgmt.c"
+      ],
+      "source_files": [
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-21936.json",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-21936.mbox",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-21936",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-21936.sha1",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-21936.dyad"
+      ]
+    },
+    "CVE-2025-37853": {
+      "total_commit_urls": 5,
+      "found_commits": [
+        "fe9d0061c413f8fb8c529b18b592b04170850ded"
+      ],
+      "missing_commits": [
+        "f84c57906f0fd2185e557d2552b20aa8430a4677",
+        "24b9e0e2e6147314c22d821f0542c4dd9a320c40",
+        "1a322b330dc0b775d1d7a84e55c752d9451bfe7d",
+        "a36f8d544522a19ef06ed9e84667d154dcb6be52"
+      ],
+      "affected_files": [
+        "drivers/gpu/drm/amd/amdkfd/kfd_device.c"
+      ],
+      "source_files": [
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-37853.json",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-37853.mbox",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-37853",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-37853.dyad",
+        "data/linux_security_vulns/cve/published/2025/CVE-2025-37853.sha1"
+      ]
+    }
+  }
+}

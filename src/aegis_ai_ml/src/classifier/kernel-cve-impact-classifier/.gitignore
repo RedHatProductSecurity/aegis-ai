@@ -1,0 +1,23 @@
+# MacOS
+.DS_Store
+
+# Large repositories (these should not be committed)
+data/linux_kernel_repo/
+data/linux_security_vulns/
+data/predict_data/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment
+.env
+.venv
+env/
+venv/
