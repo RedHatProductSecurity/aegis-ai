@@ -5,6 +5,8 @@ aegis agents
 from typing import Any
 
 from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from aegis_ai import get_settings, default_llm_model
 from aegis_ai.features.data_models import AegisAnswer
@@ -52,4 +54,14 @@ public_feature_agent = AegisAgent(
     name="PublicFeatureAgent",
     retries=5,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
     toolsets=[public_toolset],
+)
+
+safety_agent = Agent(
+    model=OpenAIModel(
+        model_name=get_settings().safety_llm_model,
+        provider=OpenAIProvider(
+            base_url=f"{get_settings().safety_llm_host}/v1/",
+            api_key=get_settings().safety_llm_openapi_key,
+        ),
+    )
 )

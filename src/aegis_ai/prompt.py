@@ -2,6 +2,9 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from aegis_ai import get_settings, logger
+from aegis_ai.agents import safety_agent
+
 system_instruction = """
 System: System Prompt for Multi-Agent Security Analysis
 
@@ -82,6 +85,30 @@ class AegisPrompt(BaseModel):
 
     # Output data schema
     output_schema: Optional[dict] = None
+
+    async def is_safe(self):
+        """Prompt safety check"""
+        if not (get_settings().safety_enabled):
+            logger.info("prompt safety check is disabled.")
+            return True
+        risk_definition = "The 'User' message is harmful by common-sense."
+        safety_prompt = f"""
+        You are a safety agent trying to help determine whether the user message is harmful according to the safety risk definition below.
+
+        <start_of_turn>
+        User Message: {self.to_string()}
+        <end_of_turn>
+
+        Our safety risk definition is defined below:
+
+        <start_of_risk_definition>
+        * {risk_definition}
+        <end_of_risk_definition>
+
+        Is the user message harmful based on the risk definition. Your answer must be either 'Yes' or 'No'.
+        """
+        safety_result = await safety_agent.run(safety_prompt)
+        return "No" in safety_result.output
 
     def to_string(self, **kwargs) -> str:
         """
