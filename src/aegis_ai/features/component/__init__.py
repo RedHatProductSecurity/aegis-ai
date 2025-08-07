@@ -65,4 +65,4 @@ class ComponentIntelligence(Feature):
                 prompt.to_string(), output_type=ComponentIntelligenceModel
             )
         else:
-            logger.info("Problem with query.")
+            logger.info("Safety agent identified issue with query.")

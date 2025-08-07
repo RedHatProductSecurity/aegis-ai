@@ -59,7 +59,12 @@ class SuggestImpact(Feature):
             static_context=static_context,
             output_schema=SuggestImpactModel.model_json_schema(),
         )
-        return await self.agent.run(prompt.to_string(), output_type=SuggestImpactModel)
+        if await prompt.is_safe():
+            return await self.agent.run(
+                prompt.to_string(), output_type=SuggestImpactModel
+            )
+        else:
+            logger.info("Safety agent identified issue with query.")
 
 
 class SuggestCWE(Feature):
@@ -128,7 +133,10 @@ class SuggestCWE(Feature):
             static_context=static_context,
             output_schema=SuggestCWEModel.model_json_schema(),
         )
-        return await self.agent.run(prompt.to_string(), output_type=SuggestCWEModel)
+        if await prompt.is_safe():
+            return await self.agent.run(prompt.to_string(), output_type=SuggestCWEModel)
+        else:
+            logger.info("Safety agent identified issue with query.")
 
 
 class IdentifyPII(Feature):
@@ -290,7 +298,10 @@ class IdentifyPII(Feature):
             static_context=static_context,
             output_schema=PIIReportModel.model_json_schema(),
         )
-        return await self.agent.run(prompt.to_string(), output_type=PIIReportModel)
+        if await prompt.is_safe():
+            return await self.agent.run(prompt.to_string(), output_type=PIIReportModel)
+        else:
+            logger.info("Safety agent identified issue with query.")
 
 
 class RewriteDescriptionText(Feature):
@@ -417,9 +428,12 @@ class RewriteDescriptionText(Feature):
             static_context=static_context,
             output_schema=RewriteDescriptionModel.model_json_schema(),
         )
-        return await self.agent.run(
-            prompt.to_string(), output_type=RewriteDescriptionModel
-        )
+        if await prompt.is_safe():
+            return await self.agent.run(
+                prompt.to_string(), output_type=RewriteDescriptionModel
+            )
+        else:
+            logger.info("Safety agent identified issue with query.")
 
 
 class RewriteStatementText(Feature):
@@ -501,9 +515,12 @@ class RewriteStatementText(Feature):
             static_context=static_context,
             output_schema=RewriteStatementModel.model_json_schema(),
         )
-        return await self.agent.run(
-            prompt.to_string(), output_type=RewriteStatementModel
-        )
+        if await prompt.is_safe():
+            return await self.agent.run(
+                prompt.to_string(), output_type=RewriteStatementModel
+            )
+        else:
+            logger.info("Safety agent identified issue with query.")
 
 
 class CVSSDiffExplainer(Feature):
@@ -564,6 +581,9 @@ class CVSSDiffExplainer(Feature):
             static_context=static_context,
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
-        return await self.agent.run(
-            prompt.to_string(), output_type=CVSSDiffExplainerModel
-        )
+        if await prompt.is_safe():
+            return await self.agent.run(
+                prompt.to_string(), output_type=CVSSDiffExplainerModel
+            )
+        else:
+            logger.info("Safety agent identified issue with query.")
