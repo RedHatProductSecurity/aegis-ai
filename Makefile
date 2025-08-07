@@ -1,3 +1,5 @@
+PYTHON ?= python3
+
 all: check test test-web
 
 install:
@@ -49,12 +51,13 @@ upgrade-deps:
 
 install-ml-deps:
 	uv pip install .[ml_deps]
+	$(PYTHON) -c 'from src.aegis_ai_ml.src import util; util.install_nltk_deps()'
 
 build-dist:
-	uv run python3 -m build
+	uv run $(PYTHON) -m build
 
 publish-dist:
-	uv run python3 -m twine upload dist/*
+	uv run $(PYTHON) -m twine upload dist/*
 
 
 ############################################################################
