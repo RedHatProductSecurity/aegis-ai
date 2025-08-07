@@ -459,9 +459,14 @@ def main():
     classifier = SecBERTSeverityClassifier()
 
     try:
-        df = classifier.load_and_preprocess_data_from_local(
-            os.getenv("AEGIS_ML_CVE_DATA_DIR")
-        )
+        data_dir = os.getenv("AEGIS_ML_CVE_DATA_DIR")
+        if not data_dir or not os.path.isdir(data_dir):
+            raise FileNotFoundError(
+                f"No valid directory provided in ${{AEGIS_ML_CVE_DATA_DIR}}: {data_dir}"
+            )
+
+        df = classifier.load_and_preprocess_data_from_local(data_dir)
+
         classifier.prepare_model_and_tokenizer()
         train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df)
 
