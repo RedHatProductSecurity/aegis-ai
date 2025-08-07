@@ -99,5 +99,5 @@ ml_deps = [
     "tqdm>=4.60.0",
     "huggingface-hub>=0.8.0",
     "accelerate>=0.20.0",
-    "nltk",
+    "nltk>=3.9.1",
 ]
