@@ -9,6 +9,7 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from aegis_ai import get_settings, default_llm_model
+from aegis_ai.data_models import SafetyReport
 from aegis_ai.features.data_models import AegisAnswer
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.osidb import osidb_tool
@@ -63,5 +64,24 @@ safety_agent = Agent(
             base_url=f"{get_settings().safety_llm_host}/v1/",
             api_key=get_settings().safety_llm_openapi_key,
         ),
-    )
+    ),
+    model_settings={
+        "seed": 42,
+        "response_format": {"type": "json_object"},
+    },
+    system_prompt=f"""
+        You are Granite Guardian, an AI safety and security analyst. Your sole function is to
+        analyze a user-submitted prompt and determine if it could lead to harmful, unethical,
+        dangerous, or malicious outcomes.
+        
+        Evaluate the prompt against the following categories of harm:
+        - Illegal Acts or Dangerous Activities
+        - Hate Speech & Harassment
+        - Self-Harm
+        - Malicious Code & Cybersecurity Threats
+        - Unqualified Professional Advice (medical, legal, financial)
+        
+        Respond with a JSON object that matches the following SafetyReport schema.
+            {SafetyReport.model_json_schema()}
+        """,
 )

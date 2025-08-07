@@ -3,7 +3,7 @@
 from typing import Annotated
 
 import cvss
-from pydantic import StringConstraints, TypeAdapter, BeforeValidator
+from pydantic import StringConstraints, TypeAdapter, BeforeValidator, BaseModel, Field
 
 
 def is_cvss3_valid(cvss_str: str) -> bool:
@@ -82,3 +82,10 @@ CWEID = Annotated[
 ]
 # create dynamic CWEID validator
 cweid_validator = TypeAdapter(CWEID)
+
+
+class SafetyReport(BaseModel):
+    is_safe: bool = Field(description="True if the prompt is safe, False otherwise.")
+    reason: str | None = Field(
+        None, description="The reason for the classification, if unsafe."
+    )
