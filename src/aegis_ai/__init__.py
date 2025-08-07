@@ -16,7 +16,7 @@ from functools import lru_cache
 import logfire
 from dotenv import load_dotenv
 from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
-from pydantic_ai.models.gemini import GeminiModel, GeminiModelSettings
+from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_settings import BaseSettings
 
 from rich.logging import RichHandler
@@ -44,8 +44,8 @@ if "api.anthropic.com" in llm_host:
     default_llm_model = AnthropicModel(model_name=llm_model)
     default_llm_settings = AnthropicModelSettings()
 elif "generativelanguage.googleapis.com" in llm_host:
-    default_llm_model = GeminiModel(model_name=llm_model)
-    default_llm_settings = GeminiModelSettings(
+    default_llm_model = GoogleModel(model_name=llm_model)
+    default_llm_settings = GoogleModelSettings(
         gemini_thinking_config={"include_thoughts": True}
     )
 else:
