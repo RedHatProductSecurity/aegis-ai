@@ -496,7 +496,7 @@ def main():
         print(f"Target Classes: {list(classifier.label_encoder.classes_)}")
 
         print("\n Output files:")
-        print("  • ./secbert_model/ - Trained model and tokenizer")
+        print("  • ./etc/models/secbert_model/ - Trained model and tokenizer")
         print("  • secbert_confusion_matrix.png - Performance visualization")
 
     except Exception as e:
