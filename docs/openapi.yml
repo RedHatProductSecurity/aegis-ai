@@ -133,6 +133,35 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Cve Analysis
+  /api/v1/analysis/cve/{feature}:
+    post:
+      operationId: cve_analysis_with_body_api_v1_analysis_cve__feature__post
+      parameters:
+      - in: path
+        name: feature
+        required: true
+        schema:
+          $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName__1'
+      - in: query
+        name: detail
+        required: false
+        schema:
+          default: false
+          title: Detail
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Cve Analysis With Body
   /console:
     get:
       operationId: console_console_get

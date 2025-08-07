@@ -19,13 +19,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from aegis_ai import config_logging
-
-# rh_feature_agent can be substituted with public_feature_agent
-from aegis_ai.agents import rh_feature_agent as feature_agent
+from aegis_ai.agents import public_feature_agent, rh_feature_agent
 
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import cve, component
-from . import AEGIS_REST_API_VERSION
+from . import AEGIS_REST_API_VERSION, feature_agent
 
 config_logging()
 
@@ -48,6 +46,11 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 favicon_path = os.path.join(STATIC_DIR, "favicon.ico")
+
+if "public" in feature_agent:
+    llm_agent = public_feature_agent
+else:
+    llm_agent = rh_feature_agent
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -131,8 +134,37 @@ async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = Fa
         )
 
     try:
-        feature_instance = FeatureClass(agent=feature_agent)
+        feature_instance = FeatureClass(agent=llm_agent)
         result = await feature_instance.exec(validated_input)
+        if detail:
+            return result
+        return result.output
+    except Exception as e:
+        raise HTTPException(500, detail=f"Error executing CVE feature '{feature}': {e}")
+
+
+@app.post(
+    f"/api/{AEGIS_REST_API_VERSION}/analysis/cve/{{feature}}",
+    response_class=JSONResponse,
+)
+async def cve_analysis_with_body(
+    feature: CVEFeatureName, cve_data: Request, detail: bool = False
+):
+    cve_data = await cve_data.json()
+    cve_id = cve_data["cve_id"]
+
+    if feature.value not in cve_feature_registry:
+        raise HTTPException(404, detail=f"CVE feature '{feature.value}' not found.")
+    FeatureClass = cve_feature_registry[feature.value]
+    try:
+        validated_input = cve_data
+    except Exception as e:
+        raise HTTPException(
+            422, detail=f"Invalid input for CVE feature '{feature}': {e}"
+        )
+    try:
+        feature_instance = FeatureClass(agent=llm_agent)
+        result = await feature_instance.exec(cve_id, static_context=validated_input)
         if detail:
             return result
         return result.output
@@ -171,7 +203,7 @@ async def component_analysis(
         )
 
     try:
-        feature_instance = FeatureClass(agent=feature_agent)
+        feature_instance = FeatureClass(agent=llm_agent)
         result = await feature_instance.exec(validated_input)
         if detail:
             return result
