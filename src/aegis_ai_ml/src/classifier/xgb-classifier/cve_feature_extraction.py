@@ -676,8 +676,7 @@ class CVEFeatureExtractor:
         
         # resume from last checkpoint (if stuck)
         start_index = 0  
-        cve_ids = cve_ids[:5]
-        logger.info(f"RESUMING from CVE {start_index+1}")
+        cve_ids = cve_ids[:5] # Set it currently for quick check, for extracting all cves: make sure to change to cve_ids[start_index:]
 
         logger.info(f"Processing {len(cve_ids)} remaining CVEs")
         

@@ -640,7 +640,7 @@ def main():
     # Setup both repositories
     scraper.setup_repositories()
     
-    scraper.process_all_cves(limit=5)  # Change to scraper.process_all_cves(limit=3) for processing only 3 cves
+    scraper.process_all_cves(limit=5)  # Change to scraper.process_all_cves(limit=5) for processing only 5 cves
     
     # Print summary statistics
     stats = scraper.get_summary_stats()
