@@ -41,8 +41,8 @@ class SecurityDataset(Dataset):
     def __getitem__(self, idx):
         # Handle both pandas Series and numpy arrays safely
         try:
-            text = str(self.texts[idx])
-            label = self.labels[idx]
+            text = str(self.texts.iloc[idx])
+            label = self.labels.iloc[idx]
         except (AttributeError, TypeError):
             text = str(self.texts[idx])
             label = self.labels[idx]
