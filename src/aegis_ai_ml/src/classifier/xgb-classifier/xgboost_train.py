@@ -15,7 +15,7 @@ def train_model():
     logger.info("Loading training dataset...")
     
     # Path to training dataset
-    data_path = 'sample_data/sample_data.csv'
+    data_path = 'data/balanced-training-dataset-through-smote.csv'
     
     df = pd.read_csv(data_path)
     logger.info(f"Loaded {len(df)} CVEs from {data_path}")
