@@ -26,6 +26,73 @@ from tqdm.auto import tqdm
 from aegis_ai_ml.src.util import normalize_text
 
 
+def load_and_preprocess_data_from_local(data_directory: str):
+    """Load and preprocess CVE data from a local directory of JSON CVE files."""
+    print(f"Loading CVE data from local directory: {data_directory}...")
+
+    cve_data = []
+    path = Path(data_directory)
+    json_files = list(path.rglob("*.json"))
+
+    if not json_files:
+        raise FileNotFoundError(
+            f"No JSON files found in directory: {data_directory}"
+        )
+
+    # Loop through all found JSON files with a progress bar
+    for file_path in tqdm(json_files, desc="Reading JSON files"):
+        with open(file_path, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+                # Assuming each file contains a single CVE object
+                # If a file contains a list, you would loop through `data` here
+                cve_data.append(data)
+            except json.JSONDecodeError:
+                print(f"Warning: Skipping malformed JSON file: {file_path}")
+
+    # Convert the list of dictionaries to a pandas DataFrame
+    df = pd.DataFrame(cve_data)
+
+    print(f"Dataset shape: {df.shape}")
+    print(f"Columns: {list(df.columns)}")
+
+    df = df.dropna(subset=["impact", "title", "cve_description"])
+
+    df["text_input"] = (
+        df["title"].astype(str) + " " + df["cve_description"].astype(str)
+    )
+    df["text_input"] = df["text_input"].apply(normalize_text)
+
+    # Remove empty text inputs
+    df = df[df["text_input"].str.len() > 0]
+
+    # Clean impact labels - map to standard format
+    severity_mapping = {
+        "Critical": "CRITICAL",
+        "Important": "IMPORTANT",
+        "Moderate": "MODERATE",
+        "Low": "LOW",
+        "critical": "CRITICAL",
+        "important": "IMPORTANT",
+        "moderate": "MODERATE",
+        "low": "LOW",
+        "LOW": "LOW",
+        "MODERATE": "MODERATE",
+        "IMPORTANT": "IMPORTANT",
+        "CRITICAL": "CRITICAL",
+    }
+
+    df["impact_clean"] = df["impact"].map(severity_mapping)
+    df = df.dropna(subset=["impact_clean"])
+
+    print("\nImpact distribution:")
+    severity_counts = df["impact_clean"].value_counts()
+    print(severity_counts)
+    print(f"\nTotal samples: {len(df)}")
+
+    return df
+
+
 class SecurityDataset(Dataset):
     """Custom dataset for security vulnerability data"""
 
@@ -97,72 +164,6 @@ class SecBERTSeverityClassifier:
             torch.set_num_threads(8)
 
         return device
-
-    def load_and_preprocess_data_from_local(self, data_directory: str):
-        """Load and preprocess CVE data from a local directory of JSON CVE files."""
-        print(f"Loading CVE data from local directory: {data_directory}...")
-
-        cve_data = []
-        path = Path(data_directory)
-        json_files = list(path.rglob("*.json"))
-
-        if not json_files:
-            raise FileNotFoundError(
-                f"No JSON files found in directory: {data_directory}"
-            )
-
-        # Loop through all found JSON files with a progress bar
-        for file_path in tqdm(json_files, desc="Reading JSON files"):
-            with open(file_path, "r", encoding="utf-8") as f:
-                try:
-                    data = json.load(f)
-                    # Assuming each file contains a single CVE object
-                    # If a file contains a list, you would loop through `data` here
-                    cve_data.append(data)
-                except json.JSONDecodeError:
-                    print(f"Warning: Skipping malformed JSON file: {file_path}")
-
-        # Convert the list of dictionaries to a pandas DataFrame
-        df = pd.DataFrame(cve_data)
-
-        print(f"Dataset shape: {df.shape}")
-        print(f"Columns: {list(df.columns)}")
-
-        df = df.dropna(subset=["impact", "title", "cve_description"])
-
-        df["text_input"] = (
-            df["title"].astype(str) + " " + df["cve_description"].astype(str)
-        )
-        df["text_input"] = df["text_input"].apply(normalize_text)
-
-        # Remove empty text inputs
-        df = df[df["text_input"].str.len() > 0]
-
-        # Clean impact labels - map to standard format
-        severity_mapping = {
-            "Critical": "CRITICAL",
-            "Important": "IMPORTANT",
-            "Moderate": "MODERATE",
-            "Low": "LOW",
-            "critical": "CRITICAL",
-            "important": "IMPORTANT",
-            "moderate": "MODERATE",
-            "low": "LOW",
-            "LOW": "LOW",
-            "MODERATE": "MODERATE",
-            "IMPORTANT": "IMPORTANT",
-            "CRITICAL": "CRITICAL",
-        }
-
-        df["impact_clean"] = df["impact"].map(severity_mapping)
-        df = df.dropna(subset=["impact_clean"])
-
-        print("\nImpact distribution:")
-        severity_counts = df["impact_clean"].value_counts()
-        print(severity_counts)
-        print(f"\nTotal samples: {len(df)}")
-
-        return df
 
     def prepare_model_and_tokenizer(self):
         """Initialize SecBERT tokenizer and model"""
@@ -465,7 +466,7 @@ def main():
                 f"No valid directory provided in ${{AEGIS_ML_CVE_DATA_DIR}}: {data_dir}"
             )
 
-        df = classifier.load_and_preprocess_data_from_local(data_dir)
+        df = load_and_preprocess_data_from_local(data_dir)
 
         classifier.prepare_model_and_tokenizer()
         train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df)
