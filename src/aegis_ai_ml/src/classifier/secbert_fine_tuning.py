@@ -35,9 +35,7 @@ def load_and_preprocess_data_from_local(data_directory: str):
     json_files = list(path.rglob("*.json"))
 
     if not json_files:
-        raise FileNotFoundError(
-            f"No JSON files found in directory: {data_directory}"
-        )
+        raise FileNotFoundError(f"No JSON files found in directory: {data_directory}")
 
     # Loop through all found JSON files with a progress bar
     for file_path in tqdm(json_files, desc="Reading JSON files"):
@@ -58,9 +56,7 @@ def load_and_preprocess_data_from_local(data_directory: str):
 
     df = df.dropna(subset=["impact", "title", "cve_description"])
 
-    df["text_input"] = (
-        df["title"].astype(str) + " " + df["cve_description"].astype(str)
-    )
+    df["text_input"] = df["title"].astype(str) + " " + df["cve_description"].astype(str)
     df["text_input"] = df["text_input"].apply(normalize_text)
 
     # Remove empty text inputs
@@ -456,61 +452,52 @@ class SecBERTSeverityClassifier:
 
 
 def main():
+    data_dir = os.getenv("AEGIS_ML_CVE_DATA_DIR")
+    if not data_dir or not os.path.isdir(data_dir):
+        raise FileNotFoundError(
+            f"No valid directory provided in ${{AEGIS_ML_CVE_DATA_DIR}}: {data_dir}"
+        )
+
+    df = load_and_preprocess_data_from_local(data_dir)
+
     # Initialize classifier
     classifier = SecBERTSeverityClassifier()
 
-    try:
-        data_dir = os.getenv("AEGIS_ML_CVE_DATA_DIR")
-        if not data_dir or not os.path.isdir(data_dir):
-            raise FileNotFoundError(
-                f"No valid directory provided in ${{AEGIS_ML_CVE_DATA_DIR}}: {data_dir}"
-            )
+    classifier.prepare_model_and_tokenizer()
+    train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df)
 
-        df = load_and_preprocess_data_from_local(data_dir)
+    classifier.train_model(train_dataset, val_dataset)
 
-        classifier.prepare_model_and_tokenizer()
-        train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df)
+    accuracy, report, cm = classifier.evaluate_model(test_dataset)
 
-        classifier.train_model(train_dataset, val_dataset)
+    # Test sample predictions
+    print("SAMPLE PREDICTIONS:")
+    print("=" * 60)
 
-        accuracy, report, cm = classifier.evaluate_model(test_dataset)
+    sample_texts = [
+        "Buffer overflow vulnerability allows remote code execution with system privileges",
+        "Cross-site scripting vulnerability in web interface allows session hijacking",
+        "Information disclosure through verbose error messages in logs",
+        "Denial of service through resource exhaustion in HTTP parser",
+    ]
 
-        # Test sample predictions
-        print("SAMPLE PREDICTIONS:")
-        print("=" * 60)
+    for i, text in enumerate(sample_texts, 1):
+        severity, confidence = classifier.predict_severity(normalize_text(text))
+        print(f"\n{i}. Text: {text}")
+        print(f"   Predicted impact: {severity.upper()} (confidence: {confidence:.3f})")
 
-        sample_texts = [
-            "Buffer overflow vulnerability allows remote code execution with system privileges",
-            "Cross-site scripting vulnerability in web interface allows session hijacking",
-            "Information disclosure through verbose error messages in logs",
-            "Denial of service through resource exhaustion in HTTP parser",
-        ]
+    # Final results
+    print(f"\n{'=' * 60}")
+    print("FINAL RESULTS")
+    print("=" * 60)
+    print(f"Model: {classifier.model_name}")
+    print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
+    print(f"Target Classes: {list(classifier.label_encoder.classes_)}")
 
-        for i, text in enumerate(sample_texts, 1):
-            severity, confidence = classifier.predict_severity(normalize_text(text))
-            print(f"\n{i}. Text: {text}")
-            print(
-                f"   Predicted impact: {severity.upper()} (confidence: {confidence:.3f})"
-            )
-
-        # Final results
-        print(f"\n{'=' * 60}")
-        print("FINAL RESULTS")
-        print("=" * 60)
-        print(f"Model: {classifier.model_name}")
-        print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
-        print(f"Target Classes: {list(classifier.label_encoder.classes_)}")
-
-        print("\n Output files:")
-        print("  • ./etc/models/secbert_model/ - Trained model and tokenizer")
-        print("  • secbert_confusion_matrix.png - Performance visualization")
-
-    except Exception as e:
-        print(f"Error during fine-tuning: {str(e)}")
-        return None
-
-    return classifier
+    print("\n Output files:")
+    print("  • ./etc/models/secbert_model/ - Trained model and tokenizer")
+    print("  • secbert_confusion_matrix.png - Performance visualization")
 
 
 if __name__ == "__main__":
-    classifier = main()
+    main()
