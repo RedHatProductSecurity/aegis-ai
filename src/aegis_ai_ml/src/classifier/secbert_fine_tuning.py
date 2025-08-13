@@ -125,12 +125,12 @@ class SecurityDataset(Dataset):
         }
 
 
-class SecBERTSeverityClassifier:
+class SecBERTClassifier:
     """SecBERT-based classifier for security severity prediction"""
 
-    def __init__(self, model_name="jackaduma/SecBERT"):
+    def __init__(self, num_labels, model_name="jackaduma/SecBERT"):
         self.model_name = model_name
-        self.num_labels = 4  # critical, important, moderate, low
+        self.num_labels = num_labels
         self.tokenizer = None
         self.model = None
         self.label_encoder = LabelEncoder()
@@ -187,12 +187,12 @@ class SecBERTSeverityClassifier:
         self.model = self.model.to(self.device)
         print(f"Model loaded and moved to {self.device}")
 
-    def prepare_datasets(self, df, test_size=0.2, val_size=0.1):
+    def prepare_datasets(self, df, column, test_size=0.2, val_size=0.1):
         """Split data into train/validation/test sets"""
         print("Preparing train/validation/test splits...")
 
         # Encode labels
-        y_encoded = self.label_encoder.fit_transform(df["impact_clean"])
+        y_encoded = self.label_encoder.fit_transform(df[column])
         print(f"Label classes: {self.label_encoder.classes_}")
 
         # Split data - stratified to maintain class distribution
@@ -461,10 +461,11 @@ def main():
     df = load_and_preprocess_data_from_local(data_dir)
 
     # Initialize classifier
-    classifier = SecBERTSeverityClassifier()
+    num_labels = df["impact_clean"].nunique()
+    classifier = SecBERTClassifier(num_labels)
 
     classifier.prepare_model_and_tokenizer()
-    train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df)
+    train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df, "impact_clean")
 
     classifier.train_model(train_dataset, val_dataset)
 
