@@ -438,23 +438,25 @@ class SecBERTClassifier:
         # Confusion matrix
         cm = confusion_matrix(y_true, y_pred)
 
+        # Create plot with confusion matrix
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            xticklabels=target_names,
+            yticklabels=target_names,
+        )
+        plt.title("SecBERT Security Severity Classification - Confusion Matrix")
+        plt.ylabel("True Label")
+        plt.xlabel("Predicted Label")
+        plt.tight_layout()
+        plt.savefig("secbert_confusion_matrix.png", dpi=300, bbox_inches="tight")
+        print("Confusion matrix saved as 'secbert_confusion_matrix.png'")
+
         if show_plots:
-            plt.figure(figsize=(10, 8))
-            sns.heatmap(
-                cm,
-                annot=True,
-                fmt="d",
-                cmap="Blues",
-                xticklabels=target_names,
-                yticklabels=target_names,
-            )
-            plt.title("SecBERT Security Severity Classification - Confusion Matrix")
-            plt.ylabel("True Label")
-            plt.xlabel("Predicted Label")
-            plt.tight_layout()
-            plt.savefig("secbert_confusion_matrix.png", dpi=300, bbox_inches="tight")
             plt.show()
-            print("Confusion matrix saved as 'secbert_confusion_matrix.png'")
 
         return accuracy, report, cm
 
