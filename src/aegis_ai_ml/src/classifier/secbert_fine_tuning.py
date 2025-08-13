@@ -53,6 +53,18 @@ def extract_cvss3_metric(cvss_scores, cvss3_metric):
         return None
 
 
+def impact_by_cvss3_score(cvss3_score):
+    # we cannot use cvss3.severities() because it uses incompatible labels
+    if cvss3_score <= 4.0:
+        return "LOW"
+    elif cvss3_score <= 7.0:
+        return "MODERATE"
+    elif cvss3_score <= 9.0:
+        return "IMPORTANT"
+    else:
+        return "CRITICAL"
+
+
 def load_and_preprocess_data_from_local(data_directory: str):
     """Load and preprocess CVE data from a local directory of JSON CVE files."""
     print(f"Loading CVE data from local directory: {data_directory}...")
@@ -416,7 +428,7 @@ class SecBERTClassifier:
         print(f"Fallback training completed! Model saved to {output_dir}")
         return train_result
 
-    def evaluate_model(self, test_dataset, show_plots=True):
+    def evaluate_model(self, test_dataset, show_plots=True, file_prefix=""):
         """Evaluate the trained model"""
         print("Evaluating model on test set...")
 
@@ -452,8 +464,9 @@ class SecBERTClassifier:
         plt.ylabel("True Label")
         plt.xlabel("Predicted Label")
         plt.tight_layout()
-        plt.savefig("secbert_confusion_matrix.png", dpi=300, bbox_inches="tight")
-        print("Confusion matrix saved as 'secbert_confusion_matrix.png'")
+        file_name = f"{file_prefix}secbert_confusion_matrix.png"
+        plt.savefig(file_name, dpi=300, bbox_inches="tight")
+        print(f"Confusion matrix saved as '{file_name}'")
 
         if show_plots:
             plt.show()
@@ -491,21 +504,42 @@ def main():
 
     # add columns for CVSS3 base metrics
     for cvss3_metric in CVSS3_BASIC_METRICS:
-        df[cvss3_metric] = df["cvss_scores"].apply(extract_cvss3_metric, cvss3_metric=cvss3_metric)
+        df[cvss3_metric] = df["cvss_scores"].apply(
+            extract_cvss3_metric, cvss3_metric=cvss3_metric
+        )
 
     # drop rows where CVSS3_BASIC_METRICS fields are not available
     df = df.dropna(subset=CVSS3_BASIC_METRICS)
 
-    # Initialize classifier
-    num_labels = df["impact_clean"].nunique()
-    classifier = SecBERTClassifier(num_labels)
+    classifier_by_metric = {}
 
-    classifier.prepare_model_and_tokenizer()
-    train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df, "impact_clean")
+    for cvss3_metric in CVSS3_BASIC_METRICS:
+        # Initialize classifier
+        num_labels = df[cvss3_metric].nunique()
+        classifier = SecBERTClassifier(num_labels)
 
-    classifier.train_model(train_dataset, val_dataset)
+        print(
+            f"\n\nTraining {cvss3_metric}, num_labels = {num_labels}, rows = {len(df)}"
+        )
+        print(f"Impact distribution: {df[cvss3_metric].value_counts()}")
 
-    accuracy, report, cm = classifier.evaluate_model(test_dataset)
+        classifier.prepare_model_and_tokenizer()
+        train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(
+            df, cvss3_metric
+        )
+
+        classifier.train_model(
+            train_dataset,
+            val_dataset,
+            output_dir=f"./etc/models/secbert_model/{cvss3_metric}",
+        )
+
+        accuracy, report, cm = classifier.evaluate_model(
+            test_dataset,
+            show_plots=False,
+            file_prefix=f"./etc/{cvss3_metric}-",
+        )
+        classifier_by_metric[cvss3_metric] = classifier
 
     # Test sample predictions
     print("SAMPLE PREDICTIONS:")
@@ -519,9 +553,21 @@ def main():
     ]
 
     for i, text in enumerate(sample_texts, 1):
-        severity, confidence = classifier.predict_severity(normalize_text(text))
         print(f"\n{i}. Text: {text}")
-        print(f"   Predicted impact: {severity.upper()} (confidence: {confidence:.3f})")
+        cvss3_str = "CVSS:3.1"
+        for cvss3_metric in CVSS3_BASIC_METRICS:
+            classifier = classifier_by_metric[cvss3_metric]
+            value, confidence = classifier.predict_severity(normalize_text(text))
+            print(
+                f"   Predicted {cvss3_metric}: {value} (confidence: {confidence:.3f})"
+            )
+            cvss3_str += f"/{cvss3_metric}:{value[0]}"
+
+        print(f"   Predicted CVSS3 vector: {cvss3_str}")
+        cvss3 = cvss.CVSS3(cvss3_str)
+        cvss3_score = cvss3.scores()[0]
+        print(f"   Predicted CVSS3 score: {cvss3_score}")
+        print(f"   Predicted impact: {impact_by_cvss3_score(cvss3_score)}")
 
     # Final results
     print(f"\n{'=' * 60}")
