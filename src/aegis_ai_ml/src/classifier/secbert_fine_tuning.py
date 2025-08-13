@@ -65,6 +65,20 @@ def impact_by_cvss3_score(cvss3_score):
         return "CRITICAL"
 
 
+def compute_pred_impact(row, classifier_by_metric):
+    """compute impact based on predicted CVSS3 base metrics"""
+    cvss3_str = "CVSS:3.1"
+    text_input = row["text_input"]
+    for cvss3_metric in CVSS3_BASIC_METRICS:
+        classifier = classifier_by_metric[cvss3_metric]
+        value, _ = classifier.predict_severity(normalize_text(text_input))
+        cvss3_str += f"/{cvss3_metric}:{value[0]}"
+
+    cvss3 = cvss.CVSS3(cvss3_str)
+    cvss3_score = cvss3.scores()[0]
+    return impact_by_cvss3_score(cvss3_score)
+
+
 def load_and_preprocess_data_from_local(data_directory: str):
     """Load and preprocess CVE data from a local directory of JSON CVE files."""
     print(f"Loading CVE data from local directory: {data_directory}...")
@@ -514,6 +528,21 @@ def main():
     # drop rows where CVSS3_BASIC_METRICS fields are not available
     df = df.dropna(subset=CVSS3_BASIC_METRICS)
 
+    # enforce meaningful ordering
+    impact_labels = ["LOW", "MODERATE", "IMPORTANT", "CRITICAL"]
+    label_encoder = LabelEncoder()
+    label_encoder.classes_ = np.array(impact_labels)
+
+    # Split data - stratified to maintain class distribution
+    y_encoded = label_encoder.transform(df["impact_clean"])
+    df, df_test, _, _ = train_test_split(
+        df,
+        y_encoded,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_encoded,
+    )
+
     classifier_by_metric = {}
 
     for cvss3_metric in CVSS3_BASIC_METRICS:
@@ -539,7 +568,7 @@ def main():
 
         print("Evaluating model on test set...")
         y_pred, y_true, target_names = classifier.get_predictions(test_dataset)
-        accuracy, report, cm = evaluate_model(
+        evaluate_model(
             y_pred,
             y_true,
             target_names,
@@ -548,16 +577,24 @@ def main():
         )
         classifier_by_metric[cvss3_metric] = classifier
 
+    # create a new column with the predicted impact based on the predicted CVSS3 base metrics
+    df_test["pred_impact"] = df_test.apply(
+        compute_pred_impact, axis=1, classifier_by_metric=classifier_by_metric
+    )
+
+    # Prepare expected/actual output
+    y_pred = label_encoder.transform(df_test["pred_impact"])
+    y_true = label_encoder.transform(df_test["impact_clean"])
+
+    # Overall evaluation
+    accuracy, report, cm = evaluate_model(y_pred, y_true, impact_labels)
+
     # Test sample predictions
     print("SAMPLE PREDICTIONS:")
     print("=" * 60)
 
-    sample_texts = [
-        "Buffer overflow vulnerability allows remote code execution with system privileges",
-        "Cross-site scripting vulnerability in web interface allows session hijacking",
-        "Information disclosure through verbose error messages in logs",
-        "Denial of service through resource exhaustion in HTTP parser",
-    ]
+    # Pick 4 random inputs from df_test
+    sample_texts = df_test["text_input"].sample(n=4)
 
     for i, text in enumerate(sample_texts, 1):
         print(f"\n{i}. Text: {text}")
