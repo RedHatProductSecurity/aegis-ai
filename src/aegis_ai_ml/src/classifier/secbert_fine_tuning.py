@@ -128,6 +128,45 @@ def load_and_preprocess_data_from_local(data_directory: str):
     return df
 
 
+def evaluate_model(y_pred, y_true, target_names, show_plots=True, file_prefix=""):
+    """Evaluate the trained model"""
+
+    # Calculate metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
+
+    # Classification report
+    report = classification_report(y_true, y_pred, target_names=target_names)
+    print("\nClassification Report:")
+    print(report)
+
+    # Confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+
+    # Create plot with confusion matrix
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=target_names,
+        yticklabels=target_names,
+    )
+    plt.title("SecBERT Security Severity Classification - Confusion Matrix")
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
+    plt.tight_layout()
+    file_name = f"{file_prefix}secbert_confusion_matrix.png"
+    plt.savefig(file_name, dpi=300, bbox_inches="tight")
+    print(f"Confusion matrix saved as '{file_name}'")
+
+    if show_plots:
+        plt.show()
+
+    return accuracy, report, cm
+
+
 class SecurityDataset(Dataset):
     """Custom dataset for security vulnerability data"""
 
@@ -437,47 +476,6 @@ class SecBERTClassifier:
         target_names = self.label_encoder.classes_
         return y_pred, y_true, target_names
 
-    def evaluate_model(self, test_dataset, show_plots=True, file_prefix=""):
-        """Evaluate the trained model"""
-
-        # Get predictions
-        y_pred, y_true, target_names = self.get_predictions(test_dataset)
-
-        # Calculate metrics
-        accuracy = accuracy_score(y_true, y_pred)
-        print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
-
-        # Classification report
-        report = classification_report(y_true, y_pred, target_names=target_names)
-        print("\nClassification Report:")
-        print(report)
-
-        # Confusion matrix
-        cm = confusion_matrix(y_true, y_pred)
-
-        # Create plot with confusion matrix
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            cm,
-            annot=True,
-            fmt="d",
-            cmap="Blues",
-            xticklabels=target_names,
-            yticklabels=target_names,
-        )
-        plt.title("SecBERT Security Severity Classification - Confusion Matrix")
-        plt.ylabel("True Label")
-        plt.xlabel("Predicted Label")
-        plt.tight_layout()
-        file_name = f"{file_prefix}secbert_confusion_matrix.png"
-        plt.savefig(file_name, dpi=300, bbox_inches="tight")
-        print(f"Confusion matrix saved as '{file_name}'")
-
-        if show_plots:
-            plt.show()
-
-        return accuracy, report, cm
-
     def predict_severity(self, text):
         """Predict severity for new text"""
         if self.model is None or self.tokenizer is None:
@@ -540,8 +538,11 @@ def main():
         )
 
         print("Evaluating model on test set...")
-        accuracy, report, cm = classifier.evaluate_model(
-            test_dataset,
+        y_pred, y_true, target_names = classifier.get_predictions(test_dataset)
+        accuracy, report, cm = evaluate_model(
+            y_pred,
+            y_true,
+            target_names,
             show_plots=False,
             file_prefix=f"./etc/{cvss3_metric}-",
         )
