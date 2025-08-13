@@ -1,5 +1,6 @@
 # inspired by https://github.com/sidhpurwala-huzaifa/redhat-sev-classifier
 
+import cvss
 import json
 import os
 from pathlib import Path
@@ -24,6 +25,32 @@ import seaborn as sns
 from tqdm.auto import tqdm
 
 from aegis_ai_ml.src.util import normalize_text
+
+
+CVSS3_BASIC_METRICS = ["AV", "AC", "PR", "UI", "S", "C", "I", "A"]
+
+
+def find_rh_cvss3(cvss_scores):
+    """find RH CVSS3 in the cvss_scores list in per-CVE data from OSIDB"""
+    for item in cvss_scores:
+        if item["cvss_version"] != "V3":
+            continue
+
+        if item["issuer"] != "RH":
+            continue
+
+        cvss3_str = item["vector"]
+        return cvss.CVSS3(cvss3_str)
+
+
+def extract_cvss3_metric(cvss_scores, cvss3_metric):
+    """extract value of a single RH CVSS3 metric from the cvss_scores cell"""
+    try:
+        rh_cvss = find_rh_cvss3(cvss_scores)
+        return rh_cvss.get_value_description(cvss3_metric)
+    except Exception:
+        # failed to get cvss3_metric
+        return None
 
 
 def load_and_preprocess_data_from_local(data_directory: str):
@@ -459,6 +486,13 @@ def main():
         )
 
     df = load_and_preprocess_data_from_local(data_dir)
+
+    # add columns for CVSS3 base metrics
+    for cvss3_metric in CVSS3_BASIC_METRICS:
+        df[cvss3_metric] = df["cvss_scores"].apply(extract_cvss3_metric, cvss3_metric=cvss3_metric)
+
+    # drop rows where CVSS3_BASIC_METRICS fields are not available
+    df = df.dropna(subset=CVSS3_BASIC_METRICS)
 
     # Initialize classifier
     num_labels = df["impact_clean"].nunique()
