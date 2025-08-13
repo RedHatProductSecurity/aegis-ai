@@ -428,21 +428,26 @@ class SecBERTClassifier:
         print(f"Fallback training completed! Model saved to {output_dir}")
         return train_result
 
-    def evaluate_model(self, test_dataset, show_plots=True, file_prefix=""):
-        """Evaluate the trained model"""
-        print("Evaluating model on test set...")
-
+    def get_predictions(self, test_dataset):
         # Get predictions
         predictions = self.trainer.predict(test_dataset)
         y_pred = np.argmax(predictions.predictions, axis=1)
         y_true = predictions.label_ids
+
+        target_names = self.label_encoder.classes_
+        return y_pred, y_true, target_names
+
+    def evaluate_model(self, test_dataset, show_plots=True, file_prefix=""):
+        """Evaluate the trained model"""
+
+        # Get predictions
+        y_pred, y_true, target_names = self.get_predictions(test_dataset)
 
         # Calculate metrics
         accuracy = accuracy_score(y_true, y_pred)
         print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
 
         # Classification report
-        target_names = self.label_encoder.classes_
         report = classification_report(y_true, y_pred, target_names=target_names)
         print("\nClassification Report:")
         print(report)
@@ -534,6 +539,7 @@ def main():
             output_dir=f"./etc/models/secbert_model/{cvss3_metric}",
         )
 
+        print("Evaluating model on test set...")
         accuracy, report, cm = classifier.evaluate_model(
             test_dataset,
             show_plots=False,
