@@ -288,7 +288,7 @@ class SecBERTSeverityClassifier:
             optim="adamw_torch",  # Use PyTorch AdamW
             seed=42,  # Set seed for reproducibility
             data_seed=42,
-            no_cuda=True,  # Force CPU usage
+            use_cpu=True,  # Force CPU usage
         )
 
         # Put model in training mode before creating trainer
@@ -367,7 +367,7 @@ class SecBERTSeverityClassifier:
             optim="sgd",  # Use SGD instead of AdamW
             seed=42,
             data_seed=42,
-            no_cuda=True,
+            use_cpu=True,
         )
 
         # Create new trainer with fallback settings
