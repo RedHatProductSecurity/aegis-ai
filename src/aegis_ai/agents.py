@@ -16,42 +16,38 @@ from aegis_ai.tools.osidb import osidb_tool
 from aegis_ai.toolsets import public_toolset
 
 
-class AegisAgent(Agent):
+def create_aegis_agent(**kwargs: Any) -> Agent:
     """
-    AegisAgent: A specialized pydantic-ai Agent.
+    Factory for a pre-configured `Agent` that mirrors the previous AegisAgent defaults
+    without subclassing the (final) `Agent` class.
     """
-
-    def __init__(
-        self,
-        **kwargs: Any,
-    ):
-        super().__init__(
-            model=default_llm_model,
-            model_settings=get_settings().default_llm_settings
-            | {
-                "temperature": 0.055,
-                "top_p": 0.8,
-                "seed": 42,
-                "response_format": {"type": "json_object"},
-            },
-            **kwargs,
-        )
+    return Agent(
+        model=default_llm_model,
+        model_settings=get_settings().default_llm_settings
+        | {
+            "temperature": 0.055,
+            "top_p": 0.8,
+            "seed": 42,
+            "response_format": {"type": "json_object"},
+        },
+        **kwargs,
+    )
 
 
-simple_agent = AegisAgent(
+simple_agent = create_aegis_agent(
     name="SimpleAgent",
     output_type=AegisAnswer,
 )
 
 
-rh_feature_agent = AegisAgent(
+rh_feature_agent = create_aegis_agent(
     name="RHFeatureAgent",
     retries=2,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
     tools=[osidb_tool, cwe_tool],
 )
 
 
-public_feature_agent = AegisAgent(
+public_feature_agent = create_aegis_agent(
     name="PublicFeatureAgent",
     retries=5,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
     toolsets=[public_toolset],

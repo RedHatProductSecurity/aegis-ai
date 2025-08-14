@@ -27,7 +27,7 @@ format:
 	uvx ruff format
 
 check-type:
-	uvx ty check --exit-zero
+	uvx ty check
     
 check: format lint check-type
 
