@@ -60,9 +60,4 @@ class ComponentIntelligence(Feature):
             output_schema=ComponentIntelligenceModel.model_json_schema(),
         )
         logger.debug(prompt.to_string())
-        if await prompt.is_safe():
-            return await self.agent.run(
-                prompt.to_string(), output_type=ComponentIntelligenceModel
-            )
-        else:
-            logger.info("Safety agent identified issue with query.")
+        return await self.run_if_safe(prompt, output_type=ComponentIntelligenceModel)
