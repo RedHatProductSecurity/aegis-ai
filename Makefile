@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= python
 
 all: check test test-web
 
@@ -51,7 +51,7 @@ upgrade-deps:
 
 install-ml-deps:
 	uv pip install .[ml_deps]
-	$(PYTHON) -c 'from src.aegis_ai_ml.src import util; util.install_nltk_deps()'
+	uv run $(PYTHON) -c 'from src.aegis_ai_ml.src import util; util.install_nltk_deps()'
 
 build-dist:
 	uv run $(PYTHON) -m build
