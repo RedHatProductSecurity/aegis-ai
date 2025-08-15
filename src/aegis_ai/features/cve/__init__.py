@@ -68,11 +68,11 @@ class SuggestCWE(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
             user_instruction="""
-                Conduct a precise, systematic identification of the most appropriate Common Weakness Enumeration (CWE) for a given 
-                Common Vulnerabilities and Exposures (CVE) JSON object. Ignore any mention of specific CWE and come to 
+                Conduct a precise, systematic identification of the most appropriate Common Weakness Enumeration (CWE) for a given
+                Common Vulnerabilities and Exposures (CVE) JSON object. Ignore any mention of specific CWE and come to
                 independent conclusion.
                 """,
-            goals="""                
+            goals="""
                 Core Analysis Methodology:
                 1. Comprehensive JSON Examination
                    - Perform exhaustive traversal of entire JSON structure
@@ -88,12 +88,12 @@ class SuggestCWE(Feature):
                 Mandatory Analysis Components:
                 - CWE Identifier: Standard numeric classification (e.g., CWE-125)
                 - Confidence Percentage: Quantitative assessment of prediction reliability
-                - Reasoning Explanation: Concise rationale linking CVE description to selected CWE            
+                - Reasoning Explanation: Concise rationale linking CVE description to selected CWE
             """,
             rules="""
                 Critical Selection Guidelines:
                 a) Prioritize most specific CWE matching vulnerability's root cause
-                b) Reject generalized or prohibited CWEs (specifically CWE-264, CWE-269)
+                b) Reject CWEs marked as disallowed by the cwe_tool
                 c) Cross-reference similar historical CVE classifications
                 d) Emphasize technical precision over generalization
                 
@@ -115,13 +115,11 @@ class SuggestCWE(Feature):
                 b) Provide the standard CWE identifier (e.g., CWE-125).
 
                 c) When making CWE assessment, prioritize the correct level CWE in the hierarchy that accurately describes the direct root cause of the flaw, rather than a more general parent category. For example
-                if there is a choice between CWE-272 and CWE-271, return CWE-271 if it is more appropriate (if it is more general).            
+                if there is a choice between CWE-272 and CWE-271, return CWE-271 if it is more appropriate (if it is more general).
                 
                 d) Offer a concise explanation outlining the connection between the CVE description and the predicted CWE.
                 
-                e) Avoid predicting CWEs that are discouraged or prohibited for Vulnerability Mapping by MITRE.  In particular, do not suggest CWE-264 and CWE-269.
-                
-                f) compare other CVEs with the same CWE to help provide higher confidence in the analysis
+                e) compare other CVEs with the same CWE to help provide higher confidence in the analysis
                 
                 """,
             context=CVEFeatureInput(cve_id=cve_id),
