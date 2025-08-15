@@ -19,9 +19,10 @@ logger = logging.getLogger(__name__)
 
 # retrieve from cwe.mitre.org
 CWE_URLS = [
+    "https://cwe.mitre.org/data/csv/699.csv.zip",  # development - the only view supported by OSIM
     "https://cwe.mitre.org/data/csv/1000.csv.zip",  # research
-    "https://cwe.mitre.org/data/csv/699.csv.zip",  # development
     "https://cwe.mitre.org/data/csv/1008.csv.zip",  # architectural
+    "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
 ]
 
 
@@ -42,16 +43,23 @@ class CWE(BaseToolOutput):
         ...,
         description="CWE name.",
     )
+
     description: str = Field(
         ...,
         description="CWE description.",
+    )
+
+    disallowed: bool = Field(
+        ...,
+        description="True if the CWE is not accepted by OSIM.",
     )
 
 
 def retrieve_cwe_definitions():
     """Retrieve CWE definitions from MITRE."""
     defs = {}
-    for url in CWE_URLS:
+    for idx, url in enumerate(CWE_URLS):
+        cwe_699_view = not idx
         response = requests.get(url)
         zip_file = ZipFile(io.BytesIO(response.content))
 
@@ -61,11 +69,17 @@ def retrieve_cwe_definitions():
 
             next(reader)  # Skip header
             for line in reader:
-                defs[f"CWE-{line[0]}"] = {
+                cwe = f"CWE-{line[0]}"
+                if cwe in defs:
+                    assert not cwe_699_view, "CWE redifinition in CWE-699 view"
+                    continue
+
+                defs[cwe] = {
                     "name": line[1],
                     "description": line[4],
                     "extended_description": line[5],
                     "related_weaknesses": line[6],
+                    "disallowed": not cwe_699_view,
                 }
 
     return defs
@@ -93,7 +107,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
             with open(file_path, "r") as f:
                 data = json.load(f)
         else:
-            logger.debug(f"No cwe cache found. Fetching and writing to: {file_path}")
+            logger.info(f"No cwe cache found. Fetching and writing to: {file_path}")
             data = retrieve_cwe_definitions()
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=2)
@@ -103,6 +117,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
             cwe_id=validated_cwe_id,
             name=cwe["name"],
             description=cwe["description"],
+            disallowed=cwe.get("disallowed", False),
         )
 
     except Exception as e:
