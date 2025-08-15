@@ -31,7 +31,7 @@ class CWEDependencies:
 
 
 class CWE(BaseToolOutput):
-    """ """
+    """Canonical CWE definition returned by the `cwe_tool`."""
 
     cwe_id: CWEID = Field(
         ...,
@@ -71,7 +71,7 @@ def retrieve_cwe_definitions():
     return defs
 
 
-async def cwe_lookup(cwe_id: CWEID):
+async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
     """
     Get cwe-id name, description from mitre.
 
@@ -98,14 +98,19 @@ async def cwe_lookup(cwe_id: CWEID):
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-        return data[validated_cwe_id]
+        cwe = data[validated_cwe_id]
+        return CWE(
+            cwe_id=validated_cwe_id,
+            name=cwe["name"],
+            description=cwe["description"],
+        )
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
 
 @Tool
-async def cwe_tool(ctx: RunContext[CWEDependencies], cwe_id: CWEID) -> str:
-    """ """
+async def cwe_tool(ctx: RunContext[CWEDependencies], cwe_id: CWEID) -> CWE | None:
+    """Lookup a CWE definition by ID and return a structured `CWE` model."""
     logger.debug(cwe_id)
     return await cwe_lookup(cwe_id)
