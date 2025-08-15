@@ -1,5 +1,6 @@
 # inspired by https://github.com/sidhpurwala-huzaifa/redhat-sev-classifier
 
+import cvss
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,160 @@ from tqdm.auto import tqdm
 from aegis_ai_ml.src.util import normalize_text
 
 
+CVSS3_BASIC_METRICS = ["AV", "AC", "PR", "UI", "S", "C", "I", "A"]
+
+
+def find_rh_cvss3(cvss_scores):
+    """find RH CVSS3 in the cvss_scores list in per-CVE data from OSIDB"""
+    for item in cvss_scores:
+        if item["cvss_version"] != "V3":
+            continue
+
+        if item["issuer"] != "RH":
+            continue
+
+        cvss3_str = item["vector"]
+        return cvss.CVSS3(cvss3_str)
+
+
+def extract_cvss3_metric(cvss_scores, cvss3_metric):
+    """extract value of a single RH CVSS3 metric from the cvss_scores cell"""
+    try:
+        rh_cvss = find_rh_cvss3(cvss_scores)
+        return rh_cvss.get_value_description(cvss3_metric)
+    except Exception:
+        # failed to get cvss3_metric
+        return None
+
+
+def impact_by_cvss3_score(cvss3_score):
+    # we cannot use cvss3.severities() because it uses incompatible labels
+    if cvss3_score <= 4.0:
+        return "LOW"
+    elif cvss3_score <= 7.0:
+        return "MODERATE"
+    elif cvss3_score <= 9.0:
+        return "IMPORTANT"
+    else:
+        return "CRITICAL"
+
+
+def compute_pred_impact(row, classifier_by_metric):
+    """compute impact based on predicted CVSS3 base metrics"""
+    cvss3_str = "CVSS:3.1"
+    text_input = row["text_input"]
+    for cvss3_metric in CVSS3_BASIC_METRICS:
+        classifier = classifier_by_metric[cvss3_metric]
+        value, _ = classifier.predict_severity(normalize_text(text_input))
+        cvss3_str += f"/{cvss3_metric}:{value[0]}"
+
+    cvss3 = cvss.CVSS3(cvss3_str)
+    cvss3_score = cvss3.scores()[0]
+    return impact_by_cvss3_score(cvss3_score)
+
+
+def load_and_preprocess_data_from_local(data_directory: str):
+    """Load and preprocess CVE data from a local directory of JSON CVE files."""
+    print(f"Loading CVE data from local directory: {data_directory}...")
+
+    cve_data = []
+    path = Path(data_directory)
+    json_files = list(path.rglob("*.json"))
+
+    if not json_files:
+        raise FileNotFoundError(f"No JSON files found in directory: {data_directory}")
+
+    # Loop through all found JSON files with a progress bar
+    for file_path in tqdm(json_files, desc="Reading JSON files"):
+        with open(file_path, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+                # Assuming each file contains a single CVE object
+                # If a file contains a list, you would loop through `data` here
+                cve_data.append(data)
+            except json.JSONDecodeError:
+                print(f"Warning: Skipping malformed JSON file: {file_path}")
+
+    # Convert the list of dictionaries to a pandas DataFrame
+    df = pd.DataFrame(cve_data)
+
+    print(f"Dataset shape: {df.shape}")
+    print(f"Columns: {list(df.columns)}")
+
+    df = df.dropna(subset=["impact", "title", "cve_description"])
+
+    df["text_input"] = df["title"].astype(str) + " " + df["cve_description"].astype(str)
+    df["text_input"] = df["text_input"].apply(normalize_text)
+
+    # Remove empty text inputs
+    df = df[df["text_input"].str.len() > 0]
+
+    # Clean impact labels - map to standard format
+    severity_mapping = {
+        "Critical": "CRITICAL",
+        "Important": "IMPORTANT",
+        "Moderate": "MODERATE",
+        "Low": "LOW",
+        "critical": "CRITICAL",
+        "important": "IMPORTANT",
+        "moderate": "MODERATE",
+        "low": "LOW",
+        "LOW": "LOW",
+        "MODERATE": "MODERATE",
+        "IMPORTANT": "IMPORTANT",
+        "CRITICAL": "CRITICAL",
+    }
+
+    df["impact_clean"] = df["impact"].map(severity_mapping)
+    df = df.dropna(subset=["impact_clean"])
+
+    print("\nImpact distribution:")
+    severity_counts = df["impact_clean"].value_counts()
+    print(severity_counts)
+    print(f"\nTotal samples: {len(df)}")
+
+    return df
+
+
+def evaluate_model(y_pred, y_true, target_names, show_plots=True, file_prefix=""):
+    """Evaluate the trained model"""
+
+    # Calculate metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
+
+    # Classification report
+    report = classification_report(y_true, y_pred, target_names=target_names)
+    print("\nClassification Report:")
+    print(report)
+
+    # Confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+
+    # Create plot with confusion matrix
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=target_names,
+        yticklabels=target_names,
+    )
+    plt.title("SecBERT Security Severity Classification - Confusion Matrix")
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label")
+    plt.tight_layout()
+    file_name = f"{file_prefix}secbert_confusion_matrix.png"
+    plt.savefig(file_name, dpi=300, bbox_inches="tight")
+    print(f"Confusion matrix saved as '{file_name}'")
+
+    if show_plots:
+        plt.show()
+
+    return accuracy, report, cm
+
+
 class SecurityDataset(Dataset):
     """Custom dataset for security vulnerability data"""
 
@@ -41,8 +196,8 @@ class SecurityDataset(Dataset):
     def __getitem__(self, idx):
         # Handle both pandas Series and numpy arrays safely
         try:
-            text = str(self.texts[idx])
-            label = self.labels[idx]
+            text = str(self.texts.iloc[idx])
+            label = self.labels.iloc[idx]
         except (AttributeError, TypeError):
             text = str(self.texts[idx])
             label = self.labels[idx]
@@ -62,12 +217,12 @@ class SecurityDataset(Dataset):
         }
 
 
-class SecBERTSeverityClassifier:
+class SecBERTClassifier:
     """SecBERT-based classifier for security severity prediction"""
 
-    def __init__(self, model_name="jackaduma/SecBERT"):
+    def __init__(self, num_labels, model_name="jackaduma/SecBERT"):
         self.model_name = model_name
-        self.num_labels = 4  # critical, important, moderate, low
+        self.num_labels = num_labels
         self.tokenizer = None
         self.model = None
         self.label_encoder = LabelEncoder()
@@ -98,72 +253,6 @@ class SecBERTSeverityClassifier:
 
         return device
 
-    def load_and_preprocess_data_from_local(self, data_directory: str):
-        """Load and preprocess CVE data from a local directory of JSON CVE files."""
-        print(f"Loading CVE data from local directory: {data_directory}...")
-
-        cve_data = []
-        path = Path(data_directory)
-        json_files = list(path.rglob("*.json"))
-
-        if not json_files:
-            raise FileNotFoundError(
-                f"No JSON files found in directory: {data_directory}"
-            )
-
-        # Loop through all found JSON files with a progress bar
-        for file_path in tqdm(json_files, desc="Reading JSON files"):
-            with open(file_path, "r", encoding="utf-8") as f:
-                try:
-                    data = json.load(f)
-                    # Assuming each file contains a single CVE object
-                    # If a file contains a list, you would loop through `data` here
-                    cve_data.append(data)
-                except json.JSONDecodeError:
-                    print(f"Warning: Skipping malformed JSON file: {file_path}")
-
-        # Convert the list of dictionaries to a pandas DataFrame
-        df = pd.DataFrame(cve_data)
-
-        print(f"Dataset shape: {df.shape}")
-        print(f"Columns: {list(df.columns)}")
-
-        df = df.dropna(subset=["impact", "title", "cve_description"])
-
-        df["text_input"] = (
-            df["title"].astype(str) + " " + df["cve_description"].astype(str)
-        )
-        df["text_input"] = df["text_input"].apply(normalize_text)
-
-        # Remove empty text inputs
-        df = df[df["text_input"].str.len() > 0]
-
-        # Clean impact labels - map to standard format
-        severity_mapping = {
-            "Critical": "CRITICAL",
-            "Important": "IMPORTANT",
-            "Moderate": "MODERATE",
-            "Low": "LOW",
-            "critical": "CRITICAL",
-            "important": "IMPORTANT",
-            "moderate": "MODERATE",
-            "low": "LOW",
-            "LOW": "LOW",
-            "MODERATE": "MODERATE",
-            "IMPORTANT": "IMPORTANT",
-            "CRITICAL": "CRITICAL",
-        }
-
-        df["impact_clean"] = df["impact"].map(severity_mapping)
-        df = df.dropna(subset=["impact_clean"])
-
-        print("\nImpact distribution:")
-        severity_counts = df["impact_clean"].value_counts()
-        print(severity_counts)
-        print(f"\nTotal samples: {len(df)}")
-
-        return df
-
     def prepare_model_and_tokenizer(self):
         """Initialize SecBERT tokenizer and model"""
         print(f"Loading {self.model_name} tokenizer and model...")
@@ -190,12 +279,12 @@ class SecBERTSeverityClassifier:
         self.model = self.model.to(self.device)
         print(f"Model loaded and moved to {self.device}")
 
-    def prepare_datasets(self, df, test_size=0.2, val_size=0.1):
+    def prepare_datasets(self, df, column, test_size=0.2, val_size=0.1):
         """Split data into train/validation/test sets"""
         print("Preparing train/validation/test splits...")
 
         # Encode labels
-        y_encoded = self.label_encoder.fit_transform(df["impact_clean"])
+        y_encoded = self.label_encoder.fit_transform(df[column])
         print(f"Label classes: {self.label_encoder.classes_}")
 
         # Split data - stratified to maintain class distribution
@@ -288,7 +377,7 @@ class SecBERTSeverityClassifier:
             optim="adamw_torch",  # Use PyTorch AdamW
             seed=42,  # Set seed for reproducibility
             data_seed=42,
-            no_cuda=True,  # Force CPU usage
+            use_cpu=True,  # Force CPU usage
         )
 
         # Put model in training mode before creating trainer
@@ -367,7 +456,7 @@ class SecBERTSeverityClassifier:
             optim="sgd",  # Use SGD instead of AdamW
             seed=42,
             data_seed=42,
-            no_cuda=True,
+            use_cpu=True,
         )
 
         # Create new trainer with fallback settings
@@ -392,47 +481,14 @@ class SecBERTSeverityClassifier:
         print(f"Fallback training completed! Model saved to {output_dir}")
         return train_result
 
-    def evaluate_model(self, test_dataset, show_plots=True):
-        """Evaluate the trained model"""
-        print("Evaluating model on test set...")
-
+    def get_predictions(self, test_dataset):
         # Get predictions
         predictions = self.trainer.predict(test_dataset)
         y_pred = np.argmax(predictions.predictions, axis=1)
         y_true = predictions.label_ids
 
-        # Calculate metrics
-        accuracy = accuracy_score(y_true, y_pred)
-        print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
-
-        # Classification report
         target_names = self.label_encoder.classes_
-        report = classification_report(y_true, y_pred, target_names=target_names)
-        print("\nClassification Report:")
-        print(report)
-
-        # Confusion matrix
-        cm = confusion_matrix(y_true, y_pred)
-
-        if show_plots:
-            plt.figure(figsize=(10, 8))
-            sns.heatmap(
-                cm,
-                annot=True,
-                fmt="d",
-                cmap="Blues",
-                xticklabels=target_names,
-                yticklabels=target_names,
-            )
-            plt.title("SecBERT Security Severity Classification - Confusion Matrix")
-            plt.ylabel("True Label")
-            plt.xlabel("Predicted Label")
-            plt.tight_layout()
-            plt.savefig("secbert_confusion_matrix.png", dpi=300, bbox_inches="tight")
-            plt.show()
-            print("Confusion matrix saved as 'secbert_confusion_matrix.png'")
-
-        return accuracy, report, cm
+        return y_pred, y_true, target_names
 
     def predict_severity(self, text):
         """Predict severity for new text"""
@@ -455,61 +511,120 @@ class SecBERTSeverityClassifier:
 
 
 def main():
-    # Initialize classifier
-    classifier = SecBERTSeverityClassifier()
+    data_dir = os.getenv("AEGIS_ML_CVE_DATA_DIR")
+    if not data_dir or not os.path.isdir(data_dir):
+        raise FileNotFoundError(
+            f"No valid directory provided in ${{AEGIS_ML_CVE_DATA_DIR}}: {data_dir}"
+        )
 
-    try:
-        data_dir = os.getenv("AEGIS_ML_CVE_DATA_DIR")
-        if not data_dir or not os.path.isdir(data_dir):
-            raise FileNotFoundError(
-                f"No valid directory provided in ${{AEGIS_ML_CVE_DATA_DIR}}: {data_dir}"
-            )
+    df = load_and_preprocess_data_from_local(data_dir)
 
-        df = classifier.load_and_preprocess_data_from_local(data_dir)
+    # add columns for CVSS3 base metrics
+    for cvss3_metric in CVSS3_BASIC_METRICS:
+        df[cvss3_metric] = df["cvss_scores"].apply(
+            extract_cvss3_metric, cvss3_metric=cvss3_metric
+        )
+
+    # drop rows where CVSS3_BASIC_METRICS fields are not available
+    df = df.dropna(subset=CVSS3_BASIC_METRICS)
+
+    # enforce meaningful ordering
+    impact_labels = ["LOW", "MODERATE", "IMPORTANT", "CRITICAL"]
+    label_encoder = LabelEncoder()
+    label_encoder.classes_ = np.array(impact_labels)
+
+    # Split data - stratified to maintain class distribution
+    y_encoded = label_encoder.transform(df["impact_clean"])
+    df, df_test, _, _ = train_test_split(
+        df,
+        y_encoded,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_encoded,
+    )
+
+    classifier_by_metric = {}
+
+    for cvss3_metric in CVSS3_BASIC_METRICS:
+        # Initialize classifier
+        num_labels = df[cvss3_metric].nunique()
+        classifier = SecBERTClassifier(num_labels)
+
+        print(
+            f"\n\nTraining {cvss3_metric}, num_labels = {num_labels}, rows = {len(df)}"
+        )
+        print(f"Impact distribution: {df[cvss3_metric].value_counts()}")
 
         classifier.prepare_model_and_tokenizer()
-        train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(df)
+        train_dataset, val_dataset, test_dataset = classifier.prepare_datasets(
+            df, cvss3_metric
+        )
 
-        classifier.train_model(train_dataset, val_dataset)
+        classifier.train_model(
+            train_dataset,
+            val_dataset,
+            output_dir=f"./etc/models/secbert_model/{cvss3_metric}",
+        )
 
-        accuracy, report, cm = classifier.evaluate_model(test_dataset)
+        print("Evaluating model on test set...")
+        y_pred, y_true, target_names = classifier.get_predictions(test_dataset)
+        evaluate_model(
+            y_pred,
+            y_true,
+            target_names,
+            show_plots=False,
+            file_prefix=f"./etc/{cvss3_metric}-",
+        )
+        classifier_by_metric[cvss3_metric] = classifier
 
-        # Test sample predictions
-        print("SAMPLE PREDICTIONS:")
-        print("=" * 60)
+    # create a new column with the predicted impact based on the predicted CVSS3 base metrics
+    df_test["pred_impact"] = df_test.apply(
+        compute_pred_impact, axis=1, classifier_by_metric=classifier_by_metric
+    )
 
-        sample_texts = [
-            "Buffer overflow vulnerability allows remote code execution with system privileges",
-            "Cross-site scripting vulnerability in web interface allows session hijacking",
-            "Information disclosure through verbose error messages in logs",
-            "Denial of service through resource exhaustion in HTTP parser",
-        ]
+    # Prepare expected/actual output
+    y_pred = label_encoder.transform(df_test["pred_impact"])
+    y_true = label_encoder.transform(df_test["impact_clean"])
 
-        for i, text in enumerate(sample_texts, 1):
-            severity, confidence = classifier.predict_severity(normalize_text(text))
-            print(f"\n{i}. Text: {text}")
+    # Overall evaluation
+    accuracy, report, cm = evaluate_model(y_pred, y_true, impact_labels)
+
+    # Test sample predictions
+    print("SAMPLE PREDICTIONS:")
+    print("=" * 60)
+
+    # Pick 4 random inputs from df_test
+    sample_texts = df_test["text_input"].sample(n=4)
+
+    for i, text in enumerate(sample_texts, 1):
+        print(f"\n{i}. Text: {text}")
+        cvss3_str = "CVSS:3.1"
+        for cvss3_metric in CVSS3_BASIC_METRICS:
+            classifier = classifier_by_metric[cvss3_metric]
+            value, confidence = classifier.predict_severity(normalize_text(text))
             print(
-                f"   Predicted impact: {severity.upper()} (confidence: {confidence:.3f})"
+                f"   Predicted {cvss3_metric}: {value} (confidence: {confidence:.3f})"
             )
+            cvss3_str += f"/{cvss3_metric}:{value[0]}"
 
-        # Final results
-        print(f"\n{'=' * 60}")
-        print("FINAL RESULTS")
-        print("=" * 60)
-        print(f"Model: {classifier.model_name}")
-        print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
-        print(f"Target Classes: {list(classifier.label_encoder.classes_)}")
+        print(f"   Predicted CVSS3 vector: {cvss3_str}")
+        cvss3 = cvss.CVSS3(cvss3_str)
+        cvss3_score = cvss3.scores()[0]
+        print(f"   Predicted CVSS3 score: {cvss3_score}")
+        print(f"   Predicted impact: {impact_by_cvss3_score(cvss3_score)}")
 
-        print("\n Output files:")
-        print("  • ./etc/models/secbert_model/ - Trained model and tokenizer")
-        print("  • secbert_confusion_matrix.png - Performance visualization")
+    # Final results
+    print(f"\n{'=' * 60}")
+    print("FINAL RESULTS")
+    print("=" * 60)
+    print(f"Model: {classifier.model_name}")
+    print(f"Test Accuracy: {accuracy:.4f} ({accuracy:.1%})")
+    print(f"Target Classes: {list(classifier.label_encoder.classes_)}")
 
-    except Exception as e:
-        print(f"Error during fine-tuning: {str(e)}")
-        return None
-
-    return classifier
+    print("\n Output files:")
+    print("  • ./etc/models/secbert_model/ - Trained model and tokenizer")
+    print("  • secbert_confusion_matrix.png - Performance visualization")
 
 
 if __name__ == "__main__":
-    classifier = main()
+    main()

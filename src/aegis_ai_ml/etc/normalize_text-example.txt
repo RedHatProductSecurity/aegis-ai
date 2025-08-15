@@ -1,0 +1,8 @@
+"Heap use after free (UAF) leads to Denial of service (DoS) A use-after-free vulnerability was found in libxml2. This issue occurs when parsing XPath elements under certain circumstances when the XML schematron has the <sch:name path="..."/> schema elements. This flaw allows a malicious actor to craft a malicious XML document used as input for libxml, resulting in the program's crash using libxml or other possible undefined behaviors."
+-->
+"Heap use free ( UAF ) lead Denial service ( DoS ) A use-after-free vulnerability find libxml2 . This issue occur parse XPath element certain circumstance XML schematron < sch: name path= '' ... '' / > schema element . This flaw allow malicious actor craft malicious XML document use input libxml , result program 's crash use libxml possible undefined behavior ."
+
+
+"xhci: Fix null pointer dereference when host dies Make sure xhci_free_dev() and xhci_kill_endpoint_urbs() do not race and cause null pointer dereference when host suddenly dies. Usb core may call xhci_free_dev() which frees the xhci->devs[slot_id] virt device at the same time that xhci_kill_endpoint_urbs() tries to loop through all the device's endpoints, checking if there are any cancelled urbs left to give back. Hold the xhci spinlock while freeing the virt device"
+-->
+"xhci: Fix null pointer dereference host dy Make sure xhci_free_dev ( ) xhci_kill_endpoint_urbs ( ) race cause null pointer dereference host suddenly die . Usb core may call xhci_free_dev ( ) free xhci- > devs [ slot_id ] virt device time xhci_kill_endpoint_urbs ( ) try loop device 's endpoint , check cancelled urbs leave give back . Hold xhci spinlock free virt device"
