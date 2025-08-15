@@ -1,0 +1,5834 @@
+[
+  {
+    "cve_id": "CVE-2021-47553",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47645",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21709",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49982",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49900",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56662",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48984",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41035",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50232",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35869",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49916",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-2312",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38308",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58075",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44938",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26954",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57881",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46673",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46838",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-4770",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-45009",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43873",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50099",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35819",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21753",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38633",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40962",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37768",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38204",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53102",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-45022",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47397",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50102",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42118",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26939",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50174",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48969",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46724",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21665",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36019",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46925",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27415",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52998",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21980",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2020-36775",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37953",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49060",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21865",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35990",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49927",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53136",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22021",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49764",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41082",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49785",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2020-36791",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49745",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26598",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50060",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35875",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49814",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49165",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57896",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53185",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26739",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38205",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50149",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57844",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47068",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26640",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50258",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26798",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27388",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46983",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38062",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47710",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49950",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27008",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48787",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50091",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49750",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52694",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53087",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46973",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37815",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50095",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52496",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47756",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52583",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49622",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43850",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27411",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48961",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50053",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21696",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38161",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49948",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56601",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52495",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50228",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47753",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35955",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49558",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49504",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57987",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56650",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49249",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37891",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41018",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35969",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46701",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49765",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56759",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52668",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49014",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43911",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21650",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-52560",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49229",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37757",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21854",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52506",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48989",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47104",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38150",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27037",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49390",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38240",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52835",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21991",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56722",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-54191",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53111",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49605",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57986",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37762",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49657",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49061",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37974",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48719",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49810",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22053",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38629",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46769",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57944",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53092",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49925",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36883",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49119",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26790",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48808",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37866",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38101",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50040",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38298",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57985",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52899",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47695",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48738",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50136",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47097",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53093",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49945",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50159",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49771",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56692",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27042",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56765",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47735",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47712",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49905",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49536",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38269",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47041",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26644",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-23160",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48995",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26904",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52681",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49170",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38144",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49076",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40930",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49759",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52978",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40938",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35809",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38131",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21695",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49958",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49719",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41010",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21704",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58007",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52921",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21681",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48792",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53079",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-45021",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35948",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38609",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27071",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53088",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52513",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38583",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52651",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38168",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47642",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26997",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52456",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40986",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46950",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49863",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50117",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21943",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35962",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38244",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49904",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49304",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46869",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53114",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21726",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50230",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56750",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38137",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35892",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36001",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53074",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53121",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57982",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53118",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47620",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50236",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38026",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49238",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21683",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49529",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42310",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44983",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38032",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47385",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50205",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27053",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21867",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47389",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44972",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-3839",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21815",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36972",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56544",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42306",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49550",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56744",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38072",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49403",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26986",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52517",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57882",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49336",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38023",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-45004",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50002",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37834",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52670",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53021",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42160",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47682",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38064",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22056",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37870",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48638",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42113",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-55639",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40995",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44960",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53236",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47451",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49483",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26946",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42125",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49713",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22125",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26971",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52687",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48734",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49665",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38153",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21680",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44953",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48858",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42224",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49108",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49957",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49961",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49634",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58042",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35842",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53208",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49272",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48861",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58014",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49006",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37786",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37991",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35810",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38262",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26940",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48929",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38292",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22033",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49898",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48627",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56582",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52911",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46863",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44952",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52898",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42227",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52702",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41031",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38289",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26978",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50036",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49303",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50278",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40911",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49291",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37813",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48892",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49586",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-2700",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52587",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50239",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-54031",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50131",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21646",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49867",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38211",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36892",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-4910",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35795",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53033",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50191",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50210",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44948",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47592",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36979",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57890",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53149",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46840",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43886",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52979",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42152",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36025",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49032",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49326",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21746",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56540",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26974",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21734",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38104",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49732",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38018",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26666",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52910",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21677",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58067",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58013",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46745",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48795",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49919",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41088",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26852",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41058",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48852",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40906",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38197",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49847",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21940",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46729",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37996",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43870",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49933",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47240",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47633",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49264",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48994",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50126",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49667",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46834",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26967",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46850",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53036",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49863",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49590",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22010",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38324",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49958",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49196",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49837",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49382",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48899",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49616",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52566",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-3863",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50001",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37860",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53190",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50067",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50300",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49548",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46742",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26726",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49063",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22057",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48870",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21994",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49979",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22081",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56637",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46821",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-4968",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37988",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49510",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49824",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58085",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49828",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37748",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43838",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49116",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49563",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50301",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50015",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-4216",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21828",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47131",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26735",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47224",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49180",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49976",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50087",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47337",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35800",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50016",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47500",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42112",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50011",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46678",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52919",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53150",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27031",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57949",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56609",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58098",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50228",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40950",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26725",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26930",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47651",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49158",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43825",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40952",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21742",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44991",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26734",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47661",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49521",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56575",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58066",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26616",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50200",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38578",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26626",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50185",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38096",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47000",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52522",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49270",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50045",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26991",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46761",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27405",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-23132",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49010",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21941",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49869",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26996",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49998",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48937",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49298",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49486",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37845",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-37354",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40967",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49808",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47087",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47251",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53052",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40959",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47755",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49898",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49478",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46855",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38028",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37836",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38543",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49811",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49866",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49261",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50214",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35914",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48945",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49387",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22065",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49655",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38203",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35828",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49972",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27030",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48733",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49524",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26610",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49518",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38229",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26980",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40993",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53134",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38232",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48867",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21702",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49937",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47565",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37758",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49922",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50279",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38217",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26604",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38545",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48923",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49924",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21765",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26796",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50050",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26994",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49687",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40937",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49094",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47260",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35830",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58092",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26754",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46857",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48783",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50036",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21711",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49560",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41037",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47347",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26791",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46786",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50247",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26688",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-39494",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38339",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49294",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49967",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46852",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49853",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52564",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44958",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50195",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38084",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26665",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56557",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46848",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26847",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47309",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50223",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52497",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50076",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52463",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52595",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35873",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22061",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40928",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48958",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38312",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53086",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49130",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48740",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49341",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50189",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53098",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38199",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48686",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56660",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58072",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50215",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50166",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38226",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38182",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35786",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43830",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26710",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44988",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52985",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49282",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37963",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42143",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52859",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50023",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41061",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52657",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49929",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48844",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48868",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43900",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52508",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49029",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48843",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50195",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46733",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35980",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49181",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38598",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52666",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21777",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46762",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50075",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46939",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21817",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47563",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56690",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49481",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58096",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22062",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26698",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38322",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52615",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36476",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21745",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43826",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56560",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48947",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42105",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49891",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48956",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49854",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38045",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21947",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47709",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37749",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36970",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57913",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21738",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35797",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52854",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49918",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37789",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49818",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49890",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48932",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26677",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47390",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53054",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26802",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53067",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49816",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26911",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47745",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49935",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50115",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40974",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48985",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49600",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49018",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47595",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49210",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56611",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43871",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47274",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53203",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37863",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37738",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49321",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46961",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46955",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38200",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49245",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52752",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53103",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49927",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41089",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49106",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47302",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38121",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-39755",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35918",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49660",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38100",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47686",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44984",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26785",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49096",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21784",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49647",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26783",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48855",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43835",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49421",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40991",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22019",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46836",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46981",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43896",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38258",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42303",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50046",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52912",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38254",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36244",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46964",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40904",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50118",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50083",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49050",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47341",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49144",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43881",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48771",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44965",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50272",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26632",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40909",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38540",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56649",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37912",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37908",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37853",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21671",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52628",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27009",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50079",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53043",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48954",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47286",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46809",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56709",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46688",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47719",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47740",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38046",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38127",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35910",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21629",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27016",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47123",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56753",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57839",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50156",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44940",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37858",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46715",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47103",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46835",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49002",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53110",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57979",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38021",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47062",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47703",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49973",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21731",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56605",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53139",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42242",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47562",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53227",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21798",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49720",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47596",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-45005",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21908",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50021",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40972",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49933",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42268",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37765",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-58062",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47007",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26789",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38276",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35951",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52646",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48911",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50152",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38033",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38196",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36889",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46819",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43906",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36976",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26952",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27061",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35852",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26851",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49566",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38297",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38560",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26801",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49417",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48982",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47636",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47008",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-47746",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26697",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46814",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49809",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48816",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53087",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53081",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38582",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56368",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21655",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49878",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21689",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46856",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49670",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56535",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47624",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46992",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21667",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50118",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49487",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36011",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22121",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-43834",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48687",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26932",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-23142",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38005",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49318",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53065",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52889",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50031",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50059",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21679",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48886",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49661",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46839",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40976",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27409",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46772",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21837",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36013",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50127",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47437",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52894",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42280",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21957",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53123",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49451",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48862",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46730",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37859",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38606",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26889",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56719",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-22016",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49896",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50150",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38103",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-57793",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37773",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50168",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-38592",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37848",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49607",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49425",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49635",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38281",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49882",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47322",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38187",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27418",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42288",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53119",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56670",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47465",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-50212",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50221",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49105",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21962",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49450",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49583",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42281",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-49878",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38164",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52584",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-46844",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21855",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-39292",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-35887",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49159",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47072",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44943",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50068",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42274",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50163",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-40910",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49960",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38173",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52691",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38286",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21929",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56579",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38263",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38222",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-53143",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21826",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38331",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-37812",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-42297",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48828",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-50059",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52789",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-26686",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38210",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-39476",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38132",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49768",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-56547",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2023-52988",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48875",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53049",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48863",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49347",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48891",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49401",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-21669",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53059",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-27401",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49364",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38183",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-46977",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-41044",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-36905",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-53048",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-44961",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2024-45001",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47038",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2025-38225",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-48765",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49896",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2021-47598",
+    "impact": "MODERATE"
+  },
+  {
+    "cve_id": "CVE-2022-49543",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47604",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-39298",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47207",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38621",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38576",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47058",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47263",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50076",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41011",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49469",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52839",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46995",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46918",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26903",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26803",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-50266",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21898",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47253",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42132",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36893",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48663",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46698",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48631",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46968",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-53049",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50139",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56708",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-57920",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48815",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50176",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38664",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47457",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-50130",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47144",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52436",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48749",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38613",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52734",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36481",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47619",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49415",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46915",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35876",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47482",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26836",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47270",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49046",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47481",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-53012",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21882",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21644",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47005",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-53031",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-27003",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47279",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26989",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-53082",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48647",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52777",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56568",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-43905",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50006",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21825",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49402",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52768",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22042",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47204",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42078",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48714",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52693",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47410",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47405",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36906",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47622",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49071",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36925",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26824",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47483",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47292",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52609",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21921",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47523",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35893",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26861",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42320",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21879",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-23130",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41094",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21805",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49603",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49424",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37936",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49584",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-27027",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49511",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-47728",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47276",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49936",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35997",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56669",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21638",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22048",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-27013",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46817",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-45017",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49312",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46801",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48706",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38617",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56657",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48767",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38553",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47320",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-43891",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-43098",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49796",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47099",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48645",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46686",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-5798",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38601",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50135",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56715",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56610",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49088",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21953",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47542",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50218",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26873",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52675",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47416",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41072",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36031",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47111",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46776",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47108",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48716",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21713",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47130",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41028",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47051",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47428",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35868",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49782",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-50161",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50033",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47158",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26831",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38616",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22039",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49731",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47267",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48721",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26909",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48707",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38559",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49772",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41050",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38010",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52590",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47529",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47169",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26953",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50113",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52763",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50198",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56533",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-58077",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47429",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47119",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-53005",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26825",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49352",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50042",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21931",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21910",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47149",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48859",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49766",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48803",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-39462",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-40919",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52575",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46749",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-47736",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47290",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56543",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52754",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49458",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46867",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37805",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26846",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50009",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52503",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50017",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52838",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38546",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52465",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47226",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47001",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35930",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-27437",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41068",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52510",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47615",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38574",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52696",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47441",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52605",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38611",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49070",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46937",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52914",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46820",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21723",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-53180",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47198",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35959",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35944",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36911",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38193",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41006",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-43887",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38388",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-53202",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35822",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47485",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48756",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47541",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42255",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26695",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-39468",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49337",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36896",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46957",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46865",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50055",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56571",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36018",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37952",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26646",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47202",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36954",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52747",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26714",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26661",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49103",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37899",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26983",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-45027",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48731",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46920",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-23162",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52802",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-50163",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-53211",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47105",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46923",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-57889",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52467",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41932",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47217",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41036",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47521",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38166",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21880",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35854",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22011",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56539",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26743",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47067",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26687",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48633",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49752",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47043",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47075",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47296",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48725",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42064",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42071",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35805",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22022",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50032",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26872",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52986",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47039",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47418",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47589",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50161",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26702",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42085",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52561",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50172",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50132",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52501",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-58074",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52850",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52981",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47528",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-4917",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-57838",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46794",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49376",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41003",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48887",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41021",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26587",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38634",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38190",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-53685",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-57950",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56681",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-47143",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49257",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48813",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46861",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26921",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47431",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48807",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36012",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37924",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56748",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38013",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42100",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47452",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-46672",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2020-36780",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52904",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26618",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50160",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48800",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47074",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52468",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35843",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47423",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48764",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47374",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41027",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-50280",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21976",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52481",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52526",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-43907",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-43817",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50089",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42103",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48968",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21660",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38557",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46997",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50207",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47032",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52853",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36961",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47080",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26700",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21819",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36977",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-53189",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48712",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2020-36778",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21983",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46924",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52631",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49743",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52788",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41001",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21632",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-57933",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42128",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46932",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-27079",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47438",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21922",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52614",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36894",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52560",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42097",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21860",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47147",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50143",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56684",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22045",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52917",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38278",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50146",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49741",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26883",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47436",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52573",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35984",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38605",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42096",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26878",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38198",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-41079",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46941",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2020-36781",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47054",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26758",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50196",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49498",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52652",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52982",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49653",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49618",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52592",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-57800",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26863",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52851",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26614",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52621",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52499",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36937",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47534",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47134",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48701",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52532",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-40963",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38596",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21832",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47550",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47597",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48894",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26713",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-23149",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21965",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52807",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49350",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38585",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47488",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-38620",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22073",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47369",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22025",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52875",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-42067",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-36953",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50038",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21946",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50111",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47360",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-39276",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52701",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-38009",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-49227",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22092",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47266",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50048",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56696",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47426",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-46909",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50203",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48772",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-56706",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37822",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-48820",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2022-50104",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35926",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47048",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-40941",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21810",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-26859",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-37931",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2023-52692",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2021-47329",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-21981",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2025-22122",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35913",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-35790",
+    "impact": "LOW"
+  },
+  {
+    "cve_id": "CVE-2024-53126",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-4919",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-21722",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-50112",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-47659",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-38630",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-22088",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-46812",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-53141",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-48871",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-49551",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-56561",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-22036",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-57926",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-57801",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-53186",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-53191",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-53122",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-37799",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-4916",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-21735",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-53133",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-40114",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2025-21789",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-56784",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-49909",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-4924",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-2698",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-57925",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-49505",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2022-49669",
+    "impact": "IMPORTANT"
+  },
+  {
+    "cve_id": "CVE-2024-3596",
+    "impact": "IMPORTANT"
+  }
+]
