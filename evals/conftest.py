@@ -1,3 +1,4 @@
+import logging
 import pytest
 
 from pydantic_ai.tools import RunContext, Tool
@@ -19,6 +20,9 @@ async def osidb_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging_for_session():
     config_logging(level="INFO")
+
+    # suppress noisy INFO messages: AFC is enabled with max remote calls: 10.
+    logging.getLogger("google_genai.models").setLevel(logging.WARNING)
 
 
 # We need to cache OSIDB responses (and maintain them in git) to make
