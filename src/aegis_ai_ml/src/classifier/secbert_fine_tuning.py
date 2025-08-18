@@ -65,6 +65,25 @@ def impact_by_cvss3_score(cvss3_score):
         return "CRITICAL"
 
 
+def check_cvss3_impact(row):
+    """check whether impact_clean matches CVSS3 score"""
+    cvss3 = find_rh_cvss3(row["cvss_scores"])
+    cvss3_score = cvss3.scores()[0]
+    expected_impact = impact_by_cvss3_score(cvss3_score)
+    actual_impact = row["impact_clean"]
+    if actual_impact == expected_impact:
+        return actual_impact
+
+    cve_id_aligned = row["cve_id"].ljust(14)
+    exp_imp_aligned = expected_impact.ljust(len("IMPORTANT"))
+    print(
+        f"dropping {cve_id_aligned}"
+        f"  cvss3={cvss3.vector}  score={cvss3_score}"
+        f"  expected_impact={exp_imp_aligned}  actual_impact={actual_impact}"
+    )
+    return None
+
+
 def compute_pred_impact(row, classifier_by_metric):
     """compute impact based on predicted CVSS3 base metrics"""
     cvss3_str = "CVSS:3.1"
@@ -527,6 +546,10 @@ def main():
 
     # drop rows where CVSS3_BASIC_METRICS fields are not available
     df = df.dropna(subset=CVSS3_BASIC_METRICS)
+
+    # drop rows where assigned impact does not match CVSS3 score
+    df["impact_clean"] = df.apply(check_cvss3_impact, axis=1)
+    df = df.dropna(subset=["impact_clean"])
 
     # enforce meaningful ordering
     impact_labels = ["LOW", "MODERATE", "IMPORTANT", "CRITICAL"]
