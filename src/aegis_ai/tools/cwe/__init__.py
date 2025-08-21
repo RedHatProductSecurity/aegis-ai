@@ -112,13 +112,22 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-        cwe = data[validated_cwe_id]
-        return CWE(
-            cwe_id=validated_cwe_id,
-            name=cwe["name"],
-            description=cwe["description"],
-            disallowed=cwe.get("disallowed", False),
-        )
+        try:
+            cwe = data[validated_cwe_id]
+            return CWE(
+                cwe_id=validated_cwe_id,
+                name=cwe["name"],
+                description=cwe["description"],
+                disallowed=cwe.get("disallowed", False),
+            )
+        except KeyError:
+            # if the CWE is not in our table, mark it as disallowed
+            return CWE(
+                cwe_id=validated_cwe_id,
+                name="UNKNOWN",
+                description="UNKNOWN",
+                disallowed=True,
+            )
 
     except Exception as e:
         logger.error(f"An error occurred: {e}")
