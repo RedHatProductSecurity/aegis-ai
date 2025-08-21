@@ -22,7 +22,7 @@ class SuggestImpact(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
-            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest an overall impact rating for the CVE as well as suggest a related CVSS3 and CVSS4 score/vector. Ignore any mention of specific impact/severity (or CVSS) and come to independent conclusion.",
+            user_instruction="Your task is to meticulously examine the provided CVE JSON object and suggest an overall impact rating for the CVE as well as suggest a related CVSS3 score/vector. Ignore any mention of specific impact/severity (or CVSS) and come to independent conclusion.",
             goals="""
                 # Task:
                 Given a CVE ID or CVE description containing a description of a vulnerability, draft CVSS, affected components and other information generate an impact rating based on the following four-point scale used by Red Hat:
@@ -31,7 +31,7 @@ class SuggestImpact(Feature):
                 * MODERATE: This rating is given to flaws that may be more difficult to exploit but could still lead to some compromise of the confidentiality, integrity or availability of resources under certain circumstances. It is also given to flaws that could be exploited to cause denial of service-like conditions on AI systems via an inference end point, or allow attackers to steal other users’ data from the AI system without authorization. These are the types of vulnerabilities that could have had a Critical or Important impact but are less easily exploited based on a technical evaluation of the flaw and/or affect unlikely configurations.
                 * LOW: This rating is given to all other issues that may have a security impact. These are the types of vulnerabilities that are believed to require unlikely circumstances to be able to be exploited, or where a successful exploit would give minimal consequences. This includes flaws that are present in a program’s source code but to which no current or theoretically possible, but unproven, exploitation vectors exist or were found during the technical analysis of the flaw.
                 
-                Generate a suggestion CVSS3 and CVSS4 scores and vectors.
+                Generate a suggestion CVSS3 score and vector.
                 
                 # Instructions for Analysis:
                 
@@ -48,7 +48,7 @@ class SuggestImpact(Feature):
                     * Potential for arbitrary code execution
                     * Potential for privilege escalation
                     * Potential for denial of service
-                  and generate a red hat specific CVSS3 and CVSS4 score to help suggest impact.
+                  and generate a red hat specific CVSS3 score to help suggest impact.
                 2. Analysis should be based on the provided JSON against all known CVEs affecting Red Hat products.
                 3. The reasoning should not take into account which Red Hat products are affected by the flaw.
                 4. Denial of Service (DoS) flaws are usually not IMPORTANT if their scope is limited to an application.
