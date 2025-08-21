@@ -77,7 +77,7 @@ async def suggest_cwe(cve_id: CVEID) -> SuggestCWEModel:
 # test cases
 cases = [
     SuggestCweCase("CVE-2022-48701", ["CWE-125", "CWE-20"]),
-    SuggestCweCase("CVE-2024-53232", ["CWE-476", "CWE-416"]),
+    SuggestCweCase("CVE-2024-53232", ["CWE-476", "CWE-416", "CWE-825"]),
     # CWE-269 is discouraged by MITRE and unavailable in OSIM
     # CWE-273 and CWE-73 are incorrect: https://github.com/RedHatProductSecurity/aegis/issues/71
     SuggestCweCase("CVE-2025-23395", ["CWE-271", "CWE-250", "CWE-272", "CWE-273"]),
