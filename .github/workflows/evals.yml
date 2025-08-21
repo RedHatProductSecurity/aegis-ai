@@ -42,6 +42,10 @@ jobs:
       AEGIS_EVALS_LLM_MODEL: ${{ vars.AEGIS_EVALS_LLM_MODEL }}
       AEGIS_EVALS_LLM_API_KEY: ${{ secrets.AEGIS_EVALS_LLM_API_KEY }}
 
+      # how many top-level pytest tests need to succeed for us to count it as success
+      # (if unset, all of them need to succeed)
+      AEGIS_EVALS_MIN_PASSED: ${{ vars.AEGIS_EVALS_MIN_PASSED }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
