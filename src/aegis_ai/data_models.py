@@ -6,58 +6,45 @@ import cvss
 from pydantic import StringConstraints, TypeAdapter, BeforeValidator, BaseModel, Field
 
 
-def is_cvss3_valid(cvss_str: str) -> bool:
-    """return True if cvss_str is a valid CVSS3 vector"""
+def is_cvss_valid(cvss_str: str, cvss_fw: str = "CVSS3") -> bool:
+    """Return True if cvss_str is a valid vector for the given CVSS framework."""
     try:
-        cvss.CVSS3(cvss_str)
+        cvss_constructor = getattr(cvss, cvss_fw)
+        cvss_constructor(cvss_str)
         return True
 
     except cvss.CVSSError:
         return False
 
 
-def validate_with_is_cvss3(v: str) -> str:
-    if not is_cvss3_valid(v):
-        raise ValueError(f"'{v}' is not a valid CVSS3 vector.")
-    return v
+def _make_cvss_validator(cvss_fw: str):
+    """Factory returning a pydantic validator for CVSS strings."""
+
+    def _validator(v: str) -> str:
+        if not is_cvss_valid(v, cvss_fw):
+            raise ValueError(f"'{v}' is not a valid {cvss_fw} vector.")
+        return v
+
+    return _validator
+
+
+def _make_cvss_model(cvss_fw: str):
+    """Factory returning a pydantic model for CVSS strings."""
+    return Annotated[
+        str,
+        StringConstraints(
+            strict=True,
+            strip_whitespace=True,
+        ),
+        BeforeValidator(_make_cvss_validator(cvss_fw)),
+    ]
 
 
 # cvss3 field
-CVSS3Vector = Annotated[
-    str,
-    StringConstraints(
-        strict=True,
-        strip_whitespace=True,
-    ),
-    BeforeValidator(validate_with_is_cvss3),
-]
+CVSS3Vector = _make_cvss_model("CVSS3")
 
-
-def is_cvss4_valid(cvss_str: str) -> bool:
-    """return True if cvss_str is a valid CVSS4 vector"""
-    try:
-        cvss.CVSS4(cvss_str)
-        return True
-
-    except cvss.CVSSError:
-        return False
-
-
-def validate_with_is_cvss4(v: str) -> str:
-    if not is_cvss4_valid(v):
-        raise ValueError(f"'{v}' is not a valid CVSS4 vector.")
-    return v
-
-
-# cvss4 field
-CVSS4Vector = Annotated[
-    str,
-    StringConstraints(
-        strict=True,
-        strip_whitespace=True,
-    ),
-    BeforeValidator(validate_with_is_cvss4),
-]
+# cvss4_field
+CVSS4Vector = _make_cvss_model("CVSS4")
 
 # cve id field
 CVEID = Annotated[
