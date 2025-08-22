@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.13"
 resolution-markers = [
     "platform_python_implementation != 'PyPy'",
@@ -112,7 +112,7 @@ requires-dist = [
     { name = "huggingface-hub", marker = "extra == 'ml-deps'", specifier = ">=0.8.0" },
     { name = "imbalanced-learn", marker = "extra == 'ml-deps'", specifier = ">=0.13.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "logfire", extras = ["fastapi", "httpx", "sqlite3"], specifier = ">=4.0.0" },
+    { name = "logfire", extras = ["fastapi", "httpx", "sqlite3"], specifier = ">=4.2.0" },
     { name = "matplotlib", marker = "extra == 'ml-deps'", specifier = ">=3.10.5" },
     { name = "mcp-nvd", specifier = ">=0.0.1" },
     { name = "nltk", marker = "extra == 'ml-deps'", specifier = ">=3.9.1" },
@@ -122,8 +122,8 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'ml-deps'", specifier = ">=1.5.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "pydantic", specifier = ">=2.11.7" },
-    { name = "pydantic-ai", extras = ["logfire"], specifier = ">=0.4.11" },
-    { name = "pydantic-ai-slim", extras = ["duckduckgo", "mcp", "tavily"], specifier = ">=0.4.11" },
+    { name = "pydantic-ai", extras = ["logfire"], specifier = ">=0.7.4" },
+    { name = "pydantic-ai-slim", extras = ["duckduckgo", "mcp", "tavily"], specifier = ">=0.7.4" },
     { name = "pygithub", specifier = ">=2.6.1" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "scikit-learn", marker = "extra == 'ml-deps'", specifier = ">=1.1.0" },
