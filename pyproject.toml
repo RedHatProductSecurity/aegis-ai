@@ -44,6 +44,9 @@ aegis = "aegis_ai_cli.main:aegis_cli"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.logfire]
+ignore_no_config = true
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = "tests"
