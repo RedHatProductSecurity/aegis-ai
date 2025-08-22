@@ -2,7 +2,7 @@ from typing import List, Literal
 
 from pydantic import Field, BaseModel
 
-from aegis_ai.data_models import CVEID, CVSS3Vector, CVSS4Vector, CWEID
+from aegis_ai.data_models import CVEID, CVSS3Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -53,15 +53,6 @@ class SuggestImpactModel(AegisFeatureModel):
     cvss3_vector: CVSS3Vector = Field(
         ...,
         description="Suggested Red Hat CVSS3 vector",
-    )
-
-    cvss4_score: str = Field(
-        ...,
-        description="Suggested Red Hat CVSS4 score",
-    )
-    cvss4_vector: CVSS4Vector = Field(
-        ...,
-        description="Suggested Red Hat CVSS4 vector",
     )
 
 

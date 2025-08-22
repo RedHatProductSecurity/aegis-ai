@@ -1,11 +1,10 @@
-import cvss
 import pytest
 
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis_ai.agents import rh_feature_agent
-from aegis_ai.data_models import CVEID
+from aegis_ai.data_models import CVEID, is_cvss_valid
 from aegis_ai.features.cve import CVSSDiffExplainer, CVSSDiffExplainerModel
 
 from evals.features.common import (
@@ -25,16 +24,6 @@ class CVSSDiffCase(Case):
             expected_output=has_diff,
             metadata={"difficulty": "easy"},
         )
-
-
-def is_cvss_valid(cvss_str: str) -> bool:
-    """return True if cvss_str is a valid CVSS3 vector"""
-    try:
-        cvss.CVSS3(cvss_str)
-        return True
-
-    except cvss.CVSSError:
-        return False
 
 
 class CVSSDiffEvaluator(Evaluator[str, CVSSDiffExplainerModel]):

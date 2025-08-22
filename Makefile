@@ -35,10 +35,10 @@ clean:
 	uv clean
 
 eval:
-	uv run pytest -rA -vv -s evals
+	LOGFIRE_IGNORE_NO_CONFIG=1 uv run pytest -vv -s evals
 
 eval-in-parallel:
-	uv run pytest -rA -vv -n auto evals
+	LOGFIRE_IGNORE_NO_CONFIG=1 uv run pytest -vv -n auto evals
 
 test:
 	uv run pytest tests

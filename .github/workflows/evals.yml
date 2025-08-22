@@ -1,0 +1,77 @@
+name: Evals
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # TODO: make sure this runs only for PRs from the upstream repo
+    # (because PRs from forks do not have access to our secrets)
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-evals:
+    name: Run evaluation suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # make the tables in pydantic-eval reports readable
+      COLUMNS: 200
+
+      # enable colorized text when output is redirected
+      PYTEST_ADDOPTS: --color=yes
+
+      # core LLM configuration
+      AEGIS_LLM_HOST: ${{ vars.AEGIS_LLM_HOST }}
+      AEGIS_LLM_MODEL: ${{ vars.AEGIS_LLM_MODEL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      # safety checks (optional)
+      AEGIS_SAFETY_ENABLED: ${{ vars.AEGIS_SAFETY_ENABLED }}
+      AEGIS_SAFETY_LLM_HOST: ${{ vars.AEGIS_SAFETY_LLM_HOST }}
+      AEGIS_SAFETY_OPENAPI_KEY: ${{ secrets.AEGIS_SAFETY_OPENAPI_KEY }}
+
+      # separate LLM for evals (optional)
+      AEGIS_EVALS_LLM_HOST: ${{ vars.AEGIS_EVALS_LLM_HOST }}
+      AEGIS_EVALS_LLM_MODEL: ${{ vars.AEGIS_EVALS_LLM_MODEL }}
+      AEGIS_EVALS_LLM_API_KEY: ${{ secrets.AEGIS_EVALS_LLM_API_KEY }}
+
+      # how many top-level pytest tests need to succeed for us to count it as success
+      # (if unset, all of them need to succeed)
+      AEGIS_EVALS_MIN_PASSED: ${{ vars.AEGIS_EVALS_MIN_PASSED }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends \
+            build-essential \
+            krb5-config \
+            libffi-dev \
+            libkrb5-dev \
+            pkg-config
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies (dev group)
+        run: uv sync --group dev
+
+      - name: Run evaluation suite
+        run: make eval
