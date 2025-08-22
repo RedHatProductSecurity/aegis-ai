@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from typing import Dict
 
+import requests
 from platformdirs import user_config_dir
 from functools import lru_cache
 
@@ -17,6 +18,7 @@ import logfire
 from dotenv import load_dotenv
 from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
+from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_settings import BaseSettings
 
 from rich.logging import RichHandler
@@ -49,11 +51,19 @@ elif "generativelanguage.googleapis.com" in llm_host:
         gemini_thinking_config={"include_thoughts": True}
     )
 else:
-    default_llm_model = OpenAIModel(
-        model_name=llm_model,
-        provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
-    )
-    default_llm_settings = OpenAIResponsesModelSettings()
+    # simplest way to 'sniff' if model is served by Ollama
+    if "Ollama" in requests.get(llm_host).text:
+        default_llm_model = OpenAIModel(
+            model_name=llm_model,
+            provider=OllamaProvider(base_url=f"{llm_host}/v1/"),
+        )
+        default_llm_settings = OpenAIResponsesModelSettings()
+    else:
+        default_llm_model = OpenAIModel(
+            model_name=llm_model,
+            provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
+        )
+        default_llm_settings = OpenAIResponsesModelSettings()
 
 # aegis app settings
 APP_NAME = "aegis_ai"
