@@ -42,7 +42,7 @@ simple_agent = create_aegis_agent(
 
 rh_feature_agent = create_aegis_agent(
     name="RHFeatureAgent",
-    retries=2,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
+    retries=5,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
     tools=[osidb_tool, cwe_tool],
 )
 
