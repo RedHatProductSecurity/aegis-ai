@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added /openapi.yml 
 - added `make check-type`
 - added safety agent
-- add secbert classifier example to `aegis_ai_ml`
+- added secbert classifier example to `aegis_ai_ml`
+- added kernel_cve tool (https://git.kernel.org/pub/scm/linux/security/vulns.git)
 
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 
