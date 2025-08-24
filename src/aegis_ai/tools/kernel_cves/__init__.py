@@ -1,6 +1,5 @@
 # https://git.kernel.org/pub/scm/linux/security/vulns.git
 
-import asyncio
 import os
 import re
 import subprocess
@@ -34,16 +33,16 @@ class CVEDataScraper:
 
     def setup_repositories(self):
         """Clone or update security vulnerabilities repositories"""
-        logger.info("Setting up repositories...")
+        logger.debug("Setting up repositories...")
         self.setup_vulns_repo()
-        logger.info("All repositories setup complete")
+        logger.debug("All repositories setup complete")
 
     def setup_vulns_repo(self):
         """Clone or update the Linux security vulnerabilities repo"""
-        logger.info("Setting up Linux security vulnerabilities repository...")
+        logger.debug("Setting up Linux security vulnerabilities repository...")
 
         if not self.vulns_repo_path.exists():
-            logger.info("Cloning Linux security vulnerabilities repo...")
+            logger.debug("Cloning Linux security vulnerabilities repo...")
             cmd = [
                 "git",
                 "clone",
@@ -52,12 +51,12 @@ class CVEDataScraper:
             ]
             subprocess.run(cmd, check=True)
         else:
-            logger.info(
+            logger.debug(
                 "Security vulnerabilities repo exists. Updating with git pull..."
             )
             try:
                 subprocess.run(["git", "pull"], cwd=self.vulns_repo_path, check=True)
-                logger.info("Security vulnerabilities repository updated successfully")
+                logger.debug("Security vulnerabilities repository updated successfully")
             except subprocess.CalledProcessError as e:
                 logger.warning(
                     f"Git pull failed for vulns repo: {e}. Continuing with existing repo..."
@@ -65,7 +64,7 @@ class CVEDataScraper:
 
     def process_cve_from_vulns_repo(self, cve_id: str) -> Optional[Dict]:
         """Process CVE information from the security vulnerabilities repo"""
-        logger.info(f"Processing {cve_id} from security vulnerabilities repo")
+        logger.debug(f"Processing {cve_id} from security vulnerabilities repo")
 
         cve_dir = self.base_data_dir / cve_id
         cve_dir.mkdir(exist_ok=True)
@@ -119,7 +118,7 @@ class CVEDataScraper:
         for file_path in possible_paths:
             if file_path.exists():
                 files_found.append(str(file_path))
-                logger.info(f"Found CVE file: {file_path}")
+                logger.debug(f"Found CVE file: {file_path}")
 
                 try:
                     if file_path.suffix == ".json":
@@ -271,7 +270,6 @@ class CVEDataScraper:
         metadata = self.process_cve_from_vulns_repo(cve_id)
 
         if metadata:
-            logger.info(f"Successfully processed {cve_id}")
             return metadata
         else:
             logger.info(f"Could not find information for {cve_id}")
@@ -300,9 +298,3 @@ async def kernel_cve_tool(ctx: RunContext[kernelCVEDependencies], cve_id: CVEID)
     """Lookup a linux kernel CVE definition by ID and return structured CVE data."""
     logger.debug(cve_id)
     return await kernel_cve_lookup(cve_id)
-
-
-if __name__ == "__main__":
-    result1 = asyncio.run(kernel_cve_lookup("CVE-2024-58093"))
-    logger.warning("results:")
-    logger.warning(result1)

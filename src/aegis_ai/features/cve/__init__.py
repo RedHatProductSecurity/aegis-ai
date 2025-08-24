@@ -35,6 +35,7 @@ class SuggestImpact(Feature):
                 - Consider: basic CVSS 3.1 metrics (Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality, Integrity, Availability.
                 - User Interaction is Required for an application to connect a malicious server.
                 - Denial of Service (DoS) has lower impact on applications compared to daemons and servers.
+                - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
                 - Do not base the decision on which RH products are affected.
                 - Provide confidence in [0.00..1.00]. Keep explanations concise.
             """,
@@ -58,6 +59,7 @@ class SuggestCWE(Feature):
                 - Return a short explanation and confidence.
             """,
             rules="""
+                Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
                 Output should include:
                 - cwe: a list of 1–3 likely CWE IDs (e.g., ["CWE-125"]).
                 - explanation: 1–2 sentences connecting CVE details to the CWE.
