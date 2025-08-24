@@ -32,12 +32,13 @@ class SuggestImpact(Feature):
                 * LOW: This rating is given to all other issues that may have a security impact. These are the types of vulnerabilities that are believed to require unlikely circumstances to be able to be exploited, or where a successful exploit would give minimal consequences. This includes flaws that are present in a program’s source code but to which no current or theoretically possible, but unproven, exploitation vectors exist or were found during the technical analysis of the flaw.
                 
                 Generate a suggestion CVSS3 score and vector.
-                
+                                
                 # Instructions for Analysis:
                 
                 Thorough Traversal: Recursively traverse the entire JSON object, including nested arrays and objects.
             """,
             rules="""
+
                 1.  Analyze the provided CVE data for information related to:
                     * Attack vector (remote, local, physical)
                     * Authentication requirements
@@ -54,6 +55,8 @@ class SuggestImpact(Feature):
                 4. Denial of Service (DoS) flaws are usually not IMPORTANT if their scope is limited to an application.
                 5. A User Interaction is usually Required (UI:R in CVSS) in case an application connects a malicious server to trigger the flaw.
                 6. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
+                7. Always use kernel_cve tool to lookup additional CVE context if CVE component is kernel. This additional
+                kernel cve context should be used as secondary guidance to red hat CVE information.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
@@ -91,6 +94,9 @@ class SuggestCWE(Feature):
                 - Reasoning Explanation: Concise rationale linking CVE description to selected CWE
             """,
             rules="""
+                Always use kernel_cve tool to provide additional CVE context if CVE component is kernel. This additional
+                kernel cve context should be used as secondary guidance to red hat CVE information.
+
                 Critical Selection Guidelines:
                 a) Prioritize most specific CWE matching vulnerability's root cause
                 b) Reject CWEs marked as disallowed by the cwe_tool
