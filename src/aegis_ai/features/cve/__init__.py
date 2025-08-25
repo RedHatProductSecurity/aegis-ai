@@ -55,7 +55,7 @@ class SuggestImpact(Feature):
                 4. Denial of Service (DoS) flaws are usually not IMPORTANT if their scope is limited to an application.
                 5. A User Interaction is usually Required (UI:R in CVSS) in case an application connects a malicious server to trigger the flaw.
                 6. Provide a confidence % in how accurate (based on training material, reasoning) this assessment is.
-                7. Always use kernel_cve tool to lookup additional CVE context if CVE component is kernel. This additional
+                7. Always use kernel_cve tool to lookup additional CVE context when CVE component is kernel. This additional
                 kernel cve context should be used as secondary guidance to red hat CVE information.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
