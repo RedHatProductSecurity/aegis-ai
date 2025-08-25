@@ -88,7 +88,7 @@ cases = [
 evals = common_feature_evals + [
     SuggestImpactEvaluator(),
     create_llm_judge(
-        rubric="explanation does not mention which Red Hat products are affected"
+        rubric="The 'explanation' output field does not list affected Red Hat products.  Ignore other fields in the output."
     ),
 ]
 

@@ -68,7 +68,7 @@ cases = [
 evals = common_feature_evals + [
     CVSSDiffEvaluator(),
     create_llm_judge(
-        rubric="Unless the explanation field is empty, it elaborates on the reason why Red Hat assigned a different CVSS vector."
+        rubric="Either the explanation field is an empty string or it elaborates on the reason why Red Hat assigned a different CVSS vector."
     ),
     # TODO: more evaluators
 ]

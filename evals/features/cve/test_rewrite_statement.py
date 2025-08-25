@@ -43,13 +43,13 @@ cases = [
 # evaluators
 evals = common_feature_evals + [
     create_llm_judge(
-        rubric="The statement does not suggest to apply a patch or rebuild the software."
+        rubric="The rewritten_statement field does not suggest to apply a source code patch or rebuild the software."
     ),
     create_llm_judge(
-        rubric="The statement does not describe the code change that was used to eliminate the flaw."
+        rubric="The rewritten_statement field does not include any code-level details about the flaw."
     ),
     create_llm_judge(
-        rubric="The statement does not duplicate the flaw description.  A brief summary to provide context is acceptable though."
+        rubric="The rewritten_statement field does not duplicate the description field.  A brief summary to provide context is acceptable though."
     ),
     # TODO: more evaluators
 ]

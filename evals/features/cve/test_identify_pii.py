@@ -60,7 +60,10 @@ cases = [
 evals = common_feature_evals + [
     IdentifyPIIEvaluator(),
     create_llm_judge(
-        rubric="If PII is found, the explanation contains a bulleted list."
+        rubric="If the contains_PII field is True, the explanation field is NOT empty."
+    ),
+    create_llm_judge(
+        rubric="Either the explanation field is empty, or it contains a bulleted list starting with '-'."
     ),
 ]
 
