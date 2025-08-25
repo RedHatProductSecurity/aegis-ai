@@ -33,16 +33,16 @@ class CVEDataScraper:
 
     def setup_repositories(self):
         """Clone or update security vulnerabilities repositories"""
-        logger.debug("Setting up repositories...")
         self.setup_vulns_repo()
-        logger.debug("All repositories setup complete")
 
     def setup_vulns_repo(self):
         """Clone or update the Linux security vulnerabilities repo"""
         logger.debug("Setting up Linux security vulnerabilities repository...")
 
         if not self.vulns_repo_path.exists():
-            logger.debug("Cloning Linux security vulnerabilities repo...")
+            logger.info(
+                "Cloning Linux security vulnerabilities repo for the first time ... this may take some time."
+            )
             cmd = [
                 "git",
                 "clone",
