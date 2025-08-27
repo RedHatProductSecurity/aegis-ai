@@ -191,9 +191,9 @@ class RewriteStatementModel(AegisFeatureModel):
         """,
     )
 
-    description: str = Field(
+    original_description: str = Field(
         ...,
-        description="Contains current CVE description",
+        description="Contains the original CVE description provided by the osidb_tool.",
     )
 
     rewritten_statement: str = Field(

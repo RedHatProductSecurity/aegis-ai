@@ -100,7 +100,7 @@ def handle_eval_report(report: EvaluationReport):
 class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):
     def evaluate(self, ctx) -> EvaluationReason:
         return make_eval_reason(
-            "osidb_tool" in ctx.output.tools_used,
+            any("osidb_tool" in tool for tool in ctx.output.tools_used),
             "osidb_tool was not used by the agent",
         )
 

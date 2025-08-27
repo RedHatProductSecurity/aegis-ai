@@ -20,6 +20,6 @@
         "This CVE is not applicable to any supported version of Red Hat Enterprise Linux since RHEL-4."
     ],
     "explanation": "The original statement was factually correct for Red Hat Enterprise Linux (RHEL) but incomplete, as it failed to mention other affected Red Hat products. The rewritten statement provides a more comprehensive view by clarifying the specific condition for the vulnerability (dependency on an old zlib version), explaining why RHEL is not affected, and acknowledging that other Red Hat services are impacted. This approach offers a clearer and more complete picture for all customers.",
-    "description": "A flaw was found in libcurl. This vulnerability allows an attacker to trigger a buffer overflow via an integer overflow in zlib 1.2.0.3 or older when libcurl performs automatic gzip decompression.",
+    "original_description": "A flaw was found in libcurl. This vulnerability allows an attacker to trigger a buffer overflow via an integer overflow in zlib 1.2.0.3 or older when libcurl performs automatic gzip decompression.",
     "rewritten_statement": "This flaw is only exploitable when libcurl uses zlib version 1.2.0.3 or older for gzip decompression. Supported versions of Red Hat Enterprise Linux are not affected as they ship with newer versions of the zlib library. Some Red Hat services that bundle older third-party tools may be affected."
 }

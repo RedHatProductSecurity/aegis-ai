@@ -49,7 +49,7 @@ evals = common_feature_evals + [
         rubric="The rewritten_statement field does not include any code-level details about the flaw."
     ),
     create_llm_judge(
-        rubric="The rewritten_statement field does not duplicate the description field.  A brief summary to provide context is acceptable though."
+        rubric="The rewritten_statement field does not duplicate the original_description field.  A brief summary to provide context is acceptable though."
     ),
     # TODO: more evaluators
 ]
