@@ -110,15 +110,27 @@ export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
 ```
 
 ##### Tavily Search engine
-Integration with Tavily is achieved via built in pydantic-ai support
+Integration with Tavily via built in pydantic-ai support:
 ```bash
 export TAVILY_API_KEY="tvly-dev-XXXXXX"
+export AEGIS_USE_TAVILY_TOOL_CONTEXT=true
+```
+
+##### Linux cves
+Integration with [linux cves repo](https://git.kernel.org/pub/scm/linux/security/vulns.git):
+```bash
+export AEGIS_USE_LINUX_CVE_TOOL_CONTEXT=true
+```
+#### Mitre CWE
+Integration with [Mitre CWE definitions](https://cwe.mitre.org/data/downloads.html)
+```bash
+export AEGIS_USE_CWE_TOOL_CONTEXT=true
 ```
 
 #### RedHat tools
 
 ##### OSIDB
-Integration with OSIDB is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
+Integration with [OSIDB](https://github.com/RedHatProductSecurity/osidb) is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
 OSIDB server url for Aegis with:
 ```bash
 export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
@@ -127,10 +139,6 @@ export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
 Uses kerberos built in auth with `osidb-bindings`.
 
 ##### RHTPA
-TBA
-
-
-#### More Context
 TBA
 
 ---
