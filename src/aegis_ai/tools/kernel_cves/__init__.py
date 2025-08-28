@@ -44,7 +44,7 @@ class KernelVulnsRepo:
 
     def __init__(self, base_dir: Path):
         self.repo_path = base_dir / "linux_security_vulns"
-        self.lock_file = base_dir / ".repo_lock"  # For timestamping
+        self.lock_file = base_dir / ".timestamp"  # For timestamping
         base_dir.mkdir(exist_ok=True)
 
     def setup(self):
