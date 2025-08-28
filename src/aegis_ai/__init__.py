@@ -68,6 +68,11 @@ truthy = (
     "yes",
 )
 
+#
+use_tavily_tool = os.getenv("AEGIS_USE_TAVILY_TOOL_CONTEXT", "false")
+use_cwe_tool = os.getenv("AEGIS_USE_CWE_TOOL_CONTEXT", "true")
+use_linux_cve_tool = os.getenv("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", "false")
+
 
 class AppSettings(BaseSettings):
     default_llm_host: str = llm_host

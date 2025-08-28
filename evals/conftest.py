@@ -3,10 +3,11 @@ import os
 import pytest
 
 from pydantic_ai.tools import RunContext, Tool
+from pydantic_ai.toolsets import FunctionToolset
 
 from aegis_ai import config_logging
-from aegis_ai.agents import rh_feature_agent
 from aegis_ai.tools.osidb import CVE, CVEID, OsidbDependencies
+import aegis_ai.toolsets as ts
 
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
@@ -30,7 +31,8 @@ def setup_logging_for_session():
 # sure that our evaluation is invariant to future changes in OSIDB data
 @pytest.fixture(scope="session", autouse=True)
 def override_rh_feature_agent():
-    rh_feature_agent._function_toolset.tools["osidb_tool"] = osidb_tool
+    # Replace the first inner FunctionToolset with one that contains our wrapper
+    ts.redhat_cve_toolset.toolsets[0] = FunctionToolset(tools=[osidb_tool])
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
