@@ -50,7 +50,7 @@ CVSS4Vector = _make_cvss_model("CVSS4")
 CVEID = Annotated[
     str,
     StringConstraints(
-        pattern=r"^CVE-\d{4}-\d{4,7}$",
+        pattern=r"^CVE-[0-9]{4}-[0-9]{4,7}$",
         strict=True,
         strip_whitespace=True,
     ),
