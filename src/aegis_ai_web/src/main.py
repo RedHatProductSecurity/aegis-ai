@@ -14,6 +14,7 @@ import logfire
 import yaml
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -25,6 +26,18 @@ from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import cve, component
 from . import AEGIS_REST_API_VERSION, feature_agent
 
+
+class HSTSHeaderMiddleware(BaseHTTPMiddleware):
+    """middleware to add HSTS header to HTTP responses"""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        return response
+
+
 config_logging()
 
 app = FastAPI(
@@ -32,6 +45,11 @@ app = FastAPI(
     description="A simple web console and REST API for Aegis.",
     version=AEGIS_REST_API_VERSION,
 )
+
+# middleware to add HSTS header to HTTP responses (it is safe to send the HSTS
+# header over plain-text HTTP because the header shall be ignored by the client
+# unless it is received over HTTPS)
+app.add_middleware(HSTSHeaderMiddleware)
 
 logfire.instrument_fastapi(app)
 
