@@ -53,6 +53,15 @@ app = FastAPI(
 # unless it is received over HTTPS)
 app.add_middleware(HSTSHeaderMiddleware)
 
+# optionally enable Kerberos authentication
+kerberos_spn = os.getenv("AEGIS_WEB_SPN")
+if kerberos_spn:
+    # do not depend on `fastapi-gssapi` unless it is actually needed
+    from fastapi_gssapi import GSSAPIMiddleware
+
+    # middleware to add GSSAPI authentication
+    app.add_middleware(GSSAPIMiddleware, spn=kerberos_spn)
+
 logfire.instrument_fastapi(app)
 
 BASE_DIR = Path(__file__).parent
