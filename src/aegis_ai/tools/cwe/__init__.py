@@ -49,6 +49,10 @@ class CWE(BaseToolOutput):
         description="CWE description.",
     )
 
+    extended_description: str = Field(
+        ...,
+        description="CWE extended_description.",
+    )
     disallowed: bool = Field(
         ...,
         description="True if the CWE is not accepted by OSIM.",
@@ -118,6 +122,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
                 cwe_id=validated_cwe_id,
                 name=cwe["name"],
                 description=cwe["description"],
+                extended_description=cwe["extended_description"],
                 disallowed=cwe.get("disallowed", False),
             )
         except KeyError:

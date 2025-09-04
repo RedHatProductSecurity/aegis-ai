@@ -1,28 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="layout-pf layout-pf-fixed-with-footer">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aegis Dev Console</title>
+    <meta charset="utf-8">
+    <style>
+      .highlight { background-color:#FFFF00; }
+      /* Add some margin to the top of the right column for better spacing */
+      .right-column { margin-top: 35px; }
+    </style>
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/4.0.0-rc.1/css/patternfly.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/4.0.0-rc.1/css/patternfly-additions.min.css">
+    <title>Aegis AI</title>
 </head>
-<body>
+<body style="background-color: whitesmoke">
+<nav class="navbar navbar-default navbar-pf" role="navigation">
+    <div style="margin: 3px 0 5px 20px;">
+        <a title="Product Security Agent" href="/"
+           style="font-size: 18px; text-decoration: none; color: white">
+            <b>Aegis AI - Console</b>
+        </a>
+    </div>
+</nav>
+<div class="container-fluid">
     <div class="container">
-        <h1>Aegis Dev Console</h1>
+        <div class="row">
+            <div class="col-md-6">
+                <h1>Console</h1>
+                <div class="form-group">
+                    <label for="agent">agent:</label>
+                    <select id="agent" name="agent" class="form-control">
+                        <option>redhat</option>
+                        <option>public</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="feature">feature:</label>
+                    <select id="feature" name="feature" class="form-control">
+                        <option></option>
+                        <option>suggest-impact</option>
+                        <option>suggest-cwe</option>
+                        <option>rewrite-text</option>
+                        <option>rewrite-statement</option>
+                        <option>cvss-diff</option>
+                        <option>rewrite-mitigation</option>
+                    </select>
+                </div>
+                <hr/>
+                <form action="/console" method="post">
+                    <div class="form-group">
+                        <label for="user_instruction">User instruction:</label>
+                        <textarea id="user_instruction" name="user_instruction" rows="8" class="form-control" placeholder="Type your LLM prompt here...">{{ user_instruction }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="goals">Goals:</label>
+                        <textarea id="goals" name="goals" rows="5" class="form-control" placeholder="Type your goals here...">{{ goals }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="rules">Rules:</label>
+                        <textarea id="rules" name="rules" rows="5" class="form-control" placeholder="Type your rules here...">{{ rules }}</textarea>
+                    </div>
+                    <div class="text-right">
+                        <button type="submit" class="btn btn-primary">Generate Answer</button>
+                    </div>
+                </form>
+            </div>
 
-        <form action="/generate_response" method="post">
-            <div class="form-group">
-                <label for="prompt_input">Enter your prompt:</label><br/>
-                <textarea id="prompt_input" name="prompt_input" rows="10" cols="50" placeholder="Type your LLM prompt here...">{{ user_prompt }}</textarea>
-            </div><br/>
-            <button type="submit">Generate LLM Response</button>
-        </form>
+            <div class="col-md-6 right-column">
+                <hr/>
+                <div class="response-section">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="confidence">confidence:</label>
+                            <input id="confidence" value="{{ confidence }}" class="form-control" readonly/>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="completeness">completeness:</label>
+                            <input id="completeness" value="{{ completeness }}" class="form-control" readonly/>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="consistency">consistency:</label>
+                            <input id="consistency" value="{{ consistency }}" class="form-control" readonly/>
+                        </div>
+                    </div>
+                    <br/>
+                    <div class="form-group">
+                        <label for="tools_used">tools used:</label>
+                        <input id="tools_used" value="{{ tools_used }}" class="form-control" readonly/>
+                    </div>
 
-        <div class="response-section">
-            <h2>LLM Response:</h2>
-            <textarea id="llm_response" rows="15" cols="50" readonly>{{ llm_response }}</textarea>
+                    <div class="form-group">
+                        <label for="explanation">explanation:</label>
+                        <textarea id="explanation" rows="10" class="form-control" expanded>{{ explanation }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="answer">answer:</label>
+                        <textarea id="answer" rows="10" class="form-control" expanded>{{ answer }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="raw_output">debug:</label>
+                        <textarea id="raw_output" rows="10" class="form-control" expanded>{{ raw_output }}</textarea>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
+<div class="container-fluid footer-pf">
+    <div class="text-center" style="font-size:120%; padding-bottom: 5px">
+        Copyright © 2025 Red Hat, Inc. All rights reserved.
+        |
+        Version: 4.15.0 (9d3a07785c49a9d012d47ad4dac8172523407ee8)
+        |
+        <a href="https://github.com/RedHatProductSecurity/aegis-ai/issues"
+           rel="noopener noreferrer" target="_blank">
+            Report Issue/Enhancement
+        </a>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/patternfly/3.59.5/js/patternfly.min.js"></script>
 </body>
 </html>
