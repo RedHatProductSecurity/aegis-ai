@@ -46,7 +46,7 @@ if "api.anthropic.com" in llm_host:
 elif "generativelanguage.googleapis.com" in llm_host:
     default_llm_model = GoogleModel(model_name=llm_model)
     default_llm_settings = GoogleModelSettings(
-        gemini_thinking_config={"include_thoughts": True}
+        google_thinking_config={"include_thoughts": True}
     )
 else:
     default_llm_model = OpenAIModel(
