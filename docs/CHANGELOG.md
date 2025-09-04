@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added secbert classifier example to `aegis_ai_ml`
 - added kernel_cve tool (https://git.kernel.org/pub/scm/linux/security/vulns.git)
 - added tool env switches (AEGIS_USE_TAVILY_TOOL_CONTEXT, AEGIS_USE_CWE_TOOL_CONTEXT,AEGIS_USE_LINUX_CVE_TOOL_CONTEXT)
+- added debug console to aegis_ai_web
 
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 

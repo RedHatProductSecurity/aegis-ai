@@ -8,11 +8,11 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Type
+from typing import Dict, Type, Annotated
 
 import logfire
 import yaml
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -24,6 +24,8 @@ from aegis_ai.agents import public_feature_agent, rh_feature_agent
 
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import cve, component
+from aegis_ai.features.data_models import AegisAnswer
+
 from . import AEGIS_REST_API_VERSION, feature_agent
 
 
@@ -96,27 +98,40 @@ async def console(request: Request):
     return templates.TemplateResponse("console.html", {"request": request})
 
 
-@app.post("/generate_response")
-async def generate_response(request: Request):
+@app.post("/console")
+async def generate_response(
+    request: Request,
+    user_instruction: Annotated[str, Form()],
+    goals: Annotated[str, Form()],
+    rules: Annotated[str, Form()],
+):
     """
     Handles the submission of a prompt, simulates an LLM response,
     and re-renders the console with the results.
     """
-    user_prompt = request.form().__dict__.get("user_prompt")
 
-    # --- Simulate LLM Response ---
-    # In a real application, you would make an API call to an LLM here.
-    # For this simple example, we'll just echo the prompt and add a prefix.
-    if user_prompt:
-        llm_response = f"Simulated LLM Response: You asked '{user_prompt}'. This is a placeholder response."
-    else:
-        llm_response = "Please enter a prompt."
+    try:
+        llm_response = await llm_agent.run(user_instruction, output_type=AegisAnswer)
+        response = llm_response.output
+        return templates.TemplateResponse(
+            "console.html",
+            {
+                "request": request,
+                "user_instruction": user_instruction,
+                "goals": goals,
+                "rules": rules,
+                "confidence": response.confidence,
+                "completeness": response.completeness,
+                "consistency": response.consistency,
+                "tools_used": response.tools_used,
+                "explanation": response.explanation,
+                "answer": response.answer,
+                "raw_output": llm_response.all_messages(),
+            },
+        )
 
-    # Render the template again, passing the user's prompt and the simulated response
-    return templates.TemplateResponse(
-        "console.html",
-        {"request": request, "user_prompt": user_prompt, "llm_response": llm_response},
-    )
+    except Exception as e:
+        raise HTTPException(500, detail=f"Error executing general query': {e}")
 
 
 cve_feature_registry: Dict[str, Type] = {
