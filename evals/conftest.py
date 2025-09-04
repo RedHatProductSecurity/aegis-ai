@@ -32,7 +32,9 @@ def setup_logging_for_session():
 @pytest.fixture(scope="session", autouse=True)
 def override_rh_feature_agent():
     # Replace the first inner FunctionToolset with one that contains our wrapper
-    ts.redhat_cve_toolset.toolsets[0] = FunctionToolset(tools=[osidb_tool])
+    ts_list = ts.redhat_cve_toolset.toolsets
+    if isinstance(ts_list, list):
+        ts_list[0] = FunctionToolset(tools=[osidb_tool])
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
