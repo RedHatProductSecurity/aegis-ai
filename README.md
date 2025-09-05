@@ -71,7 +71,7 @@ Connect to Gemini (replace `YOUR_GEMINI_API_KEY` with your actual key):
 
 ```bash
 AEGIS_LLM_HOST="https://generativelanguage.googleapis.com"
-AEGIS_LLM_MODEL="gemini-2.5-pro"
+AEGIS_LLM_MODEL="gemini-2.5-flash"
 GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ````
 
@@ -107,6 +107,13 @@ Aegis provides a few 'out of the box' tools that the agent can use to enhance LL
 Integration with NVD for looking up NIST CVE:
 ```bash
 export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
+```
+
+##### Github
+Integration with github:
+```bash
+export AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=false
+export GITHUB_PERSONAL_ACCESS_TOKEN=
 ```
 
 ##### Tavily Search engine
