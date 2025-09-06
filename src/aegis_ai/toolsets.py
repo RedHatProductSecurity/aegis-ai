@@ -19,7 +19,7 @@ from aegis_ai import (
     use_wikipedia_mcp_tool,
     use_pypi_mcp_tool,
     config_dir,
-    use_osv_dev_tool,
+    use_nvd_dev_tool,
 )
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
@@ -109,8 +109,6 @@ if use_cwe_tool in truthy:
     public_tools.append(cwe_tool)
 if use_linux_cve_tool in truthy:
     public_tools.append(kernel_cve_tool)
-if use_osv_dev_tool in truthy:
-    public_tools.append(osv_dev_cve_tool)
 public_toolset = CombinedToolset(
     [
         FunctionToolset(tools=public_tools),
@@ -150,9 +148,18 @@ redhat_cve_toolset = CombinedToolset(
     ]
 )
 
+
 # Toolset containing generic tooling for CVE
+public_cve_tools = [osv_dev_cve_tool]
 public_cve_toolset = CombinedToolset(
     [
-        nvd_stdio_server,
+        FunctionToolset(tools=public_cve_tools),
     ]
 )
+if use_nvd_dev_tool in truthy:
+    public_cve_toolset = CombinedToolset(
+        [
+            public_cve_toolset,
+            nvd_stdio_server,
+        ]
+    )

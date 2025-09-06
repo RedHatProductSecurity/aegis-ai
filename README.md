@@ -37,7 +37,7 @@ We provide 'out of the box' integrations providing security context with the fol
 
 * [OSIDB](https://github.com/RedHatProductSecurity/osidb) 
 * [RHTPAv2](https://github.com/trustification/trustify)
-* NVD (https://github.com/marcoeg/mcp-nvd)
+* [osv.dev](https://osv.dev)
 * CWE (https://cwe.mitre.org)
 
 which perform lookups on security entities (ex. CVE).
@@ -106,6 +106,7 @@ Aegis provides a few 'out of the box' tools that the agent can use to enhance LL
 ##### NVD
 Integration with NVD for looking up NIST CVE:
 ```bash
+export AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT=true
 export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
 ```
 

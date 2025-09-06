@@ -3,6 +3,8 @@ aegis cli
 
 """
 
+import logging
+
 import click
 import asyncio
 
@@ -47,6 +49,8 @@ def aegis_cli(debug):
         config_logging(level="INFO")
     else:
         config_logging(level="DEBUG")
+
+    logging.info(f"Aegis cli_agent: {cli_agent.name}")
 
     if check_llm_status():
         pass
