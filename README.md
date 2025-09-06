@@ -128,7 +128,7 @@ Integration with [linux cves repo](https://git.kernel.org/pub/scm/linux/security
 ```bash
 export AEGIS_USE_LINUX_CVE_TOOL_CONTEXT=true
 ```
-#### Mitre CWE
+##### Mitre CWE
 Integration with [Mitre CWE definitions](https://cwe.mitre.org/data/downloads.html)
 ```bash
 export AEGIS_USE_CWE_TOOL_CONTEXT=true
@@ -143,7 +143,11 @@ Integration with pypi:
 ```bash
 export AEGIS_USE_PYPI_MCP_CONTEXT=true
 ```
-
+##### osv.dev
+Integration with [osv.dev](https://osv.dev):
+```bash
+export AEGIS_USE_OSV_DEV_CONTEXT=true
+```
 
 #### RedHat tools
 

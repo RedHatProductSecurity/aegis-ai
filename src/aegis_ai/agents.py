@@ -53,7 +53,7 @@ rh_public_feature_agent = create_aegis_agent(
 public_feature_agent = create_aegis_agent(
     name="PublicFeatureAgent",
     retries=5,  # FIXME: this should be made configurable, was included as brutish technique for revalidations
-    toolsets=[public_cve_toolset, public_toolset],
+    toolsets=[public_toolset, public_cve_toolset],
 )
 
 safety_agent = Agent(
