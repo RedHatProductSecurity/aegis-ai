@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.2.7] - 2025-09-06
+
+### Fixed
+- fix pyproject.toml to include all assets, fixes pypi dist 
+
+
 ## [0.2.6] - 2025-09-06
 
 ### Added
