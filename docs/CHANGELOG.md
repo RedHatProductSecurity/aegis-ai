@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added tool env switches (AEGIS_USE_TAVILY_TOOL_CONTEXT, AEGIS_USE_CWE_TOOL_CONTEXT,AEGIS_USE_LINUX_CVE_TOOL_CONTEXT)
 - added debug console to aegis_ai_web
 - update to pydantic-ai 1.0.1
+- added github mcp tool (https://github.com/github/github-mcp-server)
 
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 

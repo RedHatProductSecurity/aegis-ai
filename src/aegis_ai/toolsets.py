@@ -3,6 +3,8 @@ Aegis MCP - register mcp here
 
 """
 
+import os
+
 from pydantic_ai.common_tools.tavily import tavily_search_tool
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.toolsets import FunctionToolset, CombinedToolset
@@ -13,6 +15,7 @@ from aegis_ai import (
     use_tavily_tool,
     use_cwe_tool,
     use_linux_cve_tool,
+    use_github_mcp_tool,
 )
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
@@ -31,7 +34,36 @@ nvd_stdio_server = MCPServerStdio(
         "run",
         "mcp-nvd",
     ],
+    tool_prefix="mitre_nvd",
 )
+
+# github-mcp: read only query against github.
+# https://hub.docker.com/r/mcp/github-mcp-server
+#
+# requires
+#   AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=false
+#   GITHUB_PERSONAL_ACCESS_TOKEN=
+github_stdio_server = MCPServerStdio(
+    "podman",
+    args=[
+        "run",
+        "-i",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "-e",
+        "GITHUB_TOOLSETS",
+        "-e",
+        "GITHUB_READ_ONLY",
+        "mcp/github-mcp-server",
+    ],
+    env={
+        "GITHUB_PERSONAL_ACCESS_TOKEN": f"{os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN', '')}",
+        "GITHUB_TOOLSETS": "repos",
+        "GITHUB_READ_ONLY": "1",
+    },
+    tool_prefix="github",
+)
+
 
 # Toolset for 'baked in' pydantic-ai tools
 pydantic_ai_tools = [wikipedia_tool]
@@ -52,6 +84,14 @@ public_toolset = CombinedToolset(
         pydantic_ai_toolset,
     ]
 )
+
+if use_github_mcp_tool in truthy:
+    public_toolset = CombinedToolset(
+        [
+            github_stdio_server,
+            public_toolset,
+        ]
+    )
 
 # Toolset containing rh specific tooling for CVE
 redhat_cve_toolset = CombinedToolset(

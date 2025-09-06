@@ -72,6 +72,7 @@ truthy = (
 use_tavily_tool = os.getenv("AEGIS_USE_TAVILY_TOOL_CONTEXT", "false")
 use_cwe_tool = os.getenv("AEGIS_USE_CWE_TOOL_CONTEXT", "true")
 use_linux_cve_tool = os.getenv("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", "false")
+use_github_mcp_tool = os.getenv("AEGIS_USE_GITHUB_MCP_CONTEXT", "true")
 
 
 class AppSettings(BaseSettings):
