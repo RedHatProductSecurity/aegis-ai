@@ -19,10 +19,12 @@ from aegis_ai import (
     use_wikipedia_mcp_tool,
     use_pypi_mcp_tool,
     config_dir,
+    use_osv_dev_tool,
 )
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.tools.osidb import osidb_tool
+from aegis_ai.tools.osvdev import osv_dev_cve_tool
 from aegis_ai.tools.wikipedia import wikipedia_tool
 
 # register any MCP tools below:
@@ -101,13 +103,14 @@ if use_tavily_tool in truthy:
     pydantic_ai_tools.append(tavily_search_tool(tavily_api_key))
 pydantic_ai_toolset = FunctionToolset(tools=pydantic_ai_tools)
 
-# Toolset containing public tools
+# Enable public function tools
 public_tools = []
 if use_cwe_tool in truthy:
     public_tools.append(cwe_tool)
 if use_linux_cve_tool in truthy:
     public_tools.append(kernel_cve_tool)
-
+if use_osv_dev_tool in truthy:
+    public_tools.append(osv_dev_cve_tool)
 public_toolset = CombinedToolset(
     [
         FunctionToolset(tools=public_tools),
@@ -115,6 +118,7 @@ public_toolset = CombinedToolset(
     ]
 )
 
+# Enable toolsets
 if use_github_mcp_tool in truthy:
     public_toolset = CombinedToolset(
         [
@@ -138,6 +142,7 @@ if use_pypi_mcp_tool in truthy:
             public_toolset,
         ]
     )
+
 # Toolset containing rh specific tooling for CVE
 redhat_cve_toolset = CombinedToolset(
     [
