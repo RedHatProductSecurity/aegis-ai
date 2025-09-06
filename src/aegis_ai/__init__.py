@@ -21,7 +21,7 @@ from pydantic_settings import BaseSettings
 
 from rich.logging import RichHandler
 
-from pydantic_ai.models.openai import OpenAIModel, OpenAIResponsesModelSettings
+from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 
 load_dotenv()
@@ -49,7 +49,7 @@ elif "generativelanguage.googleapis.com" in llm_host:
         google_thinking_config={"include_thoughts": True}
     )
 else:
-    default_llm_model = OpenAIModel(
+    default_llm_model = OpenAIChatModel(
         model_name=llm_model,
         provider=OpenAIProvider(base_url=f"{llm_host}/v1/"),
     )
@@ -68,11 +68,12 @@ truthy = (
     "yes",
 )
 
-#
+# tool flags
 use_tavily_tool = os.getenv("AEGIS_USE_TAVILY_TOOL_CONTEXT", "false")
 use_cwe_tool = os.getenv("AEGIS_USE_CWE_TOOL_CONTEXT", "true")
 use_linux_cve_tool = os.getenv("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", "false")
-use_github_mcp_tool = os.getenv("AEGIS_USE_GITHUB_MCP_CONTEXT", "true")
+use_github_mcp_tool = os.getenv("AEGIS_USE_GITHUB_MCP_CONTEXT", "false")
+use_wikipedia_mcp_tool = os.getenv("AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", "false")
 
 
 class AppSettings(BaseSettings):

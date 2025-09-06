@@ -1,6 +1,6 @@
 import os
 
-from pydantic_ai.models.openai import OpenAIModel, OpenAIResponsesModelSettings
+from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals.dataset import EvaluationReport
 from pydantic_evals.evaluators import (
@@ -27,7 +27,7 @@ if evals_llm_host:
     # use an independent LLM for evals
     evals_llm_model_name = os.getenv("AEGIS_EVALS_LLM_MODEL", llm_model)
     evals_llm_api_key = os.getenv("AEGIS_EVALS_LLM_API_KEY", "")
-    evals_llm_model = OpenAIModel(
+    evals_llm_model = OpenAIChatModel(
         model_name=evals_llm_model_name,
         provider=OpenAIProvider(
             base_url=f"{evals_llm_host}/v1/",

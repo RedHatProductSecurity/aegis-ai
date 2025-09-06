@@ -16,6 +16,7 @@ from aegis_ai import (
     use_cwe_tool,
     use_linux_cve_tool,
     use_github_mcp_tool,
+    use_wikipedia_mcp_tool,
 )
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
@@ -64,6 +65,18 @@ github_stdio_server = MCPServerStdio(
     tool_prefix="github",
 )
 
+# wikipedia-mcp: query wikipedia
+# https://github.com/rudra-ravi/wikipedia-mcp
+#
+# requires NVD_API_KEY=
+wikipedia_stdio_server = MCPServerStdio(
+    "uv",
+    args=[
+        "run",
+        "wikipedia-mcp",
+    ],
+    tool_prefix="wikipedia",
+)
 
 # Toolset for 'baked in' pydantic-ai tools
 pydantic_ai_tools = [wikipedia_tool]
@@ -89,6 +102,14 @@ if use_github_mcp_tool in truthy:
     public_toolset = CombinedToolset(
         [
             github_stdio_server,
+            public_toolset,
+        ]
+    )
+
+if use_wikipedia_mcp_tool in truthy:
+    public_toolset = CombinedToolset(
+        [
+            wikipedia_stdio_server,
             public_toolset,
         ]
     )
