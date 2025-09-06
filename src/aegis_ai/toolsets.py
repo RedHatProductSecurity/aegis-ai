@@ -90,9 +90,7 @@ pypi_stdio_server = MCPServerStdio(
         "mcp-pypi",
         "stdio",
         "--cache-dir",
-        config_dir,
-        "--log-level",
-        "DEBUG",
+        f"{config_dir}/pypi-mcp",
     ],
     tool_prefix="pypi-mcp",
 )
