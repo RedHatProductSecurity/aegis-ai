@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.2.6] - 2025-09-06
+
+### Added
 - added cwe_tool (https://cwe.mitre.org/data/downloads.html)
 - added /openapi.yml 
 - added `make check-type`
@@ -27,8 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update to osidb-bindings 4.14.0
 - cleaned up settings aegis_ai app settings (~/.config/aegis_ai)
 - osv.dev tool is not the main default public agent cve tool
-
-### Fixed
 
 
 ## [0.2.5] - 2025-07-29
