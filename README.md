@@ -133,11 +133,15 @@ Integration with [Mitre CWE definitions](https://cwe.mitre.org/data/downloads.ht
 ```bash
 export AEGIS_USE_CWE_TOOL_CONTEXT=true
 ```
-
 ##### Wikipedia
 Integration with wikipedia:
 ```bash
 export AEGIS_USE_WIKIPEDIA_MCP_CONTEXT=true
+```
+##### pypi
+Integration with pypi:
+```bash
+export AEGIS_USE_PYPI_MCP_CONTEXT=true
 ```
 
 

@@ -29,6 +29,7 @@ dependencies = [
     "uvicorn>=0.35.0",
     "wikipedia>=1.4.0",
     "wikipedia-mcp>=1.5.8",
+    "mcp-pypi>=2.7.1",
 ]
 classifiers = [
     "Topic :: Security",

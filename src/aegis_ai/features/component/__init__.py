@@ -39,6 +39,7 @@ class ComponentIntelligence(Feature):
                     * describe the component, programming language, primary architecture and features, latest version number
                     * Prioritize up-to-date sources for news and security vulnerabilities.
                     * if available use github tool to lookup more information from docs, README, etc.
+                    * if available use mcp pypi tool to lookup more context
                     * Identify and extract key information regarding the component's description, recent activities, contributors and what companies they work for (and affiliations), repository, and security status.
                     * list any other popular software components that may include the component name in its name
                     * Investigate and report on any outstanding security issues of any listed dependencies. Provide web links if appropriate.
