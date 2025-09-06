@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update to pydantic-ai 0.4.11
 - update to osidb-bindings 4.14.0
 - cleaned up settings aegis_ai app settings (~/.config/aegis_ai)
+- osv.dev tool is not the main default public agent cve tool
 
 ### Fixed
 

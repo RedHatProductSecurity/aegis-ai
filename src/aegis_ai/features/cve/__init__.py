@@ -22,7 +22,7 @@ class SuggestImpact(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
-            user_instruction="Analyze the CVE JSON and assess basic CVSS 3.1 vector/score from the perspective of Red Hat customers.  Based on the CVSS 3.1 score predict the impact (LOW/MODERATE/IMPORTANT/CRITICAL).  Ignore existing labels and decide independently.",
+            user_instruction="Analyze the CVE JSON and assess basic CVSS 3.1 vector/score from the perspective of Red Hat customers.  Based on the CVSS 3.1 score predict the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore existing labels and decide independently.",
             goals="""
                 Impact scale (summary):
                 - CRITICAL: A remote unauthenticated user can execute arbitrary code. Does not require user interaction.  9.0 < cvss3_score
@@ -38,6 +38,8 @@ class SuggestImpact(Feature):
                 - Always use kernel_cve tool to provide additional CVE context when CVE component is kernel.
                 - Do not base the decision on which RH products are affected.
                 - Provide confidence in [0.00..1.00]. Keep explanations concise.
+                - If kernel CVE then use linux_kernel_tool to retrieve more context.
+                - if CVE impacts a python module then use mcp-pypi tool to retrieve more context.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
