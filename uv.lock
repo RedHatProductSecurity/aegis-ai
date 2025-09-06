@@ -39,6 +39,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "logfire", extra = ["fastapi", "httpx", "sqlite3"] },
     { name = "mcp-nvd" },
+    { name = "mcp-pypi" },
     { name = "osidb-bindings" },
     { name = "packageurl-python" },
     { name = "platformdirs" },
@@ -114,6 +115,7 @@ requires-dist = [
     { name = "logfire", extras = ["fastapi", "httpx", "sqlite3"], specifier = ">=4.4.0" },
     { name = "matplotlib", marker = "extra == 'ml-deps'", specifier = ">=3.10.5" },
     { name = "mcp-nvd", specifier = ">=0.0.1" },
+    { name = "mcp-pypi", specifier = ">=2.7.1" },
     { name = "nltk", marker = "extra == 'ml-deps'", specifier = ">=3.9.1" },
     { name = "numpy", marker = "extra == 'ml-deps'", specifier = ">=2.3.2" },
     { name = "osidb-bindings", specifier = ">=4.14.1" },
@@ -711,6 +713,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/43/fa/6d96a0978d19e17b68d634497769987b16c8f4cd0a7a05048bec693caa6b/decorator-5.2.1.tar.gz", hash = "sha256:65f266143752f734b0a7cc83c46f4618af75b8c5911b00ccb61d0ac9b6da0360", size = 56711, upload-time = "2025-02-24T04:41:34.073Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/8c/f3147f5c4b73e7550fe5f9352eaa956ae838d5c51eb58e7a25b9f3e2643b/decorator-5.2.1-py3-none-any.whl", hash = "sha256:d316bb415a2d9e2d2b3abcc4084c6502fc09240e292cd76a76afc106a1c8e04a", size = 9190, upload-time = "2025-02-24T04:41:32.565Z" },
+]
+
+[[package]]
+name = "defusedxml"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520, upload-time = "2021-03-08T10:59:26.269Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604, upload-time = "2021-03-08T10:59:24.45Z" },
 ]
 
 [[package]]
@@ -1733,6 +1744,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d7/1e/07f3aad16ff3f899b012d43600d2558615e9b72489d42701a3b6b59c0dbc/mcp_nvd-0.0.1.tar.gz", hash = "sha256:999b42f85221546afde5cdae4d7200f09d08eb244ce9c27c313fca176275750a", size = 25635, upload-time = "2025-03-24T01:29:10.919Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/1c/3bda45f54afe63b5399527ef3da0100ac2fd1cebcb4a63e5e9593d242d52/mcp_nvd-0.0.1-py3-none-any.whl", hash = "sha256:76038251498a92371c4b3d73db206b78af31f576da811b45c3f9b59272f10d00", size = 10690, upload-time = "2025-03-24T01:29:09.466Z" },
+]
+
+[[package]]
+name = "mcp-pypi"
+version = "2.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "defusedxml" },
+    { name = "mcp" },
+    { name = "packaging" },
+    { name = "pydantic" },
+    { name = "rich" },
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/4a/5f18e559a680fd20af992a238d8fa417c5d541c70d617ba78264d2b50753/mcp_pypi-2.7.1.tar.gz", hash = "sha256:f6f4f850ffa1ca9e9215ca1bc3ff33b4aa5331f49f79098a8da591d994d29b4b", size = 128724, upload-time = "2025-06-24T13:41:41.614Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/bb/ffeb16ec67e719153d30c60438cd72ec577d757e3ea668689cb0ac6a30e4/mcp_pypi-2.7.1-py3-none-any.whl", hash = "sha256:822b6a45f72ecfab07ca73b3f6651e29b134fb7a02c3850a824ceaad35ff4456", size = 90771, upload-time = "2025-06-24T13:41:40.036Z" },
 ]
 
 [[package]]

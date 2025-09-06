@@ -74,6 +74,7 @@ use_cwe_tool = os.getenv("AEGIS_USE_CWE_TOOL_CONTEXT", "true")
 use_linux_cve_tool = os.getenv("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", "false")
 use_github_mcp_tool = os.getenv("AEGIS_USE_GITHUB_MCP_CONTEXT", "false")
 use_wikipedia_mcp_tool = os.getenv("AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", "false")
+use_pypi_mcp_tool = os.getenv("AEGIS_USEPYPI_MCP_CONTEXT", "false")
 
 
 class AppSettings(BaseSettings):

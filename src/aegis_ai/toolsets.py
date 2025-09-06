@@ -17,6 +17,8 @@ from aegis_ai import (
     use_linux_cve_tool,
     use_github_mcp_tool,
     use_wikipedia_mcp_tool,
+    use_pypi_mcp_tool,
+    config_dir,
 )
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
@@ -78,6 +80,23 @@ wikipedia_stdio_server = MCPServerStdio(
     tool_prefix="wikipedia",
 )
 
+# mcp-pypi: query pypi
+# https://github.com/kimasplund/mcp-pypi
+#
+pypi_stdio_server = MCPServerStdio(
+    "uv",
+    args=[
+        "run",
+        "mcp-pypi",
+        "stdio",
+        "--cache-dir",
+        config_dir,
+        "--log-level",
+        "DEBUG",
+    ],
+    tool_prefix="pypi-mcp",
+)
+
 # Toolset for 'baked in' pydantic-ai tools
 pydantic_ai_tools = [wikipedia_tool]
 if use_tavily_tool in truthy:
@@ -114,6 +133,13 @@ if use_wikipedia_mcp_tool in truthy:
         ]
     )
 
+if use_pypi_mcp_tool in truthy:
+    public_toolset = CombinedToolset(
+        [
+            pypi_stdio_server,
+            public_toolset,
+        ]
+    )
 # Toolset containing rh specific tooling for CVE
 redhat_cve_toolset = CombinedToolset(
     [
