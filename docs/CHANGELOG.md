@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update to pydantic-ai 1.0.1
 - added github mcp tool (https://github.com/github/github-mcp-server)
 - added wikipedia mcp tool (https://github.com/rudra-ravi/wikipedia-mcp)
+- added pypi mcp tool (https://github.com/kimasplund/mcp-pypi)
 
 ### Changed
 - use pydantic-ai toolsets and register MCP in aegis_ai.toolsets 
