@@ -5,7 +5,7 @@ aegis agents
 from typing import Any
 
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from aegis_ai import get_settings, default_llm_model
@@ -57,7 +57,7 @@ public_feature_agent = create_aegis_agent(
 )
 
 safety_agent = Agent(
-    model=OpenAIModel(
+    model=OpenAIChatModel(
         model_name=get_settings().safety_llm_model,
         provider=OpenAIProvider(
             base_url=f"{get_settings().safety_llm_host}/v1/",

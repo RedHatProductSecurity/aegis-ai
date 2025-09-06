@@ -22,12 +22,13 @@ dependencies = [
     "packageurl-python>=0.16.0",
     "platformdirs>=4.3.8",
     "pydantic-ai-slim[duckduckgo,mcp,tavily]>=1.0.1",
-    "pydantic-ai[logfire]>=1.0.1",
+    "pydantic-ai[logfire]>=0.0.1",
     "pydantic>=2.11.7",
     "pygithub>=2.7.0",
     "rich>=14.0.0",
     "uvicorn>=0.35.0",
     "wikipedia>=1.4.0",
+    "wikipedia-mcp>=1.5.8",
 ]
 classifiers = [
     "Topic :: Security",

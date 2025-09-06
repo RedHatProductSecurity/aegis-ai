@@ -112,7 +112,7 @@ export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
 ##### Github
 Integration with github:
 ```bash
-export AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=false
+export AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=true
 export GITHUB_PERSONAL_ACCESS_TOKEN=
 ```
 
@@ -133,6 +133,13 @@ Integration with [Mitre CWE definitions](https://cwe.mitre.org/data/downloads.ht
 ```bash
 export AEGIS_USE_CWE_TOOL_CONTEXT=true
 ```
+
+##### Wikipedia
+Integration with wikipedia:
+```bash
+export AEGIS_USE_WIKIPEDIA_MCP_CONTEXT=true
+```
+
 
 #### RedHat tools
 
