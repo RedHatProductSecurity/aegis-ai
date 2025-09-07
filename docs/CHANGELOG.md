@@ -11,10 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-## [0.2.7] - 2025-09-07
+## [0.2.8] - 2025-09-07
 
 ### Changed
 - update openapi 
+
 
 ## [0.2.7] - 2025-09-06
 
