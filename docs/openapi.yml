@@ -1,5 +1,22 @@
 components:
   schemas:
+    Body_generate_response_console_post:
+      properties:
+        goals:
+          title: Goals
+          type: string
+        rules:
+          title: Rules
+          type: string
+        user_instruction:
+          title: User Instruction
+          type: string
+      required:
+      - user_instruction
+      - goals
+      - rules
+      title: Body_generate_response_console_post
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -110,7 +127,7 @@ paths:
         name: cve_id
         required: true
         schema:
-          pattern: ^CVE-\d{4}-\d{4,7}$
+          pattern: ^CVE-[0-9]{4}-[0-9]{4,7}$
           title: Cve Id
           type: string
       - in: query
@@ -173,16 +190,27 @@ paths:
                 type: string
           description: Successful Response
       summary: Console
-  /generate_response:
     post:
       description: 'Handles the submission of a prompt, simulates an LLM response,
 
         and re-renders the console with the results.'
-      operationId: generate_response_generate_response_post
+      operationId: generate_response_console_post
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Body_generate_response_console_post'
+        required: true
       responses:
         '200':
           content:
             application/json:
               schema: {}
           description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
       summary: Generate Response
