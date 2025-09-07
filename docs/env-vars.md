@@ -15,20 +15,21 @@
 
 
 # Tool settings
-| Environment Variable                    | Description                 | Default Value            |
-|-----------------------------------------|-----------------------------|--------------------------|
-| `AEGIS_OSIDB_SERVER_URL`                | OSIDB REST API host         | `https://localhost:8000` |
-| `AEGIS_OSIDB_RETRIEVE_EMBARGOED`        | Enable retrieving embargoed | `false`                  |
-| `AEGIS_USE_TAVILY_TOOL_CONTEXT`         | Use Tavily search api tool  | `false`                  |
-| `TAVILY_API_KEY`                        | Use Tavily search api tool  |                          |
-| `NVD_API_KEY`                           | Use NVD tool (for public)   |                          |
-| `AEGIS_USE_CWE_TOOL_CONTEXT`            | Use mitre CWE tool          | `true`                   |
-| `AEGIS_USE_LINUX_CVE_TOOL_CONTEXT`      | Use linux kernel tool       | `false`                  |
-| `AEGIS_USE_GITHUB_MCP_CONTEXT`          | Use github mcp tool         | `true`                   |
-| `GITHUB_PERSONAL_ACCESS_TOKEN`          | Use linux kernel tool       |                          |
-| `AEGIS_USE_WIKIPEDIA_MCP_CONTEXT`       | Use wikipedia mcp tool      | `false`                  |
-| `AEGIS_USE_PYPI_MCP_CONTEXT`            | Use pypi mcp tool           | `false`                  |
-| `AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT`  | Use nvd mitre tool          | `false`                  |
+| Environment Variable                   | Description                 | Default Value            |
+|----------------------------------------|-----------------------------|--------------------------|
+| `AEGIS_OSIDB_SERVER_URL`               | OSIDB REST API host         | `https://localhost:8000` |
+| `AEGIS_OSIDB_RETRIEVE_EMBARGOED`       | Enable retrieving embargoed | `false`                  |
+| `AEGIS_USE_TAVILY_TOOL_CONTEXT`        | Use Tavily search api tool  | `false`                  |
+| `TAVILY_API_KEY`                       | Use Tavily search api tool  |                          |
+| `NVD_API_KEY`                          | Use NVD tool (for public)   |                          |
+| `AEGIS_USE_CWE_TOOL_CONTEXT`           | Use mitre CWE tool          | `true`                   |
+| `AEGIS_USE_LINUX_CVE_TOOL_CONTEXT`     | Use linux kernel tool       | `false`                  |
+| `AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT`    | Use github mcp tool         | `true`                   |
+| `GITHUB_PERSONAL_ACCESS_TOKEN`         | Use linux kernel tool       |                          |
+| `AEGIS_USE_WIKIPEDIA_MCP_CONTEXT`      | Use wikipedia mcp tool      | `false`                  |
+| `AEGIS_USE_PYPI_MCP_CONTEXT`           | Use pypi mcp tool           | `false`                  |
+| `AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT` | Use nvd mitre tool          | `false`                  |
+| `AEGIS_USE_DBPEDIA_TOOL_CONTEXT`       | Use nvd mitre tool          | `false`                  |
 
 
 # Instrumenting/logging settings

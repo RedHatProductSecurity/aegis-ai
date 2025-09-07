@@ -72,10 +72,11 @@ truthy = (
 use_tavily_tool = os.getenv("AEGIS_USE_TAVILY_TOOL_CONTEXT", "false")
 use_cwe_tool = os.getenv("AEGIS_USE_CWE_TOOL_CONTEXT", "true")
 use_linux_cve_tool = os.getenv("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", "false")
-use_github_mcp_tool = os.getenv("AEGIS_USE_GITHUB_MCP_CONTEXT", "false")
+use_github_mcp_tool = os.getenv("AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT", "false")
 use_wikipedia_mcp_tool = os.getenv("AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", "false")
 use_pypi_mcp_tool = os.getenv("AEGIS_USE_PYPI_MCP_CONTEXT", "false")
 use_nvd_dev_tool = os.getenv("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", "false")
+use_dbpedia_tool = os.getenv("AEGIS_USE_DBPEDIA_TOOL_CONTEXT", "false")
 
 
 class AppSettings(BaseSettings):

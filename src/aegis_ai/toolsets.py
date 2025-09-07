@@ -20,8 +20,10 @@ from aegis_ai import (
     use_pypi_mcp_tool,
     config_dir,
     use_nvd_dev_tool,
+    use_dbpedia_tool,
 )
 from aegis_ai.tools.cwe import cwe_tool
+from aegis_ai.tools.dbpedia import dbpedia_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.tools.osidb import osidb_tool
 from aegis_ai.tools.osvdev import osv_dev_cve_tool
@@ -63,7 +65,7 @@ github_stdio_server = MCPServerStdio(
     ],
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": f"{os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN', '')}",
-        "GITHUB_TOOLSETS": "repos",
+        "GITHUB_TOOLSETS": "repos",  # TODO: expand list of services at some point
         "GITHUB_READ_ONLY": "1",
     },
     tool_prefix="github",
@@ -72,7 +74,7 @@ github_stdio_server = MCPServerStdio(
 # wikipedia-mcp: query wikipedia
 # https://github.com/rudra-ravi/wikipedia-mcp
 #
-# requires NVD_API_KEY=
+# requires wikipedia PAT
 wikipedia_stdio_server = MCPServerStdio(
     "uv",
     args=[
@@ -98,17 +100,21 @@ pypi_stdio_server = MCPServerStdio(
 )
 
 # Toolset for 'baked in' pydantic-ai tools
-pydantic_ai_tools = [wikipedia_tool]
+pydantic_ai_tools = []
 if use_tavily_tool in truthy:
     pydantic_ai_tools.append(tavily_search_tool(tavily_api_key))
 pydantic_ai_toolset = FunctionToolset(tools=pydantic_ai_tools)
 
 # Enable public function tools
-public_tools = []
+public_tools = [wikipedia_tool]
 if use_cwe_tool in truthy:
     public_tools.append(cwe_tool)
 if use_linux_cve_tool in truthy:
     public_tools.append(kernel_cve_tool)
+if use_dbpedia_tool in truthy:
+    public_tools.append(dbpedia_tool)
+# TODO: in the future we should enable adding wikipedia_mcp_tool - dependent on wikipedia account
+
 public_toolset = CombinedToolset(
     [
         FunctionToolset(tools=public_tools),
