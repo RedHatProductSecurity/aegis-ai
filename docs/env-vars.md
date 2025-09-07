@@ -29,7 +29,8 @@
 | `AEGIS_USE_WIKIPEDIA_MCP_CONTEXT`      | Use wikipedia mcp tool      | `false`                  |
 | `AEGIS_USE_PYPI_MCP_CONTEXT`           | Use pypi mcp tool           | `false`                  |
 | `AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT` | Use nvd mitre tool          | `false`                  |
-| `AEGIS_USE_DBPEDIA_TOOL_CONTEXT`       | Use nvd mitre tool          | `false`                  |
+| `AEGIS_USE_DBPEDIA_TOOL_CONTEXT`       | Use dbpedia tool            | `false`                  |
+| `AEGIS_USE_CISA_KEV_TOOL_CONTEXT`      | Use cisa kev tool           | `false`                  |
 
 
 # Instrumenting/logging settings

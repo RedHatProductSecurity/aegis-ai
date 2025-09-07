@@ -104,21 +104,21 @@ Aegis provides a few 'out of the box' tools that the agent can use to enhance LL
 #### Public tools
 
 ##### NVD
-Integration with NVD for looking up NIST CVE:
+Integration with [NVD](https://nvd.nist.gov/vuln) for looking up NIST CVE:
 ```bash
 export AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT=true
 export NVD_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx"
 ```
 
 ##### Github
-Integration with github:
+Integration with [github](https://github.com/):
 ```bash
 export AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=true
 export GITHUB_PERSONAL_ACCESS_TOKEN=
 ```
 
 ##### Tavily Search engine
-Integration with Tavily via built in pydantic-ai support:
+Integration with [Tavily](https://www.tavily.com/) via built in pydantic-ai support:
 ```bash
 export TAVILY_API_KEY="tvly-dev-XXXXXX"
 export AEGIS_USE_TAVILY_TOOL_CONTEXT=true
@@ -135,14 +135,25 @@ Integration with [Mitre CWE definitions](https://cwe.mitre.org/data/downloads.ht
 export AEGIS_USE_CWE_TOOL_CONTEXT=true
 ```
 ##### Wikipedia
-Integration with wikipedia:
+Integration with [wikipedia](https://www.wikipedia.org/):
 ```bash
 export AEGIS_USE_WIKIPEDIA_MCP_CONTEXT=true
 ```
 ##### pypi
-Integration with pypi:
+Integration with [pypi](https://pypi.org/):
 ```bash
 export AEGIS_USE_PYPI_MCP_CONTEXT=true
+```
+##### DBPedia
+Integration with [dbpedia](https://www.dbpedia.org/):
+```bash
+export AEGIS_USE_DBPEDIA_TOOL_CONTEXT=true
+```
+
+##### CISA Kev
+Integration with [cisa-kev](https://www.cisa.gov/known-exploited-vulnerabilities-catalog):
+```bash
+export AEGIS_USE_CISA_KEV_TOOL_CONTEXT=true
 ```
 
 #### RedHat tools

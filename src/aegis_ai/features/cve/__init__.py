@@ -40,6 +40,7 @@ class SuggestImpact(Feature):
                 - Provide confidence in [0.00..1.00]. Keep explanations concise.
                 - If kernel CVE then use linux_kernel_tool to retrieve more context.
                 - if CVE impacts a python module then use mcp-pypi tool to retrieve more context.
+                - if cisa_kev_tool tool is available always check if there are any related known exploits.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,

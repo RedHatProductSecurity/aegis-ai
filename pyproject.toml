@@ -31,6 +31,7 @@ dependencies = [
     "wikipedia-mcp>=1.5.8",
     "mcp-pypi>=2.7.1",
     "sparqlwrapper>=2.0.0",
+    "cisa-kev>=2.0.2",
 ]
 classifiers = [
     "Topic :: Security",
