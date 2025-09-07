@@ -144,11 +144,6 @@ Integration with pypi:
 ```bash
 export AEGIS_USE_PYPI_MCP_CONTEXT=true
 ```
-##### osv.dev
-Integration with [osv.dev](https://osv.dev):
-```bash
-export AEGIS_USE_OSV_DEV_CONTEXT=true
-```
 
 #### RedHat tools
 
@@ -156,7 +151,7 @@ export AEGIS_USE_OSV_DEV_CONTEXT=true
 Integration with [OSIDB](https://github.com/RedHatProductSecurity/osidb) is achieved via [osidb-bindings](https://github.com/RedHatProductSecurity/osidb-bindings), set
 OSIDB server url for Aegis with:
 ```bash
-export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com"
+export AEGIS_OSIDB_SERVER_URL="https://localhost:8080"
 ```
 
 Uses kerberos built in auth with `osidb-bindings`.
