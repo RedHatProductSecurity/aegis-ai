@@ -6,12 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
-- added dbpedia tool (https://www.dbpedia.org/)
-- added cisa-kev tool (https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
 
 ### Changed
 
 ### Fixed
+
+## [0.2.9] - 2025-09-07
+
+### Added
+- added dbpedia tool (https://www.dbpedia.org/)
+- added cisa-kev tool (https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
+
 
 ## [0.2.8] - 2025-09-07
 

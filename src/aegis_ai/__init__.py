@@ -30,7 +30,7 @@ logger = logging.getLogger("aegis")
 
 logger.debug("starting aegis")
 
-__version__ = "0.2.5"
+__version__ = "0.2.9"
 
 llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
 llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
