@@ -36,7 +36,7 @@ class OSVClient:
         """
         self.base_url = base_url.rstrip("/")
         self._session = requests.Session()
-        self._session.headers.update({"User-Agent": "aegis-ai"})
+        self._session.headers.update({"User-Agent": "aegis"})
 
     def _get(self, endpoint: str) -> JsonBlob:
         """Helper for GET requests."""
