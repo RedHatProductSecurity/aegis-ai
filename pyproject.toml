@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.12.15",
+    "cisa-kev>=2.0.2",
     "click>=8.2.1",
     "click-completion>=0.5.2",
     "cvss>=3.4",
@@ -18,20 +19,19 @@ dependencies = [
     "jinja2>=3.1.6",
     "logfire[fastapi,httpx,sqlite3]>=4.4.0",
     "mcp-nvd>=0.0.1",
+    "mcp-pypi>=2.7.1",
     "osidb-bindings>=4.14.1",
     "packageurl-python>=0.16.0",
     "platformdirs>=4.3.8",
-    "pydantic-ai-slim[duckduckgo,mcp,tavily]>=1.0.1",
-    "pydantic-ai[logfire]>=0.0.1",
     "pydantic>=2.11.7",
+    "pydantic-ai[logfire]>=0.0.1",
+    "pydantic-ai-slim[duckduckgo,mcp,tavily]>=1.0.1",
     "pygithub>=2.7.0",
     "rich>=14.0.0",
+    "sparqlwrapper>=2.0.0",
     "uvicorn>=0.35.0",
     "wikipedia>=1.4.0",
     "wikipedia-mcp>=1.5.8",
-    "mcp-pypi>=2.7.1",
-    "sparqlwrapper>=2.0.0",
-    "cisa-kev>=2.0.2",
 ]
 classifiers = [
     "Topic :: Security",
