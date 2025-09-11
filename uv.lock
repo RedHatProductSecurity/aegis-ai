@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 resolution-markers = [
     "platform_python_implementation != 'PyPy'",
@@ -36,6 +36,7 @@ dependencies = [
     { name = "cvss" },
     { name = "dotenv" },
     { name = "fastapi" },
+    { name = "fastapi-gssapi" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "logfire", extra = ["fastapi", "httpx", "sqlite3"] },
@@ -111,6 +112,7 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'ml-deps'", specifier = ">=2.0.0" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "fastapi", specifier = ">=0.116.1" },
+    { name = "fastapi-gssapi", specifier = ">=0.1.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", marker = "extra == 'ml-deps'", specifier = ">=0.8.0" },
     { name = "imbalanced-learn", marker = "extra == 'ml-deps'", specifier = ">=0.13.0" },
@@ -678,7 +680,7 @@ version = "3.23.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
-    { name = "docstring-parser", marker = "python_full_version < '4.0'" },
+    { name = "docstring-parser", marker = "python_full_version < '4'" },
     { name = "rich" },
     { name = "rich-rst" },
 ]
@@ -873,6 +875,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/78/d7/6c8b3bfe33eeffa208183ec037fee0cce9f7f024089ab1c5d12ef04bd27c/fastapi-0.116.1.tar.gz", hash = "sha256:ed52cbf946abfd70c5a0dccb24673f0670deeb517a88b3544d03c2a6bf283143", size = 296485, upload-time = "2025-07-11T16:22:32.057Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/47/d63c60f59a59467fda0f93f46335c9d18526d7071f025cb5b89d5353ea42/fastapi-0.116.1-py3-none-any.whl", hash = "sha256:c46ac7c312df840f0c9e220f7964bada936781bc4e2e6eb71f1c4d7553786565", size = 95631, upload-time = "2025-07-11T16:22:30.485Z" },
+]
+
+[[package]]
+name = "fastapi-gssapi"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "gssapi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/05/783cd338133f73ca0ac8160dca4dcfc41ea4f0442d09097cbc17b33a26ae/fastapi_gssapi-0.1.1.tar.gz", hash = "sha256:901bc50421318e30d6587bdfd3396dc3828806a4083c1c4baee5c13786249de3", size = 5933, upload-time = "2025-04-17T22:11:47.478Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/e7/4f55c8e03d667c2b39f41cc2bc4b954aacbcdf18a81e866d7dcc60368675/fastapi_gssapi-0.1.1-py3-none-any.whl", hash = "sha256:fdd295d3a410ee30f6bee74a8cd2eeb3098ae03f6db4a5bf6e1e51f094b1db06", size = 7252, upload-time = "2025-04-17T22:11:46.018Z" },
 ]
 
 [[package]]
