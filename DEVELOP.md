@@ -151,6 +151,31 @@ Add MCP servers to aegis_ai.toolsets
 
 -----
 
+## Building and running container
+
+To simply build container:
+```commandline
+podman build -f Containerfile -t aegis-ai
+```
+
+Build args can be passed in as well:
+```commandline
+podman build --build-arg PIP_INDEX_URL="${PIP_INDEX_URL}" \
+		     --build-arg RH_CERT_URL=${RH_CERT_URL} \
+		     --tag aegis-ai .
+```
+
+To run built container:
+```commandline
+podman run --rm -it -p 9000:9000 localhost/aegis-ai:latest
+```
+
+Optionally one can set krb5 config as well:
+```commandline
+podman run --rm -it -v /etc/krb5.conf:/etc/krb5.conf -p 9000:9000 localhost/aegis-ai:latest
+```
+
+-----
 ## Publishing & Releasing
 
 #### Build and Publish to PyPI

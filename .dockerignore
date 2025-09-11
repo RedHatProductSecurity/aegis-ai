@@ -1,0 +1,42 @@
+.attic/
+docs/
+tests/
+evals/
+etc
+src/aegis_ai_ml
+src/aegis_ai_chat
+
+
+# Environment
+.venv/
+env/
+venv/
+
+# IDE and OS
+.vscode/
+.idea/
+*.sublime-*
+Thumbs.db
+.DS_Store
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+*.pytest_cache*
+
+# Local data
+*.log
+
+# Packaging
+dist/
+build/
+*.egg-info/
+
+# Git
+.gitignore
+
+# Compiled files
+__pycache__/
+*.pyc
