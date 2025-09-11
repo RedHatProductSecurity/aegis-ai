@@ -39,6 +39,7 @@ We provide 'out of the box' integrations providing security context with the fol
 * [RHTPAv2](https://github.com/trustification/trustify)
 * [osv.dev](https://osv.dev)
 * CWE (https://cwe.mitre.org)
+* manpages
 
 which perform lookups on security entities (ex. CVE).
 
