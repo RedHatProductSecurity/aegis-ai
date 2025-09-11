@@ -136,6 +136,8 @@ async def osv_vulnerability_lookup(cve_id: CVEID):
 
 @Tool
 async def osv_dev_cve_tool(ctx: RunContext, cve_id: CVEID):
-    """"""
+    """
+    Lookup CVE definition in osv.dev and return as much metadata as possible.
+    """
     logger.info(f"Looking up osv.dev vulnerability for {cve_id}...")
     return await osv_vulnerability_lookup(cve_id)
