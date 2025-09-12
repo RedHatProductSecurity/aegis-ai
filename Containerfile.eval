@@ -13,15 +13,22 @@ ENV HOME="/src" \
     PATH="/src/.local/bin:${PATH}"
 
 # initialize the home directory
-RUN git config --global --add safe.directory /src/aegis-ai \
+RUN set -x \
+    && git config --global init.defaultBranch main \
+    && git config --global safe.directory /src/aegis-ai \
     && pip install --upgrade pip uv \
     && printf "#!/bin/bash -ex\ncd aegis-ai\ngit pull\nmake eval\n" > entrypoint.sh \
     && chmod 0755 entrypoint.sh
 
 # checkout the repository and initialize virtual environment
-RUN umask 2 \
-    && git clone --depth=1 https://github.com/RedHatProductSecurity/aegis-ai.git \
+COPY --chown=aegis .git /tmp/aegis-ai
+RUN set -x && umask 2 \
+    && ln -fv /tmp/aegis-ai/refs/{remotes/origin,heads}/main \
+    && git clone --branch=main --depth=1 file:///tmp/aegis-ai \
+    && rm -fr /tmp/aegis-ai \
     && cd aegis-ai \
+    && git remote set-url origin https://github.com/RedHatProductSecurity/aegis-ai.git \
+    && git branch --set-upstream-to=origin/main \
     && uv sync 
 
 # the default entry point can be overridden at run time

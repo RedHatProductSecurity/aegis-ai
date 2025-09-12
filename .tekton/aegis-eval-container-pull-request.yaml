@@ -135,6 +135,8 @@ spec:
         value: $(params.git-url)
       - name: revision
         value: $(params.revision)
+      - name: mergeTargetBranch
+        value: true
       - name: ociStorage
         value: $(params.output-image).git
       - name: ociArtifactExpiresAfter
