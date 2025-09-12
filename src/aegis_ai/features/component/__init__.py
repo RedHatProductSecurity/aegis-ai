@@ -43,6 +43,7 @@ class ComponentIntelligence(Feature):
                     * if available always use github mcp tool to retrieve information on the project/component.
                     * if available and component is in python ecosystem then use mcp pypi tool to lookup more context.
                     * if available check with cisakev tool for exploits on the component.
+                    * if CVE mentions a linux function use manpages tool to retrieve more context.
                     * Identify and extract key information regarding the component's description, recent activities, contributors and what companies they work for (and affiliations), repository, and security status.
                     * list any other popular software components that may include the component name in its name
                     * Investigate and report on any outstanding security issues of any listed dependencies. Provide web links if appropriate.
