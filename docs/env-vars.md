@@ -1,24 +1,25 @@
 # ENVIRONMENT VARIABLES
 
 # General settings
-| Environment Variable           | Description                                 | Default Value |
-|--------------------------------|---------------------------------------------|---------------|
-| `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile           | `public`      |
-| `AEGIS_LLM_HOST`               | Aegis LLM host                              | `localhost:11434` |
-| `AEGIS_LLM_MODEL`              | Aegis LLM model                             | `llama3.2:latest` |
-| `AEGIS_SAFETY_ENABLED`         | Enable separate model to check model safety | `false`       |
-| `AEGIS_SAFETY_LLM_HOST`        | Safety LLM host                             | `localhost:11434` |
-| `AEGIS_SAFETY_LLM_MODEL`       | Safety LLM model                            | `granite3-guardian-2b`|
-| `AEGIS_SAFETY_OPENAPI_KEY`     | Safety openai key                           |               |
-| `AEGIS_ML_CVE_DATA_DIR`        | Directory containing CVE training data      |               |
+| Environment Variable           | Description                                 | Default Value          |
+|--------------------------------|---------------------------------------------|------------------------|
+| `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile           | `public`               |
+| `AEGIS_LLM_HOST`               | Aegis LLM host                              | `localhost:11434`      |
+| `AEGIS_LLM_MODEL`              | Aegis LLM model                             | `llama3.2:latest`      |
+| `AEGIS_SAFETY_ENABLED`         | Enable separate model to check model safety | `false`                |
+| `AEGIS_SAFETY_LLM_HOST`        | Safety LLM host                             | `localhost:11434`      |
+| `AEGIS_SAFETY_LLM_MODEL`       | Safety LLM model                            | `granite3-guardian-2b` |
+| `AEGIS_SAFETY_OPENAPI_KEY`     | Safety openai key                           |                        |
+| `AEGIS_ML_CVE_DATA_DIR`        | Directory containing CVE training data      |                        |
 
 
 # REST API settings
-| Environment Variable           | Description                                 | Default Value      |
-|--------------------------------|---------------------------------------------|--------------------|
-| `AEGIS_WEB_FEATURE_AGENT`      | Set to `redhat` to use rh profile           | `public`           |
-| `AEGIS_WEB_SPN`                | Service Principal Name for Kerberos auth    |                    |
-| `KRB5_KTNAME`                  | Path to the keytab file for Kerberos auth   | `/etc/krb5.keytab` |
+| Environment Variable       | Description                               | Default Value           |
+|----------------------------|-------------------------------------------|-------------------------|
+| `AEGIS_WEB_FEATURE_AGENT`  | Set to `redhat` to use rh profile         | `public`                |
+| `AEGIS_WEB_SPN`            | Service Principal Name for Kerberos auth  |                         |
+| `KRB5_KTNAME`              | Path to the keytab file for Kerberos auth | `/etc/krb5.keytab`      |
+| `AEGIS_CORS_TARGET_URL`    | CORS origin url                           | `http://localhost:5173` |
 
 
 # Tool settings

@@ -10,11 +10,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Type, Annotated
 
-import logfire
 import yaml
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -62,7 +62,20 @@ if kerberos_spn:
     # middleware to add GSSAPI authentication
     app.add_middleware(GSSAPIMiddleware, spn=kerberos_spn)
 
-logfire.instrument_fastapi(app)
+# middleware enabling CORS
+cors_target_url = os.getenv("AEGIS_CORS_TARGET_URL", "http://localhost:5173")
+origins = [
+    cors_target_url,
+    "https://localhost",
+    "https://localhost:5173",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_target_url,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 BASE_DIR = Path(__file__).parent
 TEMPLATES_DIR = BASE_DIR / "templates"
