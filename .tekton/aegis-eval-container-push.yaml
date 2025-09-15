@@ -132,6 +132,10 @@ spec:
         value: $(params.git-url)
       - name: revision
         value: $(params.revision)
+      - name: depth
+        value: 0  # needed for mergeTargetBranch to work (artificial merge conflicts are reported without this)
+      - name: mergeTargetBranch
+        value: true
       - name: ociStorage
         value: $(params.output-image).git
       - name: ociArtifactExpiresAfter
