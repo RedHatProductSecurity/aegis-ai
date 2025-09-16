@@ -119,6 +119,10 @@ Integration with [github](https://github.com/):
 export AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=true
 export GITHUB_PERSONAL_ACCESS_TOKEN=
 ```
+When using on local dev platform then ensure container is available by pulling it:
+```commandline
+podman pull mcp/github-mcp-server
+```
 
 ##### Tavily Search engine
 Integration with [Tavily](https://www.tavily.com/) via built in pydantic-ai support:
