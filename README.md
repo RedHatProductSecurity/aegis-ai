@@ -63,6 +63,8 @@ First ensure `Aegis` can use any required ca certs:
 REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 ```
 
+Note: some tools require podman.
+
 ### Connecting to LLMs
 
 Aegis allows you to connect to various LLM providers, from your own custom LLM models to cloud LLM services and MaaS.
@@ -200,12 +202,12 @@ uv sync
 The following programmatically invokes the `SuggestImpact` feature:
 ```python
 import asyncio
-from aegis_ai.agents import rh_feature_agent
+from aegis_ai.agents import public_feature_agent
 from aegis_ai.features import cve
 
 
 async def main():
-    feature = cve.SuggestImpact(rh_feature_agent)
+    feature = cve.SuggestImpact(public_feature_agent)
     result = await feature.exec("CVE-2025-0725")
     print(result.output.model_dump_json(indent=2))
 
