@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added manpages tool
 
 ### Changed
-
+- bump to pydantic-ai 1.0.7
+- 
 ### Fixed
 
 ## [0.2.9] - 2025-09-07
