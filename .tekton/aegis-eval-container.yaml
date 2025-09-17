@@ -1,3 +1,4 @@
+---
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
@@ -29,7 +30,7 @@ spec:
     value: 5d
   - name: dockerfile
     value: Containerfile.eval
-  pipelineSpec:
+  pipelineSpec: &shared-pipeline
     description: |
       This pipeline is ideal for building container images from a Containerfile while maintaining trust after pipeline customization.
 
@@ -594,3 +595,33 @@ spec:
     secret:
       secretName: '{{ git_auth_secret }}'
 status: {}
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/RedHatProductSecurity/aegis-ai?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+      == "main"
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: aegis
+    appstudio.openshift.io/component: aegis-eval-container
+    pipelines.appstudio.openshift.io/type: build
+  name: aegis-eval-container-on-push
+  namespace: aegis-tenant
+spec:
+  params:
+  - name: git-url
+    value: '{{source_url}}'
+  - name: revision
+    value: '{{revision}}'
+  - name: output-image
+    value: quay.io/redhat-user-workloads/aegis-tenant/aegis-eval-container:{{revision}}
+  - name: dockerfile
+    value: Containerfile.eval
+  pipelineSpec: *shared-pipeline
