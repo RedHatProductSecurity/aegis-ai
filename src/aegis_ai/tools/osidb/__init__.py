@@ -1,7 +1,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import List
+from typing import List, Any
 
 from pydantic import Field
 
@@ -9,18 +9,20 @@ from pydantic_ai import (
     RunContext,
     Tool,
 )
-
-import osidb_bindings
+from pydantic_ai.toolsets import FunctionToolset
 
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.tools import BaseToolOutput
+from aegis_ai.tools.osidb.osidb_client import OSIDBClient
 
 logger = logging.getLogger(__name__)
 
-osidb_server_uri = os.getenv("AEGIS_OSIDB_SERVER_URL", "https://localhost:8000")
-osidb_retrieve_embargoed = os.getenv(
+OSIDB_RETRIEVE_EMBARGOED = os.getenv(
     "AEGIS_OSIDB_RETRIEVE_EMBARGOED", "false"
 ).lower() in ("true", "1", "t", "y", "yes")
+
+
+client = OSIDBClient()
 
 
 @dataclass
@@ -56,30 +58,25 @@ class CVE(BaseToolOutput):
     cvss_scores: List = Field(..., description="list of cvss scores")
 
 
-async def osidb_retrieve(cve_id: CVEID):
+async def cve_retrieve(cve_id: CVEID) -> CVE:
     logger.info(f"retrieving {cve_id} from osidb")
     validated_cve_id = cveid_validator.validate_python(cve_id)
 
     try:
-        session = osidb_bindings.new_session(osidb_server_uri=osidb_server_uri)
-
         # Retrieval of embargoed flaws is disabled by default, to enable set env var `AEGIS_OSIDB_RETRIEVE_EMBARGOED`
-        flaw = session.flaws.retrieve(
-            id=validated_cve_id,
-            include_fields="cve_id,title,cve_description,cvss_scores,statement,components,comments,comment_zero,affects,references,embargoed",
-        )
+        flaw = await client.get_flaw_data(validated_cve_id, OSIDB_RETRIEVE_EMBARGOED)
 
         # This logic is about default constraining LLM access to embargo information ... for additional programmatic safety, user acl always
         # dictates if a user has access or not.
-        if not osidb_retrieve_embargoed and flaw.embargoed:
+        if not OSIDB_RETRIEVE_EMBARGOED and flaw.embargoed:
             logger.info(
                 f"retrieved {validated_cve_id} from osidb but it is under embargo and AEGIS_OSIDB_RETRIEVE_EMBARGOED is set 'false'."
             )
-            return None
+            raise ValueError(f"Could not retrieve {cve_id}")
 
         logger.info(f"{validated_cve_id}:{flaw.title}")
         comments = ""
-        for i, comment in enumerate(flaw.comments):
+        for i, comment in enumerate(flaw.get("comments", [])):
             if i >= 15:  # FIXME: remove limit of 15 comments
                 break
             if not comment.is_private:
@@ -129,19 +126,64 @@ async def osidb_retrieve(cve_id: CVEID):
         logger.error(
             f"We encountered an error during OSIDB retrieval of {validated_cve_id}: {e}"
         )
+        raise ValueError(f"Could not retrieve {cve_id}")
 
 
 @Tool
-async def osidb_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
+async def flaw_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
     """
     Searches OSIDB by cve_id performing a lookup on CVE entity in OSIDB and returns structured information about it.
 
     Args:
         ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.
-        cve_lookup_input: An object containing validated CVE ID (e.g., CVE-2024-30941).
+        cve_lookup_input: An object containing validated CVE ID (ex. CVE-2024-30941).
 
     Returns:
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
     logger.debug(cve_id)
-    return await osidb_retrieve(cve_id)
+    return await cve_retrieve(cve_id)
+
+
+@Tool
+async def component_count_tool(
+    ctx: RunContext[OsidbDependencies], component_name: str
+) -> Any:
+    """
+    Searches OSIDB by component_name returning count of CVE flaws related to given component.
+
+    Args:
+        ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.
+        component_name: An object containing component_name (ex. curl).
+
+    Returns:
+        count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
+    """
+    logger.debug(component_name)
+    return await client.count_component_flaws(component_name)
+
+
+@Tool
+async def component_flaw_tool(
+    ctx: RunContext[OsidbDependencies], component_name: str
+) -> Any:
+    """
+    Searches OSIDB by component_name returning CVE flaws related to given component.
+
+    Args:
+        ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.
+        component_name: An object containing component_name (ex. curl).
+
+    Returns:
+        count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
+    """
+    logger.debug(component_name)
+    return await client.list_component_flaws(component_name)
+
+
+toolset = FunctionToolset(
+    tools=[flaw_tool, component_count_tool, component_flaw_tool],
+)
+
+# osidb toolset
+osidb_toolset = toolset.prefixed("osidb")

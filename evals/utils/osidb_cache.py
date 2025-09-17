@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 
-from aegis_ai.tools.osidb import CVE, CVEID, osidb_retrieve
+from aegis_ai.tools.osidb import CVE, CVEID, cve_retrieve
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ async def osidb_cache_retrieve(cve_id: CVEID) -> CVE:
 
         except OSError:
             # cached CVE data not available -> query OSIDB
-            cve_data = await osidb_retrieve(cve_id)
+            cve_data = await cve_retrieve(cve_id)
 
             logger.info(f'writing CVE data cache to "{cache_file}"')
             with open(cache_file, "w") as f:
