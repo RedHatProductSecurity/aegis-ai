@@ -76,7 +76,7 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
 
         logger.info(f"{validated_cve_id}:{flaw.title}")
         comments = ""
-        for i, comment in enumerate(flaw.get("comments", [])):
+        for i, comment in enumerate(flaw.comments):
             if i >= 15:  # FIXME: remove limit of 15 comments
                 break
             if not comment.is_private:
