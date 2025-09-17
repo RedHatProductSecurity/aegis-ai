@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - bump to pydantic-ai 1.0.7
-- 
+- bump to osidb-bindings 4.15.0
+
 ### Fixed
 
 ## [0.2.9] - 2025-09-07
@@ -24,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - update openapi 
-
+- enhanced osidb tool to enumerate a given component's CVEs
 
 ## [0.2.7] - 2025-09-06
 

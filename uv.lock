@@ -126,7 +126,7 @@ requires-dist = [
     { name = "mcp-pypi", specifier = ">=2.7.1" },
     { name = "nltk", marker = "extra == 'ml-deps'", specifier = ">=3.9.1" },
     { name = "numpy", marker = "extra == 'ml-deps'", specifier = ">=2.3.2" },
-    { name = "osidb-bindings", specifier = ">=4.14.1" },
+    { name = "osidb-bindings", specifier = ">=4.15.0" },
     { name = "packageurl-python", specifier = ">=0.16.0" },
     { name = "pandas", marker = "extra == 'ml-deps'", specifier = ">=1.5.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
@@ -2575,7 +2575,7 @@ wheels = [
 
 [[package]]
 name = "osidb-bindings"
-version = "4.14.1"
+version = "4.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2584,9 +2584,9 @@ dependencies = [
     { name = "requests" },
     { name = "requests-gssapi" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/96/c13d820908912612c097d0a71129a735f6f2b97669191324582daf088b18/osidb_bindings-4.14.1.tar.gz", hash = "sha256:f76e7abe6b7e9a33ed4113332cad49b08eefe8ae644f23c8a1fc475aa4afeb96", size = 197788, upload-time = "2025-08-05T11:40:02.965Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/2b/27845c7692284816020822e51355f708eb5dfbbea9c6f6f1decef1acc0d4/osidb_bindings-4.15.0.tar.gz", hash = "sha256:b46ce3c770f285c70c12450babdda2433746d79383eee30a3d81b1ecac9f85ba", size = 198182, upload-time = "2025-09-16T13:04:35.928Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/3e/1c022089c116bdde89d45a1ca2a9fe9e973b801325e82dc970e9c89f5e2c/osidb_bindings-4.14.1-py3-none-any.whl", hash = "sha256:fec0b6caf789245e5187954a412930fe1a0290922dc2650400ea9dabdde1fc76", size = 576756, upload-time = "2025-08-05T11:40:01.486Z" },
+    { url = "https://files.pythonhosted.org/packages/af/9c/a48655d14992d2aa2453acb2ce6c20d96cddc4eea151e7a1e86e973ced87/osidb_bindings-4.15.0-py3-none-any.whl", hash = "sha256:8b1cbea7c2da8be9272c142bbf5d5e57ef54ead6e78ad1a877c88edb19a08e9d", size = 577094, upload-time = "2025-09-16T13:04:34.5Z" },
 ]
 
 [[package]]

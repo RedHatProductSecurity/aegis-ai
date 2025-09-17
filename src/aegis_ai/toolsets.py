@@ -27,7 +27,7 @@ from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.dbpedia import dbpedia_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.tools.manpages import manpages_toolset
-from aegis_ai.tools.osidb import osidb_tool
+from aegis_ai.tools.osidb import osidb_toolset
 from aegis_ai.tools.osvdev import osv_dev_cve_tool
 from aegis_ai.tools.wikipedia import wikipedia_tool
 from aegis_ai.tools.cisakev import cisa_kev_tool
@@ -153,7 +153,7 @@ if use_pypi_mcp_tool in truthy:
 # Toolset containing rh specific tooling for CVE
 redhat_cve_toolset = CombinedToolset(
     [
-        FunctionToolset(tools=[osidb_tool]),
+        osidb_toolset,
     ]
 )
 
