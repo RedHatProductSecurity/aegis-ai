@@ -12,7 +12,12 @@ class OSIDBClient:
     """A client for interacting with OSIDB API."""
 
     def __init__(self):
-        self._session = osidb_bindings.new_session(osidb_server_uri=OSIDB_SERVER_URI)
+        try:
+            self._session = osidb_bindings.new_session(
+                osidb_server_uri=OSIDB_SERVER_URI
+            )
+        except Exception as e:
+            logger.info(f"No connection to osidb. {e}")
 
     async def get_flaw_data(self, cve_id: str, include_embargoed: bool):
         """
