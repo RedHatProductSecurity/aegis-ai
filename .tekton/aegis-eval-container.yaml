@@ -99,6 +99,10 @@ spec:
         VMs
       name: privileged-nested
       type: string
+    - name: ADDITIONAL_TAGS
+      description: Additional tags that will be applied to the image in the registry.
+      type: array
+      default: []
     results:
     - description: ""
       name: IMAGE_URL
@@ -527,6 +531,8 @@ spec:
         value: $(tasks.build-image-index.results.IMAGE_URL)
       - name: IMAGE_DIGEST
         value: $(tasks.build-image-index.results.IMAGE_DIGEST)
+      - name: ADDITIONAL_TAGS
+        value: $(params.ADDITIONAL_TAGS[*])
       runAfter:
       - build-image-index
       taskRef:
@@ -624,4 +630,7 @@ spec:
     value: quay.io/redhat-user-workloads/aegis-tenant/aegis-eval-container:{{revision}}
   - name: dockerfile
     value: Containerfile.eval
+  # update the `:latest` tag on the container image only if it is built from the `main` branch
+  - name: ADDITIONAL_TAGS
+    value: [latest]
   pipelineSpec: *shared-pipeline
