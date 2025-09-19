@@ -34,7 +34,7 @@ def override_rh_feature_agent():
     # Replace the first inner FunctionToolset with one that contains our wrapper
     ts_list = ts.redhat_cve_toolset.toolsets
     if isinstance(ts_list, list):
-        ts_list[0] = FunctionToolset(tools=[osidb_tool])
+        ts_list[0] = FunctionToolset(tools=[osidb_tool])  # type: ignore
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
