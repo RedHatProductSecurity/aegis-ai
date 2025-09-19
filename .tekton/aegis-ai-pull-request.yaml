@@ -1,0 +1,49 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    build.appstudio.openshift.io/repo: https://github.com/RedHatProductSecurity/aegis-ai?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "main"
+  creationTimestamp: null
+  labels:
+    appstudio.openshift.io/application: aegis
+    appstudio.openshift.io/component: aegis-ai
+    pipelines.appstudio.openshift.io/type: build
+  name: aegis-ai-on-pull-request
+  namespace: aegis-tenant
+spec:
+  params:
+  - name: git-url
+    value: '{{source_url}}'
+  - name: revision
+    value: '{{revision}}'
+  - name: output-image
+    value: quay.io/redhat-user-workloads/aegis-tenant/aegis-ai:on-pr-{{revision}}
+  - name: image-expires-after
+    value: 5d
+  - name: dockerfile
+    value: Containerfile
+  pipelineRef:
+    # include the shared pipeline definition from aegis-build-pipeline.yaml
+    resolver: git
+    params:
+    - name: url
+      value: $(params.git-url)
+    - name: revision
+      value: $(params.revision)
+    - name: pathInRepo
+      value: .tekton/aegis-build-pipeline.yaml
+    - name: kind
+      value: pipeline
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-aegis-ai
+  workspaces:
+  - name: git-auth
+    secret:
+      secretName: '{{ git_auth_secret }}'
+status: {}
