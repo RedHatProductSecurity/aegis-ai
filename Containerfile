@@ -1,3 +1,4 @@
+# TODO: consider using the ubi10-minimal to reduce size of the output image
 FROM registry.access.redhat.com/ubi10:10.0-1758186945
 
 LABEL summary="AEGIS" \
@@ -20,6 +21,7 @@ COPY ./scripts /scripts
 RUN ./scripts/install-certs.sh $RH_CERT_URL
 
 # install dependencies and security updates
+# FIXME: remove unneeded dependencies from the list (see Containerfile.eval)
 RUN dnf --nodocs --setopt install_weak_deps=false -y install \
     cargo \
     gcc \
@@ -51,5 +53,3 @@ ENV PATH="/opt/app-root/.local/bin:${PATH}"
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
-
-RUN chmod +x /opt/app-root/scripts/run_web_service.sh
