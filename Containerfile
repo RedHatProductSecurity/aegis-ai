@@ -44,7 +44,9 @@ RUN dnf --nodocs --setopt install_weak_deps=false -y install \
     && dnf clean all
 
 WORKDIR /opt/app-root
-COPY --exclude=.git . /opt/app-root
+COPY . /opt/app-root
+# FIXME: the build-container task in Konflux does not support `COPY --exclude=.git`
+RUN rm -rf .git
 
 # install uv
 RUN pip3 install gssapi uv && uv sync
