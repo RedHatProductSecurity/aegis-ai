@@ -51,7 +51,8 @@ RUN rm -rf .git
 # install uv
 RUN pip3 install gssapi uv && uv sync
 
-ENV PATH="/opt/app-root/.local/bin:${PATH}"
+ENV HOME="/opt/app-root" \
+    PATH="/opt/app-root/.local/bin:${PATH}"
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
