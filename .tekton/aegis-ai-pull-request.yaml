@@ -28,6 +28,9 @@ spec:
     value: 5d
   - name: dockerfile
     value: Containerfile
+  # FIXME: for testing purposes only
+  - name: ADDITIONAL_TAGS
+    value: [latest]
   pipelineRef:
     # include the shared pipeline definition from aegis-build-pipeline.yaml
     resolver: git
