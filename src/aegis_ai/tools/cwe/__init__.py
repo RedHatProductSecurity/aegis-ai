@@ -131,6 +131,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
                 cwe_id=validated_cwe_id,
                 name="UNKNOWN",
                 description="UNKNOWN",
+                extended_description="UNKNOWN",
                 disallowed=True,
             )
 
