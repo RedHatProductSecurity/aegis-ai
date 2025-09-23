@@ -75,15 +75,54 @@ async def suggest_cwe(cve_id: CVEID) -> SuggestCWEModel:
 
 
 # test cases
+# fmt: off
 cases = [
     SuggestCweCase("CVE-2022-48701", ["CWE-125", "CWE-20"]),
-    SuggestCweCase("CVE-2024-53232", ["CWE-476", "CWE-416", "CWE-825"]),
-    # CWE-269 is discouraged by MITRE and unavailable in OSIM
-    # CWE-273 and CWE-73 are incorrect: https://github.com/RedHatProductSecurity/aegis/issues/71
-    SuggestCweCase("CVE-2025-23395", ["CWE-271", "CWE-250", "CWE-272", "CWE-273"]),
+    SuggestCweCase("CVE-2022-49885", ["CWE-190"]),
+    SuggestCweCase("CVE-2023-53116", ["CWE-763"]),
+    SuggestCweCase("CVE-2023-53123", ["CWE-763"]),
+    SuggestCweCase("CVE-2023-53174", ["CWE-772"]),
+    SuggestCweCase("CVE-2024-53232", ["CWE-476", "CWE-825"]),
+
+    # FIXME: CWE-674 is not included in the CWE-699 view!
+    SuggestCweCase("CVE-2025-5302", ["CWE-674"]),
+
+    # FIXME: CWE-20 is not included in the CWE-699 view!
+    SuggestCweCase("CVE-2025-6547", ["CWE-20"]),
+
     SuggestCweCase("CVE-2025-5399", ["CWE-835", "CWE-400"]),
-    # TODO: add more cases
+
+    # FIXME: CWE-119 is not included in the CWE-699 view!
+    SuggestCweCase("CVE-2025-9390", ["CWE-119", "CWE-120"]),
+
+    # FIXME: CWE-119 is not included in the CWE-699 view!
+    # FIXME: CWE-416 is not included in the CWE-699 view!
+    SuggestCweCase("CVE-2025-9394", ["CWE-119", "CWE-416"]),
+
+    SuggestCweCase("CVE-2025-21879", ["CWE-763"]),
+    SuggestCweCase("CVE-2025-22097", ["CWE-1188"]),
+    SuggestCweCase("CVE-2025-22115", ["CWE-413"]),
+    SuggestCweCase("CVE-2025-23395", ["CWE-271", "CWE-250", "CWE-272", "CWE-273"]),
+    SuggestCweCase("CVE-2025-26503", ["CWE-120"]),
+    SuggestCweCase("CVE-2025-38691", ["CWE-824"]),
+    SuggestCweCase("CVE-2025-38695", ["CWE-476"]),
+    SuggestCweCase("CVE-2025-39855", ["CWE-476"]),
+    SuggestCweCase("CVE-2025-39856", ["CWE-476"]),
+    SuggestCweCase("CVE-2025-39861", ["CWE-825"]),
+    SuggestCweCase("CVE-2025-39864", ["CWE-825", "CWE-763"]),
+    SuggestCweCase("CVE-2025-39865", ["CWE-476"]),
+    SuggestCweCase("CVE-2025-39866", ["CWE-825"]),
+    SuggestCweCase("CVE-2025-40779", ["CWE-617", "CWE-476"]),
+
+    SuggestCweCase("CVE-2025-49133", ["CWE-125"]),
+    SuggestCweCase("CVE-2025-52494", ["CWE-770"]),
+
+    # FIXME: CWE-122 is not included in the CWE-699 view!
+    SuggestCweCase("CVE-2025-57803", ["CWE-122"]),
+
+    SuggestCweCase("CVE-2025-58446", ["CWE-770"]),
 ]
+# fmt: on
 
 # evaluators
 evals = common_feature_evals + [
