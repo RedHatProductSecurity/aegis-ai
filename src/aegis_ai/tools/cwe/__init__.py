@@ -23,7 +23,7 @@ JsonBlob = Dict[str, Any]
 
 # retrieve allowed cwes from cwe.mitre.org
 CWE_URLS = [
-    "https://cwe.mitre.org/data/csv/699.csv.zip",  # development - the only view supported by OSIM
+    "https://cwe.mitre.org/data/csv/699.csv.zip",  # development - the only view supported by OSIM auto-completions
     "https://cwe.mitre.org/data/csv/1000.csv.zip",  # research
     "https://cwe.mitre.org/data/csv/1008.csv.zip",  # architectural
     "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
@@ -68,7 +68,7 @@ class CWE(BaseToolOutput):
     )
     disallowed: bool = Field(
         ...,
-        description="True if the CWE is not accepted by OSIM.",
+        description="True if the CWE is not available in the CWE-699 view.",
     )
 
 
@@ -139,7 +139,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
                 name=cwe["name"],
                 description=cwe["description"],
                 extended_description=cwe["extended_description"],
-                disallowed=cwe.get("disallowed", False),
+                disallowed=cwe["disallowed"],
             )
         except KeyError:
             # if the CWE is not in our table, mark it as disallowed
@@ -148,7 +148,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
                 name="UNKNOWN",
                 description="UNKNOWN",
                 extended_description="UNKNOWN",
-                disallowed=True,
+                disallowed=True,  # disallow CWEs that this tool knows nothing about
                 status="not_found",
                 error_message="Could not find CWE-ID.",
             )
