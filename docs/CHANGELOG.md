@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Added
 - added manpages tool
+- added http_get tool
 
 ### Changed
 - bump to pydantic-ai 1.0.7
 - bump to osidb-bindings 4.15.0
+- added aegis `User-Agent` to tool HTTP requests
+- added http compression when making tool HTTP requests
 
 ### Fixed
 

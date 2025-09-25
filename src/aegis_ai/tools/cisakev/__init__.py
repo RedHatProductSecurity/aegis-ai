@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from pydantic_ai import RunContext, Tool
 
 from aegis_ai import config_dir
+from aegis_ai.tools import default_tool_http_headers
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,9 @@ class CISAClient:
     def _get(self, url: str) -> JsonBlob:
         """Helper for GET requests."""
         try:
-            response = self._session.get(url)
+            response = self._session.get(
+                url, headers=default_tool_http_headers, timeout=10
+            )
             response.raise_for_status()
             return response.json()
         except RequestException as e:

@@ -25,6 +25,7 @@ from aegis_ai import (
 )
 from aegis_ai.tools.cwe import cwe_tool
 from aegis_ai.tools.dbpedia import dbpedia_tool
+from aegis_ai.tools.http_get import http_get_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.tools.manpages import manpages_toolset
 from aegis_ai.tools.osidb import osidb_toolset
@@ -109,7 +110,7 @@ if use_tavily_tool in truthy:
 pydantic_ai_toolset = FunctionToolset(tools=pydantic_ai_tools)
 
 # Enable public function tools
-public_tools = [wikipedia_tool]
+public_tools = [wikipedia_tool, http_get_tool]
 if use_cwe_tool in truthy:
     public_tools.append(cwe_tool)
 if use_linux_cve_tool in truthy:

@@ -15,6 +15,7 @@ from requests import RequestException
 
 from aegis_ai import logger
 from aegis_ai.data_models import CVEID
+from aegis_ai.tools import default_tool_http_headers
 
 JsonBlob = Dict[str, Any]
 
@@ -42,12 +43,14 @@ class OSVClient:
         """Helper for GET requests."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
-            response = self._session.get(url)
+            response = self._session.get(
+                url, timeout=5, headers=default_tool_http_headers
+            )
             response.raise_for_status()
             return response.json()
         except RequestException as e:
             print(f"API request failed: {e}")
-            raise
+            return {}
 
     def _post(self, endpoint: str, data: JsonBlob) -> JsonBlob:
         """manage POST requests."""
@@ -61,7 +64,7 @@ class OSVClient:
             return response.json()
         except RequestException as e:
             print(f"API request failed: {e}")
-            raise
+            return {}
 
     def get_vuln_by_id(self, vuln_id: str) -> JsonBlob:
         """

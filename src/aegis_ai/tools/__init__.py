@@ -19,3 +19,10 @@ async def date_tool(ctx: RunContext) -> str:
     logger.info("calling date_lookup")
     today = date.today()
     return str(today)
+
+
+default_tool_http_headers = {
+    "User-Agent": "aegis - https://github.com/RedHatProductSecurity/aegis",
+    # Signal to the server that the client supports gzip, deflate, and brotli compression.
+    "Accept-Encoding": "gzip, deflate, br",
+}

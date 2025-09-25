@@ -39,8 +39,9 @@ class SuggestImpact(Feature):
                 - Do not base the decision on which RH products are affected.
                 - Provide confidence in [0.00..1.00]. Keep explanations concise.
                 - If kernel CVE then use linux_kernel_tool to retrieve more context.
-                - if CVE impacts a python module then use mcp-pypi tool to retrieve more context.
-                - if cisa_kev_tool tool is available always check if there are any related known exploits.
+                - if mcp-pypi tool is available and CVE impacts a python module then retrieve more context from pypi.
+                - if cisa_kev_tool is available always check if there are any related known exploits.
+                - if http_get tool is available use to retrieve relevant reference urls.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
@@ -63,6 +64,7 @@ class SuggestCWE(Feature):
             """,
             rules="""
                 Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
+                If http_get tool is available use to retrieve relevant reference urls.
                 Output should include:
                 - cwe: a list of 1–3 likely CWE IDs (e.g., ["CWE-125"]).
                 - explanation: 1–2 sentences connecting CVE details to the CWE.

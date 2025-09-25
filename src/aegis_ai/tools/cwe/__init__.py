@@ -13,7 +13,7 @@ from pydantic_ai import Tool, RunContext
 
 from aegis_ai import config_dir
 from aegis_ai.data_models import CWEID, cweid_validator
-from aegis_ai.tools import BaseToolOutput
+from aegis_ai.tools import BaseToolOutput, default_tool_http_headers
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def retrieve_cwe_definitions():
     defs = {}
     for idx, url in enumerate(CWE_URLS):
         cwe_699_view = not idx
-        response = requests.get(url)
+        response = requests.get(url, timeout=5, headers=default_tool_http_headers)
         zip_file = ZipFile(io.BytesIO(response.content))
 
         for file_name in zip_file.namelist():

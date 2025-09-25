@@ -163,6 +163,13 @@ Integration with [cisa-kev](https://www.cisa.gov/known-exploited-vulnerabilities
 export AEGIS_USE_CISA_KEV_TOOL_CONTEXT=true
 ```
 
+##### HTTP GET
+Integration with simple HTTP GET retrieval tool:
+```bash
+export AEGIS_USE_HTTP_GET_TOOL_CONTEXT=true
+export AEGIS_HTTP_GET_TOOL_ALLOW_LIST="^.*\.wikipedia\.org$,www\.test\.com"
+```
+
 #### RedHat tools
 
 ##### OSIDB
