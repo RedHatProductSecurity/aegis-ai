@@ -455,6 +455,10 @@ spec:
       value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
     - name: CACHI2_ARTIFACT
       value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
+    - name: IMP_FINDINGS_ONLY
+      value: "false"
+    - name: TARGET_DIRS
+      value: docs,evals,scripts,src,tests
     runAfter:
     - build-image-index
     taskRef:
