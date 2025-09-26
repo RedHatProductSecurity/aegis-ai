@@ -39,7 +39,6 @@ We provide 'out of the box' integrations providing security context with the fol
 * [RHTPAv2](https://github.com/trustification/trustify)
 * [osv.dev](https://osv.dev)
 * CWE (https://cwe.mitre.org)
-* manpages
 
 which perform lookups on security entities (ex. CVE).
 
@@ -150,11 +149,6 @@ export AEGIS_USE_WIKIPEDIA_MCP_CONTEXT=true
 Integration with [pypi](https://pypi.org/):
 ```bash
 export AEGIS_USE_PYPI_MCP_CONTEXT=true
-```
-##### DBPedia
-Integration with [dbpedia](https://www.dbpedia.org/):
-```bash
-export AEGIS_USE_DBPEDIA_TOOL_CONTEXT=true
 ```
 
 ##### CISA Kev

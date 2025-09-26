@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14' and platform_python_implementation != 'PyPy'",
@@ -52,7 +52,6 @@ dependencies = [
     { name = "pygithub" },
     { name = "requests-gssapi" },
     { name = "rich" },
-    { name = "sparqlwrapper" },
     { name = "uv" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "wikipedia" },
@@ -137,7 +136,6 @@ requires-dist = [
     { name = "rich", specifier = ">=14.0.0" },
     { name = "scikit-learn", marker = "extra == 'ml-deps'", specifier = ">=1.1.0" },
     { name = "seaborn", marker = "extra == 'ml-deps'", specifier = ">=0.13.2" },
-    { name = "sparqlwrapper", specifier = ">=2.0.0" },
     { name = "torch", marker = "extra == 'ml-deps'", specifier = ">=1.9.0" },
     { name = "tqdm", marker = "extra == 'ml-deps'", specifier = ">=4.60.0" },
     { name = "transformers", marker = "extra == 'ml-deps'", specifier = ">=4.20.0" },
@@ -3326,18 +3324,6 @@ wheels = [
 ]
 
 [[package]]
-name = "rdflib"
-version = "7.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyparsing" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/99/d2fec85e5f6bdfe4367dea143119cb4469bf48710487939df0abf7e22003/rdflib-7.2.1.tar.gz", hash = "sha256:cf9b7fa25234e8925da8b1fb09700f8349b5f0f100e785fb4260e737308292ac", size = 4873802, upload-time = "2025-09-19T02:33:36.492Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/98/7fa830bb4b9da21905683a5352aa0a01a1f3082328ae976aad341e980c23/rdflib-7.2.1-py3-none-any.whl", hash = "sha256:1a175bc1386a167a42fbfaba003bfa05c164a2a3ca3cb9c0c97f9c9638ca6ac2", size = 565423, upload-time = "2025-09-19T02:33:30.889Z" },
-]
-
-[[package]]
 name = "readme-renderer"
 version = "44.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3800,18 +3786,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6d/e6/21ccce3262dd4889aa3332e5a119a3491a95e8f60939870a3a035aabac0d/soupsieve-2.8.tar.gz", hash = "sha256:e2dd4a40a628cb5f28f6d4b0db8800b8f581b65bb380b97de22ba5ca8d72572f", size = 103472, upload-time = "2025-08-27T15:39:51.78Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/a0/bb38d3b76b8cae341dad93a2dd83ab7462e6dbcdd84d43f54ee60a8dc167/soupsieve-2.8-py3-none-any.whl", hash = "sha256:0cc76456a30e20f5d7f2e14a98a4ae2ee4e5abdc7c5ea0aafe795f344bc7984c", size = 36679, upload-time = "2025-08-27T15:39:50.179Z" },
-]
-
-[[package]]
-name = "sparqlwrapper"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "rdflib" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/cc/453752fffa759ef41a3ceadb3f167e13dae1a74c1db057d9f6a7affa9240/SPARQLWrapper-2.0.0.tar.gz", hash = "sha256:3fed3ebcc77617a4a74d2644b86fd88e0f32e7f7003ac7b2b334c026201731f1", size = 98429, upload-time = "2022-03-13T23:14:00.671Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/89/176e3db96e31e795d7dfd91dd67749d3d1f0316bb30c6931a6140e1a0477/SPARQLWrapper-2.0.0-py3-none-any.whl", hash = "sha256:c99a7204fff676ee28e6acef327dc1ff8451c6f7217dcd8d49e8872f324a8a20", size = 28620, upload-time = "2022-03-13T23:13:58.969Z" },
 ]
 
 [[package]]

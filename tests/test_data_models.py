@@ -10,7 +10,7 @@ def test_cweid():
     with pytest.raises(ValidationError) as excinfo:
         cve_id = CWEID("BAD-CWE-4")
         assert cweid_validator.validate_python(cve_id)
-    assert "String should match pattern '^CWE-\\d+$'" in str(excinfo)
+    assert "String should match pattern '^CWE-\d{1,5}$'" in str(excinfo)
 
 
 def test_cveid():

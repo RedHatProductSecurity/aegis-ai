@@ -9,10 +9,12 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional, Set, TypedDict
 
+from pydantic import Field
 from pydantic_ai import Tool, RunContext
 
 from aegis_ai import config_dir
 from aegis_ai.data_models import CVEID
+from aegis_ai.tools import BaseToolInput, BaseToolOutput
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,13 @@ logger = logging.getLogger(__name__)
 REPO_LOCK = Lock()
 # Cache git pull to avoid excessive network calls
 REPO_UPDATE_INTERVAL = 600  # seconds
+
+
+class LINUXCVEToolInput(BaseToolInput):
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
 
 
 class CVEMetadata(TypedDict):
@@ -32,6 +41,17 @@ class CVEMetadata(TypedDict):
     json_data: Optional[Dict[str, Any]]
     mbox_data: Optional[str]
     scraped_at: float
+
+
+class LINUXCVEToolResponse(BaseToolOutput):
+    """"""
+
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    metadata: Optional[CVEMetadata] = Field(..., description="Linux CVE metadata")
 
 
 # --- Repository Management (Thread-Safe) ---
@@ -177,7 +197,7 @@ def _find_and_parse_cve_files(repo_path: Path, cve_id: str) -> Optional[CVEMetad
     )
 
 
-async def kernel_cve_lookup(cve_id: CVEID) -> Optional[CVEMetadata]:
+async def kernel_cve_lookup(cve_id: CVEID) -> LINUXCVEToolResponse:
     """
     Looks up a Linux kernel CVE by cloning/updating a git repository
     and parsing the relevant files for context.
@@ -185,8 +205,10 @@ async def kernel_cve_lookup(cve_id: CVEID) -> Optional[CVEMetadata]:
     try:
         subprocess.run(["git", "--version"], check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        logger.error("git is not installed or not in PATH. This tool cannot run.")
-        return None
+        logger.warning("git is not installed or not in PATH. This tool cannot run.")
+        return LINUXCVEToolResponse(
+            cve_id=cve_id, status="error", error_message="Failed to run tool."
+        )
 
     cache_path = Path(config_dir) / "kernel_cves"
     repo = KernelVulnsRepo(cache_path)
@@ -194,14 +216,22 @@ async def kernel_cve_lookup(cve_id: CVEID) -> Optional[CVEMetadata]:
     try:
         repo.setup()
     except subprocess.CalledProcessError:
-        return None  # Failed to setup repo, can't proceed.
+        logger.warning("failed to setup git repo.")
+        return LINUXCVEToolResponse(
+            cve_id=cve_id, status="error", error_message="Failed to setup tool."
+        )
 
-    return _find_and_parse_cve_files(repo.repo_path, cve_id)
+    return LINUXCVEToolResponse(
+        cve_id=cve_id,
+        metadata=_find_and_parse_cve_files(repo.repo_path, cve_id),
+    )
 
 
 @Tool
-async def kernel_cve_tool(ctx: RunContext, cve_id: CVEID) -> Optional[CVEMetadata]:
+async def kernel_cve_tool(
+    ctx: RunContext, input: LINUXCVEToolInput
+) -> LINUXCVEToolResponse:
     """Looks up a Linux kernel CVE definition by its ID and returns structured data,
     including related commit hashes and affected files."""
-    logger.info(f"Looking up kernel context for {cve_id}...")
-    return await kernel_cve_lookup(cve_id)
+    logger.info(f"Looking up kernel context for {input.cve_id}...")
+    return await kernel_cve_lookup(input.cve_id)

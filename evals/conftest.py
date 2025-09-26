@@ -6,16 +6,16 @@ from pydantic_ai.tools import RunContext, Tool
 from pydantic_ai.toolsets import FunctionToolset
 
 from aegis_ai import config_logging
-from aegis_ai.tools.osidb import CVE, CVEID, OsidbDependencies
+from aegis_ai.tools.osidb import CVE, OSIDBToolInput
 import aegis_ai.toolsets as ts
 
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
 @Tool
-async def osidb_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
+async def osidb_tool(ctx: RunContext, input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
-    return await osidb_cache_retrieve(cve_id)
+    return await osidb_cache_retrieve(input.cve_id)
 
 
 # enable logging to see progress

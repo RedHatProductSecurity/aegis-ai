@@ -4,7 +4,7 @@ import io
 import json
 import logging
 import os
-from dataclasses import dataclass
+
 from zipfile import ZipFile
 
 import requests
@@ -13,22 +13,26 @@ from pydantic_ai import Tool, RunContext
 
 from aegis_ai import config_dir
 from aegis_ai.data_models import CWEID, cweid_validator
-from aegis_ai.tools import BaseToolOutput
+from aegis_ai.tools import BaseToolOutput, default_tool_http_headers, BaseToolInput
 
 logger = logging.getLogger(__name__)
 
 # retrieve from cwe.mitre.org
 CWE_URLS = [
     "https://cwe.mitre.org/data/csv/699.csv.zip",  # development - the only view supported by OSIM
-    "https://cwe.mitre.org/data/csv/1000.csv.zip",  # research
-    "https://cwe.mitre.org/data/csv/1008.csv.zip",  # architectural
-    "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
+    # "https://cwe.mitre.org/data/csv/1000.csv.zip",  # research
+    # "https://cwe.mitre.org/data/csv/1008.csv.zip",  # architectural
+    # "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
 ]
 
 
-@dataclass
-class CWEDependencies:
-    test = 1
+class CWEToolInput(BaseToolInput):
+    """CWE tool input"""
+
+    cwe_id: CWEID = Field(
+        ...,
+        description="The unique CWE identifier for the security CWE.",
+    )
 
 
 class CWE(BaseToolOutput):
@@ -64,7 +68,14 @@ def retrieve_cwe_definitions():
     defs = {}
     for idx, url in enumerate(CWE_URLS):
         cwe_699_view = not idx
-        response = requests.get(url)
+
+        try:
+            response = requests.get(url, timeout=5, headers=default_tool_http_headers)
+            response.raise_for_status()
+        except Exception as e:
+            logger.error(f"Failed to retrieve CWE definitions from {url}: {e}")
+            continue
+
         zip_file = ZipFile(io.BytesIO(response.content))
 
         for file_name in zip_file.namelist():
@@ -133,6 +144,8 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
                 description="UNKNOWN",
                 extended_description="UNKNOWN",
                 disallowed=True,
+                status="not_found",
+                error_message="Could not find CWE-ID.",
             )
 
     except Exception as e:
@@ -140,7 +153,7 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
 
 
 @Tool
-async def cwe_tool(ctx: RunContext[CWEDependencies], cwe_id: CWEID) -> CWE | None:
-    """Lookup a CWE definition by ID and return a structured `CWE` model."""
-    logger.debug(cwe_id)
-    return await cwe_lookup(cwe_id)
+async def cwe_tool(ctx: RunContext, cwe_tool_input: CWEToolInput) -> CWE | None:
+    """Lookup a CWE definition by CWE ID and return a structured `CWE` model."""
+    logger.debug(cwe_tool_input)
+    return await cwe_lookup(cwe_tool_input.cwe_id)

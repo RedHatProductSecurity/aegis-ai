@@ -1,6 +1,6 @@
 import logging
 import os
-from dataclasses import dataclass
+
 from typing import List, Any
 
 from pydantic import Field
@@ -12,7 +12,7 @@ from pydantic_ai import (
 from pydantic_ai.toolsets import FunctionToolset
 
 from aegis_ai.data_models import CVEID, cveid_validator
-from aegis_ai.tools import BaseToolOutput
+from aegis_ai.tools import BaseToolOutput, BaseToolInput
 from aegis_ai.tools.osidb.osidb_client import OSIDBClient
 
 logger = logging.getLogger(__name__)
@@ -25,9 +25,11 @@ OSIDB_RETRIEVE_EMBARGOED = os.getenv(
 client = OSIDBClient()
 
 
-@dataclass
-class OsidbDependencies:
-    test = 1
+class OSIDBToolInput(BaseToolInput):
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
 
 
 class CVE(BaseToolOutput):
@@ -130,7 +132,7 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
 
 
 @Tool
-async def flaw_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
+async def flaw_tool(ctx: RunContext, input: OSIDBToolInput) -> CVE:
     """
     Searches OSIDB by cve_id performing a lookup on CVE entity in OSIDB and returns structured information about it.
 
@@ -141,14 +143,12 @@ async def flaw_tool(ctx: RunContext[OsidbDependencies], cve_id: CVEID) -> CVE:
     Returns:
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
-    logger.debug(cve_id)
-    return await cve_retrieve(cve_id)
+    logger.debug(input.cve_id)
+    return await cve_retrieve(input.cve_id)
 
 
 @Tool
-async def component_count_tool(
-    ctx: RunContext[OsidbDependencies], component_name: str
-) -> Any:
+async def component_count_tool(ctx: RunContext, component_name: str) -> Any:
     """
     Searches OSIDB by component_name returning count of CVE flaws related to given component.
 
@@ -164,9 +164,7 @@ async def component_count_tool(
 
 
 @Tool
-async def component_flaw_tool(
-    ctx: RunContext[OsidbDependencies], component_name: str
-) -> Any:
+async def component_flaw_tool(ctx: RunContext, component_name: str) -> Any:
     """
     Searches OSIDB by component_name returning CVE flaws related to given component.
 

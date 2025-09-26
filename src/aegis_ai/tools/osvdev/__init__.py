@@ -4,19 +4,40 @@ Python module to provide programmatic bindings for the OSV.dev REST API.
 This module provides an OSVClient class for querying the Open Source
 Vulnerability (OSV) database API.
 
-Requires the 'requests' library: pip install requests
+deps: pip install requests
 """
 
 import requests
 from typing import Dict, Any, List
 
+from pydantic import Field
 from pydantic_ai import RunContext, Tool
 from requests import RequestException
 
 from aegis_ai import logger
 from aegis_ai.data_models import CVEID
+from aegis_ai.tools import default_tool_http_headers, BaseToolOutput, BaseToolInput
 
 JsonBlob = Dict[str, Any]
+
+
+class OSVToolInput(BaseToolInput):
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+
+class OSVResponse(BaseToolOutput):
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    response: str = Field(
+        ...,
+        description="Response from OSV client.",
+    )
 
 
 class OSVClient:
@@ -36,18 +57,20 @@ class OSVClient:
         """
         self.base_url = base_url.rstrip("/")
         self._session = requests.Session()
-        self._session.headers.update({"User-Agent": "aegis"})
+        self._session.headers.update(default_tool_http_headers)
 
     def _get(self, endpoint: str) -> JsonBlob:
         """Helper for GET requests."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
-            response = self._session.get(url)
+            response = self._session.get(
+                url, timeout=5, headers=default_tool_http_headers
+            )
             response.raise_for_status()
             return response.json()
         except RequestException as e:
-            print(f"API request failed: {e}")
-            raise
+            logger.warning(f"API request failed: {e}")
+            return {}
 
     def _post(self, endpoint: str, data: JsonBlob) -> JsonBlob:
         """manage POST requests."""
@@ -60,8 +83,8 @@ class OSVClient:
                 return {}
             return response.json()
         except RequestException as e:
-            print(f"API request failed: {e}")
-            raise
+            logger.warning(f"API request failed: {e}")
+            return {}
 
     def get_vuln_by_id(self, vuln_id: str) -> JsonBlob:
         """
@@ -135,9 +158,9 @@ async def osv_vulnerability_lookup(cve_id: CVEID):
 
 
 @Tool
-async def osv_dev_cve_tool(ctx: RunContext, cve_id: CVEID):
+async def osv_dev_cve_tool(ctx: RunContext, input: OSVToolInput):
     """
     Lookup CVE definition in osv.dev and return as much metadata as possible.
     """
-    logger.info(f"Looking up osv.dev vulnerability for {cve_id}...")
-    return await osv_vulnerability_lookup(cve_id)
+    logger.info(f"Looking up osv.dev vulnerability for {input.cve_id}...")
+    return await osv_vulnerability_lookup(input.cve_id)
