@@ -413,6 +413,7 @@ spec:
     - name: IMP_FINDINGS_ONLY
       value: "false"
     runAfter:
+    - build-image-index
     - coverity-availability-check
     taskRef:
       params:
@@ -433,8 +434,6 @@ spec:
       values:
       - success
   - name: coverity-availability-check
-    runAfter:
-    - build-image-index
     taskRef:
       params:
       - name: name
