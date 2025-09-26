@@ -1,7 +1,13 @@
+import asyncio
 import logging
+import os
+
 from pydantic_ai import Agent
 
 logger = logging.getLogger(__name__)
+
+# Timeout in seconds for a single LLM prompt
+llm_prompt_timeout = int(os.getenv("AEGIS_LLM_TIMEOUT_SECS", "300"))
 
 
 class Feature:
@@ -14,10 +20,19 @@ class Feature:
         Returns the model output on success, otherwise None.
         """
         if await prompt.is_safe():
-            return await self.agent.run(
-                prompt.to_string(),
-                **kwargs,
-            )
+            try:
+                return await asyncio.wait_for(
+                    self.agent.run(
+                        prompt.to_string(),
+                        **kwargs,
+                    ),
+                    timeout=llm_prompt_timeout,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"{self.__class__.__name__}: LLM request timed out after {llm_prompt_timeout} seconds"
+                )
+                return None
 
         logger.info("Safety agent identified issue with query.")
         return None
