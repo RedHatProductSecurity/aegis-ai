@@ -1,26 +1,20 @@
 import logging
 import wikipedia
 from typing import List, Optional, Literal
-from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from pydantic_ai import (
     RunContext,
     Tool,
 )
 
-from aegis_ai.tools import BaseToolOutput
+from aegis_ai.tools import BaseToolOutput, BaseToolInput
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class WikipediaDependencies:
-    test = 1
-
-
-class GetWikipediaSoftwareInfoInput(BaseModel):
+class GetWikipediaSoftwareInfoInput(BaseToolInput):
     """Input schema for the get_wikipedia_software_info tool."""
 
     component_name: str = Field(
@@ -60,7 +54,7 @@ class WikipediaSoftwareInfo(BaseToolOutput):
 
 @Tool
 def wikipedia_tool(
-    ctx: RunContext[WikipediaDependencies], input: GetWikipediaSoftwareInfoInput
+    ctx: RunContext, input: GetWikipediaSoftwareInfoInput
 ) -> WikipediaSoftwareInfo:
     """
     Retrieves general encyclopedic information about a software component from Wikipedia

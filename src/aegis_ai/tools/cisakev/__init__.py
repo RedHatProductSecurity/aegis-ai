@@ -9,10 +9,11 @@ import pathlib
 from typing import Dict, Any, Optional, TypeAlias
 from requests import RequestException
 
-from pydantic import BaseModel
+from pydantic import Field
 from pydantic_ai import RunContext, Tool
 
 from aegis_ai import config_dir
+from aegis_ai.tools import default_tool_http_headers, BaseToolOutput, BaseToolInput
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,22 @@ CVEID: TypeAlias = str
 JsonBlob = Dict[str, Any]
 
 
-class BaseToolOutput(BaseModel):
-    """Base model for tool outputs."""
+class CISAToolInput(BaseToolInput):
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
 
-    pass
+
+class CISAToolResponse(BaseToolOutput):
+    """"""
+
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    response: JsonBlob = Field(..., description="CISA response")
 
 
 class CISAClient:
@@ -56,7 +69,7 @@ class CISAClient:
         self.base_url = base_url.rstrip("/")
         self.catalog_url = f"{self.base_url}/{catalog_path.lstrip('/')}"
         self._session = requests.Session()
-        self._session.headers.update({"User-Agent": "py-cisa-client/1.0"})
+        self._session.headers.update(default_tool_http_headers)
 
         # --- Cache config ---
         self.cache_path = pathlib.Path(cache_file_path)
@@ -65,7 +78,9 @@ class CISAClient:
     def _get(self, url: str) -> JsonBlob:
         """Helper for GET requests."""
         try:
-            response = self._session.get(url)
+            response = self._session.get(
+                url, headers=default_tool_http_headers, timeout=10
+            )
             response.raise_for_status()
             return response.json()
         except RequestException as e:
@@ -146,7 +161,7 @@ class CISAClient:
 cisa_client_instance = CISAClient()
 
 
-async def cisa_kev_lookup(cve_id: CVEID) -> Optional[JsonBlob]:
+async def cisa_kev_lookup(cve_id: CVEID) -> CISAToolResponse:
     """
     Async wrapper to run the synchronous client's search method in a thread pool.
     """
@@ -154,17 +169,33 @@ async def cisa_kev_lookup(cve_id: CVEID) -> Optional[JsonBlob]:
         vulnerability_data = await asyncio.to_thread(
             cisa_client_instance.get_vuln_by_cve, cve_id
         )
-        return vulnerability_data
-    except Exception as e:
-        logger.error(f"CISA KEV lookup failed: {e}")
-        return None
+        if not vulnerability_data:
+            logger.debug(f"No exploit found for {cve_id} in CISA KEV.")
+            return CISAToolResponse(
+                cve_id=cve_id,
+                response={},
+                status="not_found",
+                error_message="CISA KEV lookup did not find any KEV.",
+            )
+        return CISAToolResponse(cve_id=cve_id, response=vulnerability_data)
+
+    except Exception:
+        logger.warning("CISA KEV lookup failed")
+        return CISAToolResponse(
+            cve_id=cve_id,
+            response={},
+            status="failure",
+            error_message="CISA KEV lookup encountered an error.",
+        )
 
 
 @Tool
-async def cisa_kev_tool(ctx: RunContext, cve_id: CVEID) -> Optional[JsonBlob]:
+async def cisa_kev_tool(
+    ctx: RunContext, cisa_tool_input: CISAToolInput
+) -> CISAToolResponse:
     """
     Checks if a specific CVE ID exists in the CISA Known Exploited Vulnerabilities (KEV)
     catalog. This tool ONLY returns data if the CVE is known to be actively exploited.
     """
-    logger.info(f"Checking CISA KEV catalog for {cve_id}...")
-    return await cisa_kev_lookup(cve_id)
+    logger.info(f"Checking CISA KEV catalog for {cisa_tool_input.cve_id}...")
+    return await cisa_kev_lookup(cisa_tool_input.cve_id)

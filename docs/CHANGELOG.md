@@ -6,11 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
-- added manpages tool
+- removed dbpedia tool
 
 ### Changed
 - bump to pydantic-ai 1.0.7
 - bump to osidb-bindings 4.15.0
+- update tools User Agent (aegis - https://github.com/RedHatProductSecurity/aegis) 
+- added some error handling for tools
 
 ### Fixed
 

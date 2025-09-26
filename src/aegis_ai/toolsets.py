@@ -20,13 +20,10 @@ from aegis_ai import (
     use_pypi_mcp_tool,
     config_dir,
     use_nvd_dev_tool,
-    use_dbpedia_tool,
     use_cisa_kev_tool,
 )
 from aegis_ai.tools.cwe import cwe_tool
-from aegis_ai.tools.dbpedia import dbpedia_tool
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
-from aegis_ai.tools.manpages import manpages_toolset
 from aegis_ai.tools.osidb import osidb_toolset
 from aegis_ai.tools.osvdev import osv_dev_cve_tool
 from aegis_ai.tools.wikipedia import wikipedia_tool
@@ -114,15 +111,13 @@ if use_cwe_tool in truthy:
     public_tools.append(cwe_tool)
 if use_linux_cve_tool in truthy:
     public_tools.append(kernel_cve_tool)
-if use_dbpedia_tool in truthy:
-    public_tools.append(dbpedia_tool)
 if use_cisa_kev_tool in truthy:
     public_tools.append(cisa_kev_tool)
 
-# TODO: in the future we should enable adding wikipedia_mcp_tool - dependent on wikipedia account
+# TODO: in the future we might enable adding wikipedia_mcp_tool - dependent on wikipedia account
 
 public_toolset = CombinedToolset(
-    [FunctionToolset(tools=public_tools), pydantic_ai_toolset, manpages_toolset]
+    [FunctionToolset(tools=public_tools), pydantic_ai_toolset]
 )
 
 # Enable toolsets
