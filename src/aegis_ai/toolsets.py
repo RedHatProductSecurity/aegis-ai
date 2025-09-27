@@ -22,7 +22,7 @@ from aegis_ai import (
     use_nvd_dev_tool,
     use_cisa_kev_tool,
 )
-from aegis_ai.tools.cwe import cwe_tool
+from aegis_ai.tools.cwe import cwe_toolset
 from aegis_ai.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.tools.osidb import osidb_toolset
 from aegis_ai.tools.osvdev import osv_dev_cve_tool
@@ -107,8 +107,6 @@ pydantic_ai_toolset = FunctionToolset(tools=pydantic_ai_tools)
 
 # Enable public function tools
 public_tools = [wikipedia_tool]
-if use_cwe_tool in truthy:
-    public_tools.append(cwe_tool)
 if use_linux_cve_tool in truthy:
     public_tools.append(kernel_cve_tool)
 if use_cisa_kev_tool in truthy:
@@ -145,6 +143,13 @@ if use_pypi_mcp_tool in truthy:
         ]
     )
 
+if use_cwe_tool in truthy:
+    public_toolset = CombinedToolset(
+        [
+            cwe_toolset,
+            public_toolset,
+        ]
+    )
 # Toolset containing rh specific tooling for CVE
 redhat_cve_toolset = CombinedToolset(
     [

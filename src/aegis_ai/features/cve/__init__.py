@@ -56,12 +56,12 @@ class SuggestCWE(Feature):
         prompt = AegisPrompt(
             user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause. Ignore any pre-labeled CWE.",
             goals="""
-                - Use cwe_tool to check canonical CWE definitions.
-                - Never return CWEs that are marked as disallowed by the cwe_tool.
                 - Prefer the most specific CWE over broad parents.
+                - Never return CWEs that are marked as disallowed by the cwe_tool.
                 - Return a short explanation and confidence.
             """,
             rules="""
+                Use mitre cwe tool to retrieve all allowed cwe definitions first so this context can be used to try and identify cwe in vulnerability.
                 Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
                 Output should include:
                 - cwe: a list of 1–3 likely CWE IDs (e.g., ["CWE-125"]).
