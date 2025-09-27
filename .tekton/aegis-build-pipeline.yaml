@@ -20,13 +20,11 @@ spec:
     name: output-image
     type: string
   - default: .
-    description: Path to the source code of an application's component from where
-      to build image.
+    description: Path to the source code of an application's component from where to build image.
     name: path-context
     type: string
   - default: Containerfile.eval
-    description: Path to the Dockerfile inside the context specified by parameter
-      path-context
+    description: Path to the Dockerfile inside the context specified by parameter path-context
     name: dockerfile
     type: string
   - default: "false"
@@ -46,8 +44,7 @@ spec:
     name: prefetch-input
     type: string
   - default: ""
-    description: Image tag expiration time, time values could be something like
-      1h, 2d, 3w for hours, days, and weeks, respectively.
+    description: Image tag expiration time, time values could be something like 1h, 2d, 3w for hours, days, and weeks, respectively.
     name: image-expires-after
     type: string
   - default: "false"
@@ -67,14 +64,17 @@ spec:
     name: build-args-file
     type: string
   - default: "false"
-    description: Whether to enable privileged mode, should be used only with remote
-      VMs
+    description: Whether to enable privileged mode, should be used only with remote VMs
     name: privileged-nested
     type: string
   - name: ADDITIONAL_TAGS
     description: Additional tags that will be applied to the image in the registry.
     type: array
     default: []
+  - name: buildah-format
+    default: docker
+    type: string
+    description: The format for the resulting image's mediaType. Valid values are oci or docker.
   results:
   - description: ""
     name: IMAGE_URL
@@ -102,7 +102,7 @@ spec:
       - name: name
         value: init
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-init:0.2@sha256:ec962d0be18f36ca7d331c99bf243800f569fc0a2ea6f8c8c3d3a574b71c44dc
+        value: quay.io/konflux-ci/tekton-catalog/task-init:0.2@sha256:abf231cfc5a68b56f68a8ac9bb26dca3c3e434c88dd9627c72bdec0b8c335c67
       - name: kind
         value: task
       resolver: bundles
@@ -113,7 +113,7 @@ spec:
     - name: revision
       value: $(params.revision)
     - name: depth
-      value: 0  # needed for mergeTargetBranch to work (artificial merge conflicts are reported without this)
+      value: 0     # needed for mergeTargetBranch to work (artificial merge conflicts are reported without this)
     - name: mergeTargetBranch
       value: true
     - name: ociStorage
@@ -192,6 +192,8 @@ spec:
       value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
     - name: CACHI2_ARTIFACT
       value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
+    - name: BUILDAH_FORMAT
+      value: $(params.buildah-format)
     runAfter:
     - prefetch-dependencies
     taskRef:
@@ -221,6 +223,8 @@ spec:
     - name: IMAGES
       value:
       - $(tasks.build-container.results.IMAGE_URL)@$(tasks.build-container.results.IMAGE_DIGEST)
+    - name: BUILDAH_FORMAT
+      value: $(params.buildah-format)
     runAfter:
     - build-container
     taskRef:
@@ -569,21 +573,21 @@ spec:
       values:
       - "false"
   - name: provision-eaas-space
-    # provision an ephemeral namespace where we can deploy the newly built container image
+      # provision an ephemeral namespace where we can deploy the newly built container image
     taskRef:
       resolver: git
       params:
-        - name: url
-          value: https://github.com/konflux-ci/build-definitions.git
-        - name: revision
-          value: main
-        - name: pathInRepo
-          value: task/eaas-provision-space/0.1/eaas-provision-space.yaml
+      - name: url
+        value: https://github.com/konflux-ci/build-definitions.git
+      - name: revision
+        value: main
+      - name: pathInRepo
+        value: task/eaas-provision-space/0.1/eaas-provision-space.yaml
     params:
-      - name: ownerName
-        value: $(context.pipelineRun.name)
-      - name: ownerUid
-        value: $(context.pipelineRun.uid)
+    - name: ownerName
+      value: $(context.pipelineRun.name)
+    - name: ownerUid
+      value: $(context.pipelineRun.uid)
   - name: run-evals
     params:
     - name: image-url
@@ -606,76 +610,76 @@ spec:
         secret:
           secretName: $(tasks.provision-eaas-space.results.secretRef)
       steps:
-        - name: deploy
-          image: registry.redhat.io/openshift4/ose-cli-rhel9:4.16@sha256:bb4a8bc89ebb9857c528839ff57fcc199b655fae40ef788dc473705a5e2bd1e6
-          volumeMounts:
-            - name: eaas-space
-              mountPath: /var/run/eaas-space
-              readOnly: true
-          script: |
-            #!/bin/bash -ex
-            set -o pipefail
-            dnf install -yq jq
-            export KUBECONFIG="/var/run/eaas-space/kubeconfig"
+      - name: deploy
+        image: registry.redhat.io/openshift4/ose-cli-rhel9:4.16@sha256:bb4a8bc89ebb9857c528839ff57fcc199b655fae40ef788dc473705a5e2bd1e6
+        volumeMounts:
+        - name: eaas-space
+          mountPath: /var/run/eaas-space
+          readOnly: true
+        script: |
+          #!/bin/bash -ex
+          set -o pipefail
+          dnf install -yq jq
+          export KUBECONFIG="/var/run/eaas-space/kubeconfig"
 
-            # transfer the gemini-key secret to the ephemeral namespace
-            { KUBECONFIG= oc get secret gemini-key -o json \
-              | jq 'del(.metadata.namespace, .metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp)' \
-              | oc apply -f - \
-              || { EC=$?; echo gemini-key secret not available; exit $EC; }
-            } 2>/dev/null
+          # transfer the gemini-key secret to the ephemeral namespace
+          { KUBECONFIG= oc get secret gemini-key -o json \
+            | jq 'del(.metadata.namespace, .metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp)' \
+            | oc apply -f - \
+            || { EC=$?; echo gemini-key secret not available; exit $EC; }
+          } 2>/dev/null
 
-            # define a one-shot pod
-            tee aegis-eval.yaml << EOF
-            ---
-            apiVersion: v1
-            kind: Pod
-            metadata:
-              generateName: aegis-ai-eval
-            spec:
-              restartPolicy: Never
-              containers:
-              - name: aegis-eval-container
-                image: $(params.image-url)
-                command: ["make", "eval"]
-                env:
-                  # make the tables in pydantic-eval reports readable
-                  - name: COLUMNS
-                    value: "200"
-                  # enable colorized text when output is redirected
-                  - name: PYTEST_ADDOPTS
-                    value: "--color=yes"
-                  - name: AEGIS_LLM_HOST
-                    value: "https://generativelanguage.googleapis.com"
-                  - name: AEGIS_LLM_MODEL
-                    value: "gemini-2.5-flash"
-                  # FIXME: this should be removed once we have (more) reliable evals
-                  - name: AEGIS_EVALS_MIN_PASSED
-                    value: "5"
-                  - name: GEMINI_API_KEY
-                    valueFrom:
-                      secretKeyRef:
-                        name: gemini-key
-                        key: token
-                resources:
-                  requests:
-                    memory: "2Gi"
-                    cpu: 1
-                  limits:
-                    memory: "4Gi"
-                    cpu: 2
-            EOF
+          # define a one-shot pod
+          tee aegis-eval.yaml << EOF
+          ---
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            generateName: aegis-ai-eval
+          spec:
+            restartPolicy: Never
+            containers:
+            - name: aegis-eval-container
+              image: $(params.image-url)
+              command: ["make", "eval"]
+              env:
+                # make the tables in pydantic-eval reports readable
+                - name: COLUMNS
+                  value: "200"
+                # enable colorized text when output is redirected
+                - name: PYTEST_ADDOPTS
+                  value: "--color=yes"
+                - name: AEGIS_LLM_HOST
+                  value: "https://generativelanguage.googleapis.com"
+                - name: AEGIS_LLM_MODEL
+                  value: "gemini-2.5-flash"
+                # FIXME: this should be removed once we have (more) reliable evals
+                - name: AEGIS_EVALS_MIN_PASSED
+                  value: "5"
+                - name: GEMINI_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: gemini-key
+                      key: token
+              resources:
+                requests:
+                  memory: "2Gi"
+                  cpu: 1
+                limits:
+                  memory: "4Gi"
+                  cpu: 2
+          EOF
 
-            # create the pod in the ephemeral namespace and monitor it
-            oc create -f aegis-eval.yaml -o json | jq -r .metadata.name | tee pod-name.txt
-            oc wait --for=condition=Ready --timeout=300s "pod/$(<pod-name.txt)" || oc get pods
-            oc logs -f "$(<pod-name.txt)"
-            EC_JSON_PATH=".status.containerStatuses[0].state.terminated.exitCode"
-            oc wait --for="jsonpath={$EC_JSON_PATH}" --timeout=30s "pod/$(<pod-name.txt)" || oc get pods
-            EC=$(oc get -o json "pod/$(<pod-name.txt)" | jq "$EC_JSON_PATH")
-            test 0 -le "$EC" || EC=$?
-            oc delete pod "$(<pod-name.txt)"
-            exit "$EC"
+          # create the pod in the ephemeral namespace and monitor it
+          oc create -f aegis-eval.yaml -o json | jq -r .metadata.name | tee pod-name.txt
+          oc wait --for=condition=Ready --timeout=300s "pod/$(<pod-name.txt)" || oc get pods
+          oc logs -f "$(<pod-name.txt)"
+          EC_JSON_PATH=".status.containerStatuses[0].state.terminated.exitCode"
+          oc wait --for="jsonpath={$EC_JSON_PATH}" --timeout=30s "pod/$(<pod-name.txt)" || oc get pods
+          EC=$(oc get -o json "pod/$(<pod-name.txt)" | jq "$EC_JSON_PATH")
+          test 0 -le "$EC" || EC=$?
+          oc delete pod "$(<pod-name.txt)"
+          exit "$EC"
   workspaces:
   - name: git-auth
     optional: true
