@@ -24,9 +24,9 @@ JsonBlob = Dict[str, Any]
 # retrieve allowed cwes from cwe.mitre.org
 CWE_URLS = [
     "https://cwe.mitre.org/data/csv/699.csv.zip",  # development - the only view supported by OSIM
-    # "https://cwe.mitre.org/data/csv/1000.csv.zip",  # research
-    # "https://cwe.mitre.org/data/csv/1008.csv.zip",  # architectural
-    # "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
+    "https://cwe.mitre.org/data/csv/1000.csv.zip",  # research
+    "https://cwe.mitre.org/data/csv/1008.csv.zip",  # architectural
+    "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
 ]
 
 # lazy load CWE
