@@ -54,10 +54,13 @@ class CVE(BaseToolOutput):
         description="all public comments.",
     )
     description: str = Field(..., description="CVE cve_description.")
-    components: List = Field(..., description="list of components")
-    references: List = Field(..., description="list of references")
-    affects: List = Field(..., description="list of affects")
-    cvss_scores: List = Field(..., description="list of cvss scores")
+    components: List = Field(..., description="list of software components")
+    references: List = Field(
+        ...,
+        description="list of reference urls providing additional vulnerability context",
+    )
+    affects: List = Field(..., description="list of component affects")
+    cvss_scores: List = Field(..., description="list of CVSS scores")
 
 
 async def cve_retrieve(cve_id: CVEID) -> CVE:

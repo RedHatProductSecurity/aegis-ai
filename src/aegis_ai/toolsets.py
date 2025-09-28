@@ -65,7 +65,7 @@ github_stdio_server = MCPServerStdio(
     ],
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": f"{os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN', '')}",
-        "GITHUB_TOOLSETS": "repos",  # TODO: expand list of services at some point
+        "GITHUB_TOOLSETS": "repos,pull_requests",  # TODO: expand list of services at some point
         "GITHUB_READ_ONLY": "1",
     },
     tool_prefix="github",
