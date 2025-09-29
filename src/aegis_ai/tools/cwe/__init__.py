@@ -4,7 +4,7 @@ import io
 import json
 import logging
 import os
-from typing import List, Dict, Any
+from typing import List
 
 from zipfile import ZipFile
 
@@ -18,8 +18,6 @@ from aegis_ai.data_models import CWEID, cweid_validator
 from aegis_ai.tools import BaseToolOutput, default_tool_http_headers, BaseToolInput
 
 logger = logging.getLogger(__name__)
-
-JsonBlob = Dict[str, Any]
 
 # retrieve allowed cwes from cwe.mitre.org
 CWE_URLS = [
@@ -158,9 +156,9 @@ async def cwe_lookup(cwe_id: CWEID) -> CWE | None:
 
 
 @Tool
-async def retrieve_all_cwes(ctx: RunContext) -> JsonBlob | None:
-    """Retrieve all allowed cwe definitions."""
-    logger.info("retrieving allowed cwe definitions.")
+async def retrieve_allowed_cwe_ids(ctx: RunContext) -> List[CWEID] | None:
+    """Retrieve all allowed CWE-IDs."""
+    logger.info("retrieving allowed cwe-ids.")
 
     file_path = os.path.join(CACHE_DIR, CACHE_FILE)
 
@@ -175,7 +173,7 @@ async def retrieve_all_cwes(ctx: RunContext) -> JsonBlob | None:
             with open(file_path, "w") as f:
                 json.dump(data, f, indent=2)
 
-        return data
+        return [key for key in data.keys() if not data[key].get("disallowed", False)]
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
@@ -186,12 +184,14 @@ async def retrieve_cwes(ctx: RunContext, inputs: CWEToolInput) -> List[CWE]:
     logger.info(f"retrieving {inputs.cwe_ids} cwe definitions.")
     results = []
     for input in inputs.cwe_ids:
-        results.append(await cwe_lookup(input))
+        result = await cwe_lookup(input)
+        if result and not result.disallowed:
+            results.append(result)
     return results
 
 
 toolset = FunctionToolset(
-    tools=[retrieve_cwes, retrieve_all_cwes],
+    tools=[retrieve_cwes, retrieve_allowed_cwe_ids],
 )
 
 cwe_toolset = toolset.prefixed("cwe")
