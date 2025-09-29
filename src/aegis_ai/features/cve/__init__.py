@@ -61,7 +61,7 @@ class SuggestCWE(Feature):
                 - Return a short explanation and confidence.
             """,
             rules="""
-                Use mitre cwe tool to retrieve all allowed cwe definitions first so this context can be used to try and identify cwe in vulnerability.
+                Use mitre cwe tool retrieve_allowed_cwe_ids first to constrain available CWE to select from.
                 Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
                 Output should include:
                 - cwe: a list of 1–3 likely CWE IDs (e.g., ["CWE-125"]).
