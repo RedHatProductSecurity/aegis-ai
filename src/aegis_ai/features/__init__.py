@@ -23,21 +23,21 @@ class Feature:
         Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
         Returns the model output on success, otherwise None.
         """
-        if await prompt.is_safe():
-            try:
-                async with llm_sem:
-                    return await asyncio.wait_for(
-                        self.agent.run(
-                            prompt.to_string(),
-                            **kwargs,
-                        ),
-                        timeout=llm_prompt_timeout,
-                    )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"{self.__class__.__name__}: LLM request timed out after {llm_prompt_timeout} seconds"
-                )
-                return None
+        if not await prompt.is_safe():
+            msg = f"{self.__class__.__name__}: Safety agent blocked the prompt: unsafe content detected"
+            logger.info(msg)
+            raise RuntimeError(msg)
 
-        logger.info("Safety agent identified issue with query.")
-        return None
+        try:
+            async with llm_sem:
+                return await asyncio.wait_for(
+                    self.agent.run(
+                        prompt.to_string(),
+                        **kwargs,
+                    ),
+                    timeout=llm_prompt_timeout,
+                )
+        except asyncio.TimeoutError:
+            msg = f"{self.__class__.__name__}: LLM request timed out after {llm_prompt_timeout} seconds"
+            logger.warning(msg)
+            raise RuntimeError(msg)
