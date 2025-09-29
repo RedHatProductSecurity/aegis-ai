@@ -37,9 +37,7 @@ class SuggestImpactModel(AegisFeatureModel):
 
     explanation: str = Field(
         ...,
-        description="""
-        Explain rationale behind suggested impact rating.
-        """,
+        description="Explain rationale behind suggested impact rating.",
     )
 
     impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
@@ -85,7 +83,7 @@ class SuggestCWEModel(AegisFeatureModel):
 
     cwe: List[CWEID] = Field(
         ...,
-        description="List of cwe-ids",
+        description="List of 2 or more suggested CWE-ID(s)",
     )
 
 

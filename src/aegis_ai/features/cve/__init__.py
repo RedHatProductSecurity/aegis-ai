@@ -32,15 +32,17 @@ class SuggestImpact(Feature):
                 Also output a plausible CVSS 3.1 base vector and score.
             """,
             rules="""
+                - Always use github mcp tool to retrieve additional context from vulnerability reference url.
+                - Retrieve and summarise context from vulnerability reference urls.
+                - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
+                - If CVE impacts a python module then use mcp-pypi tool to retrieve more context.
+                - If cisa_kev_tool tool is available check if there are any related known exploits.
                 - Consider: basic CVSS 3.1 metrics (Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality, Integrity, Availability.
                 - User Interaction is Required for an application to connect a malicious server.
                 - Denial of Service (DoS) has lower impact on applications compared to daemons and servers.
                 - Always use kernel_cve tool to provide additional CVE context when CVE component is kernel.
                 - Do not base the decision on which RH products are affected.
                 - Provide confidence in [0.00..1.00]. Keep explanations concise.
-                - If kernel CVE then use linux_kernel_tool to retrieve more context.
-                - if CVE impacts a python module then use mcp-pypi tool to retrieve more context.
-                - if cisa_kev_tool tool is available always check if there are any related known exploits.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
@@ -54,17 +56,24 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
-            user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause. Ignore any pre-labeled CWE.",
+            user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause of software weakness. Ignore any pre-labeled CWE.",
             goals="""
                 - Prefer the most specific CWE over broad parents.
-                - Never return CWEs that are marked as disallowed by the cwe_tool.
                 - Return a short explanation and confidence.
             """,
             rules="""
-                Use mitre cwe tool to retrieve all allowed cwe definitions first so this context can be used to try and identify cwe in vulnerability.
-                Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
+                - When CVE component is kernel always use kernel_cve tool to retrieve additional context.
+                - Retrieve and summarise additional context from vulnerability reference urls.
+                    - Use github mcp tool to resolve vulnerability reference urls.
+                    - Use tavily to resolve vulnerability reference urls.
+                    - Use google search to resolve vulnerability reference urls.
+                - Identify set of candidate CWEs - always use the mitre cwe tool retrieve_allowed_cwe_ids to filter candidate CWE list.
+                    - Analyze vulnerability, identify CWE that matches root cause of weakness, being careful about memory management and buffer overflows.
+                    - Perform search using mitre cwe tool cwe_searches to identify candidate CWEs (perform cwe_searches with 2-3 different queries).
+                - Use mitre cwe retrieve_cwes tool to get additional information on candidate CWEs.
+                - Select the top 2-3 most applicable CWEs (preference on applicability and higher similarity score) from the final set of candidate CWEs.
                 Output should include:
-                - cwe: a list of 1–3 likely CWE IDs (e.g., ["CWE-125"]).
+                - cwe: Return a list of top 2–3 applicable CWE IDs (ex. ["CWE-94","CWE-22"]).
                 - explanation: 1–2 sentences connecting CVE details to the CWE.
                 - confidence: [0.00..1.00].
             """,

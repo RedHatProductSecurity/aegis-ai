@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - removed dbpedia tool
 
 ### Changed
-- bump to pydantic-ai 1.0.7
-- bump to osidb-bindings 4.15.0
 - update tools User Agent (aegis - https://github.com/RedHatProductSecurity/aegis) 
 - added some error handling for tools
 - add gemini safety settings
+- bump to osidb-bindings 4.16.0
+- bump to pydantic-ai 1.0.14
+- enhance mitre cwe tool to support similarity search (via faiss-cpu)
 
 ### Fixed
 

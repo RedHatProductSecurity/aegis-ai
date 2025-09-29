@@ -4,8 +4,9 @@ import asyncio
 import csv
 import re
 import sys
+from typing import no_type_check
 
-from aegis_ai.tools.cwe import retrieve_cwe_definitions
+from aegis_ai.tools.cwe import cwe_manager
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
@@ -23,6 +24,7 @@ def _cve_sort_key(cve_id):
     return (1, text.lower())
 
 
+@no_type_check
 def process_cwe_feedback(file_path):
     """Read CSV, sort rows by the 2nd column (index 1), and write to stdout."""
     with open(file_path, "r", newline="", encoding="utf-8") as input_file:
@@ -33,7 +35,8 @@ def process_cwe_feedback(file_path):
     rows.sort(key=lambda r: _cve_sort_key(r[1]))
 
     # Try to load CWE-699 view to flag CWEs not present there
-    cwe_defs = retrieve_cwe_definitions()
+    cwe_manager.initialize()
+    cwe_defs = cwe_manager.get_allowed_cwe_ids()
 
     # column headers vary in time
     header_cve = {"Column 1", "CVE-ID"}
