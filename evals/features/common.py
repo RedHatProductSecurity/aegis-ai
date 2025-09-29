@@ -78,8 +78,13 @@ def handle_eval_report(report: EvaluationReport):
     """print evaluation summary and trigger assertion failure in case any assertion failed"""
     report.print(include_input=True, include_output=True, include_durations=False)
 
-    # iterate through cases
     failures = ""
+
+    # handle case failures (LLM quota exceeded, LLM response timed out, etc.)
+    for case in report.failures:
+        failures += f"{case.name}: case failure: {case.error_message}\n"
+
+    # iterate through evaluated cases
     for case in report.cases:
         # bool assertions
         for result in case.assertions.values():
