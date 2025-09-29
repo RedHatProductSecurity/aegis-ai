@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+import asyncio
 import csv
 import re
 import sys
 
 from aegis_ai.tools.cwe import retrieve_cwe_definitions
+from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
 def _cve_sort_key(cve_id):
@@ -59,6 +61,13 @@ def process_cwe_feedback(file_path):
         # print single instantiation of SuggestCweCase
         cwe_list = ", ".join(f'"{cwe}"' for cwe in cwe_list)
         print(f'{" " * 4}SuggestCweCase("{row[1]}", [{cwe_list}]),')
+
+        # populate OSIDB cache for this CVE (best-effort)
+        try:
+            asyncio.run(osidb_cache_retrieve(cve))
+        except Exception as e:
+            # Non-fatal: report and continue
+            print(f"{' ' * 4}# NOTE: failed to cache {cve} from OSIDB: {e}")
 
 
 def main():
