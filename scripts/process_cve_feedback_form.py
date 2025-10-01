@@ -35,10 +35,14 @@ def process_cwe_feedback(file_path):
     # Try to load CWE-699 view to flag CWEs not present there
     cwe_defs = retrieve_cwe_definitions()
 
+    # column headers vary in time
+    header_cve = {"Column 1", "CVE-ID"}
+    header_exp_cwe = {"Column 3", "Expected CWE value"}
+
     for row in rows:
         cve = row[1]
         exp_cwe = row[3]
-        if cve == "CVE-ID" and exp_cwe == "Expected CWE value":
+        if cve in header_cve and exp_cwe in header_exp_cwe:
             # skip table header
             continue
 
