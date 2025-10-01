@@ -40,4 +40,11 @@ class Feature:
                 raise RuntimeError(msg)
 
         result = await self._timeout_wrap(prompt, **kwargs)
+
+        # check how many input tokens were processed by the LLM
+        input_tokens = result._state.usage.input_tokens
+        logger.debug(
+            f"{self.__class__.__name__}: LLM processed {input_tokens} input tokens"
+        )
+
         return result
