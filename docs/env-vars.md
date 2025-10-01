@@ -6,6 +6,7 @@
 | `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile           | `public`               |
 | `AEGIS_LLM_HOST`               | Aegis LLM host                              | `localhost:11434`      |
 | `AEGIS_LLM_MODEL`              | Aegis LLM model                             | `llama3.2:latest`      |
+| `AEGIS_LLM_INPUT_TOKENS_WARN_THR` | Threshold for LLM input tokens to log a warning | 16384           |
 | `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently  | 4                      |
 | `AEGIS_LLM_TIMEOUT_SECS`       | Timeout in seconds for a single LLM prompt  | 300                    |
 | `AEGIS_SAFETY_ENABLED`         | Enable separate model to check model safety | `false`                |
