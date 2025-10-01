@@ -18,6 +18,16 @@ class Feature:
     def __init__(self, agent: Agent):
         self.agent = agent
 
+    async def _timeout_wrap(self, prompt, **kwargs):
+        try:
+            runner = self.agent.run(prompt.to_string(), **kwargs)
+            return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
+
+        except asyncio.TimeoutError:
+            msg = f"{self.__class__.__name__}: LLM request timed out after {llm_prompt_timeout} seconds"
+            logger.warning(msg)
+            raise RuntimeError(msg)
+
     async def run_if_safe(self, prompt, **kwargs):
         """
         Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
@@ -29,15 +39,5 @@ class Feature:
                 logger.info(msg)
                 raise RuntimeError(msg)
 
-            try:
-                return await asyncio.wait_for(
-                    self.agent.run(
-                        prompt.to_string(),
-                        **kwargs,
-                    ),
-                    timeout=llm_prompt_timeout,
-                )
-            except asyncio.TimeoutError:
-                msg = f"{self.__class__.__name__}: LLM request timed out after {llm_prompt_timeout} seconds"
-                logger.warning(msg)
-                raise RuntimeError(msg)
+        result = await self._timeout_wrap(prompt, **kwargs)
+        return result
