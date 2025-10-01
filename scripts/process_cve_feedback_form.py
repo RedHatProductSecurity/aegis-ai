@@ -39,6 +39,8 @@ def process_cwe_feedback(file_path):
     header_cve = {"Column 1", "CVE-ID"}
     header_exp_cwe = {"Column 3", "Expected CWE value"}
 
+    # there can be multiple rows for a single CVE, for which we merge the CWE lists
+    data = []
     for row in rows:
         cve = row[1]
         exp_cwe = row[3]
@@ -53,18 +55,24 @@ def process_cwe_feedback(file_path):
         # create a well formatted list out of the full-text field
         cwe_list = [item.strip() for item in re.split(r" *, *| *or *", exp_cwe)]
 
+        # the rows are sorted by CVE -> check for subsequent rows with identical CVE
+        if data and data[-1][0] == cve:
+            # merge the CWE list with the last item
+            data[-1][1].extend(cwe_list)
+        else:
+            # create a new item (for a previously unseen CVE)
+            data.append((cve, cwe_list))
+
+    for cve, cwe_list in data:
         # Optionally warn about CWEs not in the CWE-699 view (MITRE)
         for cwe in cwe_list:
-            if not re.match(r"^CWE-\d+$", cwe):
-                continue
-
             cwe_data = cwe_defs.get(cwe)
             if cwe_data and cwe_data.get("disallowed", True):
                 print(f"{' ' * 4}# FIXME: {cwe} is not included in the CWE-699 view!")
 
         # print single instantiation of SuggestCweCase
         cwe_list = ", ".join(f'"{cwe}"' for cwe in cwe_list)
-        print(f'{" " * 4}SuggestCweCase("{row[1]}", [{cwe_list}]),')
+        print(f'{" " * 4}SuggestCweCase("{cve}", [{cwe_list}]),')
 
         # populate OSIDB cache for this CVE (best-effort)
         try:
