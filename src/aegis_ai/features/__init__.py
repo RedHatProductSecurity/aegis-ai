@@ -42,7 +42,7 @@ class Feature:
                 logger.info(msg)
                 raise RuntimeError(msg)
 
-        result = await self._timeout_wrap(prompt, **kwargs)
+            result = await self._timeout_wrap(prompt, **kwargs)
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens
