@@ -1,3 +1,4 @@
+import logging
 import os
 
 from typing import Sequence, Any
@@ -108,7 +109,8 @@ def handle_eval_report(report: EvaluationReport):
 async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) -> None:
     """create a dataset for the given cases/evaluators and evaluate the given task"""
     dataset = Dataset(cases=cases, evaluators=evals)
-    report = await dataset.evaluate(task)
+    debug = logging.getLogger().isEnabledFor(logging.DEBUG)
+    report = await dataset.evaluate(task, progress=debug)
     handle_eval_report(report)
 
 
