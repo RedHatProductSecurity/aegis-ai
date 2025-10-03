@@ -15,6 +15,7 @@ from pydantic_evals.evaluators import (
 )
 
 from aegis_ai import default_llm_model, default_llm_settings, llm_model
+from aegis_ai.features import llm_max_jobs
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -110,7 +111,7 @@ async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) 
     """create a dataset for the given cases/evaluators and evaluate the given task"""
     dataset = Dataset(cases=cases, evaluators=evals)
     debug = logging.getLogger().isEnabledFor(logging.DEBUG)
-    report = await dataset.evaluate(task, progress=debug)
+    report = await dataset.evaluate(task, max_concurrency=llm_max_jobs, progress=debug)
     handle_eval_report(report)
 
 
