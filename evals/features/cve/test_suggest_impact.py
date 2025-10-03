@@ -1,6 +1,6 @@
 import pytest
 
-from pydantic_evals import Case, Dataset
+from pydantic_evals import Case
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from aegis_ai.agents import rh_feature_agent
@@ -10,7 +10,7 @@ from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
-    handle_eval_report,
+    run_evaluation,
 )
 
 
@@ -98,6 +98,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_suggest_impact():
     """suggest_impact evaluation entry point"""
-    dataset = Dataset(cases=cases, evaluators=evals)
-    report = await dataset.evaluate(suggest_impact)
-    handle_eval_report(report)
+    await run_evaluation(cases, evals, suggest_impact)

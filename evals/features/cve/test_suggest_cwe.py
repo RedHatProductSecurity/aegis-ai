@@ -1,14 +1,14 @@
 import pytest
 import re
 
-from pydantic_evals import Case, Dataset
+from pydantic_evals import Case
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestCWE, SuggestCWEModel
 
-from evals.features.common import common_feature_evals, handle_eval_report
+from evals.features.common import common_feature_evals, run_evaluation
 
 
 # penalize models providing correct results but low confidence (the difference
@@ -124,6 +124,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_suggest_cwe():
     """suggest_cwe evaluation entry point"""
-    dataset = Dataset(cases=cases, evaluators=evals)
-    report = await dataset.evaluate(suggest_cwe)
-    handle_eval_report(report)
+    await run_evaluation(cases, evals, suggest_cwe)

@@ -1,7 +1,10 @@
 import os
 
+from typing import Sequence, Any
+
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_evals import Dataset
 from pydantic_evals.dataset import EvaluationReport
 from pydantic_evals.evaluators import (
     EvaluationReason,
@@ -100,6 +103,13 @@ def handle_eval_report(report: EvaluationReport):
 
     # report all failures at once (if any)
     assert not failures, f"Unsatisfied assertion(s):\n{failures}"
+
+
+async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) -> None:
+    """create a dataset for the given cases/evaluators and evaluate the given task"""
+    dataset = Dataset(cases=cases, evaluators=evals)
+    report = await dataset.evaluate(task)
+    handle_eval_report(report)
 
 
 class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):

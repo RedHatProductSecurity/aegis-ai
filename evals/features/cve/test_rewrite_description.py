@@ -1,7 +1,7 @@
 import pytest
 import re
 
-from pydantic_evals import Case, Dataset
+from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis_ai.agents import rh_feature_agent
@@ -11,8 +11,8 @@ from aegis_ai.features.cve import RewriteDescriptionText, RewriteDescriptionMode
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
-    handle_eval_report,
     make_eval_reason,
+    run_evaluation,
 )
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
@@ -108,6 +108,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_rewrite_description():
     """rewrite_description evaluation entry point"""
-    dataset = Dataset(cases=cases, evaluators=evals)
-    report = await dataset.evaluate(rewrite_description)
-    handle_eval_report(report)
+    await run_evaluation(cases, evals, rewrite_description)

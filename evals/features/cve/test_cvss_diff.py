@@ -1,6 +1,6 @@
 import pytest
 
-from pydantic_evals import Case, Dataset
+from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis_ai.agents import rh_feature_agent
@@ -10,8 +10,8 @@ from aegis_ai.features.cve import CVSSDiffExplainer, CVSSDiffExplainerModel
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
-    handle_eval_report,
     make_eval_reason,
+    run_evaluation,
 )
 
 
@@ -79,6 +79,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_cvss_diff():
     """cvss_diff evaluation entry point"""
-    dataset = Dataset(cases=cases, evaluators=evals)
-    report = await dataset.evaluate(cvss_diff)
-    handle_eval_report(report)
+    await run_evaluation(cases, evals, cvss_diff)
