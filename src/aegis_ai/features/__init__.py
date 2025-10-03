@@ -21,39 +21,49 @@ class Feature:
     def __init__(self, agent: Agent):
         self.agent = agent
 
-    async def _timeout_wrap(self, prompt, **kwargs):
-        try:
-            runner = self.agent.run(prompt.to_string(), **kwargs)
-            return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
-
-        except asyncio.TimeoutError:
-            msg = f"{self.__class__.__name__}: LLM request timed out after {llm_prompt_timeout} seconds"
-            logger.warning(msg)
-            raise RuntimeError(msg)
-
     async def run_if_safe(self, prompt, **kwargs):
         """
         Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
         Returns the model output on success, otherwise None.
         """
+        feat_name = self.__class__.__name__
+        call_str = f"{feat_name}({prompt.context.cve_id})"
+        logger.info(f"{call_str} = ?")
         async with llm_sem:
             if not await prompt.is_safe():
-                msg = f"{self.__class__.__name__}: Safety agent blocked the prompt: unsafe content detected"
-                logger.info(msg)
+                msg = f"{call_str}: Safety agent blocked the prompt: unsafe content detected"
+                logger.warning(msg)
                 raise RuntimeError(msg)
 
-            result = await self._timeout_wrap(prompt, **kwargs)
+            try:
+                runner = self.agent.run(prompt.to_string(), **kwargs)
+                result = await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
+
+            except asyncio.TimeoutError:
+                msg = f"{call_str}: LLM request timed out after {llm_prompt_timeout} seconds"
+                logger.warning(msg)
+                raise RuntimeError(msg)
+
+            except Exception as e:
+                # log only exception name by default, details only when debugging
+                logger.warning(
+                    f"{call_str} raised an exception: {e.__class__.__name__}"
+                )
+                logger.debug(f"{call_str} raised an exception: {e}")
+                raise
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens
-        logger.debug(
-            f"{self.__class__.__name__}: LLM processed {input_tokens} input tokens"
-        )
+        logger.debug(f"{call_str}: LLM processed {input_tokens} input tokens")
 
         # log a warning if the threshold is exceeded
         if llm_input_tokens_warn_thr < input_tokens:
             logger.warning(
-                f"{self.__class__.__name__}: too many input tokens processed by LLM: {input_tokens}"
+                f"{call_str}: too many input tokens processed by LLM: {input_tokens}"
             )
+
+        # TODO: introduce a common logging hook for classes inherited from Feature
+        outcome = result.output.cwe if feat_name == "SuggestCWE" else "[...]"
+        logger.info(f"{call_str} = {outcome}")
 
         return result
