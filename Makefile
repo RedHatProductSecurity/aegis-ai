@@ -35,10 +35,15 @@ clean:
 	uv clean
 
 eval:
-	LOGFIRE_IGNORE_NO_CONFIG=1 uv run pytest -vv -s evals
+	uv run pytest -vv -s evals
+
+# The eval-debug target enforces single-job concurrency for debugging purposes
+# by setting AEGIS_LLM_MAX_JOBS=1. This ensures only one job runs at a time.
+eval-debug:
+	AEGIS_LLM_MAX_JOBS=1 uv run pytest -vv -s -o log_cli_level=DEBUG evals
 
 eval-in-parallel:
-	LOGFIRE_IGNORE_NO_CONFIG=1 uv run pytest -vv -n auto evals
+	uv run pytest -vv -n auto evals
 
 test:
 	uv run pytest tests
