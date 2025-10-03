@@ -48,11 +48,16 @@ ENV HOME="/opt/app-root" \
 
 WORKDIR /opt/app-root
 COPY --chown=aegis . /opt/app-root
-# FIXME: the build-container task in Konflux does not support `COPY --exclude=.git`
-RUN rm -rf .git
 
-# install uv
-RUN pip3 install --no-cache-dir gssapi uv && uv sync --no-cache
+# install uv, install local dependencies and initialize version string
+RUN pip3 install --no-cache-dir gssapi uv \
+    && uv sync --no-cache --frozen \
+    && printf '\n[tool.hatch.version.raw-options]\nfallback_version = "%s"\n' \
+        "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
+    | tee -a pyproject.toml
+
+# remove git repo after the version string is initialized
+RUN rm -fr .git
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root

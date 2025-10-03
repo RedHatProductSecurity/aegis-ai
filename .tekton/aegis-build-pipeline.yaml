@@ -114,6 +114,8 @@ spec:
       value: $(params.revision)
     - name: depth
       value: 0     # needed for mergeTargetBranch to work (artificial merge conflicts are reported without this)
+    - name: fetchTags
+      value: true
     - name: mergeTargetBranch
       value: true
     - name: ociStorage

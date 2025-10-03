@@ -29,7 +29,15 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-__version__ = "0.2.9"
+try:
+    # populated by hatch-vcs at build time
+    from ._version import __version__  # type: ignore
+except Exception:  # pragma: no cover
+    # fallback to Python packaging version
+    from importlib.metadata import version as pkg_version
+
+    __version__ = pkg_version(__name__)
+
 
 llm_host = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
 llm_model = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
