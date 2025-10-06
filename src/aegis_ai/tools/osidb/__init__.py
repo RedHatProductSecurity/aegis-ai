@@ -128,7 +128,7 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
         logger.error(
             f"We encountered an error during OSIDB retrieval of {validated_cve_id}: {e}"
         )
-        raise ValueError(f"Could not retrieve {cve_id}")
+        raise ValueError(f"Could not retrieve {cve_id} {e}")
 
 
 @Tool

@@ -1,9 +1,11 @@
+import logging
 from typing import List, Literal
 
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, field_validator
 
 from aegis_ai.data_models import CVEID, CVSS3Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
+from aegis_ai.tools.cwe import cwe_manager
 
 
 class CVEFeatureInput(BaseModel):
@@ -37,9 +39,7 @@ class SuggestImpactModel(AegisFeatureModel):
 
     explanation: str = Field(
         ...,
-        description="""
-        Explain rationale behind suggested impact rating.
-        """,
+        description="Explain rationale behind suggested impact rating.",
     )
 
     impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
@@ -87,6 +87,13 @@ class SuggestCWEModel(AegisFeatureModel):
         ...,
         description="List of cwe-ids",
     )
+
+    @field_validator("cwe")
+    @classmethod
+    def filter_allowed_cwes(cls, cwes: List[CWEID]) -> List[CWEID]:
+        allowed_cwe_ids = set(cwe_manager.get_allowed_cwe_ids())
+        logging.debug(f"Filtering {cwes} in allowed cwe ids: {allowed_cwe_ids}.")
+        return [cwe for cwe in cwes if cwe in allowed_cwe_ids]
 
 
 class PIIReportModel(AegisFeatureModel):

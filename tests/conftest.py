@@ -26,3 +26,9 @@ def disable_model_requests():
         models.ALLOW_MODEL_REQUESTS = True
     else:
         models.ALLOW_MODEL_REQUESTS = False
+
+
+@pytest.fixture
+def set_test_allowed_cwe_ids_env_var(monkeypatch):
+    """set AEGIS_CWE_TOOL_ALLOWED_CWE_IDS env var."""
+    monkeypatch.setenv("AEGIS_CWE_TOOL_ALLOWED_CWE_IDS", "CWE-190")
