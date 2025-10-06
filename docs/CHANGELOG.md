@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 ### Added
 - removed dbpedia tool
+- add AEGIS_CWE_TOOL_ALLOWED_CWE_IDS env var defining allowed CWE-IDs
 
 ### Changed
 - update tools User Agent (aegis - https://github.com/RedHatProductSecurity/aegis) 

@@ -137,9 +137,12 @@ export AEGIS_USE_LINUX_CVE_TOOL_CONTEXT=true
 ```
 ##### Mitre CWE
 Integration with [Mitre CWE definitions](https://cwe.mitre.org/data/downloads.html)
+
 ```bash
 export AEGIS_USE_CWE_TOOL_CONTEXT=true
+export AEGIS_CWE_TOOL_ALLOWED_CWE_IDS=CWE-190, CWE-120, .....
 ```
+
 ##### Wikipedia
 Integration with [wikipedia](https://www.wikipedia.org/):
 ```bash

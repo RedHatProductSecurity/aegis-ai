@@ -24,14 +24,14 @@ async def test_suggest_impact_with_test_model():
     )
 
 
-async def test_suggest_cwe_with_test_model():
+async def test_suggest_cwe_with_test_model(set_test_allowed_cwe_ids_env_var):
     def feature():
         return cve.SuggestCWE(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
     suggestcwe = cve.SuggestCWEModel.model_validate_json(result)
     assert isinstance(suggestcwe, cve.SuggestCWEModel)
-    assert suggestcwe.cwe == ["CWE-680"]
+    assert suggestcwe.cwe == ["CWE-190"]
 
 
 async def test_identify_pii_with_test_model():

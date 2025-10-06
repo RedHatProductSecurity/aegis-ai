@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import logging
+import os
 from pathlib import Path
 from typing import List, Optional, Dict, Tuple, no_type_check
 from zipfile import ZipFile
@@ -232,7 +233,11 @@ class CWEManager:
         return results
 
     def get_allowed_cwe_ids(self) -> List[CWEID]:
-        """Returnlist of all allowed CWE IDs from in-memory cache."""
+        """Return list of all allowed CWE IDs from in-memory cache."""
+
+        cwe_tool_allowed_cwe_ids = os.getenv("AEGIS_CWE_TOOL_ALLOWED_CWE_IDS", "")
+        if cwe_tool_allowed_cwe_ids:
+            return cwe_tool_allowed_cwe_ids.split(",")
         if not self._definitions:
             logger.error("CWE definitions not loaded. Please initialize the manager.")
             return []
