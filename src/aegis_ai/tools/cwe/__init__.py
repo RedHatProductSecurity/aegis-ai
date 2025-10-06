@@ -194,9 +194,10 @@ class CWEManager:
             name="UNKNOWN",
             description="UNKNOWN",
             extended_description="UNKNOWN",
+            affected_resources="UNKNOWN",
+            notes="UNKNOWN",
             disallowed=True,
-            status="not_found",
-            error_message="Could not find CWE-ID.",
+            score=0.0,
         )
 
     @no_type_check
