@@ -71,9 +71,9 @@ class SuggestCWE(Feature):
                     - Analyze vulnerability, identify CWE that matches root cause of weakness, being careful about memory management and buffer overflows.
                     - Perform search using mitre cwe tool cwe_searches to identify candidate CWEs (perform cwe_searches with 2-3 different queries).
                 - Use mitre cwe retrieve_cwes tool to get additional information on candidate CWEs.
-                - Select the top 2-3 most applicable CWEs (preference on applicability and higher similarity score) from the final set of candidate CWEs.
+                - Select the top 1-3 most applicable CWEs (preference on applicability and higher similarity score) from the final set of candidate CWEs.
                 Output should include:
-                - cwe: Return a list of top 2–3 applicable CWE IDs (ex. ["CWE-94","CWE-22"]).
+                - cwe: Return a list of top 1–3 applicable CWE IDs (ex. ["CWE-94"]).
                 - explanation: 1–2 sentences connecting CVE details to the CWE.
                 - confidence: [0.00..1.00].
             """,

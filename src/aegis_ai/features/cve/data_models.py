@@ -85,7 +85,7 @@ class SuggestCWEModel(AegisFeatureModel):
 
     cwe: List[CWEID] = Field(
         ...,
-        description="List of 2 or more suggested CWE-ID(s)",
+        description="List of cwe-ids",
     )
 
     @field_validator("cwe")
