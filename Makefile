@@ -23,7 +23,7 @@ lint:
 format:
 	uvx ruff format
 
-check-type:
+check-type: install-ml-deps
 	uvx ty check
     
 check: format lint check-type
@@ -51,7 +51,7 @@ test-web:
 upgrade-deps:
 	uv sync --upgrade
 
-install-ml-deps:
+install-ml-deps: upgrade-deps
 	uv pip install .[ml_deps]
 	uv run $(PYTHON) -c 'from src.aegis_ai_ml.src import util; util.install_nltk_deps()'
 
