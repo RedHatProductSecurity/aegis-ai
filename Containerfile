@@ -49,7 +49,7 @@ COPY . /opt/app-root
 RUN rm -rf .git
 
 # install uv
-RUN pip3 install gssapi uv && uv sync
+RUN pip3 install --no-cache-dir gssapi uv && uv sync --no-cache
 
 ENV HOME="/opt/app-root" \
     PATH="/opt/app-root/.local/bin:${PATH}"
