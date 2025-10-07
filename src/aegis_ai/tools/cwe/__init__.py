@@ -56,6 +56,7 @@ class CWEManager:
         self._embedding_model: Optional[SentenceTransformer] = None
         self._lock = asyncio.Lock()
         self._is_initialized = False
+        self._debug = False
 
     async def _load_embedding_model(self):
         """Load SentenceTransformer model if not loaded."""
@@ -127,7 +128,7 @@ class CWEManager:
         )
 
         embeddings = await asyncio.to_thread(
-            self._embedding_model.encode, corpus, show_progress_bar=True
+            self._embedding_model.encode, corpus, show_progress_bar=self._debug
         )
         embeddings = np.array(embeddings).astype("float32")
         faiss.normalize_L2(embeddings)
@@ -153,6 +154,7 @@ class CWEManager:
             if self._is_initialized:
                 return
 
+            self._debug = logger.isEnabledFor(logging.DEBUG)
             await self._load_embedding_model()
 
             if CWE_DEFS_FILE.exists():
@@ -213,7 +215,7 @@ class CWEManager:
             return []
 
         query_vector = await asyncio.to_thread(
-            self._embedding_model.encode, [query.lower()]
+            self._embedding_model.encode, [query.lower()], show_progress_bar=self._debug
         )
         query_vector = np.array(query_vector).astype("float32")
         faiss.normalize_L2(query_vector)
