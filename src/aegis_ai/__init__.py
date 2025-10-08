@@ -27,9 +27,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 
 load_dotenv()
 
-logger = logging.getLogger("aegis")
-
-logger.debug("starting aegis")
+logger = logging.getLogger(__name__)
 
 __version__ = "0.2.9"
 
@@ -145,6 +143,9 @@ def config_logging(level="INFO"):
     logging.basicConfig(
         level=level, format=message_format, datefmt="[%X]", handlers=[RichHandler()]
     )
+
+    # Log startup message after handlers are configured so DEBUG is visible when enabled
+    logger.debug(f"starting aegis-{__version__}")
 
     if get_settings().otel_enabled:
         logfire.configure(send_to_logfire=False)
