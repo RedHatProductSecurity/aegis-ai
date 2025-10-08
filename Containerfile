@@ -15,11 +15,6 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 9000
 
-# OPTIONAL: When RH_CERT_URL is passed we set RH internal root ca and the IPA CA cert
-ARG RH_CERT_URL=""
-COPY ./scripts /scripts
-RUN ./scripts/install-certs.sh $RH_CERT_URL
-
 # install dependencies and security updates
 # FIXME: remove unneeded dependencies from the list (see Containerfile.eval)
 RUN dnf --nodocs --setopt install_weak_deps=false -y install \
