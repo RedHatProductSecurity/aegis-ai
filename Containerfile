@@ -38,16 +38,21 @@ RUN dnf --nodocs --setopt install_weak_deps=false -y install \
     && dnf --nodocs --setopt install_weak_deps=false -y upgrade --security \
     && dnf clean all
 
+# create a non-privileged user
+RUN useradd -d /opt/app-root -g 0 -m aegis
+
+# switch to the non-privileged user
+USER aegis
+ENV HOME="/opt/app-root" \
+    PATH="/opt/app-root/.local/bin:${PATH}"
+
 WORKDIR /opt/app-root
-COPY . /opt/app-root
+COPY --chown=aegis . /opt/app-root
 # FIXME: the build-container task in Konflux does not support `COPY --exclude=.git`
 RUN rm -rf .git
 
 # install uv
 RUN pip3 install --no-cache-dir gssapi uv && uv sync --no-cache
-
-ENV HOME="/opt/app-root" \
-    PATH="/opt/app-root/.local/bin:${PATH}"
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
