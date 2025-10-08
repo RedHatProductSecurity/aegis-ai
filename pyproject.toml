@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
   { name="James Fuller", email="jfuller@redhat.com" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "torch @ https://download.pytorch.org/whl/cpu/torch-2.8.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl#sha256=8f81dedb4c6076ec325acc3b47525f9c550e5284a18eae1d9061c543f7b6e7de",
     "aiofiles>=24.1.0",
