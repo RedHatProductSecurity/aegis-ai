@@ -167,6 +167,35 @@ spec:
       workspace: git-auth
     - name: netrc
       workspace: netrc
+  - name: read-git-tags
+    params:
+    - name: SOURCE_ARTIFACT
+      value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
+    runAfter:
+    - prefetch-dependencies
+    taskSpec:
+      description: Read git tags pointing at HEAD and generate image labels based on them.  Moreover, when the git tag pointing at HEAD is a version string (containing digits and dots only), generate the :stable image tag.
+      params: [{name: SOURCE_ARTIFACT}]
+      results: [{name: IMAGE_LABELS, type: array, description: Image labels implied by git tags.}]
+      volumes: [{name: workdir, emptyDir: {}}]
+      stepTemplate: {volumeMounts: [{name: workdir, mountPath: /var/workdir}]}
+      steps:
+      - name: use-trusted-artifact
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:4689f88dd253bd1feebf57f1a76a5a751880f739000719cd662bbdc76990a7fd
+        args: [use, $(params.SOURCE_ARTIFACT)=/var/workdir/source]
+      - name: git-tags-to-image-labels
+        image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:41e6037fc55e98cbd0f7cb3d0ffbee58a14aa6c68fbdec5df7464059c3b0970d
+        workingDir: /var/workdir/source
+        script: |
+          #!/bin/bash -ex
+          git describe --tags
+          tags="$(git tag --points-at HEAD | tr '\n' ,)"
+          if [[ -z "$tags" ]]; then
+            echo "[]" > "$(results.IMAGE_LABELS.path)"
+          else
+            [[ "$tags" =~ ^[0-9.]+,$ ]] && tags="stable,${tags}"
+            printf '["%s"]' "konflux.additional-tags=${tags%,}" | tee "$(results.IMAGE_LABELS.path)"
+          fi
   - name: build-container
     params:
     - name: IMAGE
@@ -196,8 +225,10 @@ spec:
       value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
     - name: BUILDAH_FORMAT
       value: $(params.buildah-format)
+    - name: LABELS
+      value: $(tasks.read-git-tags.results.IMAGE_LABELS)
     runAfter:
-    - prefetch-dependencies
+    - read-git-tags
     taskRef:
       params:
       - name: name
