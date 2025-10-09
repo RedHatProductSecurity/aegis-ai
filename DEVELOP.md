@@ -176,7 +176,21 @@ podman run --rm -it -v /etc/krb5.conf:/etc/krb5.conf -p 9000:9000 localhost/aegi
 ```
 
 -----
+
 ## Publishing & Releasing
+
+####  Making a Release
+
+Aegis uses semantic versioning for stable releases and `hatch-vcs` for development snapshots.
+
+1.  **Update Changelog**: Add the release notes to `docs/CHANGELOG.md`.
+2.  **Sync Lockfile**: Update `uv.lock` by running `make` or `uv lock`.
+3.  **Submit PR**: Create a pull request, get it reviewed, and merge it into the `main` branch.
+4.  **Merge PR**: Merge the pull request to the `main` branch.  This will trigger a new build of a container image that will be tagged into `:latest` and automatically deployed on the staging environment.
+5.  **Test the release candidate**: Test the automatically deployed image in the staging environment.
+6.  **Push a git tag**: Create a new signed git tag (e.g. `0.3.0`) and push it to the upstream git repository on GitHub.  This will trigger a new build of a container image that will be tagged into `:stable` (and e.g. `:0.3.0`) and automatically deployed on the production environment.
+6.  **Create a GitHub Release**: Create a new release on GitHub from the git tag.
+
 
 #### Build and Publish to PyPI
 
@@ -191,14 +205,3 @@ podman run --rm -it -v /etc/krb5.conf:/etc/krb5.conf -p 9000:9000 localhost/aegi
 
     make publish-dist
     ```
-
-####  Making a Release
-
-Aegis uses semantic versioning.
-
-1.  **Create a Release Branch**: Create a new branch for the release (e.g., `release-prep/v1.1.2`).
-2.  **Update Version**: Increment the version number in `pyproject.toml`.
-3.  **Update Changelog**: Add the release notes to `docs/CHANGELOG.md`.
-4.  **Sync Lockfile**: Update `uv.lock` by running `make` or `uv lock`.
-5.  **Submit PR**: Create a pull request, get it reviewed, and merge it into the main branch.
-6.  **Tag and Release**: Create a new tag and release on GitHub from the main branch. The tag (e.g., `v1.1.2`) will trigger the CI pipeline to build and publish the package to PyPI.
