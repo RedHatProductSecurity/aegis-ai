@@ -5,9 +5,6 @@ all: check test test-web
 install:
 	pip install . --force
 
-run-chat:
-	uv run uvicorn aegis_ai_chat.src.chat_app:app --port 9001 --reload
-
 run-web:
 	uv run uvicorn aegis_ai_web.src.main:app --port 9000 --reload --loop uvloop --http httptools
 
