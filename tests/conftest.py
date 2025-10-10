@@ -23,9 +23,9 @@ def setup_logging_for_session():
 def disable_model_requests():
     # Set to True to enable capturing of llm calls to cache.
     if test_allow_recapture:
-        models.ALLOW_MODEL_REQUESTS = True
+        models.ALLOW_MODEL_REQUESTS = True  # type: ignore
     else:
-        models.ALLOW_MODEL_REQUESTS = False
+        models.ALLOW_MODEL_REQUESTS = False  # type: ignore
 
 
 @pytest.fixture

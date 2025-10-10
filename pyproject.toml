@@ -30,7 +30,7 @@ dependencies = [
     "platformdirs>=4.3.8",
     "pydantic>=2.11.9",
     # Use slim provider set to avoid pulling AWS Bedrock (boto3/botocore)
-    "pydantic-ai-slim[openai,google,anthropic,duckduckgo,mcp,tavily]>=1.0.15",
+    "pydantic-ai-slim[openai,google,anthropic,duckduckgo,mcp,tavily]>=1.0.17",
     # Required by evaluation suite (imports `pydantic_evals`)
     "pydantic-evals>=0.0.1",
     "pygithub>=2.7.0",
