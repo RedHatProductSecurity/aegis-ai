@@ -1,7 +1,5 @@
 .attic/
-docs/
 etc
-src/aegis_ai_ml
 
 
 # Environment
@@ -30,9 +28,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-
-# Git
-.gitignore
 
 # Compiled files
 __pycache__/

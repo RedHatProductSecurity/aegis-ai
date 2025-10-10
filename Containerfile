@@ -56,8 +56,8 @@ RUN pip3 install --no-cache-dir gssapi uv \
         "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
     | tee -a pyproject.toml
 
-# remove git repo after the version string is initialized
-RUN rm -fr .git
+# remove git repo (and files maintained in it) after the version string is initialized
+RUN rm -fr .git docs src/aegis_ai_ml
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
