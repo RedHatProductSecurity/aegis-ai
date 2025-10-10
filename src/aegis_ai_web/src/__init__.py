@@ -69,9 +69,10 @@ def sanitize_input(text) -> str:
     if text:
         # The regex "[^a-zA-Z0-9, -,^\x20-\x7E]" does:
         #    a-zA-Z0-9: allow all uppercase letters, lowercase letters, and digits.
-        #    -: allow hyphen.
+        #    -: allow hyphen
         #    @: allow apersand
-        return re.sub(r"[^a-zA-Z0-9,-, @]", "", text)
+        #    -: allow standard hypen
+        return re.sub(r"[^a-zA-Z0-9 .,_–,@-]", "", text)
     return ""
 
 
