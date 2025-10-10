@@ -17,6 +17,57 @@ components:
       - rules
       title: Body_generate_response_console_post
       type: object
+    Feedback:
+      description: Data structure for feedback.
+      properties:
+        accept:
+          default: false
+          title: Accept
+          type: boolean
+        actual:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: ''
+          title: Actual
+        cve_id:
+          anyOf:
+          - maxLength: 50
+            pattern: ^CVE-[0-9]{4}-[0-9]{4,7}$
+            type: string
+          - type: 'null'
+          default: ''
+          title: Cve Id
+        email:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          default: ''
+          title: Email
+        expected:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: ''
+          title: Expected
+        feature:
+          maxLength: 100
+          title: Feature
+          type: string
+        request_time:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: ''
+          title: Request Time
+      required:
+      - feature
+      title: Feedback
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -179,6 +230,30 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Cve Analysis With Body
+  /api/v1/feedback:
+    post:
+      description: Receive feedback, validate, sanitize, and log it to a separate
+        log file.
+      operationId: save_feedback_api_v1_feedback_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Feedback'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Save Feedback
   /console:
     get:
       operationId: console_console_get

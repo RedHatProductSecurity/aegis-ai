@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1]
 
+### Added
+- add `api/v1/feedback` REST api endpoint (and environment variable AEGIS_WEB_FEEDBACK_LOG)
+
 ### Fixed
 - use stable version string in stable container images
 
