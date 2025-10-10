@@ -13,6 +13,7 @@ from typing import Dict, Type, Annotated
 import yaml
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -26,7 +27,12 @@ from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import cve, component
 from aegis_ai.features.data_models import AegisAnswer
 
-from . import AEGIS_REST_API_VERSION, feature_agent
+from . import (
+    AEGIS_REST_API_VERSION,
+    feature_agent,
+    setup_feedback_logger,
+    Feedback,
+)
 
 
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
@@ -41,6 +47,8 @@ class HSTSHeaderMiddleware(BaseHTTPMiddleware):
 
 
 config_logging()
+
+feedback_logger = setup_feedback_logger()
 
 app = FastAPI(
     title="Aegis REST-API",
@@ -266,4 +274,31 @@ async def component_analysis(
     except Exception as e:
         raise HTTPException(
             500, detail=f"Error executing Component feature '{feature}': {e}"
+        )
+
+
+@app.post("/api/v1/feedback")
+async def save_feedback(feedback: Feedback):
+    """
+    Receive feedback, validate, sanitize, and log it to a separate log file.
+    """
+
+    try:
+        log_message = (
+            f"FEEDBACK RECEIVED | "
+            f"feature: '{feedback.feature}' | "
+            f"cve_id: '{feedback.cve_id}' | "
+            f"actual: '{feedback.actual}' | "
+            f"expected: '{feedback.expected}' | "
+            f"request_time: '{feedback.request_time}' | "
+            f"accept: '{feedback.accept}'"
+        )
+        feedback_logger.info(log_message)
+        return {"status": "Feedback received and logged successfully."}
+
+    except Exception as e:
+        logging.error(f"Failed to process feedback: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while processing feedback.",
         )
