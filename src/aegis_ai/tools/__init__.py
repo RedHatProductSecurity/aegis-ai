@@ -26,7 +26,7 @@ async def date_tool(ctx: RunContext) -> str:
 
 
 default_tool_http_headers = {
-    "User-Agent": "aegis - https://github.com/RedHatProductSecurity/aegis",
+    "User-Agent": "aegis - https://github.com/RedHatProductSecurity/aegis-ai",
     # Signal to the server that the client supports gzip, deflate, and brotli compression.
     "Accept-Encoding": "gzip, deflate, br",
 }

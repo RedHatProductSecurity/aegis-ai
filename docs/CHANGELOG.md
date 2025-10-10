@@ -4,20 +4,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.3.0] - 2025-10-10
+
 ### Added
-- removed dbpedia tool
-- add AEGIS_CWE_TOOL_ALLOWED_CWE_IDS env var defining allowed CWE-IDs
+- add `AEGIS_CWE_TOOL_ALLOWED_CWE_IDS` env var defining allowed CWE-IDs
+- make the REST API support Kerberos auth (when `AEGIS_WEB_SPN` is set)
+- add manpages context tool
+- enable CORS on the REST API endpoint
+- add `Containerfile` to build `aegis-ai` container image
+- timeout (300s by default) for LLM response can be controlled by `AEGIS_LLM_TIMEOUT_SECS`
+- the number of concurrently running LLM prompts (4 by default) can be controlled by `AEGIS_LLM_MAX_JOBS`
+- increase coverage of `suggest-cwe` in the evaluation suite
+- warning for too many LLM input tokens can be controlled by `AEGIS_LLM_INPUT_TOKENS_WARN_THR`
+- add `eval-debug` target of `make`
+- development snapshots of aegis now report their version based on `git describe`
 
 ### Changed
-- update tools User Agent (aegis - https://github.com/RedHatProductSecurity/aegis) 
+- remove dbpedia tool
+- update tools User Agent (aegis - https://github.com/RedHatProductSecurity/aegis-ai)
 - added some error handling for tools
 - add gemini safety settings
 - bump to osidb-bindings 4.16.0
 - bump to pydantic-ai 1.0.14
-- enhance mitre cwe tool to support similarity search (via faiss-cpu)
+- enhance mitre cwe tool to support similarity search (via `faiss-cpu`)
+- restrict the output of `suggest-cwe` to CWEs that are included in the `CWE-699` view
+- the list of CWEs returned by `suggest-cwe` is now ordered by correctness
+- remove `aegis_ai_chat` example code
+- the release process for aegis is now more automated
 
 ### Fixed
+- the default `make` target now works on a freshly cloned git repository
 
 ## [0.2.9] - 2025-09-07
 
