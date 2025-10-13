@@ -52,9 +52,11 @@ COPY --chown=aegis . /opt/app-root
 # install uv, install local dependencies and initialize version string
 RUN pip3 install --no-cache-dir gssapi uv \
     && uv sync --no-cache --frozen \
-    && printf '\n[tool.hatch.version.raw-options]\nfallback_version = "%s"\n' \
-        "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
-    | tee -a pyproject.toml
+    && tee -a pyproject.toml <<EOF
+
+[tool.hatch.version.raw-options]
+fallback_version = "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')"
+EOF
 
 # remove git repo (and files maintained in it) after the version string is initialized
 RUN rm -fr .git docs src/aegis_ai_ml
