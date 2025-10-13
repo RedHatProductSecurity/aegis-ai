@@ -107,6 +107,25 @@ use_nvd_dev_tool = os.getenv("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", "false")
 use_cisa_kev_tool = os.getenv("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", "false")
 
 
+# Ensure console logs include project-relative path and line number
+class RelativePathFilter(logging.Filter):
+    def __init__(self) -> None:
+        super().__init__()
+        self._project_root = str(Path(__file__).resolve().parents[2])
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Resolve project-relative path
+        try:
+            record.pathname = os.path.relpath(record.pathname, start=self._project_root)
+        except (ValueError, OSError):
+            # most likely an external dependency
+            pass
+
+        # Avoid using basename only in log messages (especially __init__.py is ambiguous)
+        record.filename = record.pathname
+        return True
+
+
 class AppSettings(BaseSettings):
     default_llm_host: str = llm_host
     default_llm_model: str = llm_model
@@ -172,6 +191,9 @@ def config_logging(level="INFO"):
             date_format = "%Y-%m-%d %H:%M:%S"
             formatter = ColoredLevelFormatter(tw, log_format, date_format)
             handler.setFormatter(formatter)
+
+            # Avoid using basename only in log messages (especially __init__.py is ambiguous)
+            handler.addFilter(RelativePathFilter())
 
     # Log startup message after handlers are configured so DEBUG is visible when enabled
     logger.debug(f"starting aegis-{__version__}")
