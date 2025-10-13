@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.13.*"
 resolution-markers = [
     "platform_python_implementation != 'PyPy'",
@@ -1530,7 +1530,7 @@ wheels = [
 
 [[package]]
 name = "logfire"
-version = "4.13.0"
+version = "4.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "executing" },
@@ -1541,9 +1541,9 @@ dependencies = [
     { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/79/6137e240c7d798e25e2cfcf0c7f209aa5136e138c50d3809f75b1f032748/logfire-4.13.0.tar.gz", hash = "sha256:692a203e75343ac9b1a2fed1fbb4ed62d6285cfc63439c985087b8e8972024f1", size = 547685, upload-time = "2025-10-09T17:34:13.265Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/89/8e022c0d71131d07394837844e97fec5c219b64f4831d6d5cacb3d972f4a/logfire-4.13.1.tar.gz", hash = "sha256:a6ef3f7f2357ede57e8586307e65743d21edff282a56f888adfe57f4d21d7887", size = 547762, upload-time = "2025-10-13T12:23:44.047Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/f9/9ce9a483d14e61be9eb01209b077c80a424f6ae9200aa1e3ce56cb6dff26/logfire-4.13.0-py3-none-any.whl", hash = "sha256:6da1ecf9f1d73dda2faea24ab10c9405ddc46dcd7e03c29c0ca3ead4ec59e56e", size = 228113, upload-time = "2025-10-09T17:34:09.859Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/a9/6b5548eefe25056305ff3b536ad736814a34b89d1813abc69ef58011cb88/logfire-4.13.1-py3-none-any.whl", hash = "sha256:cae629356e1b12d2d4b413dbc8b4e952ce5827e1fc8b0b4e6b181f0776f6ddc9", size = 228161, upload-time = "2025-10-13T12:23:40.075Z" },
 ]
 
 [package.optional-dependencies]
@@ -1559,11 +1559,11 @@ sqlite3 = [
 
 [[package]]
 name = "logfire-api"
-version = "4.13.0"
+version = "4.13.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cc/b8/f9cdae74ab6e295854cae47de23e1272ba2f90a85c0ed3744234c7373406/logfire_api-4.13.0.tar.gz", hash = "sha256:24e1508d625af8d0fba3bfe54fd4684d42705cb5b1fafc0a3702df3a880b3270", size = 57609, upload-time = "2025-10-09T17:34:14.488Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/13/7911c46fa88e4ae1b2a6c77dca46b0c327c55b2e54088289257b550d11f6/logfire_api-4.13.1.tar.gz", hash = "sha256:c05095289310c7026aee4d1e88f57223c07cd174ef22ff704acb3eb193e4c898", size = 57610, upload-time = "2025-10-13T12:23:45.265Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/1e/c7e4bcce47f4676ab089ac1c1a38029081b826ff98b6969f440ea41f05f0/logfire_api-4.13.0-py3-none-any.whl", hash = "sha256:6ec2d761e07b7ab65592b464cf8c9ca798fabfa3740b6cd7e2d4eb7909726d2a", size = 95027, upload-time = "2025-10-09T17:34:11.733Z" },
+    { url = "https://files.pythonhosted.org/packages/92/07/f94f4000deb1db1d00bb0e7e5ce3cf98d2d9d62554f705161fd219ecaeff/logfire_api-4.13.1-py3-none-any.whl", hash = "sha256:1ae2f11ebec842423135e0db73a59470691fbd3ecee95cace30b830569497b46", size = 95027, upload-time = "2025-10-13T12:23:42.129Z" },
 ]
 
 [[package]]
