@@ -6,6 +6,7 @@ import re
 import sys
 from typing import no_type_check
 
+from aegis_ai import config_logging
 from aegis_ai.tools.cwe import cwe_manager
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
@@ -35,8 +36,8 @@ def process_cwe_feedback(file_path):
     rows.sort(key=lambda r: _cve_sort_key(r[1]))
 
     # Try to load CWE-699 view to flag CWEs not present there
-    cwe_manager.initialize()
-    cwe_defs = cwe_manager.get_allowed_cwe_ids()
+    asyncio.run(cwe_manager.initialize())
+    cwe_defs = cwe_manager._definitions
 
     # column headers vary in time
     header_cve = {"Column 1", "CVE-ID"}
@@ -56,7 +57,7 @@ def process_cwe_feedback(file_path):
             continue
 
         # create a well formatted list out of the full-text field
-        cwe_list = [item.strip() for item in re.split(r" *, *| *or *", exp_cwe)]
+        cwe_list = [item.strip() for item in re.split(r" *(?:[,/]|or) *", exp_cwe)]
 
         # the rows are sorted by CVE -> check for subsequent rows with identical CVE
         if data and data[-1][0] == cve:
@@ -93,6 +94,7 @@ def main():
     input_path = sys.argv[1]
 
     try:
+        config_logging(level="INFO")
         process_cwe_feedback(input_path)
     except FileNotFoundError as error:
         print(f"Error: {error}", file=sys.stderr)
