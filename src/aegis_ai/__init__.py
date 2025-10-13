@@ -4,9 +4,11 @@ aegis
 """
 
 import datetime
-from dataclasses import dataclass, field
 import logging
 import os
+import sys
+
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
 
@@ -20,7 +22,8 @@ from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
 from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_settings import BaseSettings
 
-from rich.logging import RichHandler
+from _pytest._io import TerminalWriter
+from _pytest.logging import ColoredLevelFormatter
 
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -147,10 +150,28 @@ def config_logging(level="INFO"):
 
         http_client.HTTPConnection.debuglevel = 1
 
-    message_format = "%(asctime)s %(name)s %(levelname)s %(message)s"
-    logging.basicConfig(
-        level=level, format=message_format, datefmt="[%X]", handlers=[RichHandler()]
-    )
+    # iterate through the default logger (CLI/pytest) and unicorn loggers
+    for logger_name in (None, "uvicorn", "uvicorn.error", "uvicorn.access"):
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(level)
+
+        if not logger.handlers:
+            # if no handlers are configured, use the basic logging handler
+            handler = logging.StreamHandler()
+            logging.basicConfig(level=level, handlers=[handler])
+
+        for handler in logger.handlers:
+            # write to stderr, enable colors if connected to a TTY
+            tw = TerminalWriter(sys.stderr)
+            tw.hasmarkup = sys.stderr.isatty()
+
+            # use the same format as pytest uses by default
+            log_format = (
+                "%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)s)"
+            )
+            date_format = "%Y-%m-%d %H:%M:%S"
+            formatter = ColoredLevelFormatter(tw, log_format, date_format)
+            handler.setFormatter(formatter)
 
     # Log startup message after handlers are configured so DEBUG is visible when enabled
     logger.debug(f"starting aegis-{__version__}")
