@@ -3,7 +3,7 @@ import os
 import pytest
 
 from pydantic_ai.tools import RunContext, Tool
-from pydantic_ai.toolsets import FunctionToolset
+from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
 
 from aegis_ai import config_logging
 from aegis_ai.tools.osidb import CVE, OSIDBToolInput
@@ -32,9 +32,9 @@ def setup_logging_for_session():
 @pytest.fixture(scope="session", autouse=True)
 def override_rh_feature_agent():
     # Replace the first inner FunctionToolset with one that contains our wrapper
-    ts_list = ts.redhat_cve_toolset.toolsets
-    if isinstance(ts_list, list):
-        ts_list[0] = FunctionToolset(tools=[osidb_tool])  # type: ignore
+    wrapped = ts.redhat_cve_toolset.wrapped
+    if isinstance(wrapped, CombinedToolset):
+        wrapped.toolsets[0] = FunctionToolset(tools=[osidb_tool])  # type:ignore
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded

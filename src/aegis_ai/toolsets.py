@@ -4,10 +4,14 @@ Aegis MCP - register mcp here
 """
 
 import os
+import logging
+import time
 
 from pydantic_ai.common_tools.tavily import tavily_search_tool
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.toolsets import FunctionToolset, CombinedToolset
+from pydantic_ai.toolsets.wrapper import WrapperToolset
+from pydantic_ai._run_context import RunContext
 
 from aegis_ai import (
     tavily_api_key,
@@ -28,6 +32,26 @@ from aegis_ai.tools.osidb import osidb_toolset
 from aegis_ai.tools.osvdev import osv_dev_cve_tool
 from aegis_ai.tools.wikipedia import wikipedia_tool
 from aegis_ai.tools.cisakev import cisa_kev_tool
+
+logger = logging.getLogger(__name__)
+
+
+class LoggingToolset(WrapperToolset):
+    async def call_tool(self, name: str, tool_args: dict, ctx: RunContext, tool):  # type: ignore[override]
+        # log tool call entry
+        args = str(tool_args) if tool_args else ""
+        prefix = f"[tool call] {name}({args})"
+        start = time.time()
+        logger.info(f"{prefix} started")
+
+        result = await self.wrapped.call_tool(name, tool_args, ctx, tool)
+
+        # log tool call finish
+        elapsed = time.time() - start
+        logger.info(f"{prefix} finished after {elapsed:.4f}s")
+
+        return result
+
 
 # register any MCP tools below:
 
@@ -150,6 +174,7 @@ if use_cwe_tool in truthy:
             public_toolset,
         ]
     )
+
 # Toolset containing rh specific tooling for CVE
 redhat_cve_toolset = CombinedToolset(
     [
@@ -172,3 +197,8 @@ if use_nvd_dev_tool in truthy:
             nvd_stdio_server,
         ]
     )
+
+# chain logging wrappers
+public_toolset = LoggingToolset(public_toolset)
+redhat_cve_toolset = LoggingToolset(redhat_cve_toolset)
+public_cve_toolset = LoggingToolset(public_cve_toolset)
