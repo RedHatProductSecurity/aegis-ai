@@ -18,6 +18,12 @@ from aegis_ai import logger
 from aegis_ai.data_models import CVEID
 from aegis_ai.tools import default_tool_http_headers, BaseToolOutput, BaseToolInput
 
+# timeout in seconds for GET requests
+REQUEST_TIMEOUT_GET = 5
+
+# timeout in seconds for POST requests
+REQUEST_TIMEOUT_POST = 15
+
 JsonBlob = Dict[str, Any]
 
 
@@ -64,7 +70,7 @@ class OSVClient:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
             response = self._session.get(
-                url, timeout=5, headers=default_tool_http_headers
+                url, timeout=REQUEST_TIMEOUT_GET, headers=default_tool_http_headers
             )
             response.raise_for_status()
             return response.json()
@@ -76,7 +82,7 @@ class OSVClient:
         """manage POST requests."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
-            response = self._session.post(url, json=data)
+            response = self._session.post(url, timeout=REQUEST_TIMEOUT_POST, json=data)
             response.raise_for_status()
             # The query endpoints return an empty body with a 200 OK if no vulns are found.
             if not response.content:
