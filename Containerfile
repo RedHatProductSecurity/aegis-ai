@@ -1,5 +1,5 @@
 # TODO: consider using the ubi10-minimal to reduce size of the output image
-FROM registry.access.redhat.com/ubi10:10.0-1758699521
+FROM registry.access.redhat.com/ubi10:10.0-1760519443
 
 LABEL summary="AEGIS" \
       maintainer="Product Security DevOps <prodsec-dev@redhat.com>"
