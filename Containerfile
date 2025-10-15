@@ -1,5 +1,4 @@
-# TODO: consider using the ubi10-minimal to reduce size of the output image
-FROM registry.access.redhat.com/ubi10:10.0-1758699521
+FROM registry.access.redhat.com/ubi10-minimal:10.0-1758699349
 
 LABEL summary="AEGIS" \
       maintainer="Product Security DevOps <prodsec-dev@redhat.com>"
@@ -15,28 +14,19 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 9000
 
-# install dependencies and security updates
-# FIXME: remove unneeded dependencies from the list (see Containerfile.eval)
-RUN dnf --nodocs --setopt install_weak_deps=false -y install \
-    cargo \
+# install dependencies and updates
+RUN microdnf --nodocs --setopt install_weak_deps=0 -y install \
     gcc \
-    git \
+    git-core \
     krb5-devel \
     krb5-workstation \
-    libffi-devel \
-    logrotate \
     make \
-    openldap-devel \
     openssl-devel \
-    podman \
-    postgresql-devel \
-    procps-ng \
     python3-devel \
     python3-pip \
     redhat-rpm-config \
-    which \
-    && dnf --nodocs --setopt install_weak_deps=false -y upgrade --security \
-    && dnf clean all
+    && microdnf --nodocs --setopt install_weak_deps=0 -y upgrade \
+    && microdnf clean all
 
 # create a non-privileged user
 RUN useradd -d /opt/app-root -g 0 -m aegis
