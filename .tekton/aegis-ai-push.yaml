@@ -47,9 +47,9 @@ spec:
     computeResources:
       requests:
         cpu: 1
-        memory: 4Gi
+        memory: 3Gi
       limits:
-        memory: 8Gi
+        memory: 6Gi
   workspaces:
   - name: git-auth
     secret:
