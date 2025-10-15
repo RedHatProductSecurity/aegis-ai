@@ -40,7 +40,8 @@ WORKDIR /opt/app-root
 COPY --chown=aegis . /opt/app-root
 
 # install uv, install local dependencies and initialize version string
-RUN pip3 install --no-cache-dir gssapi uv \
+RUN set -o pipefail \
+    && pip3 install --no-cache-dir gssapi uv \
     && uv sync --no-cache --frozen \
     && printf '\n[tool.hatch.version.raw-options]\nfallback_version = "%s"\n' \
         "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
