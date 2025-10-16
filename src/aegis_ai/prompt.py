@@ -40,7 +40,7 @@ class AegisPrompt(BaseModel):
     async def is_safe(self):
         """Prompt safety check"""
         if not (get_settings().safety_enabled):
-            logger.info("Safety agent check is disabled.")
+            logger.debug("Safety agent check is disabled.")
             return True
 
         safety_result = await safety_agent.run(self.to_string())
