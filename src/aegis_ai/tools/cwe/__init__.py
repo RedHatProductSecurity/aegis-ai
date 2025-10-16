@@ -74,7 +74,7 @@ class CWEManager:
         ) as client:
             for i, url in enumerate(CWE_URLS):
                 try:
-                    logger.info(f"Fetching CWE definitions from {url}...")
+                    logger.info(f"Fetching CWE definitions from '{url}'...")
                     response = await client.get(url)
                     response.raise_for_status()
 
@@ -141,7 +141,7 @@ class CWEManager:
             write_json_async(CWE_INDEX_MAP_FILE, cwe_ids),
         )
 
-        logger.info("FAISS index built and cached successfully.")
+        logger.info(f"FAISS index built and cached at '{CACHE_DIR}'.")
         return index, cwe_ids
 
     @no_type_check
@@ -158,15 +158,16 @@ class CWEManager:
             await self._load_embedding_model()
 
             if CWE_DEFS_FILE.exists():
-                logger.info("Loading CWE definitions from file cache.")
+                logger.info(f"Loading CWE definitions from '{CWE_DEFS_FILE}'.")
                 self._definitions = await read_json_async(CWE_DEFS_FILE)
             else:
                 logger.info("No CWE definitions file found. Fetching from MITRE.")
                 self._definitions = await self._fetch_and_parse_cwe_data()
+                logger.info(f"Writing CWE definitions to '{CWE_DEFS_FILE}'.")
                 await write_json_async(CWE_DEFS_FILE, self._definitions)
 
             if CWE_FAISS_INDEX_FILE.exists() and CWE_INDEX_MAP_FILE.exists():
-                logger.info("Loading FAISS index from file cache.")
+                logger.info(f"Loading FAISS index from '{CACHE_DIR}'.")
                 self._faiss_index = await asyncio.to_thread(
                     faiss.read_index, str(CWE_FAISS_INDEX_FILE)
                 )
