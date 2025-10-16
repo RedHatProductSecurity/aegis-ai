@@ -169,6 +169,9 @@ def config_logging(level="INFO"):
 
         http_client.HTTPConnection.debuglevel = 1
 
+    # suppress noisy INFO messages: AFC is enabled with max remote calls: 10.
+    logging.getLogger("google_genai.models").setLevel(logging.WARNING)
+
     # iterate through the default logger (CLI/pytest) and unicorn loggers
     for logger_name in (None, "uvicorn", "uvicorn.error", "uvicorn.access"):
         logger = logging.getLogger(logger_name)

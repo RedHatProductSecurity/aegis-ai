@@ -1,4 +1,3 @@
-import logging
 import os
 import pytest
 
@@ -22,9 +21,6 @@ async def osidb_tool(ctx: RunContext, input: OSIDBToolInput) -> CVE:
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging_for_session():
     config_logging(level="INFO")
-
-    # suppress noisy INFO messages: AFC is enabled with max remote calls: 10.
-    logging.getLogger("google_genai.models").setLevel(logging.WARNING)
 
 
 # We need to cache OSIDB responses (and maintain them in git) to make
