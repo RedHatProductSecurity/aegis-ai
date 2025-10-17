@@ -4,16 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Changed
-- bump to pydantic-ai 1.0.17
 
-## [0.3.1]
+## [0.3.1] - 2025-10-17
+
+### Changed
+- bump to pydantic-ai 1.1.0
+- unify the logging format for tests/evals, cli and web
+- trigger build of the FAISS index before starting the web service
+- eliminate unneeded dependencies in the container image
+- drop `Containerfile.eval` no longer maintained
 
 ### Added
-- add `api/v1/feedback` REST api endpoint (and environment variable AEGIS_WEB_FEEDBACK_LOG)
+- add `api/v1/feedback` REST api endpoint (and environment variable `AEGIS_WEB_FEEDBACK_LOG`)
+- log start/finish of all tool calls
+- extend the `suggest-cwe` evaluation suite based on the UAT feedback
 
 ### Fixed
 - use stable version string in stable container images
+- tweak google gemini safety settings
+- set POST request timeout in `osvdev` tool
+
 
 ## [0.3.0] - 2025-10-10
 
