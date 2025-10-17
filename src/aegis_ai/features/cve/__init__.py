@@ -24,25 +24,26 @@ class SuggestImpact(Feature):
         prompt = AegisPrompt(
             user_instruction="Analyze the CVE JSON and assess basic CVSS 3.1 vector/score from the perspective of Red Hat customers.  Based on the CVSS 3.1 score predict the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore existing labels and decide independently.",
             goals="""
-                Impact scale (summary):
-                - CRITICAL: A remote unauthenticated user can execute arbitrary code. Does not require user interaction.  9.0 < cvss3_score
-                - IMPORTANT: Allows local users to gain privileges.  Unauthenticated remote users can view resources.  Authenticated remote users can execute arbitrary code.  7.0 < cvss3_score <= 9.0
-                - MODERATE: Harder to exploit or limited scope/conditions.  4.0 < cvss3_score <= 7.0
-                - LOW: Unlikely or minimal consequence.  cvss3_score <= 4.0
-                Also output a plausible CVSS 3.1 base vector and score.
-            """,
-            rules="""
-                - Always use github mcp tool to retrieve additional context from vulnerability reference url.
-                - Retrieve and summarise context from vulnerability reference urls.
-                - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
-                - If CVE impacts a python module then use mcp-pypi tool to retrieve more context.
-                - If cisa_kev_tool tool is available check if there are any related known exploits.
-                - Consider: basic CVSS 3.1 metrics (Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality, Integrity, Availability.
                 - User Interaction is Required for an application to connect a malicious server.
                 - Denial of Service (DoS) has lower impact on applications compared to daemons and servers.
-                - Always use kernel_cve tool to provide additional CVE context when CVE component is kernel.
-                - Do not base the decision on which RH products are affected.
-                - Provide confidence in [0.00..1.00]. Keep explanations concise.
+                - Do not base analysis decisions on which RH products are affected.                
+                - Based on all the previous analysis, identify the most appropriate CVSS 3.1 vector and score - using this identify impact rating (Critical, Important, Moderate, or Low).                             
+            """,
+            rules="""
+                - Use the following Red Hat Impact scale as a guide:
+                    - CRITICAL: A remote unauthenticated user can execute arbitrary code. Does not require user interaction.  9.0 < cvss3_score
+                    - IMPORTANT: Allows local users to gain privileges.  Unauthenticated remote users can view resources.  Authenticated remote users can execute arbitrary code.  7.0 < cvss3_score <= 9.0
+                    - MODERATE: Harder to exploit or limited scope/conditions.  4.0 < cvss3_score <= 7.0
+                    - LOW: Unlikely or minimal consequence.  cvss3_score <= 4.0
+                - Consider: basic CVSS 3.1 metrics (Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality, Integrity, Availability.
+                - Retrieve and summarise context from vulnerability reference urls.
+                - Use github mcp tool to retrieve additional context from vulnerability reference url.
+                - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
+                - If cisa_kev_tool tool is available check if there are any related known exploits.
+                - Output 
+                    - output a plausible CVSS 3.1 base vector and score.
+                    - output a impact (which directly correlates to identified CVSS score) 
+                    - Provide confidence in [0.00..1.00]. Keep explanations concise.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
