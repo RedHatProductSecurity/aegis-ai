@@ -24,6 +24,7 @@
 | `KRB5_KTNAME`              | Path to the keytab file for Kerberos auth | `/etc/krb5.keytab`                |
 | `AEGIS_CORS_TARGET_URL`    | CORS origin url                           | `http://localhost:5173`           |
 | `AEGIS_WEB_FEEDBACK_LOG`    | Feedback log file                         | `~/.config/aegis_ai/feedback.log` |
+| `AEGIS_WEB_ENABLE_CONSOLE`  | Enable web console                        | `false`                            |
 
 
 # Tool settings

@@ -32,6 +32,7 @@ from . import (
     feature_agent,
     setup_feedback_logger,
     Feedback,
+    ENABLE_CONSOLE,
 )
 
 
@@ -123,45 +124,48 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.get("/console", response_class=HTMLResponse)
-async def console(request: Request):
-    return templates.TemplateResponse("console.html", {"request": request})
+if ENABLE_CONSOLE:
 
+    @app.get("/console", response_class=HTMLResponse)
+    async def console(request: Request):
+        return templates.TemplateResponse("console.html", {"request": request})
 
-@app.post("/console")
-async def generate_response(
-    request: Request,
-    user_instruction: Annotated[str, Form()],
-    goals: Annotated[str, Form()],
-    rules: Annotated[str, Form()],
-):
-    """
-    Handles the submission of a prompt, simulates an LLM response,
-    and re-renders the console with the results.
-    """
+    @app.post("/console")
+    async def generate_response(
+        request: Request,
+        user_instruction: Annotated[str, Form()],
+        goals: Annotated[str, Form()],
+        rules: Annotated[str, Form()],
+    ):
+        """
+        Handles the submission of a prompt, simulates an LLM response,
+        and re-renders the console with the results.
+        """
 
-    try:
-        llm_response = await llm_agent.run(user_instruction, output_type=AegisAnswer)
-        response = llm_response.output
-        return templates.TemplateResponse(
-            "console.html",
-            {
-                "request": request,
-                "user_instruction": user_instruction,
-                "goals": goals,
-                "rules": rules,
-                "confidence": response.confidence,
-                "completeness": response.completeness,
-                "consistency": response.consistency,
-                "tools_used": response.tools_used,
-                "explanation": response.explanation,
-                "answer": response.answer,
-                "raw_output": llm_response.all_messages(),
-            },
-        )
+        try:
+            llm_response = await llm_agent.run(
+                user_instruction, output_type=AegisAnswer
+            )
+            response = llm_response.output
+            return templates.TemplateResponse(
+                "console.html",
+                {
+                    "request": request,
+                    "user_instruction": user_instruction,
+                    "goals": goals,
+                    "rules": rules,
+                    "confidence": response.confidence,
+                    "completeness": response.completeness,
+                    "consistency": response.consistency,
+                    "tools_used": response.tools_used,
+                    "explanation": response.explanation,
+                    "answer": response.answer,
+                    "raw_output": llm_response.all_messages(),
+                },
+            )
 
-    except Exception as e:
-        raise HTTPException(500, detail=f"Error executing general query': {e}")
+        except Exception as e:
+            raise HTTPException(500, detail=f"Error executing general query': {e}")
 
 
 cve_feature_registry: Dict[str, Type] = {
