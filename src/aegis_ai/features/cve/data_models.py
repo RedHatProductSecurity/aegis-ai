@@ -14,7 +14,10 @@ class CVEFeatureInput(BaseModel):
 
 class SuggestImpactModel(AegisFeatureModel):
     """
-    Model to suggest impact of CVE.
+    Represents a model-generated suggestion for the CVSS 3.1 score and related impact
+    of a specific CVE. This data structure is used to assist security
+    analysts in triaging and rating vulnerabilities by providing a
+    pre-computed assessment.
     """
 
     cve_id: CVEID = Field(
@@ -39,7 +42,7 @@ class SuggestImpactModel(AegisFeatureModel):
 
     explanation: str = Field(
         ...,
-        description="Explain rationale behind suggested impact rating.",
+        description="Explain rationale behind suggested CVSS 3.1 score and impact rating.",
     )
 
     impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
@@ -48,11 +51,12 @@ class SuggestImpactModel(AegisFeatureModel):
 
     cvss3_score: str = Field(
         ...,
-        description="Suggested Red Hat CVSS3 score",
+        description="Suggested Red Hat CVSS3.1 score",
     )
+
     cvss3_vector: CVSS3Vector = Field(
         ...,
-        description="Suggested Red Hat CVSS3 vector",
+        description="Suggested Red Hat CVSS3.1 vector",
     )
 
 
