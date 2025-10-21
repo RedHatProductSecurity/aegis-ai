@@ -24,6 +24,11 @@ http://localhost:9000/docs
 
 ## Developer console
 
+To enable developer console
+
+```commandline
+export AEGIS_WEB_ENABLE_CONSOLE=true 
+```
 
 ## Running endpoint tests
 
