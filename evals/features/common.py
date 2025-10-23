@@ -25,6 +25,9 @@ EXPLANATION_MIN_LEN = 80
 # minimal acceptable score returned by an evaluator
 MIN_SCORE_THRESHOLD = 0.1
 
+# evaluation metrics (dict of ReportCaseAggregate objects)
+eval_metrics = {}
+
 
 # if AEGIS_EVALS_LLM_HOST is set, use an independent LLM for evals
 evals_llm_host = os.getenv("AEGIS_EVALS_LLM_HOST")
@@ -81,7 +84,16 @@ def make_eval_reason(value: bool = False, fail_reason: str = None):  # type: ign
 
 def handle_eval_report(report: EvaluationReport):
     """print evaluation summary and trigger assertion failure in case any assertion failed"""
-    report.print(include_input=True, include_output=True, include_durations=False)
+    # Only include durations when llm_max_jobs == 1 to avoid misleading timing information
+    # in parallel job scenarios, where durations may not be representative.
+    report.print(
+        include_input=True,
+        include_output=True,
+        include_durations=(llm_max_jobs == 1),
+    )
+
+    # record evaluation metrics to the global dict
+    eval_metrics[report.name] = report.averages()
 
     failures = ""
 

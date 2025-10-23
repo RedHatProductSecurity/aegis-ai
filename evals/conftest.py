@@ -1,3 +1,4 @@
+import logging
 import os
 import pytest
 
@@ -8,6 +9,7 @@ from aegis_ai import config_logging
 from aegis_ai.tools.osidb import CVE, OSIDBToolInput
 import aegis_ai.toolsets as ts
 
+from evals.features.common import eval_metrics
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
@@ -35,6 +37,18 @@ def override_rh_feature_agent():
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
 def pytest_sessionfinish(session, exitstatus):
+    # print evaluation score for each evaluator and average duration for each feature
+    for feat, metrics in eval_metrics.items():
+        if not metrics:
+            # the metrics might not be available if all cases failed
+            continue
+
+        for eval_name, score in metrics.scores.items():
+            logging.info(f"[{feat}] {eval_name}: {score:.4f}")
+
+        logging.info(f"[{feat}] assertions ratio: {metrics.assertions * 100:.1f}%")
+        logging.info(f"[{feat}] average duration: {metrics.total_duration:.2f}s")
+
     tr = session.config.pluginmanager.get_plugin("terminalreporter")
     if not tr:
         return
