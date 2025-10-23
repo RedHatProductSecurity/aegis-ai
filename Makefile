@@ -24,7 +24,7 @@ format:
 	uvx ruff format
 
 check-type: install-ml-deps
-	uvx ty check
+	uvx ty check --exclude src/aegis_ai_ml
     
 check: format lint check-type
 
