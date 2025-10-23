@@ -75,6 +75,15 @@ log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
+# suppress deprecation warnings unrelated to Aegis code
+filterwarnings = [
+    # Third-party pydantic deprecation from google.genai; safe to ignore in our tests
+    "ignore:Using `@model_validator` with mode='after' on a classmethod is deprecated\\..*",
+    # Deprecations originating from importlib bootstrap around SWIG types
+    "ignore:.*SwigPy(Packed|Object).*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
+    "ignore:.*swigvarlink.*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegis_ai","src/aegis_ai_cli","src/aegis_ai_web","src/aegis_ai_ml"]
 [tool.hatch.metadata]
