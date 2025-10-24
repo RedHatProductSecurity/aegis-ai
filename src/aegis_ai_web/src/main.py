@@ -67,9 +67,22 @@ kerberos_spn = os.getenv("AEGIS_WEB_SPN")
 if kerberos_spn:
     # do not depend on `fastapi-gssapi` unless it is actually needed
     from fastapi_gssapi import GSSAPIMiddleware
+    from starlette.responses import Response
 
-    # middleware to add GSSAPI authentication
-    app.add_middleware(GSSAPIMiddleware, spn=kerberos_spn)
+    class CustomGSSAPIMiddleware(GSSAPIMiddleware):
+        """middleware to add GSSAPI authentication for all paths except /healthz"""
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] == "http" and scope["path"] == "/healthz":
+                # skip authentication and return HTTP 204 with no content
+                resp = Response(status_code=204)
+                return await resp(scope, receive, send)
+
+            # route any other traffic to GSSAPIMiddleware
+            return await super().__call__(scope, receive, send)
+
+    # add middleware for GSSAPI authentication to the app
+    app.add_middleware(CustomGSSAPIMiddleware, spn=kerberos_spn)
 
 # middleware enabling CORS
 cors_target_url = os.getenv("AEGIS_CORS_TARGET_URL", "http://localhost:5173")
