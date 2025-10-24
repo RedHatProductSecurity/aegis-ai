@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -10,6 +10,11 @@ class AegisFeatureModel(BaseModel):
     """
     Metadata for Aegis features, nested within the main feature model.
     """
+
+    data_quality: Optional[Literal["POOR", "FAIR", "GOOD", "EXCELLENT"]] = Field(
+        None,
+        description="Overall assessment of the underlying data quality, completeness and internal consistency.",
+    )
 
     confidence: float = Field(
         ...,

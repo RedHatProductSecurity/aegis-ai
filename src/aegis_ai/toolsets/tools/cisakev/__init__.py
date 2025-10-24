@@ -13,7 +13,11 @@ from pydantic import Field
 from pydantic_ai import RunContext, Tool
 
 from aegis_ai import config_dir
-from aegis_ai.tools import default_tool_http_headers, BaseToolOutput, BaseToolInput
+from aegis_ai.toolsets.tools import (
+    default_tool_http_headers,
+    BaseToolOutput,
+    BaseToolInput,
+)
 
 logger = logging.getLogger(__name__)
 

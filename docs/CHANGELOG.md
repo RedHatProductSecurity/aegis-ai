@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - bump to pydantic-ai 1.4.0
+- refactored agents and toolsets internals
+
+### Added
+- added `AEGIS_AGENT_MAX_RETRIES` env var defining number of times agent will retry.
+- added new data_quality assessment via data critic subagent to all analysis.
+
 
 ## [0.3.1] - 2025-10-17
 

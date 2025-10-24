@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import Field
 
 from aegis_ai.data_models import CWEID
-from aegis_ai.tools import BaseToolInput, BaseToolOutput
+from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
 
 class CWEToolInput(BaseToolInput):
