@@ -20,7 +20,7 @@ class AegisFeatureModel(BaseModel):
         ...,
         ge=0.0,
         le=1.0,
-        description="""        
+        description="""
         # Confidence Score Methodology: Quantifying Analytical Reliability
 
         ## Definition
@@ -30,7 +30,7 @@ class AegisFeatureModel(BaseModel):
 
     tools_used: List = Field(
         ...,
-        description="List the names of registered tools, if any, that was used to formulate this answer. If this is a CVE suggest or CVE rewrite feature then should minimally include 'osidb_tool'",
+        description="List the names of registered tools, if any, that was used to formulate this answer. If this is a CVE suggest feature then should minimally include 'osidb_tool'",
     )
 
     # Important: This default disclaimer is required by AI assessment - do not change or remove without talking to someone !

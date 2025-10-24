@@ -47,28 +47,28 @@ async def test_identify_pii_with_test_model():
     assert not piireport.contains_PII  # is false
 
 
-async def test_rewrite_description_with_test_model():
+async def test_suggest_description_with_test_model():
     def feature():
-        return cve.RewriteDescriptionText(rh_feature_agent).exec("CVE-2025-0725")
+        return cve.SuggestDescriptionText(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    rewritedescription = cve.RewriteDescriptionModel.model_validate_json(result)
-    assert isinstance(rewritedescription, cve.RewriteDescriptionModel)
+    suggestdescription = cve.SuggestDescriptionModel.model_validate_json(result)
+    assert isinstance(suggestdescription, cve.SuggestDescriptionModel)
     assert (
-        rewritedescription.rewritten_title
+        suggestdescription.suggested_title
         == "libcurl: gzip decompression buffer overflow"
     )
 
 
-async def test_rewrite_statement_with_test_model():
+async def test_suggest_statement_with_test_model():
     def feature():
-        return cve.RewriteStatementText(rh_feature_agent).exec("CVE-2025-0725")
+        return cve.SuggestStatementText(rh_feature_agent).exec("CVE-2025-0725")
 
     result = await llm_cache_retrieve(feature)
-    rewritestatement = cve.RewriteStatementModel.model_validate_json(result)
-    assert isinstance(rewritestatement, cve.RewriteStatementModel)
+    suggeststatement = cve.SuggestStatementModel.model_validate_json(result)
+    assert isinstance(suggeststatement, cve.SuggestStatementModel)
     assert (
-        rewritestatement.rewritten_statement
+        suggeststatement.suggested_statement
         == "This flaw is only exploitable when libcurl uses zlib version 1.2.0.3 or older for gzip decompression. Supported versions of Red Hat Enterprise Linux are not affected as they ship with newer versions of the zlib library. Some Red Hat services that bundle older third-party tools may be affected."
     )
 

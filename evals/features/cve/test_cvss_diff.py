@@ -17,7 +17,7 @@ from evals.features.common import (
 
 class CVSSDiffCase(Case):
     def __init__(self, cve_id, has_diff):
-        """cve_id given as CVE-YYYY-NUM is the flaw we rewrite description for."""
+        """cve_id given as CVE-YYYY-NUM is the flaw where we explain why CVSS scores differ."""
         super().__init__(
             name=f"cvss-diff-for-{cve_id}",
             inputs=cve_id,
@@ -50,7 +50,7 @@ class CVSSDiffEvaluator(Evaluator[str, CVSSDiffExplainerModel]):
 
 
 async def cvss_diff(cve_id: CVEID) -> CVSSDiffExplainerModel:
-    """use rh_feature_agent to rewrite description for the given CVE"""
+    """use rh_feature_agent to explain why CVSS scores differ for the given CVE"""
     feature = CVSSDiffExplainer(rh_feature_agent)
     result = await feature.exec(cve_id)
     return result.output

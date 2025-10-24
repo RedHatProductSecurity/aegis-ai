@@ -145,9 +145,9 @@ class PIIReportModel(AegisFeatureModel):
     )
 
 
-class RewriteDescriptionModel(AegisFeatureModel):
+class SuggestDescriptionModel(AegisFeatureModel):
     """
-    Model to rewrite CVE description.
+    Model to suggest CVE description.
     """
 
     cve_id: CVEID = Field(
@@ -174,17 +174,17 @@ class RewriteDescriptionModel(AegisFeatureModel):
     explanation: str = Field(
         ...,
         description="""
-        Explain rationale behind rewritten CVE description and title.
+        Explain rationale behind suggested CVE description and title.
         """,
     )
 
-    rewritten_title: str = Field(..., description="rewritten CVE title.")
-    rewritten_description: str = Field(..., description="rewritten CVE description.")
+    suggested_title: str = Field(..., description="suggested CVE title.")
+    suggested_description: str = Field(..., description="suggested CVE description.")
 
 
-class RewriteStatementModel(AegisFeatureModel):
+class SuggestStatementModel(AegisFeatureModel):
     """
-    Model to rewrite Red Hat CVE statement.
+    Model to suggest Red Hat CVE statement.
     """
 
     cve_id: CVEID = Field(
@@ -210,7 +210,7 @@ class RewriteStatementModel(AegisFeatureModel):
     explanation: str = Field(
         ...,
         description="""
-        Explain rationale behind rewritten description.
+        Explain rationale behind suggested description.
         """,
     )
 
@@ -219,9 +219,9 @@ class RewriteStatementModel(AegisFeatureModel):
         description="Contains the original CVE description provided by the osidb_tool.",
     )
 
-    rewritten_statement: str = Field(
+    suggested_statement: str = Field(
         ...,
-        description="rewritten Red Hat CVE statement explaining impact on Red Hat supported products.",
+        description="suggested Red Hat CVE statement explaining impact on Red Hat supported products.",
     )
 
 

@@ -182,8 +182,8 @@ if ENABLE_CONSOLE:
 cve_feature_registry: Dict[str, Type] = {
     "suggest-impact": cve.SuggestImpact,
     "suggest-cwe": cve.SuggestCWE,
-    "rewrite-description": cve.RewriteDescriptionText,
-    "rewrite-statement": cve.RewriteStatementText,
+    "suggest-description": cve.SuggestDescriptionText,
+    "suggest-statement": cve.SuggestStatementText,
     "identify-pii": cve.IdentifyPII,
     "cvss-diff-explainer": cve.CVSSDiffExplainer,
 }

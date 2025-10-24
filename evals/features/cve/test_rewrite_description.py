@@ -6,7 +6,7 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
-from aegis_ai.features.cve import RewriteDescriptionText, RewriteDescriptionModel
+from aegis_ai.features.cve import SuggestDescriptionText, SuggestDescriptionModel
 
 from evals.features.common import (
     common_feature_evals,
@@ -17,18 +17,18 @@ from evals.features.common import (
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
-class RewriteDescriptionCase(Case):
+class SuggestDescriptionCase(Case):
     def __init__(self, cve_id):
-        """cve_id given as CVE-YYYY-NUM is the flaw we rewrite description for."""
+        """cve_id given as CVE-YYYY-NUM is the flaw we suggest description for."""
         super().__init__(
-            name=f"rewrite-description-for-{cve_id}",
+            name=f"suggest-description-for-{cve_id}",
             inputs=cve_id,
             expected_output=None,
             metadata={"difficulty": "easy"},
         )
 
 
-class OriginalTitleEvaluator(Evaluator[str, RewriteDescriptionModel]):
+class OriginalTitleEvaluator(Evaluator[str, SuggestDescriptionModel]):
     async def evaluate(self, ctx) -> EvaluationReason:
         """check whether original title is propagated by the model"""
         cve = await osidb_cache_retrieve(ctx.inputs)
@@ -38,7 +38,7 @@ class OriginalTitleEvaluator(Evaluator[str, RewriteDescriptionModel]):
         )
 
 
-class PromptLeakEvaluator(Evaluator[str, RewriteDescriptionModel]):
+class PromptLeakEvaluator(Evaluator[str, SuggestDescriptionModel]):
     @staticmethod
     def _match_re_in(pat, *args) -> bool:
         """look for regular expression pat (case insensitively) in the arguments"""
@@ -52,8 +52,8 @@ class PromptLeakEvaluator(Evaluator[str, RewriteDescriptionModel]):
         """look for regular expression pat (case insensitively) in title or description"""
         return PromptLeakEvaluator._match_re_in(
             pat,
-            ctx.output.rewritten_title,
-            ctx.output.rewritten_description,
+            ctx.output.suggested_title,
+            ctx.output.suggested_description,
         )
 
     async def evaluate(self, ctx) -> EvaluationReason:
@@ -76,17 +76,17 @@ class PromptLeakEvaluator(Evaluator[str, RewriteDescriptionModel]):
         return EvaluationReason(True)
 
 
-async def rewrite_description(cve_id: CVEID) -> RewriteDescriptionModel:
-    """use rh_feature_agent to rewrite description for the given CVE"""
-    feature = RewriteDescriptionText(rh_feature_agent)
+async def suggest_description(cve_id: CVEID) -> SuggestDescriptionModel:
+    """use rh_feature_agent to suggest description for the given CVE"""
+    feature = SuggestDescriptionText(rh_feature_agent)
     result = await feature.exec(cve_id)
     return result.output
 
 
 # test cases
 cases = [
-    RewriteDescriptionCase("CVE-2025-23395"),
-    RewriteDescriptionCase("CVE-2025-5399"),
+    SuggestDescriptionCase("CVE-2025-23395"),
+    SuggestDescriptionCase("CVE-2025-5399"),
     # TODO: add more cases
 ]
 
@@ -95,10 +95,10 @@ evals = common_feature_evals + [
     OriginalTitleEvaluator(),
     PromptLeakEvaluator(),
     create_llm_judge(
-        rubric="rewritten_title and rewritten_description do not contain any versioning info"
+        rubric="suggested_title and suggested_description do not contain any versioning info"
     ),
     create_llm_judge(
-        rubric="rewritten_title briefly summarizes what is described in rewritten_description"
+        rubric="suggested_title briefly summarizes what is described in suggested_description"
     ),
 ]
 
@@ -106,6 +106,6 @@ evals = common_feature_evals + [
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_eval_rewrite_description():
-    """rewrite_description evaluation entry point"""
-    await run_evaluation(cases, evals, rewrite_description)
+async def test_eval_suggest_description():
+    """suggest_description evaluation entry point"""
+    await run_evaluation(cases, evals, suggest_description)

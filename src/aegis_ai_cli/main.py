@@ -144,13 +144,13 @@ def suggest_cwe(cve_id):
 
 @aegis_cli.command()
 @click.argument("cve_id", type=CVEID)
-def rewrite_description(cve_id):
+def suggest_description(cve_id):
     """
-    Rewrite CVE description text.
+    Suggest CVE description text.
     """
 
     async def _doit():
-        feature = cve.RewriteDescriptionText(cli_agent)
+        feature = cve.SuggestDescriptionText(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())
@@ -161,13 +161,13 @@ def rewrite_description(cve_id):
 
 @aegis_cli.command()
 @click.argument("cve_id", type=CVEID)
-def rewrite_statement(cve_id):
+def suggest_statement(cve_id):
     """
-    Rewrite CVE statement text.
+    Suggest CVE statement text.
     """
 
     async def _doit():
-        feature = cve.RewriteStatementText(cli_agent)
+        feature = cve.SuggestStatementText(cli_agent)
         return await feature.exec(cve_id)
 
     result = asyncio.run(_doit())

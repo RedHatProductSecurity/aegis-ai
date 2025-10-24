@@ -24,7 +24,7 @@ Aegis features provide common product security analysis:
 * **Suggest CWE:** Get an in context LLM-driven Common Weakness Enumeration (CWE) mappings for CVE.
 * **Suggest CVSS:** Get an in context LLM-driven Common Vulnerability Scoring System (CVSS) score.
 * **Identify PII:** Automatically detect and flag Personally Identifiable Information within security texts.
-* **Rewrite Security Text:** Rephrase or refine security advisories and descriptions for clarity or specific audiences.
+* **Suggest Security Text:** Rephrase or refine security advisories and descriptions for clarity or specific audiences.
 * **CVSS Diff Explainer:** Understand  differences between Red Hat and NVD CVSS scores with AI-generated explanations.
 
 ### Component Intelligence
@@ -304,15 +304,15 @@ C4Context
 
 ## Features
 
-### Rewrite Description
+### Suggest Description
 
 ```commandline
-aegis rewrite-description cve-2025-0725
+aegis suggest-description cve-2025-0725
 ```
 or 
 
 ```
-GET api/v2/analysis/cve?feature=rewrite-description&cve_id=CVE-2025-0725
+GET api/v2/analysis/cve?feature=suggest-description&cve_id=CVE-2025-0725
 ```
 
 ```json
@@ -328,21 +328,21 @@ GET api/v2/analysis/cve?feature=rewrite-description&cve_id=CVE-2025-0725
     "components": [
         "libcurl"
     ],
-    "explanation": "The original title was slightly long and included implementation details (zlib). The rewritten title is more concise, focusing on the component and the direct vulnerability type. The original description was clear but a bit verbose. The rewritten description is more direct, specifying the attack vector (malicious HTTP response) and clarifying the conditions (automatic gzip decompression with old zlib) in a more streamlined manner, adhering to the structured format.",
-    "rewritten_title": "libcurl: gzip decompression buffer overflow",
-    "rewritten_description": "A flaw was found in libcurl. This vulnerability allows a remote attacker to cause a buffer overflow via a specially crafted gzip-compressed HTTP response when automatic decompression is enabled with an older version of zlib."
+    "explanation": "The original title was slightly long and included implementation details (zlib). The suggested title is more concise, focusing on the component and the direct vulnerability type. The original description was clear but a bit verbose. The suggested description is more direct, specifying the attack vector (malicious HTTP response) and clarifying the conditions (automatic gzip decompression with old zlib) in a more streamlined manner, adhering to the structured format.",
+    "suggested_title": "libcurl: gzip decompression buffer overflow",
+    "suggested_description": "A flaw was found in libcurl. This vulnerability allows a remote attacker to cause a buffer overflow via a specially crafted gzip-compressed HTTP response when automatic decompression is enabled with an older version of zlib."
 }
 
 ```
 
-### Rewrite Statement
+### Suggest Statement
 
 ```commandline
-aegis rewrite-statement cve-2025-0725
+aegis suggest-statement cve-2025-0725
 ```
 or
 ```
-GET api/v2/analysis/cve?feature=rewrite-statement&cve_id=CVE-2025-0725
+GET api/v2/analysis/cve?feature=suggest-statement&cve_id=CVE-2025-0725
 ```
 
 ```json
@@ -365,9 +365,9 @@ GET api/v2/analysis/cve?feature=rewrite-statement&cve_id=CVE-2025-0725
     "statement": [
         "This CVE is not applicable to any supported version of Red Hat Enterprise Linux since RHEL-4."
     ],
-    "explanation": "The original statement was factually correct for Red Hat Enterprise Linux (RHEL) but incomplete, as it failed to mention other affected Red Hat products. The rewritten statement provides a more comprehensive view by clarifying the specific condition for the vulnerability (dependency on an old zlib version), explaining why RHEL is not affected, and acknowledging that other Red Hat services are impacted. This approach offers a clearer and more complete picture for all customers.",
+    "explanation": "The original statement was factually correct for Red Hat Enterprise Linux (RHEL) but incomplete, as it failed to mention other affected Red Hat products. The suggested statement provides a more comprehensive view by clarifying the specific condition for the vulnerability (dependency on an old zlib version), explaining why RHEL is not affected, and acknowledging that other Red Hat services are impacted. This approach offers a clearer and more complete picture for all customers.",
     "description": "A flaw was found in libcurl. This vulnerability allows an attacker to trigger a buffer overflow via an integer overflow in zlib 1.2.0.3 or older when libcurl performs automatic gzip decompression.",
-    "rewritten_statement": "This flaw is only exploitable when libcurl uses zlib version 1.2.0.3 or older for gzip decompression. Supported versions of Red Hat Enterprise Linux are not affected as they ship with newer versions of the zlib library. Some Red Hat services that bundle older third-party tools may be affected."
+    "suggested_statement": "This flaw is only exploitable when libcurl uses zlib version 1.2.0.3 or older for gzip decompression. Supported versions of Red Hat Enterprise Linux are not affected as they ship with newer versions of the zlib library. Some Red Hat services that bundle older third-party tools may be affected."
 }
 
 ```
