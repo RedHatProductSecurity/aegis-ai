@@ -10,11 +10,29 @@ from aegis_ai.features.cve.data_models import (
     PIIReportModel,
     RewriteStatementModel,
     RewriteDescriptionModel,
+    CVEDataCriticOutput,
 )
 from aegis_ai.features.cve.data_models import CVEFeatureInput
 from aegis_ai.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
+
+
+class CVEDataCritic(Feature):
+    """Based on current CVE information and context assess quality of CVE information."""
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        prompt = AegisPrompt(
+            user_instruction="Your task is to examine the provided CVE data and generate a fast and brief data assessment of its quality, confidence, completeness and internal consistency.",
+            goals="""
+            """,
+            rules="""
+            """,
+            context=CVEFeatureInput(cve_id=cve_id),
+            static_context=static_context,
+            output_schema=CVEDataCriticOutput.model_json_schema(),
+        )
+        return await self.run_if_safe(prompt, output_type=CVEDataCriticOutput)
 
 
 class SuggestImpact(Feature):
@@ -40,6 +58,7 @@ class SuggestImpact(Feature):
                 - Use github mcp tool to retrieve additional context from vulnerability reference url.
                 - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
                 - If cisa_kev_tool tool is available check if there are any related known exploits.
+                - Always use data_critic tool (**exactly once**) to assess underlying CVE data quality.
                 - Output 
                     - output a plausible CVSS 3.1 base vector and score.
                     - output a impact (which directly correlates to identified CVSS score) 
@@ -72,6 +91,7 @@ class SuggestCWE(Feature):
                     - Analyze vulnerability, identify CWE that matches root cause of weakness, being careful about memory management and buffer overflows.
                     - Perform search using mitre cwe tool cwe_searches to identify candidate CWEs (perform cwe_searches with 2-3 different queries).
                 - Use mitre cwe retrieve_cwes tool to get additional information on candidate CWEs.
+                - Always use data_critic tool (**exactly once**) to assess underlying CVE data quality.
                 - Select the top 2-3 most applicable CWEs (preference on applicability and higher similarity score) from the final set of candidate CWEs.
                 - The final list of suggested CWEs should be ranked from most to least applicable to the vulnerability. For example, the first item in the array should be the most applicable CWE based on entire vulnerability analysis.
                 Output should include:

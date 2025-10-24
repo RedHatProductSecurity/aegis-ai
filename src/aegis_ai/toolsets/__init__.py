@@ -32,15 +32,22 @@ from aegis_ai.toolsets.tools.osidb import osidb_toolset
 from aegis_ai.toolsets.tools.osvdev import osv_dev_cve_tool
 from aegis_ai.toolsets.tools.wikipedia import wikipedia_tool
 from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
+from aegis_ai.toolsets.tools.data_critic import data_toolset
 
 logger = logging.getLogger(__name__)
 
 
 class LoggingToolset(WrapperToolset):
+    def __init__(self, wrapped, no_args: bool = False):
+        super().__init__(wrapped)
+        self.no_args: bool = no_args
+
     async def call_tool(self, name: str, tool_args: dict, ctx: RunContext, tool):  # type: ignore[override]
         # log tool call entry
         args = str(tool_args) if tool_args else ""
         prefix = f"[tool call] {name}({args})"
+        if self.no_args:
+            prefix = f"[tool call] {name}"
         start = time.time()
         logger.info(f"{prefix} started")
 
@@ -199,6 +206,7 @@ if use_nvd_dev_tool in truthy:
     )
 
 # chain logging wrappers
+data_toolset = LoggingToolset(data_toolset, no_args=True)
 public_toolset = LoggingToolset(public_toolset)
 redhat_cve_toolset = LoggingToolset(redhat_cve_toolset)
 public_cve_toolset = LoggingToolset(public_cve_toolset)

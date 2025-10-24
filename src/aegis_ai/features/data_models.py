@@ -11,9 +11,11 @@ class AegisFeatureModel(BaseModel):
     Metadata for Aegis features, nested within the main feature model.
     """
 
-    data_quality: Optional[Literal["POOR", "FAIR", "GOOD", "EXCELLENT"]] = Field(
-        None,
-        description="Overall assessment of the underlying data quality, completeness and internal consistency.",
+    data_quality: Optional[float] = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="A precision-driven numerical representation of the underlying data quality, completeness and internal consistency, scaled from 0.00 to 1.00, where 1.00 is complete and excellent level of data quality and 0 is either very poor or unknown data quality.",
     )
 
     confidence: float = Field(
