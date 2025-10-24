@@ -168,8 +168,6 @@ if ENABLE_CONSOLE:
                     "goals": goals,
                     "rules": rules,
                     "confidence": response.confidence,
-                    "completeness": response.completeness,
-                    "consistency": response.consistency,
                     "tools_used": response.tools_used,
                     "explanation": response.explanation,
                     "answer": response.answer,

@@ -51,9 +51,8 @@ else:
 
 class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
     def evaluate(self, ctx: EvaluatorContext[str, AegisFeatureModel]) -> float:
-        # multiply all metrics to get overall score to make it simple for now
-        # FIXME: should we use separate evaluator for each of them?
-        score = ctx.output.confidence * ctx.output.completeness * ctx.output.consistency
+        # start with confidence metric
+        score = ctx.output.confidence
 
         # do not check explanation length for IdentifyPII and CVSSDiffExplainer because
         # the explanation is empty in the most common case

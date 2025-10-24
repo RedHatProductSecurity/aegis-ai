@@ -1,7 +1,5 @@
 {
     "confidence": 0.95,
-    "completeness": 1.0,
-    "consistency": 1.0,
     "tools_used": [
         "osidb_tool"
     ],
