@@ -126,6 +126,15 @@ class RelativePathFilter(logging.Filter):
         return True
 
 
+class LivenessProbeLogFilter(logging.Filter):
+    """skip logging for livenessProbe"""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # skip logging for livenessProbe
+        args = getattr(record, "args", ())
+        return args[1:] != ("GET", "/healthz", "1.1", 204)
+
+
 class AppSettings(BaseSettings):
     default_llm_host: str = llm_host
     default_llm_model: str = llm_model
@@ -197,6 +206,10 @@ def config_logging(level="INFO"):
 
             # Avoid using basename only in log messages (especially __init__.py is ambiguous)
             handler.addFilter(RelativePathFilter())
+
+            # Suppress liveness probe access logs on uvicorn.access
+            if logger_name == "uvicorn.access":
+                handler.addFilter(LivenessProbeLogFilter())
 
     # Log startup message after handlers are configured so DEBUG is visible when enabled
     logger.debug(f"starting aegis-{__version__}")
