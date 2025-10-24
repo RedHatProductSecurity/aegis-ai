@@ -7,7 +7,7 @@ import sys
 from typing import no_type_check
 
 from aegis_ai import config_logging
-from aegis_ai.tools.cwe import cwe_manager
+from aegis_ai.toolsets.tools.cwe import cwe_manager
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 

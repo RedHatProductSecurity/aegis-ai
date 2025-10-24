@@ -9,7 +9,7 @@ from pydantic_ai import (
     Tool,
 )
 
-from aegis_ai.tools import BaseToolOutput, BaseToolInput
+from aegis_ai.toolsets.tools import BaseToolOutput, BaseToolInput
 
 logger = logging.getLogger(__name__)
 

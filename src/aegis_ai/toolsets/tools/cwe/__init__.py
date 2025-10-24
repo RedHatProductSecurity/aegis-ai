@@ -20,8 +20,8 @@ from pydantic_ai import Tool, RunContext
 from pydantic_ai.toolsets import FunctionToolset
 from aegis_ai import config_dir
 from aegis_ai.data_models import CWEID, cweid_validator
-from aegis_ai.tools import default_tool_http_headers
-from aegis_ai.tools.cwe.data_models import CWESearchInput, CWE, CWEToolInput
+from aegis_ai.toolsets.tools import default_tool_http_headers
+from aegis_ai.toolsets.tools.cwe.data_models import CWESearchInput, CWE, CWEToolInput
 
 logger = logging.getLogger(__name__)
 

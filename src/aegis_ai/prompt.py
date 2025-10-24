@@ -3,7 +3,6 @@ from typing import Optional, Dict
 from pydantic import BaseModel
 
 from aegis_ai import get_settings, logger
-from aegis_ai.agents import safety_agent
 
 system_instruction = """
 You are a Red Hat product security assistant.
@@ -39,6 +38,8 @@ class AegisPrompt(BaseModel):
 
     async def is_safe(self):
         """Prompt safety check"""
+        from aegis_ai.agents.safety import default as safety_agent
+
         if not (get_settings().safety_enabled):
             logger.debug("Safety agent check is disabled.")
             return True

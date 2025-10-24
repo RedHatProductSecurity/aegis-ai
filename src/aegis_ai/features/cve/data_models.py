@@ -5,11 +5,23 @@ from pydantic import Field, BaseModel, field_validator
 
 from aegis_ai.data_models import CVEID, CVSS3Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
-from aegis_ai.tools.cwe import cwe_manager
+from aegis_ai.toolsets.tools.cwe import cwe_manager
 
 
 class CVEFeatureInput(BaseModel):
     cve_id: CVEID = Field(..., description="CVE ID input")
+
+
+class CVEDataCriticOutput(AegisFeatureModel):
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Data critique on quality, completeness and consistency of CVE data.",
+    )
 
 
 class SuggestImpactModel(AegisFeatureModel):

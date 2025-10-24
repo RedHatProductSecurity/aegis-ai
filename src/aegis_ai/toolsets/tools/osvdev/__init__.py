@@ -16,7 +16,11 @@ from requests import RequestException
 
 from aegis_ai import logger
 from aegis_ai.data_models import CVEID
-from aegis_ai.tools import default_tool_http_headers, BaseToolOutput, BaseToolInput
+from aegis_ai.toolsets.tools import (
+    default_tool_http_headers,
+    BaseToolOutput,
+    BaseToolInput,
+)
 
 # timeout in seconds for GET requests
 REQUEST_TIMEOUT_GET = 5

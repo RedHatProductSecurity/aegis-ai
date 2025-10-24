@@ -26,12 +26,12 @@ from aegis_ai import (
     use_nvd_dev_tool,
     use_cisa_kev_tool,
 )
-from aegis_ai.tools.cwe import cwe_toolset
-from aegis_ai.tools.kernel_cves import kernel_cve_tool
-from aegis_ai.tools.osidb import osidb_toolset
-from aegis_ai.tools.osvdev import osv_dev_cve_tool
-from aegis_ai.tools.wikipedia import wikipedia_tool
-from aegis_ai.tools.cisakev import cisa_kev_tool
+from aegis_ai.toolsets.tools.cwe import cwe_toolset
+from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
+from aegis_ai.toolsets.tools.osidb import osidb_toolset
+from aegis_ai.toolsets.tools.osvdev import osv_dev_cve_tool
+from aegis_ai.toolsets.tools.wikipedia import wikipedia_tool
+from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
 
 logger = logging.getLogger(__name__)
 

@@ -7,14 +7,14 @@ import subprocess
 import time
 from pathlib import Path
 from threading import Lock
-from typing import Any, Dict, List, Optional, Set, TypedDict
+from typing import Any, Dict, List, Optional, Set
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 from pydantic_ai import Tool, RunContext
 
 from aegis_ai import config_dir
 from aegis_ai.data_models import CVEID
-from aegis_ai.tools import BaseToolInput, BaseToolOutput
+from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +31,43 @@ class LINUXCVEToolInput(BaseToolInput):
     )
 
 
-class CVEMetadata(TypedDict):
+class CVEMetadata(BaseModel):
     """A structured dictionary for returning CVE data."""
 
-    cve_id: str
-    source_files: List[str]
-    commit_hashes: List[str]
-    affected_files: List[str]
-    json_data: Optional[Dict[str, Any]]
-    mbox_data: Optional[str]
-    scraped_at: float
+    cve_id: str = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    source_files: List[str] = Field(
+        ...,
+        description="Related source files.",
+    )
+
+    commit_hashes: List[str] = Field(
+        ...,
+        description="related Git commit hashes.",
+    )
+
+    affected_files: List[str] = Field(
+        ...,
+        description="affected files.",
+    )
+
+    json_data: Optional[Dict[str, Any]] = Field(
+        ...,
+        description="metadata json.",
+    )
+
+    mbox_data: Optional[str] = Field(
+        ...,
+        description="The email information associated with linux cve discussion.",
+    )
+
+    scraped_at: float = Field(
+        ...,
+        description="The time metadata was gathered.",
+    )
 
 
 class LINUXCVEToolResponse(BaseToolOutput):

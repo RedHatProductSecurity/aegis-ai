@@ -6,7 +6,7 @@ from pydantic_ai.tools import RunContext, Tool
 from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
 
 from aegis_ai import config_logging
-from aegis_ai.tools.osidb import CVE, OSIDBToolInput
+from aegis_ai.toolsets.tools.osidb import CVE, OSIDBToolInput
 import aegis_ai.toolsets as ts
 
 from evals.features.common import eval_metrics
