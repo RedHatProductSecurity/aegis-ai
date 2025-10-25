@@ -8,8 +8,8 @@ from aegis_ai.features.cve.data_models import (
     SuggestImpactModel,
     SuggestCWEModel,
     PIIReportModel,
-    RewriteStatementModel,
-    RewriteDescriptionModel,
+    SuggestStatementModel,
+    SuggestDescriptionModel,
 )
 from aegis_ai.features.cve.data_models import CVEFeatureInput
 from aegis_ai.prompt import AegisPrompt
@@ -26,8 +26,8 @@ class SuggestImpact(Feature):
             goals="""
                 - User Interaction is Required for an application to connect a malicious server.
                 - Denial of Service (DoS) has lower impact on applications compared to daemons and servers.
-                - Do not base analysis decisions on which RH products are affected.                
-                - Based on all the previous analysis, identify the most appropriate CVSS 3.1 vector and score - using this identify impact rating (Critical, Important, Moderate, or Low).                             
+                - Do not base analysis decisions on which RH products are affected.
+                - Based on all the previous analysis, identify the most appropriate CVSS 3.1 vector and score - using this identify impact rating (Critical, Important, Moderate, or Low).
             """,
             rules="""
                 - Use the following Red Hat Impact scale as a guide:
@@ -115,12 +115,12 @@ class IdentifyPII(Feature):
         return await self.run_if_safe(prompt, output_type=PIIReportModel)
 
 
-class RewriteDescriptionText(Feature):
-    """Based on current CVE information and context rewrite/create description and title."""
+class SuggestDescriptionText(Feature):
+    """Based on current CVE information and context suggest a description and title."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
-            user_instruction="Rewrite the CVE description and title to be brief, clear, and accurate. If missing, propose them.",
+            user_instruction="Suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them.",
             goals="""
                 - Provide a concise description and a short title.
                 - Include confidence and quality scores.
@@ -134,17 +134,17 @@ class RewriteDescriptionText(Feature):
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
-            output_schema=RewriteDescriptionModel.model_json_schema(),
+            output_schema=SuggestDescriptionModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=RewriteDescriptionModel)
+        return await self.run_if_safe(prompt, output_type=SuggestDescriptionModel)
 
 
-class RewriteStatementText(Feature):
-    """Based on current CVE information and context rewrite/create statement."""
+class SuggestStatementText(Feature):
+    """Based on current CVE information and context suggest a statement."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
-            user_instruction="Rewrite the CVE statement to briefly explain RH-specific context for impact; leave empty if none.",
+            user_instruction="Suggest the CVE statement to briefly explain RH-specific context for impact; leave empty if none.",
             goals="""
                 - Clarify why RH impact may differ from industry reports.
                 - Provide customer-relevant context only.
@@ -157,9 +157,9 @@ class RewriteStatementText(Feature):
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
-            output_schema=RewriteStatementModel.model_json_schema(),
+            output_schema=SuggestStatementModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=RewriteStatementModel)
+        return await self.run_if_safe(prompt, output_type=SuggestStatementModel)
 
 
 class CVSSDiffExplainer(Feature):

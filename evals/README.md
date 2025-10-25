@@ -72,13 +72,13 @@ These evaluators are used for **all** Aegis features:
 | custom `LLMJudge` | [test_cvss_diff.py](features/cve/test_cvss_diff.py) | | &check; | "Unless the explanation field is empty, it elaborates on the reason why Red Hat assigned a different CVSS score." |
 | `IdentifyPIIEvaluator` | [test_identify_pii.py](features/cve/test_identify_pii.py) | | &check; | check the `contains_PII` flag in the answer |
 | custom `LLMJudge` | [test_identify_pii.py](features/cve/test_identify_pii.py) | | &check; | "If PII is found, the explanation contains a bulleted list." |
-| `OriginalTitleEvaluator` | [test_rewrite_description.py](features/cve/test_rewrite_description.py) | | &check; | check whether original title is propagated by the model |
-| `PromptLeakEvaluator` | [test_rewrite_description.py](features/cve/test_rewrite_description.py) | | &check; | check that text from the prompt template does not leak into the response |
-| custom `LLMJudge` | [test_rewrite_description.py](features/cve/test_rewrite_description.py) | | &check; | "rewritten_title and rewritten_description do not contain any versioning info" |
-| custom `LLMJudge` | [test_rewrite_description.py](features/cve/test_rewrite_description.py) | | &check; | "rewritten_title briefly summarizes what is described in rewritten_description" |
-| custom `LLMJudge` | [test_rewrite_statement.py](features/cve/test_rewrite_statement.py) | | &check; | "The statement does not suggest to apply a patch or rebuild the software." |
-| custom `LLMJudge` | [test_rewrite_statement.py](features/cve/test_rewrite_statement.py) | | &check; | "The statement does not describe the code change that was used to eliminate the flaw." |
-| custom `LLMJudge` | [test_rewrite_statement.py](features/cve/test_rewrite_statement.py) | | &check; | "The statement does not duplicate the flaw description." |
+| `OriginalTitleEvaluator` | [test_suggest_description.py](features/cve/test_suggest_description.py) | | &check; | check whether original title is propagated by the model |
+| `PromptLeakEvaluator` | [test_suggest_description.py](features/cve/test_suggest_description.py) | | &check; | check that text from the prompt template does not leak into the response |
+| custom `LLMJudge` | [test_suggest_description.py](features/cve/test_suggest_description.py) | | &check; | "suggested_title and suggested_description do not contain any versioning info" |
+| custom `LLMJudge` | [test_suggest_description.py](features/cve/test_suggest_description.py) | | &check; | "suggested_title briefly summarizes what is described in suggested_description" |
+| custom `LLMJudge` | [test_suggest_statement.py](features/cve/test_suggest_statement.py) | | &check; | "The statement does not suggest to apply a patch or rebuild the software." |
+| custom `LLMJudge` | [test_suggest_statement.py](features/cve/test_suggest_statement.py) | | &check; | "The statement does not describe the code change that was used to eliminate the flaw." |
+| custom `LLMJudge` | [test_suggest_statement.py](features/cve/test_suggest_statement.py) | | &check; | "The statement does not duplicate the flaw description." |
 | `SuggestCweEvaluator` | [test_suggest_cwe.py](features/cve/test_suggest_cwe.py) | &check; | | compare the provided list of CWEs with the expected one while taking length of the list and confidence into account |
 | `SuggestImpactEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | &check; | | compare the provided impact and CVSS3 score with the expected values while taking the confidence into account |
 | custom `LLMJudge` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | &check; | "explanation does not mention which Red Hat products are affected" |

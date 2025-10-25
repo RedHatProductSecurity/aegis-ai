@@ -102,8 +102,8 @@ components:
       enum:
       - suggest-impact
       - suggest-cwe
-      - rewrite-description
-      - rewrite-statement
+      - suggest-description
+      - suggest-statement
       - identify-pii
       - cvss-diff-explainer
       title: ComponentFeatureName

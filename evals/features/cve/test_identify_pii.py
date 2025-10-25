@@ -17,7 +17,7 @@ from evals.features.common import (
 
 class IdentifyPIICase(Case):
     def __init__(self, cve_id, contains_PII):
-        """cve_id given as CVE-YYYY-NUM is the flaw we rewrite description for."""
+        """cve_id given as CVE-YYYY-NUM is the flaw we look for PII."""
         super().__init__(
             name=f"identify-pii-for-{cve_id}",
             inputs=cve_id,
@@ -42,7 +42,7 @@ class IdentifyPIIEvaluator(Evaluator[str, PIIReportModel]):
 
 
 async def identify_pii(cve_id: CVEID) -> PIIReportModel:
-    """use rh_feature_agent to rewrite description for the given CVE"""
+    """use rh_feature_agent to look for PII in the given CVE"""
     feature = IdentifyPII(rh_feature_agent)
     result = await feature.exec(cve_id)
     return result.output
