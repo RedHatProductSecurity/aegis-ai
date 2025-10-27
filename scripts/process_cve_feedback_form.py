@@ -56,8 +56,11 @@ def process_cwe_feedback(file_path):
             # skip a row with no expected CWE
             continue
 
+        # remove parentheses in case we get "(CWE-119|CWE-122)"
+        exp_cwe = exp_cwe.strip("()")
+
         # create a well formatted list out of the full-text field
-        cwe_list = [item.strip() for item in re.split(r" *(?:[,/]|or) *", exp_cwe)]
+        cwe_list = [item.strip() for item in re.split(r" *(?:[,/|]|or) *", exp_cwe)]
 
         # the rows are sorted by CVE -> check for subsequent rows with identical CVE
         if data and data[-1][0] == cve:
@@ -71,7 +74,7 @@ def process_cwe_feedback(file_path):
         # Optionally warn about CWEs not in the CWE-699 view (MITRE)
         for cwe in cwe_list:
             cwe_data = cwe_defs.get(cwe)
-            if cwe_data and cwe_data.get("disallowed", True):
+            if not cwe_data or cwe_data.get("disallowed", True):
                 print(f"{' ' * 4}# FIXME: {cwe} is not included in the CWE-699 view!")
 
         # print single instantiation of SuggestCweCase
