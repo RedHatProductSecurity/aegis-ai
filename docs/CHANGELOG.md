@@ -4,11 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.4.0] - not yet released
+
 ### Changed
+- web console disabled by default
 - bump to pydantic-ai 1.4.0
+- simplified `AegisFeatureModel` to reduce LLM overhead
 - refactored agents and toolsets internals
+- renamed `rewrite-{description,statement}` to `suggest-{description,statement}`, respectively
 
 ### Added
+- added `/healthz` endpoint of the web server without authentication and logging
 - added `AEGIS_AGENT_MAX_RETRIES` env var defining number of times agent will retry.
 - added new data_quality assessment via data critic subagent to all analysis.
 
