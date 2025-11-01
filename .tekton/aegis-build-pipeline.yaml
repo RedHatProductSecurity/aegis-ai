@@ -184,7 +184,7 @@ spec:
         image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:43d997ac61bef77eaee0413fe50c29b66eb4d0d32066f5bd4a83f39e4b2d9457
         args: [use, $(params.SOURCE_ARTIFACT)=/var/workdir/source]
       - name: git-tags-to-image-labels
-        image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:602df003c97d1b692bb4e3830073ad7525c2e3a4e461ad104c563b9ce29fd967
+        image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:eea470200526678b6a1889fec5f307620c7761a1e83dc2517a908322926a8324
         workingDir: /var/workdir/source
         script: |
           #!/bin/bash -ex
