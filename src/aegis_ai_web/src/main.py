@@ -85,18 +85,13 @@ if kerberos_spn:
     app.add_middleware(CustomGSSAPIMiddleware, spn=kerberos_spn)
 
 # middleware enabling CORS
-cors_target_url = os.getenv("AEGIS_CORS_TARGET_URL", "http://localhost:5173")
-origins = [
-    cors_target_url,
-    "https://localhost",
-    "https://localhost:5173",
-]
+cors_target_regex = os.getenv("AEGIS_CORS_TARGET_REGEX", "http(s)?://localhost(:5173)?")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
+    allow_origin_regex=cors_target_regex,
 )
 
 BASE_DIR = Path(__file__).parent

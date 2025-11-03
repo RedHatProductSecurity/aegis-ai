@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - simplified `AegisFeatureModel` to reduce LLM overhead
 - refactored agents and toolsets internals
 - renamed `rewrite-{description,statement}` to `suggest-{description,statement}`, respectively
+- `AEGIS_CORS_TARGET_URL` was replaced by `AEGIS_CORS_TARGET_REGEX` to support multiple CORS origins
 
 ### Added
 - added `/healthz` endpoint of the web server without authentication and logging
