@@ -155,17 +155,6 @@ class SuggestDescriptionModel(AegisFeatureModel):
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
-    original_title: str = Field(
-        ...,
-        description="Original CVE title",
-    )
-
-    # FIXME: This field is usually empty.  Do we really need it?
-    original_description: str = Field(
-        ...,
-        description="Original CVE description",
-    )
-
     components: List = Field(
         ...,
         description="List of affected components",

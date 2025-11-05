@@ -14,7 +14,6 @@ from evals.features.common import (
     make_eval_reason,
     run_evaluation,
 )
-from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
 class SuggestDescriptionCase(Case):
@@ -25,16 +24,6 @@ class SuggestDescriptionCase(Case):
             inputs=cve_id,
             expected_output=None,
             metadata={"difficulty": "easy"},
-        )
-
-
-class OriginalTitleEvaluator(Evaluator[str, SuggestDescriptionModel]):
-    async def evaluate(self, ctx) -> EvaluationReason:
-        """check whether original title is propagated by the model"""
-        cve = await osidb_cache_retrieve(ctx.inputs)
-        return make_eval_reason(
-            ctx.output.original_title == cve.title,
-            "original_title does not match original title",
         )
 
 
@@ -92,7 +81,6 @@ cases = [
 
 # evaluators
 evals = common_feature_evals + [
-    OriginalTitleEvaluator(),
     PromptLeakEvaluator(),
     create_llm_judge(
         rubric="suggested_title and suggested_description do not contain any versioning info"
