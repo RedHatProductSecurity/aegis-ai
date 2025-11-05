@@ -47,21 +47,22 @@ class PromptLeakEvaluator(Evaluator[str, SuggestDescriptionModel]):
 
     async def evaluate(self, ctx) -> EvaluationReason:
         """check that text from the prompt template does not leak into the response"""
-        if self._match_re_in_td(ctx, r"'component.name'"):
-            return make_eval_reason(
-                fail_reason="'component_name' appears in title or description"
-            )
 
-        if self._match_re_in_td(ctx, r"gluster"):
-            return make_eval_reason(
-                fail_reason="'gluster' appears in title or description"
-            )
+        # a list of unwanted regular expressions we chek for
+        check_list = [
+            r"'component.name'",
+            r"gluster",
+            r"samba",
+        ]
 
-        if self._match_re_in_td(ctx, r"samba"):
-            return make_eval_reason(
-                fail_reason="'samba' appears in title or description"
-            )
+        # go through the list of regexes one by one
+        for r in check_list:
+            if self._match_re_in_td(ctx, r):
+                return make_eval_reason(
+                    fail_reason=f'"{r}" appears in title or description'
+                )
 
+        # no match
         return EvaluationReason(True)
 
 
