@@ -121,6 +121,10 @@ def handle_eval_report(report: EvaluationReport):
             if result.value is False:
                 failures += f"{case.name}: {result.source}: {result.reason}\n"
 
+        # evaluator failures
+        for ef in case.evaluator_failures:
+            failures += f"{case.name}: {ef.name}: {ef.error_message}\n"
+
         # score threshold
         for result in case.scores.values():
             score = result.value
