@@ -157,18 +157,23 @@ class SuggestDescriptionModel(AegisFeatureModel):
 
     components: List = Field(
         ...,
-        description="List of affected components",
+        description="list of affected components",
     )
 
     explanation: str = Field(
         ...,
-        description="""
-        Explain rationale behind suggested CVE description and title.
-        """,
+        description="Explain rationale behind suggested CVE description and title.",
     )
 
-    suggested_title: str = Field(..., description="suggested CVE title.")
-    suggested_description: str = Field(..., description="suggested CVE description.")
+    suggested_title: str = Field(
+        ...,
+        description="suggested CVE title",
+    )
+
+    suggested_description: str = Field(
+        ...,
+        description="suggested CVE description",
+    )
 
 
 class SuggestStatementModel(AegisFeatureModel):
