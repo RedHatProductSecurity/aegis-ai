@@ -51,8 +51,8 @@ class PromptLeakEvaluator(Evaluator[str, SuggestDescriptionModel]):
         # a list of unwanted regular expressions we chek for
         check_list = [
             r"'component.name'",
-            r"gluster",
-            r"samba",
+            r"\[impact\]",
+            r"\[vector\]",
         ]
 
         # go through the list of regexes one by one
