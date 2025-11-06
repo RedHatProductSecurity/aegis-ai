@@ -186,6 +186,11 @@ def config_logging(level="INFO"):
         logger = logging.getLogger(logger_name)
         logger.setLevel(level)
 
+        if not logger.handlers:
+            # if no handlers are configured, use the basic logging handler
+            handler = logging.StreamHandler()
+            logging.basicConfig(level=level, handlers=[handler])
+
         # avoid duplicated uvicorn log messages
         if logger_name != "uvicorn":
             # Optional log file path: write to one file for root and uvicorn loggers
@@ -193,11 +198,6 @@ def config_logging(level="INFO"):
             if log_file_path:
                 file_handler = logging.FileHandler(log_file_path)
                 logger.addHandler(file_handler)
-
-        if not logger.handlers:
-            # if no handlers are configured, use the basic logging handler
-            handler = logging.StreamHandler()
-            logging.basicConfig(level=level, handlers=[handler])
 
         for handler in logger.handlers:
             # enable colors if connected to a TTY
