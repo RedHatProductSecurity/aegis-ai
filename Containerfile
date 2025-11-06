@@ -25,6 +25,7 @@ RUN microdnf --nodocs --setopt install_weak_deps=0 -y install \
     python3-devel \
     python3-pip \
     redhat-rpm-config \
+    tar \
     && microdnf --nodocs --setopt install_weak_deps=0 -y upgrade \
     && microdnf clean all
 
