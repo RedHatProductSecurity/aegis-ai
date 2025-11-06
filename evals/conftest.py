@@ -22,7 +22,8 @@ async def osidb_tool(ctx: RunContext, input: OSIDBToolInput) -> CVE:
 # enable logging to see progress
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging_for_session():
-    config_logging(level="INFO")
+    level = "DEBUG" if logging.getLogger().isEnabledFor(logging.DEBUG) else "INFO"
+    config_logging(level=level)
 
 
 # We need to cache OSIDB responses (and maintain them in git) to make
