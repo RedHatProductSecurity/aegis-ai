@@ -1,6 +1,8 @@
+import io
 import logging
 import os
 
+from rich.console import Console
 from typing import Sequence, Any
 
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
@@ -27,6 +29,9 @@ MIN_SCORE_THRESHOLD = 0.1
 
 # evaluation metrics (dict of ReportCaseAggregate objects)
 eval_metrics = {}
+
+
+logger = logging.getLogger(__name__)
 
 
 # if AEGIS_EVALS_LLM_HOST is set, use an independent LLM for evals
@@ -83,13 +88,22 @@ def make_eval_reason(value: bool = False, fail_reason: str = None):  # type: ign
 
 def handle_eval_report(report: EvaluationReport):
     """print evaluation summary and trigger assertion failure in case any assertion failed"""
+    # capture the report as a string
+    string_io = io.StringIO()
+    console = Console(file=string_io, force_terminal=True)
+
     # Only include durations when llm_max_jobs == 1 to avoid misleading timing information
     # in parallel job scenarios, where durations may not be representative.
     report.print(
+        console=console,
         include_input=True,
         include_output=True,
         include_durations=(llm_max_jobs == 1),
     )
+
+    # print the captured string through logger
+    report_text = string_io.getvalue()
+    logger.info(f"evaluation report for {report.name}:\n{report_text}")
 
     # record evaluation metrics to the global dict
     eval_metrics[report.name] = report.averages()
@@ -121,7 +135,7 @@ def handle_eval_report(report: EvaluationReport):
 async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) -> None:
     """create a dataset for the given cases/evaluators and evaluate the given task"""
     dataset = Dataset(cases=cases, evaluators=evals)
-    debug = logging.getLogger().isEnabledFor(logging.DEBUG)
+    debug = logger.isEnabledFor(logging.DEBUG)
     report = await dataset.evaluate(task, max_concurrency=llm_max_jobs, progress=debug)
     handle_eval_report(report)
 
