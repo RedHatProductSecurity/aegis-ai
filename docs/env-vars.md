@@ -9,6 +9,7 @@
 | `AEGIS_LLM_INPUT_TOKENS_WARN_THR` | Threshold for LLM input tokens to log a warning | 16384                  |
 | `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently      | 4                      |
 | `AEGIS_LLM_TIMEOUT_SECS`       | Timeout in seconds for a single LLM prompt      | 300                    |
+| `AEGIS_LOG_FILE`               | Optional log file (logs always go to stderr)    |                        |
 | `AEGIS_SAFETY_ENABLED`         | Enable separate model to check model safety     | `false`                |
 | `AEGIS_SAFETY_LLM_HOST`        | Safety LLM host                                 | `localhost:11434`      |
 | `AEGIS_SAFETY_LLM_MODEL`       | Safety LLM model                                | `granite3-guardian-2b` |

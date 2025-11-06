@@ -181,10 +181,18 @@ def config_logging(level="INFO"):
     # suppress noisy INFO messages: AFC is enabled with max remote calls: 10.
     logging.getLogger("google_genai.models").setLevel(logging.WARNING)
 
-    # iterate through the default logger (CLI/pytest) and unicorn loggers
+    # iterate through the default logger (CLI/pytest) and uvicorn loggers
     for logger_name in (None, "uvicorn", "uvicorn.error", "uvicorn.access"):
         logger = logging.getLogger(logger_name)
         logger.setLevel(level)
+
+        # avoid duplicated uvicorn log messages
+        if logger_name != "uvicorn":
+            # Optional log file path: write to one file for root and uvicorn loggers
+            log_file_path = os.getenv("AEGIS_LOG_FILE")
+            if log_file_path:
+                file_handler = logging.FileHandler(log_file_path)
+                logger.addHandler(file_handler)
 
         if not logger.handlers:
             # if no handlers are configured, use the basic logging handler
@@ -192,9 +200,10 @@ def config_logging(level="INFO"):
             logging.basicConfig(level=level, handlers=[handler])
 
         for handler in logger.handlers:
-            # write to stderr, enable colors if connected to a TTY
+            # enable colors if connected to a TTY
             tw = TerminalWriter(sys.stderr)
-            tw.hasmarkup = sys.stderr.isatty()
+            is_file = isinstance(handler, logging.FileHandler)
+            tw.hasmarkup = not is_file and sys.stderr.isatty()
 
             # use the same format as pytest uses by default
             log_format = (
