@@ -46,6 +46,9 @@ jobs:
       # (if unset, all of them need to succeed)
       AEGIS_EVALS_MIN_PASSED: ${{ vars.AEGIS_EVALS_MIN_PASSED }}
 
+      # will be uploaded to GitHub as an artifact
+      AEGIS_LOG_FILE: "/tmp/aegis-evals.log"
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -75,3 +78,12 @@ jobs:
 
       - name: Run evaluation suite
         run: make eval
+
+      - name: Upload Evals Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: "aegis-evals.log"
+          path: "${{ env.AEGIS_LOG_FILE }}"
+          
+          # Keep the artifact available for 5 days.
+          retention-days: 5
