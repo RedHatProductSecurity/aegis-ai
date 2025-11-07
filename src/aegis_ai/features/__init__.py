@@ -3,6 +3,7 @@ import logging
 import os
 
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,9 @@ llm_sem = asyncio.Semaphore(llm_max_jobs)
 
 # The threshold for LLM input tokens to log a warning
 llm_input_tokens_warn_thr = int(os.getenv("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 16384))
+
+# temperature override while retrying a prompt
+PROMPT_RETRY_TEMPERATURE = 0.9
 
 
 class Feature:
@@ -44,6 +48,9 @@ class Feature:
         Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
         Returns the model output on success, otherwise None.
         """
+        # lazy import to avoid circular deps
+        from aegis_ai.agents import agent_default_max_retries
+
         feat_name = self.__class__.__name__
         call_str = f"{feat_name}({prompt.context.cve_id})"
         logger.info(f"{call_str} = ?")
@@ -53,7 +60,28 @@ class Feature:
                 logger.warning(msg)
                 raise RuntimeError(msg)
 
-            result = await self._run(call_str, prompt, **kwargs)
+            # will be merged with self.agent.model_settings by pydantic_ai
+            model_settings = {}
+
+            # retry loop
+            for attempt in range(agent_default_max_retries):
+                try:
+                    result = await self._run(
+                        call_str, prompt, model_settings=model_settings, **kwargs
+                    )
+                    break
+                except UnexpectedModelBehavior as e:
+                    if "RECITATION" not in str(e):
+                        # propagate other exceptions
+                        raise
+
+                    # retry with high temperature
+                    # see https://github.com/RedHatProductSecurity/aegis-ai/issues/271
+                    model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
+                    msg = f"{call_str} retrying prompt with temperature={PROMPT_RETRY_TEMPERATURE}"
+                    msg += f", attempt {attempt + 1}/{agent_default_max_retries}"
+                    logger.warning(msg)
+                    continue
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens
