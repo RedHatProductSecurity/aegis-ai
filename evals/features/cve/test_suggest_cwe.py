@@ -88,6 +88,7 @@ cases = [
     SuggestCweCase("CVE-2022-50471", ["CWE-1341"]),
     SuggestCweCase("CVE-2022-50477", ["CWE-772"]),
     SuggestCweCase("CVE-2022-50494", ["CWE-366", "CWE-821"]),
+    SuggestCweCase("CVE-2022-50558", ["CWE-476"]),
     SuggestCweCase("CVE-2023-53116", ["CWE-763"]),
     SuggestCweCase("CVE-2023-53123", ["CWE-763"]),
     SuggestCweCase("CVE-2023-53174", ["CWE-772", "CWE-459"]),
