@@ -36,6 +36,7 @@ def create_aegis_agent(**kwargs: Any) -> Agent:
     )
 
 
+# this object is only used by CLI
 simple_agent = create_aegis_agent(
     name="SimpleAgent",
     output_type=AegisAnswer,

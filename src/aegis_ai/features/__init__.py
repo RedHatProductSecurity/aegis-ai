@@ -62,8 +62,8 @@ class Feature:
                 f"{call_str}: too many input tokens processed by LLM: {input_tokens}"
             )
 
-        # TODO: introduce a common logging hook for classes inherited from Feature
-        outcome = result.output.cwe if feat_name == "SuggestCWE" else "[...]"
+        # log outcome of the feature call (if provided by the inherited class)
+        outcome = result.output.printable_outcome()
         logger.info(f"{call_str} = {outcome}")
 
         return result

@@ -111,6 +111,10 @@ class SuggestCWEModel(AegisFeatureModel):
         logging.debug(f"Filtering {cwes} in allowed cwe ids: {allowed_cwe_ids}.")
         return [cwe for cwe in cwes if cwe in allowed_cwe_ids]
 
+    def printable_outcome(self) -> str:
+        """override the logging hook to print the resulting CWE list"""
+        return str(self.cwe)
+
 
 class PIIReportModel(AegisFeatureModel):
     """
