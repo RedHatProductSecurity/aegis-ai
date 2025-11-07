@@ -21,6 +21,24 @@ class Feature:
     def __init__(self, agent: Agent):
         self.agent = agent
 
+    async def _run(self, call_str, prompt, **kwargs):
+        try:
+            runner = self.agent.run(prompt.to_string(), **kwargs)
+            return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
+
+        except asyncio.TimeoutError:
+            # fmt: off
+            msg = f"{call_str}: LLM request timed out after {llm_prompt_timeout} seconds"
+            logger.warning(msg)
+            raise RuntimeError(msg)
+            # fmt: on
+
+        except Exception as e:
+            # log only exception name by default, details only when debugging
+            logger.warning(f"{call_str} raised an exception: {e.__class__.__name__}")
+            logger.debug(f"{call_str} raised an exception: {e}")
+            raise
+
     async def run_if_safe(self, prompt, **kwargs):
         """
         Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
@@ -35,22 +53,7 @@ class Feature:
                 logger.warning(msg)
                 raise RuntimeError(msg)
 
-            try:
-                runner = self.agent.run(prompt.to_string(), **kwargs)
-                result = await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
-
-            except asyncio.TimeoutError:
-                msg = f"{call_str}: LLM request timed out after {llm_prompt_timeout} seconds"
-                logger.warning(msg)
-                raise RuntimeError(msg)
-
-            except Exception as e:
-                # log only exception name by default, details only when debugging
-                logger.warning(
-                    f"{call_str} raised an exception: {e.__class__.__name__}"
-                )
-                logger.debug(f"{call_str} raised an exception: {e}")
-                raise
+            result = await self._run(call_str, prompt, **kwargs)
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens
