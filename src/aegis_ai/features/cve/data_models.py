@@ -71,6 +71,10 @@ class SuggestImpactModel(AegisFeatureModel):
         description="Suggested Red Hat CVSS3.1 vector",
     )
 
+    def printable_outcome(self) -> str:
+        """override the logging hook to print the resulting suggestion"""
+        return f"{self.impact} {self.cvss3_score} {self.cvss3_vector}"
+
 
 class SuggestCWEModel(AegisFeatureModel):
     """
