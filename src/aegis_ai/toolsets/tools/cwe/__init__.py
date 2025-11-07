@@ -232,7 +232,7 @@ class CWEManager:
                 cwe_id = self._index_to_cweid[idx]
                 cwe_details = self._definitions.get(cwe_id)
                 if cwe_details and not cwe_details["disallowed"]:
-                    logger.info(f"Matched on allowed {cwe_id} with score: {score:.4f}")
+                    logger.debug(f"Matched on allowed {cwe_id} with score: {score:.4f}")
                     results.append(CWE(cwe_id=cwe_id, score=score, **cwe_details))
         return results
 
