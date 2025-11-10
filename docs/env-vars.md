@@ -7,7 +7,7 @@
 | `AEGIS_LLM_HOST`               | Aegis LLM host                                  | `localhost:11434`      |
 | `AEGIS_LLM_MODEL`              | Aegis LLM model                                 | `llama3.2:latest`      |
 | `AEGIS_LLM_INPUT_TOKENS_WARN_THR` | Threshold for LLM input tokens to log a warning | 16384                  |
-| `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently      | 4                      |
+| `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently      | 8                      |
 | `AEGIS_LLM_TIMEOUT_SECS`       | Timeout in seconds for a single LLM prompt      | 300                    |
 | `AEGIS_LOG_FILE`               | Optional log file (logs always go to stderr)    |                        |
 | `AEGIS_SAFETY_ENABLED`         | Enable separate model to check model safety     | `false`                |
@@ -16,6 +16,7 @@
 | `AEGIS_SAFETY_OPENAPI_KEY`     | Safety openai key                               |                        |
 | `AEGIS_ML_CVE_DATA_DIR`        | Directory containing CVE training data          |                        |
 | `AEGIS_AGENT_MAX_RETRIES`      | Agent max retries                               | 5                      |
+| `AEGIS_LLM_ASYNCIO_QUEUE_LIMIT`      | LLM asyncio process queue                       | 500                    |
 
 
 # REST API settings

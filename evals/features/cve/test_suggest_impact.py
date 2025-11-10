@@ -81,6 +81,8 @@ cases = [
     SuggestImpactCase("CVE-2024-53232", "MODERATE", 4.4),
     SuggestImpactCase("CVE-2025-23395", "MODERATE", 6.8),
     SuggestImpactCase("CVE-2025-5399", "MODERATE", 4.3),
+    SuggestImpactCase("CVE-2025-9573", "IMPORTANT", 7.2),
+    SuggestImpactCase("CVE-2025-62518", "IMPORTANT", 7.1),
     # TODO: add more cases
 ]
 

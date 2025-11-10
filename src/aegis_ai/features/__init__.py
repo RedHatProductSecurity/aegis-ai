@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 llm_prompt_timeout = int(os.getenv("AEGIS_LLM_TIMEOUT_SECS", "300"))
 
 # Cap concurrent LLM calls across the process
-llm_max_jobs = int(os.getenv("AEGIS_LLM_MAX_JOBS", "4"))
-llm_sem = asyncio.Semaphore(llm_max_jobs)
+llm_max_jobs = int(os.getenv("AEGIS_LLM_MAX_JOBS", "8"))
+llm_asyncio_queue_limit = int(os.getenv("AEGIS_LLM_ASYNCIO_QUEUE_LIMIT", 500))
 
 # The threshold for LLM input tokens to log a warning
 llm_input_tokens_warn_thr = int(os.getenv("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 16384))
@@ -22,26 +22,35 @@ PROMPT_RETRY_TEMPERATURE = 0.9
 
 
 class Feature:
+    llm_queue = asyncio.Queue(maxsize=llm_asyncio_queue_limit)
+    llm_sem = asyncio.Semaphore(llm_max_jobs)
+
     def __init__(self, agent: Agent):
         self.agent = agent
 
-    async def _run(self, call_str, prompt, **kwargs):
-        try:
-            runner = self.agent.run(prompt.to_string(), **kwargs)
-            return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
+    async def _process_llm_job(self, call_str):
+        prompt, model_settings, kwargs = await self.llm_queue.get()
+        async with self.llm_sem:
+            try:
+                runner = self.agent.run(
+                    prompt.to_string(), model_settings=model_settings, **kwargs
+                )
+                return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
 
-        except asyncio.TimeoutError:
-            # fmt: off
-            msg = f"{call_str}: LLM request timed out after {llm_prompt_timeout} seconds"
-            logger.warning(msg)
-            raise RuntimeError(msg)
-            # fmt: on
+            except asyncio.TimeoutError:
+                # fmt: off
+                msg = f"{call_str}: LLM request timed out after {llm_prompt_timeout} seconds"
+                logger.warning(msg)
+                raise RuntimeError(msg)
+                # fmt: on
 
-        except Exception as e:
-            # log only exception name by default, details only when debugging
-            logger.warning(f"{call_str} raised an exception: {e.__class__.__name__}")
-            logger.debug(f"{call_str} raised an exception: {e}")
-            raise
+            except Exception as e:
+                # log only exception name by default, details only when debugging
+                logger.warning(
+                    f"{call_str} raised an exception: {e.__class__.__name__}"
+                )
+                logger.debug(f"{call_str} raised an exception: {e}")
+                raise
 
     async def run_if_safe(self, prompt, **kwargs):
         """
@@ -54,34 +63,36 @@ class Feature:
         feat_name = self.__class__.__name__
         call_str = f"{feat_name}({prompt.context.cve_id})"
         logger.info(f"{call_str} = ?")
-        async with llm_sem:
-            if not await prompt.is_safe():
-                msg = f"{call_str}: Safety agent blocked the prompt: unsafe content detected"
+        if not await prompt.is_safe():
+            msg = (
+                f"{call_str}: Safety agent blocked the prompt: unsafe content detected"
+            )
+            logger.warning(msg)
+            raise RuntimeError(msg)
+
+        # will be merged with self.agent.model_settings by pydantic_ai
+        model_settings = {}
+
+        # Put job on queue
+        await self.llm_queue.put((prompt, model_settings, kwargs))
+
+        # retry loop
+        for attempt in range(agent_default_max_retries):
+            try:
+                result = await self._process_llm_job(call_str)
+                break
+            except UnexpectedModelBehavior as e:
+                if "RECITATION" not in str(e):
+                    # propagate other exceptions
+                    raise
+
+                # retry with high temperature
+                # see https://github.com/RedHatProductSecurity/aegis-ai/issues/271
+                model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
+                msg = f"{call_str} retrying prompt with temperature={PROMPT_RETRY_TEMPERATURE}"
+                msg += f", attempt {attempt + 1}/{agent_default_max_retries}"
                 logger.warning(msg)
-                raise RuntimeError(msg)
-
-            # will be merged with self.agent.model_settings by pydantic_ai
-            model_settings = {}
-
-            # retry loop
-            for attempt in range(agent_default_max_retries):
-                try:
-                    result = await self._run(
-                        call_str, prompt, model_settings=model_settings, **kwargs
-                    )
-                    break
-                except UnexpectedModelBehavior as e:
-                    if "RECITATION" not in str(e):
-                        # propagate other exceptions
-                        raise
-
-                    # retry with high temperature
-                    # see https://github.com/RedHatProductSecurity/aegis-ai/issues/271
-                    model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
-                    msg = f"{call_str} retrying prompt with temperature={PROMPT_RETRY_TEMPERATURE}"
-                    msg += f", attempt {attempt + 1}/{agent_default_max_retries}"
-                    logger.warning(msg)
-                    continue
+                continue
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens

@@ -6,6 +6,7 @@ Aegis MCP - register mcp here
 import os
 import logging
 import time
+from dataclasses import dataclass
 
 from pydantic_ai.common_tools.tavily import tavily_search_tool
 from pydantic_ai.mcp import MCPServerStdio
@@ -25,6 +26,7 @@ from aegis_ai import (
     config_dir,
     use_nvd_dev_tool,
     use_cisa_kev_tool,
+    use_data_tools,
 )
 from aegis_ai.toolsets.tools.cwe import cwe_toolset
 from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
@@ -32,14 +34,22 @@ from aegis_ai.toolsets.tools.osidb import osidb_toolset
 from aegis_ai.toolsets.tools.osvdev import osv_dev_cve_tool
 from aegis_ai.toolsets.tools.wikipedia import wikipedia_tool
 from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
+from aegis_ai.toolsets.tools.data_critic import data_critic_toolset
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class LoggingToolset(WrapperToolset):
+    print_args: bool
+
+    def __init__(self, wrapped, print_args: bool = True):
+        super().__init__(wrapped)
+        self.print_args: bool = print_args
+
     async def call_tool(self, name: str, tool_args: dict, ctx: RunContext, tool):  # type: ignore[override]
         # log tool call entry
-        args = str(tool_args) if tool_args else ""
+        args = str(tool_args) if self.print_args else ""
         prefix = f"[tool call] {name}({args})"
         start = time.time()
         logger.info(f"{prefix} started")
@@ -198,7 +208,17 @@ if use_nvd_dev_tool in truthy:
         ]
     )
 
+# Toolset containing generic data tooling
+data_toolset = CombinedToolset([])
+if use_data_tools in truthy:
+    data_toolset = CombinedToolset(
+        [
+            data_critic_toolset,
+        ]
+    )
+
 # chain logging wrappers
 public_toolset = LoggingToolset(public_toolset)
 redhat_cve_toolset = LoggingToolset(redhat_cve_toolset)
 public_cve_toolset = LoggingToolset(public_cve_toolset)
+data_toolset = LoggingToolset(data_toolset, print_args=False)

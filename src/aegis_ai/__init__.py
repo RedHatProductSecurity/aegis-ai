@@ -105,6 +105,7 @@ use_wikipedia_mcp_tool = os.getenv("AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", "false")
 use_pypi_mcp_tool = os.getenv("AEGIS_USE_PYPI_MCP_CONTEXT", "false")
 use_nvd_dev_tool = os.getenv("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", "false")
 use_cisa_kev_tool = os.getenv("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", "false")
+use_data_tools = os.getenv("AEGIS_DATA_ENABLED", "false")
 
 
 # Ensure console logs include project-relative path and line number
@@ -148,6 +149,10 @@ class AppSettings(BaseSettings):
     safety_llm_host: str = os.getenv("AEGIS_SAFETY_LLM_HOST", "localhost:11434")
     safety_llm_model: str = os.getenv("AEGIS_SAFETY_LLM_MODEL", "granite3-guardian-2b")
     safety_llm_openapi_key: str = os.getenv("AEGIS_SAFETY_OPENAPI_KEY", "")
+
+    data_llm_host: str = os.getenv("AEGIS_DATA_LLM_HOST", "localhost:11434")
+    data_llm_model: str = os.getenv("AEGIS_DATA_LLM_MODEL", "")
+    data_llm_openapi_key: str = os.getenv("AEGIS_DATA_OPENAPI_KEY", "")
 
 
 @dataclass

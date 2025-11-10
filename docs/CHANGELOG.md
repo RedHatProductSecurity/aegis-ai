@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - added `/healthz` endpoint of the web server without authentication and logging
 - added `AEGIS_AGENT_MAX_RETRIES` env var defining number of times agent will retry.
-- added new data_quality assessment via data critic subagent to all analysis.
+- added new data subagent which uses a new `CVEDataCritic` feature performing data critic analysis on all features.
+- added `AEGIS_LLM_ASYNCIO_QUEUE_LIMIT` env var defining llm asyncio queue length .
 
 
 ## [0.3.1] - 2025-10-17

@@ -13,6 +13,7 @@ from aegis_ai.toolsets import (
     public_toolset,
     public_cve_toolset,
     redhat_cve_toolset,
+    data_toolset,
 )
 
 agent_default_max_retries = int(os.getenv("AEGIS_AGENT_MAX_RETRIES", "5"))
@@ -45,7 +46,7 @@ simple_agent = create_aegis_agent(
 rh_feature_agent = create_aegis_agent(
     name="RHFeatureAgent",
     retries=agent_default_max_retries,
-    toolsets=[redhat_cve_toolset, public_toolset],
+    toolsets=[redhat_cve_toolset, public_toolset, data_toolset],
 )
 
 public_feature_agent = create_aegis_agent(
