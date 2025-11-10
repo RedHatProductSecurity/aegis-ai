@@ -1,7 +1,8 @@
+import cvss
 import pytest
 
 from pydantic_evals import Case
-from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
@@ -10,6 +11,7 @@ from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
+    make_eval_reason,
     run_evaluation,
 )
 
@@ -38,6 +40,35 @@ class SuggestImpactCase(Case):
             expected_output={"impact": impact, "cvss3_score": cvss3_score},
             metadata={"difficulty": "easy"},
         )
+
+
+class CVSSValidator(Evaluator[str, SuggestImpactModel]):
+    async def evaluate(self, ctx) -> EvaluationReason:
+        """verify that cvss3_score and cvss3_vector are consistent"""
+        try:
+            # parse cvss3_score as float
+            cvss3_score = float(ctx.output.cvss3_score)
+        except Exception:
+            return make_eval_reason(
+                fail_reason=f"failed to parse cvss3_score: {ctx.output.cvss3_score}"
+            )
+
+        try:
+            # parse cvss3_vector and compute the CVSS 3.1 score from it
+            cvss3_vector = ctx.output.cvss3_vector
+            cvss3_score_by_vector = cvss.CVSS3(cvss3_vector).scores()[0]
+        except Exception:
+            return make_eval_reason(
+                fail_reason=f"failed to parse cvss3_vector: {cvss3_vector}"
+            )
+
+        if cvss3_score != cvss3_score_by_vector:
+            return make_eval_reason(
+                fail_reason=f"suggested cvss3_score ({cvss3_score}) does not match suggested cvss3_vector ({cvss3_score_by_vector} {cvss3_vector})"
+            )
+
+        # no problem detected
+        return EvaluationReason(True)
 
 
 class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
@@ -86,6 +117,7 @@ cases = [
 
 # evaluators
 evals = common_feature_evals + [
+    CVSSValidator(),
     SuggestImpactEvaluator(),
     create_llm_judge(
         rubric="The 'explanation' output field does not list affected Red Hat products.  Ignore other fields in the output."
