@@ -15,7 +15,7 @@
 | `AEGIS_SAFETY_LLM_MODEL`       | Safety LLM model                                | `granite3-guardian-2b` |
 | `AEGIS_SAFETY_OPENAPI_KEY`     | Safety openai key                               |                        |
 | `AEGIS_ML_CVE_DATA_DIR`        | Directory containing CVE training data          |                        |
-| `AEGIS_AGENT_MAX_RETRIES`        | Agent max retries                               | 5                      |
+| `AEGIS_AGENT_MAX_RETRIES`      | Agent max retries                               | 5                      |
 
 
 # REST API settings

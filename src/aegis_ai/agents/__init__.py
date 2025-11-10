@@ -15,7 +15,7 @@ from aegis_ai.toolsets import (
     redhat_cve_toolset,
 )
 
-agent_default_max_retries = os.getenv("AEGIS_AGENT_MAX_RETRIES", 5)
+agent_default_max_retries = int(os.getenv("AEGIS_AGENT_MAX_RETRIES", "5"))
 
 
 def create_aegis_agent(**kwargs: Any) -> Agent:
