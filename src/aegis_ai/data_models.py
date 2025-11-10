@@ -62,7 +62,7 @@ cveid_validator = TypeAdapter(CVEID)
 CWEID = Annotated[
     str,
     StringConstraints(
-        pattern=r"^CWE-\d{1,5}$",
+        pattern=r"^CWE-[0-9]{1,5}$",
         strict=True,
         strip_whitespace=True,
     ),
