@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
 
-from google.genai.types import HarmCategory, HarmBlockThreshold
+from google.genai.types import HarmCategory, HarmBlockThreshold, SafetySettingDict
 from platformdirs import user_config_dir
 from functools import lru_cache
 
@@ -55,26 +55,27 @@ if "api.anthropic.com" in llm_host:
     default_llm_settings = AnthropicModelSettings()
 elif "generativelanguage.googleapis.com" in llm_host:
     default_llm_model = GoogleModel(model_name=llm_model)
+    google_safety_settings: list[SafetySettingDict] = [
+        {
+            "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
+            "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+        {
+            "category": HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+        {
+            "category": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        },
+        {
+            "category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            "threshold": HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+    ]
     default_llm_settings = GoogleModelSettings(
         google_thinking_config={"include_thoughts": False},
-        google_safety_settings=[
-            {
-                "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
-                "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-            },
-            {
-                "category": HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-            },
-            {
-                "category": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-            },
-            {
-                "category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                "threshold": HarmBlockThreshold.BLOCK_ONLY_HIGH,
-            },
-        ],
+        google_safety_settings=google_safety_settings,
     )
 else:
     default_llm_model = OpenAIChatModel(
