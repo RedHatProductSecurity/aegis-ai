@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] - 2025-11-04
 
 ### Changed
+- bump to osidb-bindings 5.0.0
 - web console disabled by default
-- bump to pydantic-ai 1.4.0
+- bump to pydantic-ai 1.14.0
 - simplified `AegisFeatureModel` to reduce LLM overhead
 - refactored agents and toolsets internals
 - renamed `rewrite-{description,statement}` to `suggest-{description,statement}`, respectively
