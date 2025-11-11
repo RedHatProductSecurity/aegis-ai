@@ -5,12 +5,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.4.1] - 2025-11-11
+
+### Changed
+- bump to osidb-bindings 5.1.0
+- bump to pydantic-ai 1.14.0
+- decrease verbosity of `search_cwes` when not debugging
+
+### Added
+- write log messages also to a log file when the `AEGIS_LOG_FILE` environment variable is set
+- log the outcome of `suggest-impact` feature
+
+### Fixed
+- make `make eval-debug` work again
+- handle evaluator failures accordingly
+- do not mix types in `agent_default_max_retries`
+- retry prompt with high temperature when RECITATION filter triggers
+- make aegis work again with `ollama`
+- ensure consistency of `cvss3_{vector,score}` in `suggest-impact`
+
+
 ## [0.4.0] - 2025-11-04
 
 ### Changed
-- bump to osidb-bindings 5.0.0
 - web console disabled by default
-- bump to pydantic-ai 1.14.0
+- bump to pydantic-ai 1.4.0
 - simplified `AegisFeatureModel` to reduce LLM overhead
 - refactored agents and toolsets internals
 - renamed `rewrite-{description,statement}` to `suggest-{description,statement}`, respectively
