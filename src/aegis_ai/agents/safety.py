@@ -5,7 +5,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from aegis_ai import get_settings
 from aegis_ai.data_models import SafetyReport
 
-default = Agent(
+default = Agent(  # type: ignore
     model=OpenAIChatModel(
         model_name=get_settings().safety_llm_model,
         provider=OpenAIProvider(
