@@ -2172,7 +2172,7 @@ wheels = [
 
 [[package]]
 name = "osidb-bindings"
-version = "5.0.0"
+version = "5.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2181,9 +2181,9 @@ dependencies = [
     { name = "requests" },
     { name = "requests-gssapi" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/5b/3805555897d86a6c3fb786133cf3c9022357456e7c507882163097e18909/osidb_bindings-5.0.0.tar.gz", hash = "sha256:06d638ff447286f14fe3d39696fa5683cdbbdd00d022d7196105c147b161d124", size = 279354, upload-time = "2025-11-01T11:05:23.528Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/ec/5855b7ccd09245db90f639c36f681148a916e34445960333fe9597deea9c/osidb_bindings-5.1.0.tar.gz", hash = "sha256:da3aa8c6519a79c0690be9edab6f2cc54f66b953f2b820542b36b00bfa23aaac", size = 281502, upload-time = "2025-11-11T12:36:46.251Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/a6/7ed613d411428e89f9072b7311b73f1ecf97d578551e1c07433e2d873678/osidb_bindings-5.0.0-py3-none-any.whl", hash = "sha256:97762480ccd905f26ae629309083cace1845886897a37b8104050b67ef87d45e", size = 698227, upload-time = "2025-11-01T11:05:22.134Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/1d/88ed94a9f27e6ebace826f673be9b81a6c06d719a82ea28106b7e5331398/osidb_bindings-5.1.0-py3-none-any.whl", hash = "sha256:e270d304abab17581e7def6b3b96763d61596255d386bdf74ca15ba1f1b29ee2", size = 703387, upload-time = "2025-11-11T12:36:44.613Z" },
 ]
 
 [[package]]
@@ -3270,15 +3270,15 @@ wheels = [
 
 [[package]]
 name = "secretstorage"
-version = "3.4.0"
+version = "3.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "jeepney" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/9f/11ef35cf1027c1339552ea7bfe6aaa74a8516d8b5caf6e7d338daf54fd80/secretstorage-3.4.0.tar.gz", hash = "sha256:c46e216d6815aff8a8a18706a2fbfd8d53fcbb0dce99301881687a1b0289ef7c", size = 19748, upload-time = "2025-09-09T16:42:13.859Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/32/8a/ed6747b1cc723c81f526d4c12c1b1d43d07190e1e8258dbf934392fc850e/secretstorage-3.4.1.tar.gz", hash = "sha256:a799acf5be9fb93db609ebaa4ab6e8f1f3ed5ae640e0fa732bfea59e9c3b50e8", size = 19871, upload-time = "2025-11-11T11:30:23.798Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/ff/2e2eed29e02c14a5cb6c57f09b2d5b40e65d6cc71f45b52e0be295ccbc2f/secretstorage-3.4.0-py3-none-any.whl", hash = "sha256:0e3b6265c2c63509fb7415717607e4b2c9ab767b7f344a57473b779ca13bd02e", size = 15272, upload-time = "2025-09-09T16:42:12.744Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/6d/24ebb101484f1911a6be6695b76ce43219caa110ebbe07d8c3a5f3106cca/secretstorage-3.4.1-py3-none-any.whl", hash = "sha256:c55d57b4da3de568d8c3af89dad244ab24c35ca1da8625fc1b550edf005ebc41", size = 15301, upload-time = "2025-11-11T11:30:22.618Z" },
 ]
 
 [[package]]
