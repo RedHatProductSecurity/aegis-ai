@@ -3,7 +3,6 @@ import pytest
 from pydantic_core import ValidationError
 
 from aegis_ai.agents import rh_feature_agent
-from aegis_ai.data_models import CVEID
 from aegis_ai.features import component, cve
 from tests.utils.llm_cache import llm_cache_retrieve
 
@@ -36,9 +35,8 @@ async def test_suggest_cwe_with_test_model(set_test_allowed_cwe_ids_env_var):
 
 async def test_identify_pii_with_test_model():
     def feature():
-        cve_id = CVEID(
-            "CVE-2025-0725"
-        )  # we can directly use custom fields though auto validation happens during feature input
+        # we can directly use custom fields though auto validation happens during feature input
+        cve_id = "CVE-2025-0725"
         return cve.IdentifyPII(rh_feature_agent).exec(cve_id)
 
     result = await llm_cache_retrieve(feature)
