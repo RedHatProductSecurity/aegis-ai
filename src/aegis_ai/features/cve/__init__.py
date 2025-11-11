@@ -1,3 +1,4 @@
+import cvss
 import logging
 from typing import Any
 
@@ -19,6 +20,28 @@ logger = logging.getLogger(__name__)
 
 class SuggestImpact(Feature):
     """Based on current CVE information and context assert an aggregated impact."""
+
+    def post_process(self, output, call_str):
+        # read the suggested cvss3_score
+        try:
+            cvss3_score = float(output.cvss3_score)
+        except ValueError:
+            cvss3_score = float("nan")
+
+        # compute CVSS3 score from the suggested cvss3_vector
+        try:
+            cvss3_score_by_vector = cvss.CVSS3(output.cvss3_vector).scores()[0]
+        except Exception:
+            cvss3_score_by_vector = float("nan")
+
+        if cvss3_score == cvss3_score_by_vector:
+            # already consistent
+            return
+
+        logger.warning(
+            f"{call_str}: adjusting cvss3_score to match cvss3_vector: {cvss3_score} -> {cvss3_score_by_vector}"
+        )
+        output.cvss3_score = f"{cvss3_score_by_vector}"
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         prompt = AegisPrompt(
@@ -49,7 +72,10 @@ class SuggestImpact(Feature):
             static_context=static_context,
             output_schema=SuggestImpactModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=SuggestImpactModel)
+        result = await self.run_if_safe(prompt, output_type=SuggestImpactModel)
+        call_str = f"{self.__class__.__name__}({cve_id})"
+        self.post_process(result.output, call_str)
+        return result
 
 
 class SuggestCWE(Feature):
