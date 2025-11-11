@@ -1,11 +1,11 @@
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from aegis_ai import get_settings
 from aegis_ai.data_models import SafetyReport
 
-default = Agent(  # type: ignore
+default = Agent(
     model=OpenAIChatModel(
         model_name=get_settings().safety_llm_model,
         provider=OpenAIProvider(
@@ -13,10 +13,9 @@ default = Agent(  # type: ignore
             api_key=get_settings().safety_llm_openapi_key,
         ),
     ),
-    model_settings={
-        "seed": 42,
-        "response_format": {"type": "json_object"},
-    },
+    model_settings=OpenAIResponsesModelSettings(
+        seed=42,
+    ),
     system_prompt=f"""
         You are Granite Guardian, an AI safety and security analyst. Your sole function is to
         analyze a user-submitted prompt and determine if it could lead to harmful, unethical,
