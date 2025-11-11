@@ -8,7 +8,7 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Type, Annotated
+from typing import Dict, Type, Annotated, cast, Any
 
 import yaml
 from fastapi import FastAPI, Request, HTTPException, Form
@@ -51,7 +51,7 @@ config_logging()
 
 feedback_logger = setup_feedback_logger()
 
-app = FastAPI(
+app: FastAPI = FastAPI(
     title="Aegis REST-API",
     description="A simple web console and REST API for Aegis.",
     version=AEGIS_REST_API_VERSION,
@@ -60,7 +60,7 @@ app = FastAPI(
 # middleware to add HSTS header to HTTP responses (it is safe to send the HSTS
 # header over plain-text HTTP because the header shall be ignored by the client
 # unless it is received over HTTPS)
-app.add_middleware(HSTSHeaderMiddleware)
+app.add_middleware(cast(Any, HSTSHeaderMiddleware))
 
 # optionally enable Kerberos authentication
 kerberos_spn = os.getenv("AEGIS_WEB_SPN")
@@ -82,12 +82,12 @@ if kerberos_spn:
             return await super().__call__(scope, receive, send)
 
     # add middleware for GSSAPI authentication to the app
-    app.add_middleware(CustomGSSAPIMiddleware, spn=kerberos_spn)
+    app.add_middleware(cast(Any, CustomGSSAPIMiddleware), spn=kerberos_spn)
 
 # middleware enabling CORS
 cors_target_regex = os.getenv("AEGIS_CORS_TARGET_REGEX", "http(s)?://localhost(:5173)?")
 app.add_middleware(
-    CORSMiddleware,
+    cast(Any, CORSMiddleware),
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
