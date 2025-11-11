@@ -40,9 +40,9 @@ class SuggestImpact(Feature):
                 - Use github mcp tool to retrieve additional context from vulnerability reference url.
                 - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
                 - If cisa_kev_tool tool is available check if there are any related known exploits.
-                - Output 
+                - Output
                     - output a plausible CVSS 3.1 base vector and score.
-                    - output a impact (which directly correlates to identified CVSS score) 
+                    - output a impact (which directly correlates to identified CVSS score)
                     - Provide confidence in [0.00..1.00]. Keep explanations concise.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
@@ -75,7 +75,7 @@ class SuggestCWE(Feature):
                 - Select the top 2-3 most applicable CWEs (preference on applicability and higher similarity score) from the final set of candidate CWEs.
                 - The final list of suggested CWEs should be ranked from most to least applicable to the vulnerability. For example, the first item in the array should be the most applicable CWE based on entire vulnerability analysis.
                 Output should include:
-                - cwe: Return ordered list of top 2–3 applicable CWE IDs (ex. ["CWE-94"]) 
+                - cwe: Return ordered list of top 2–3 applicable CWE IDs (ex. ["CWE-94"])
                 - explanation: 1–2 sentences connecting CVE details to the CWE.
                 - confidence: [0.00..1.00].
             """,
