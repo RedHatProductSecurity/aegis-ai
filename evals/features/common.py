@@ -15,6 +15,7 @@ from pydantic_evals.evaluators import (
     EvaluatorContext,
     LLMJudge,
 )
+from pydantic_evals.evaluators.common import OutputConfig
 
 from aegis_ai import default_llm_model, default_llm_settings, llm_model
 from aegis_ai.features import llm_max_jobs
@@ -72,13 +73,20 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
         return score
 
 
-def create_llm_judge(**kwargs):
+def create_output_config(name):
+    """return a fresh instance of OutputConfig if name is given, False otherwise"""
+    return OutputConfig(evaluation_name=name, include_reason=True) if name else False
+
+
+def create_llm_judge(score_name=None, assertion_name=None, **kwargs):
     """construct an LLMJudge object based on the provided named arguments"""
     return LLMJudge(
         model=evals_llm_model,
         model_settings=evals_llm_settings,
+        score=create_output_config(score_name),
+        assertion=create_output_config(assertion_name),
         **kwargs,
-    )  # type: ignore
+    )
 
 
 def make_eval_reason(value: bool = False, fail_reason: str = None):  # type: ignore
@@ -97,8 +105,10 @@ def handle_eval_report(report: EvaluationReport):
     report.print(
         console=console,
         include_input=True,
+        include_expected_output=True,
         include_output=True,
         include_durations=(llm_max_jobs == 1),
+        include_reasons=True,
     )
 
     # print the captured string through logger
