@@ -43,13 +43,16 @@ cases = [
 # evaluators
 evals = common_feature_evals + [
     create_llm_judge(
-        rubric="The suggested_statement field does not suggest to apply a source code patch or rebuild the software."
+        assertion_name="DoNotSuggestPatch",
+        rubric="The suggested_statement field does not suggest to apply a source code patch or rebuild the software.",
     ),
     create_llm_judge(
-        rubric="The suggested_statement field does not include any code-level details about the flaw."
+        assertion_name="NoCodeLevelDetails",
+        rubric="The suggested_statement field does not include any code-level details about the flaw.",
     ),
     create_llm_judge(
-        rubric="The suggested_statement field does not duplicate the original_description field.  A brief summary to provide context is acceptable though."
+        assertion_name="NoDuplicatedInfo",
+        rubric="The suggested_statement field does not duplicate the original_description field.  A brief summary to provide context is acceptable though.",
     ),
     # TODO: more evaluators
 ]

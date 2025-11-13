@@ -124,7 +124,8 @@ evals = common_feature_evals + [
     CVSSValidator(),
     SuggestImpactEvaluator(),
     create_llm_judge(
-        rubric="The 'explanation' output field does not list affected Red Hat products.  Ignore other fields in the output."
+        assertion_name="NoAffectsInExplanation",
+        rubric="The 'explanation' output field does not list affected Red Hat products.  Ignore other fields in the output.",
     ),
 ]
 

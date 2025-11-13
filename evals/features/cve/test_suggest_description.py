@@ -128,10 +128,12 @@ cases = [
 evals = common_feature_evals + [
     PromptLeakEvaluator(),
     create_llm_judge(
-        rubric="suggested_title and suggested_description do not contain any versioning info"
+        assertion_name="NoVersionInTitle",
+        rubric="suggested_title and suggested_description do not contain any versioning info",
     ),
     create_llm_judge(
-        rubric="suggested_title briefly summarizes what is described in suggested_description"
+        assertion_name="TitleSummarizesDescription",
+        rubric="suggested_title briefly summarizes what is described in suggested_description",
     ),
 ]
 
