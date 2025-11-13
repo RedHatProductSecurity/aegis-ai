@@ -44,12 +44,21 @@ spec:
     serviceAccountName: build-pipeline-aegis-ai
   taskRunSpecs:
   - pipelineTaskName: sast-coverity-check
-    computeResources:
-      requests:
-        cpu: 1
-        memory: 3Gi
-      limits:
-        memory: 6Gi
+    stepSpecs:
+    - name: build
+      computeResources:
+        requests:
+          cpu: 1
+          memory: 3Gi
+        limits:
+          memory: 6Gi
+    - name: postprocess
+      computeResources:
+        requests:
+          cpu: 1
+          memory: "1Gi"
+        limits:
+          memory: "2Gi"
   workspaces:
   - name: git-auth
     secret:
