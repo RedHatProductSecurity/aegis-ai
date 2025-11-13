@@ -30,6 +30,7 @@ jobs:
       # core LLM configuration
       AEGIS_LLM_HOST: ${{ vars.AEGIS_LLM_HOST }}
       AEGIS_LLM_MODEL: ${{ vars.AEGIS_LLM_MODEL }}
+      AEGIS_LLM_MAX_JOBS: ${{ vars.AEGIS_LLM_MAX_JOBS }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       # safety checks (optional)
