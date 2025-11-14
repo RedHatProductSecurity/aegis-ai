@@ -3,7 +3,7 @@ import os
 
 from typing import List, Any
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from pydantic_ai import (
     RunContext,
@@ -14,6 +14,8 @@ from pydantic_ai.toolsets import FunctionToolset
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.toolsets.tools import BaseToolOutput, BaseToolInput
 from aegis_ai.toolsets.tools.osidb.osidb_client import OSIDBClient
+
+from aegis_ai.data_models import CVSS3Vector
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,55 @@ class OSIDBToolInput(BaseToolInput):
     )
 
 
+class CVSSScore(BaseModel):
+    issuer: str = Field(
+        ...,
+        description="CVSS issuer.",
+    )
+    vector: CVSS3Vector = Field(
+        ...,
+        description="CVSS v3 vector.",
+    )
+
+
+class CVEReference(BaseModel):
+    url: str = Field(
+        ...,
+        description="Reference url.",
+    )
+
+
+class CVEAffect(BaseModel):
+    affected: str = Field(
+        ...,
+        description="CVE affect affectedness.",
+    )
+    ps_module: str = Field(
+        ...,
+        description="CVE affect ps_module.",
+    )
+    ps_product: str = Field(
+        ...,
+        description="CVE affect ps_product.",
+    )
+    ps_component: str = Field(
+        ...,
+        description="CVE affect ps_component.",
+    )
+    impact: str = Field(
+        ...,
+        description="CVE affect impact.",
+    )
+    not_affected_justification: str = Field(
+        ...,
+        description="CVE affect not affected justification (ex. code path is never used).",
+    )
+    delegated_not_affected_justification: str = Field(
+        ...,
+        description="CVE affect delegated not affected justification.",
+    )
+
+
 class CVE(BaseToolOutput):
     """ """
 
@@ -39,25 +90,24 @@ class CVE(BaseToolOutput):
         ...,
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
-
     title: str = Field(
-        ...,  # Make it required
+        ...,
         description="CVE title.",
     )
     statement: str = Field(
         ...,
         description="CVE statement.",
     )
-    comment_zero: str = Field(..., description="CVE comment_zero.")
+    comment_zero: str = Field(..., description="CVE initial description of CVE.")
     comments: str = Field(
         ...,
         description="all public comments.",
     )
     description: str = Field(..., description="CVE cve_description.")
-    components: List = Field(..., description="list of components")
-    references: List = Field(..., description="list of references")
-    affects: List = Field(..., description="list of affects")
-    cvss_scores: List = Field(..., description="list of cvss scores")
+    components: List[str] = Field(..., description="list of components")
+    references: List[CVEReference] = Field(..., description="list of references")
+    affects: List[CVEAffect] = Field(..., description="list of affects")
+    cvss_scores: List[CVSSScore] = Field(..., description="list of cvss scores")
 
 
 async def cve_retrieve(cve_id: CVEID) -> CVE:
@@ -79,38 +129,31 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
         logger.info(f"{validated_cve_id}:{flaw.title}")
         comments = ""
         for i, comment in enumerate(flaw.comments):
-            if i >= 15:  # FIXME: remove limit of 15 comments
+            if i >= 20:  # FIXME: remove limit of 15 comments
                 break
             if not comment.is_private:
                 comments += str(comment.text) + " "
         affects = []
         for affect in flaw.affects:
             affects.append(
-                {
-                    "affected": affect.affectedness,
-                    "ps_module": affect.ps_module,
-                    "ps_product": affect.ps_product,
-                    "ps_component": affect.ps_component,
-                    "impact": affect.impact,
-                    "not_affected_justification": affect.not_affected_justification,
-                    "delegated_not_affected_justification": affect.delegated_not_affected_justification,
-                }
+                CVEAffect(
+                    affected=affect.affectedness,
+                    ps_module=affect.ps_module,
+                    ps_product=affect.ps_product,
+                    ps_component=affect.ps_component,
+                    impact=affect.impact,
+                    not_affected_justification=affect.not_affected_justification,
+                    delegated_not_affected_justification=affect.delegated_not_affected_justification,
+                )
             )
         references = []
         for reference in flaw.references:
             if hasattr(reference, "url") and reference.url:
-                references.append(
-                    {
-                        "url": reference.url,
-                    }
-                )
+                references.append(CVEReference(url=reference.url))
         cvss_scores = []
         for cvss_score in flaw.cvss_scores:
             cvss_scores.append(
-                {
-                    "issuer": cvss_score.issuer,
-                    "vector": cvss_score.vector,
-                }
+                CVSSScore(issuer=cvss_score.issuer, vector=cvss_score.vector)
             )
         return CVE(
             cve_id=flaw.cve_id,
@@ -148,22 +191,6 @@ async def flaw_tool(ctx: RunContext, input: OSIDBToolInput) -> CVE:
 
 
 @Tool
-async def component_count_tool(ctx: RunContext, component_name: str) -> Any:
-    """
-    Searches OSIDB by component_name returning count of CVE flaws related to given component.
-
-    Args:
-        ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.
-        component_name: An object containing component_name (ex. curl).
-
-    Returns:
-        count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
-    """
-    logger.debug(component_name)
-    return await client.count_component_flaws(component_name)
-
-
-@Tool
 async def component_flaw_tool(ctx: RunContext, component_name: str) -> Any:
     """
     Searches OSIDB by component_name returning CVE flaws related to given component.
@@ -173,14 +200,14 @@ async def component_flaw_tool(ctx: RunContext, component_name: str) -> Any:
         component_name: An object containing component_name (ex. curl).
 
     Returns:
-        count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
+        An array of CVE entities related to component name.
     """
     logger.debug(component_name)
     return await client.list_component_flaws(component_name)
 
 
 toolset = FunctionToolset(
-    tools=[flaw_tool, component_count_tool, component_flaw_tool],
+    tools=[flaw_tool, component_flaw_tool],
 )
 
 # osidb toolset
