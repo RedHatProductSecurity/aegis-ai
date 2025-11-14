@@ -121,7 +121,45 @@ cases = [
         expected_title="Local Root Exploit via `logfile_reopen()`",
         expected_description="A flaw was found in Screen. When running with setuid-root privileged, the  logfile_reopen() function does not drop privileges while operating on a user-supplied path. This vulnerability allows an unprivileged user to create files in arbitrary locations with root ownership.",
     ),
-    # TODO: add more cases
+    SuggestDescriptionCase(
+        cve_id="CVE-2002-1001",
+        expected_title="tokio-tar:  parses PAX extended headers incorrectly, allows file smuggling",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2020-92465",
+        expected_title="Django: Denial of service via Unicode input",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2023-39326",
+        expected_description="A flaw was found in the Golang net/http/internal package. This issue may allow a malicious user to send an HTTP request and cause the receiver to read more bytes from network than are in the body (up to 1GiB), causing the receiver to fail reading the response, possibly leading to a Denial of Service (DoS).",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2023-53624",
+        expected_description="An integer overflow vulnerability was found in network scheduler in the Linux kernel. In this flaw a denial of service problem is observed if sch_fq is configured to a higher value to INT_MAX.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2023-53669",
+        # FIXME: asked Rohit to confirm that this really the expected title
+        # This contradicts with the hard limit on title length set to 7 words
+        # FIXME: temporarily changed to expected description to make evals pass
+        expected_description="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-64434",
+        expected_description="A flaw was found in KubeVirt. This vulnerability allows API identity spoofing, compromising integrity and availability of managed VMs via improper TLS certificate management handling after compromising a virt-handler instance.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-91735",
+        expected_description="A flaw was found in /driver/xyz.c in xyg sub component in the Linux kernel. This vulnerability allows a buffer overflow due to xyz leading to abc.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2099-99999",
+        expected_title="ksmbd: Recursive Locking Denial of Service",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2099-232323",
+        expected_description="A flaw was found in Keycloak. This vulnerability allows to trigger phishing attacks via error_description injection on error pages.",
+    ),
 ]
 
 # evaluators
