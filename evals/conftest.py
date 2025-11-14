@@ -47,8 +47,10 @@ def pytest_sessionfinish(session, exitstatus):
         for eval_name, score in metrics.scores.items():
             logging.info(f"[{feat}] {eval_name}: {score:.4f}")
 
+        evaluator_duration = metrics.total_duration - metrics.task_duration
         logging.info(f"[{feat}] assertions ratio: {metrics.assertions * 100:.1f}%")
-        logging.info(f"[{feat}] average duration: {metrics.total_duration:.2f}s")
+        logging.info(f"[{feat}] average case duration: {metrics.task_duration:.2f}s")
+        logging.info(f"[{feat}] average evaluator duration: {evaluator_duration:.2f}s")
 
     tr = session.config.pluginmanager.get_plugin("terminalreporter")
     if not tr:
