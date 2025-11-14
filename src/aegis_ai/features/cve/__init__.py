@@ -156,7 +156,7 @@ class SuggestDescriptionText(Feature):
                 Description: one short paragraph of the form:
                 "A flaw was found in [component]. This vulnerability allows [impact] via [vector]."
                 - No versioning or extra commentary.
-                Title: <= 7 words, include product/component and vulnerability type.
+                Title: <= 20 words, include product/component and vulnerability type.
                 Do not duplicate fields like versions; keep it focused and professional.
             """,
             context=CVEFeatureInput(cve_id=cve_id),

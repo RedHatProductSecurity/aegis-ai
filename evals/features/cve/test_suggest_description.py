@@ -139,10 +139,7 @@ cases = [
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2023-53669",
-        # FIXME: asked Rohit to confirm that this really the expected title
-        # This contradicts with the hard limit on title length set to 7 words
-        # FIXME: temporarily changed to expected description to make evals pass
-        expected_description="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
+        expected_title="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-64434",
