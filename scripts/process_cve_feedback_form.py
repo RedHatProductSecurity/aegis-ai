@@ -25,16 +25,18 @@ def _cve_sort_key(cve_id):
     return (1, text.lower())
 
 
+def osidb_cache_cve(cve):
+    # populate OSIDB cache for this CVE (best-effort)
+    try:
+        asyncio.run(osidb_cache_retrieve(cve))
+    except Exception as e:
+        # Non-fatal: report and continue
+        print(f"{' ' * 4}# NOTE: failed to cache {cve} from OSIDB: {e}")
+
+
 @no_type_check
-def process_cwe_feedback(file_path):
-    """Read CSV, sort rows by the 2nd column (index 1), and write to stdout."""
-    with open(file_path, "r", newline="", encoding="utf-8") as input_file:
-        csv_reader = csv.reader(input_file)
-        rows = list(csv_reader)
-
-    # sort the list by CVE ID
-    rows.sort(key=lambda r: _cve_sort_key(r[1]))
-
+def process_cwe_feedback(rows):
+    """processor of suggest-cwe feedback"""
     # Try to load CWE-699 view to flag CWEs not present there
     asyncio.run(cwe_manager.initialize())
     cwe_defs = cwe_manager._definitions
@@ -46,6 +48,11 @@ def process_cwe_feedback(file_path):
     # there can be multiple rows for a single CVE, for which we merge the CWE lists
     data = []
     for row in rows:
+        feature = row[8]
+        if feature and feature != "suggest-cwe":
+            # skip feedback for other features
+            continue
+
         cve = row[1]
         exp_cwe = row[3]
         if cve in header_cve and exp_cwe in header_exp_cwe:
@@ -77,16 +84,24 @@ def process_cwe_feedback(file_path):
             if not cwe_data or cwe_data.get("disallowed", True):
                 print(f"{' ' * 4}# FIXME: {cwe} is not included in the CWE-699 view!")
 
+        osidb_cache_cve(cve)
+
         # print single instantiation of SuggestCweCase
         cwe_list = ", ".join(f'"{cwe}"' for cwe in cwe_list)
         print(f'{" " * 4}SuggestCweCase("{cve}", [{cwe_list}]),')
 
-        # populate OSIDB cache for this CVE (best-effort)
-        try:
-            asyncio.run(osidb_cache_retrieve(cve))
-        except Exception as e:
-            # Non-fatal: report and continue
-            print(f"{' ' * 4}# NOTE: failed to cache {cve} from OSIDB: {e}")
+
+def process_feedback(file_path):
+    """Read CSV, sort rows by the 2nd column (index 1), and run specific processors."""
+    with open(file_path, "r", newline="", encoding="utf-8") as input_file:
+        csv_reader = csv.reader(input_file)
+        rows = list(csv_reader)
+
+    # sort the list by CVE ID
+    rows.sort(key=lambda r: _cve_sort_key(r[1]))
+
+    # run specific processors
+    process_cwe_feedback(rows)
 
 
 def main():
@@ -98,7 +113,7 @@ def main():
 
     try:
         config_logging(level="INFO")
-        process_cwe_feedback(input_path)
+        process_feedback(input_path)
     except FileNotFoundError as error:
         print(f"Error: {error}", file=sys.stderr)
         sys.exit(1)
