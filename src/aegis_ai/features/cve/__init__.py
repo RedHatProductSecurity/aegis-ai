@@ -53,6 +53,7 @@ class SuggestImpact(Feature):
                 - Based on all the previous analysis, identify the most appropriate CVSS 3.1 vector and score - using this identify impact rating (Critical, Important, Moderate, or Low).
             """,
             rules="""
+                - Assess impact within the context of Red Hat's defense-in-depth architecture, specifically noting that mandatory MFA and least privilege access can limit attack surface.  
                 - Use the following Red Hat Impact scale as a guide:
                     - CRITICAL: A remote unauthenticated user can execute arbitrary code. Does not require user interaction.  9.0 < cvss3_score
                     - IMPORTANT: Allows local users to gain privileges.  Unauthenticated remote users can view resources.  Authenticated remote users can execute arbitrary code.  7.0 < cvss3_score <= 9.0

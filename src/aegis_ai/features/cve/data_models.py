@@ -39,7 +39,7 @@ class SuggestImpactModel(AegisFeatureModel):
 
     title: str = Field(
         ...,
-        description="Contains CVE title",
+        description="CVE title",
     )
 
     components: List = Field(

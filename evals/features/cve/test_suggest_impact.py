@@ -109,10 +109,14 @@ async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
 # test cases
 cases = [
     SuggestImpactCase("CVE-2022-48701", "MODERATE", 4.9),
+    SuggestImpactCase("CVE-2023-39326", "MODERATE", 7.5),
+    SuggestImpactCase("CVE-2023-53693", "MODERATE", 5.5),
     SuggestImpactCase("CVE-2024-53232", "MODERATE", 4.4),
-    SuggestImpactCase("CVE-2025-23395", "MODERATE", 6.8),
     SuggestImpactCase("CVE-2025-5399", "MODERATE", 4.3),
-    # TODO: add more cases
+    SuggestImpactCase("CVE-2025-9573", "IMPORTANT", 7.2),
+    SuggestImpactCase("CVE-2025-12735", "CRITICAL", 9.8),
+    SuggestImpactCase("CVE-2025-23395", "MODERATE", 6.8),
+    SuggestImpactCase("CVE-2025-59840", "IMPORTANT", 8.1),
 ]
 
 # evaluators
