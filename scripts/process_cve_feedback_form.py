@@ -2,6 +2,7 @@
 
 import asyncio
 import csv
+import json
 import re
 import sys
 from typing import no_type_check
@@ -91,6 +92,31 @@ def process_cwe_feedback(rows):
         print(f'{" " * 4}SuggestCweCase("{cve}", [{cwe_list}]),')
 
 
+def is_title(value):
+    """guess whether the provided expected value is a title"""
+    return not value.endswith(".") and len(value) < 128
+
+
+def process_description_feedback(rows):
+    for row in rows:
+        feature = row[8]
+        if feature != "suggest-description":
+            # skip feedback for other features
+            continue
+
+        # get CVE ID
+        cve = row[1]
+        osidb_cache_cve(cve)
+
+        # get expected output
+        value = row[3]
+        field = "title" if is_title(value) else "description"
+        print(f"{' ' * 4}SuggestDescriptionCase(")
+        print(f"{' ' * 8}cve_id={json.dumps(cve)},")
+        print(f"{' ' * 8}expected_{field}={json.dumps(value)},")
+        print(f"{' ' * 4}),")
+
+
 def process_feedback(file_path):
     """Read CSV, sort rows by the 2nd column (index 1), and run specific processors."""
     with open(file_path, "r", newline="", encoding="utf-8") as input_file:
@@ -102,6 +128,7 @@ def process_feedback(file_path):
 
     # run specific processors
     process_cwe_feedback(rows)
+    process_description_feedback(rows)
 
 
 def main():
