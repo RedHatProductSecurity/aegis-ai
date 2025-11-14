@@ -21,12 +21,12 @@ from evals.features.common import (
 field_evaluators = {
     "suggested_title": create_llm_judge(
         score_name="TitleEvaluator",
-        rubric="Score how much the actual suggested_title field is semantically equivalent to the expected suggest_title field.",
+        rubric="Score how much the actual suggested_title field is semantically equivalent to the expected suggest_title field.  If the key message is the same but the style is different, the score should not be zero.  If the style is different, the score should not be 1.0.",
         include_expected_output=True,
     ),
     "suggested_description": create_llm_judge(
         score_name="DescriptionEvaluator",
-        rubric="Score how much the actual suggested_description field is semantically equivalent to the expected suggest_description field.",
+        rubric="Score how much the actual suggested_description field is semantically equivalent to the expected suggest_description field.  If the key message is the same but the style is different, the score should not be zero.  If the style is different, the score should not be 1.0.",
         include_expected_output=True,
     ),
 }
