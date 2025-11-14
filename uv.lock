@@ -2174,7 +2174,7 @@ wheels = [
 
 [[package]]
 name = "osidb-bindings"
-version = "5.2.0"
+version = "5.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2183,9 +2183,9 @@ dependencies = [
     { name = "requests" },
     { name = "requests-gssapi" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/87/09/5feb9f3fce940ab455e33041b118e33e20e9fa139850c74a7652e9669203/osidb_bindings-5.2.0.tar.gz", hash = "sha256:a62eb0df8123d620d14d2e0de3f666274eed3956b59b4cadb2f3ca6e8e8b1489", size = 286842, upload-time = "2025-11-13T15:53:03.259Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/8a/5baced41fc3bbc3ea28abec797856e748b29d86007928bde0534a9d9b510/osidb_bindings-5.2.1.tar.gz", hash = "sha256:964c4a65e8b50a2277a278c1288ecdb8d62a0edd85ac1cd7e741bdfb75cb41a7", size = 286807, upload-time = "2025-11-14T12:39:16.466Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/0f/23aa8be75edc423f9da9aaa1eec37e5384c82523ef55885668ce59a4e9c8/osidb_bindings-5.2.0-py3-none-any.whl", hash = "sha256:6cec6f5620371a91d453cbe05186be473dbc3a74d38cd0cdf738220f89db37fa", size = 714261, upload-time = "2025-11-13T15:53:01.696Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/ea/9a9373ede7015214764cf5882636d5650916fa3ae58285ea7d592fc47bc3/osidb_bindings-5.2.1-py3-none-any.whl", hash = "sha256:6a183fa95ca97bfe0784092fc30ae4b23386d5c767e81834511053aeb673201e", size = 714256, upload-time = "2025-11-14T12:39:14.801Z" },
 ]
 
 [[package]]
@@ -3574,11 +3574,11 @@ wheels = [
 
 [[package]]
 name = "trove-classifiers"
-version = "2025.9.11.17"
+version = "2025.11.14.15"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ca/9a/778622bc06632529817c3c524c82749a112603ae2bbcf72ee3eb33a2c4f1/trove_classifiers-2025.9.11.17.tar.gz", hash = "sha256:931ca9841a5e9c9408bc2ae67b50d28acf85bef56219b56860876dd1f2d024dd", size = 16975, upload-time = "2025-09-11T17:07:50.97Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/a9/880cccf76af9e7b322112f52e4e2dbb3534cbe671197b8f443a42189dfc7/trove_classifiers-2025.11.14.15.tar.gz", hash = "sha256:6b60f49d40bbd895bc61d8dc414fc2f2286d70eb72ed23548db8cf94f62804ca", size = 16995, upload-time = "2025-11-14T15:23:13.78Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/85/a4ff8758c66f1fc32aa5e9a145908394bf9cf1c79ffd1113cfdeb77e74e4/trove_classifiers-2025.9.11.17-py3-none-any.whl", hash = "sha256:5d392f2d244deb1866556457d6f3516792124a23d1c3a463a2e8668a5d1c15dd", size = 14158, upload-time = "2025-09-11T17:07:49.886Z" },
+    { url = "https://files.pythonhosted.org/packages/49/f6/73c4aa003d1237ee9bea8a46f49dc38c45dfe95af4f0da7e60678d388011/trove_classifiers-2025.11.14.15-py3-none-any.whl", hash = "sha256:d1dac259c1e908939862e3331177931c6df0a37af2c1a8debcc603d9115fcdd9", size = 14191, upload-time = "2025-11-14T15:23:12.467Z" },
 ]
 
 [[package]]
