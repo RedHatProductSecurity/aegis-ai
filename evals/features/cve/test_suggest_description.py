@@ -142,6 +142,18 @@ cases = [
         expected_title="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
     ),
     SuggestDescriptionCase(
+        cve_id="CVE-2025-54770",
+        expected_description="A vulnerability has been identified in the GRUB2 bootloader's network module that poses an immediate Denial of Service (DoS) risk. This flaw is a Use-after-Free issue, caused because the net_set_vlan command is not properly unregistered when the network module is unloaded from memory. An attacker who can execute this command can force the system to access memory locations that are no longer valid. Successful exploitation leads directly to system instability, which can result in a complete crash and halt system availability.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-61661",
+        expected_description="A vulnerability has been identified in the GRUB (Grand Unified Bootloader) component. This flaw occurs because the bootloader mishandles string conversion when reading information from a USB device, allowing an attacker to exploit inconsistent length values. A local attacker can connect a maliciously configured USB device during the boot sequence to trigger this issue. A successful exploitation may lead GRUB to crash, leading to a Denial of Service. Data corruption may be also possible, although given the complexity of the exploit the impact is most likely limited.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-63811",
+        expected_description="A flaw was found in jose2go. This vulnerability allows an attacker to cause a Denial-of-Service (DoS).",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2025-64434",
         expected_description="A flaw was found in KubeVirt. This vulnerability allows API identity spoofing, compromising integrity and availability of managed VMs via improper TLS certificate management handling after compromising a virt-handler instance.",
     ),

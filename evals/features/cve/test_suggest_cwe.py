@@ -147,6 +147,8 @@ cases = [
     SuggestCweCase("CVE-2025-49133", ["CWE-125"]),
     SuggestCweCase("CVE-2025-52099", ["CWE-190"]),
     SuggestCweCase("CVE-2025-52494", ["CWE-770"]),
+    SuggestCweCase("CVE-2025-54770", ["CWE-825"]),
+    SuggestCweCase("CVE-2025-54771", ["CWE-825"]),
     SuggestCweCase("CVE-2025-55559", ["CWE-1288"]),
     SuggestCweCase("CVE-2025-57803", ["CWE-787", "CWE-131"]),
     SuggestCweCase("CVE-2025-58446", ["CWE-770"]),
@@ -154,10 +156,12 @@ cases = [
     SuggestCweCase("CVE-2025-59681", ["CWE-89"]),
     SuggestCweCase("CVE-2025-59956", ["CWE-940"]),
     SuggestCweCase("CVE-2025-61584", ["CWE-94"]),
+    SuggestCweCase("CVE-2025-61663", ["CWE-825"]),
     SuggestCweCase("CVE-2025-61770", ["CWE-131"]),
     SuggestCweCase("CVE-2025-61771", ["CWE-131"]),
     SuggestCweCase("CVE-2025-61984", ["CWE-78"]),
     SuggestCweCase("CVE-2025-61985", ["CWE-88", "CWE-1286"]),
+    SuggestCweCase("CVE-2025-63811", ["CWE-770"]),
 ]
 # fmt: on
 
