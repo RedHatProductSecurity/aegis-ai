@@ -687,7 +687,7 @@ spec:
                 - name: AEGIS_LLM_MODEL
                   value: "gemini-2.5-flash"
                 - name: AEGIS_LLM_MAX_JOBS
-                  value: "16"
+                  value: "8"
                 # FIXME: this should be removed once we have (more) reliable evals
                 - name: AEGIS_EVALS_MIN_PASSED
                   value: "5"
