@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 
+from google.genai.errors import ServerError
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
@@ -16,6 +17,10 @@ llm_sem = asyncio.Semaphore(llm_max_jobs)
 
 # The threshold for LLM input tokens to log a warning
 llm_input_tokens_warn_thr = int(os.getenv("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 16384))
+
+
+# initial delay in seconds after getting HTTP 503 status code from LLM (doubled on each attempt)
+PROMPT_RETRY_503_DELAY_INIT = 8
 
 # temperature override while retrying a prompt
 PROMPT_RETRY_TEMPERATURE = 0.9
@@ -63,14 +68,34 @@ class Feature:
             # will be merged with self.agent.model_settings by pydantic_ai
             model_settings = {}
 
+            # how long we sleep before next attempt
+            delay = 0
+
             # retry loop
-            for attempt in range(agent_default_max_retries):
+            attempt = 0
+            while True:
+                msg = f"{call_str} retrying prompt"
                 try:
                     result = await self._run(
                         call_str, prompt, model_settings=model_settings, **kwargs
                     )
+
+                    # success (no exception)
                     break
+
+                except ServerError as e:
+                    if agent_default_max_retries <= attempt or e.code != 503:
+                        # propagate other exceptions (or exceeded retry attempts)
+                        raise
+
+                    # retry the prompt with gradually increasing delay
+                    delay = (delay * 2) if delay else PROMPT_RETRY_503_DELAY_INIT
+
                 except UnexpectedModelBehavior as e:
+                    if agent_default_max_retries <= attempt:
+                        # exceeded retry attempts
+                        raise
+
                     if "RECITATION" not in str(e):
                         # propagate other exceptions
                         raise
@@ -78,10 +103,19 @@ class Feature:
                     # retry with high temperature
                     # see https://github.com/RedHatProductSecurity/aegis-ai/issues/271
                     model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
-                    msg = f"{call_str} retrying prompt with temperature={PROMPT_RETRY_TEMPERATURE}"
-                    msg += f", attempt {attempt + 1}/{agent_default_max_retries}"
-                    logger.warning(msg)
-                    continue
+                    msg += f" with temperature={PROMPT_RETRY_TEMPERATURE}"
+
+                # increment the counter of retries
+                attempt += 1
+
+                # print a warning that we retry the prompt
+                if delay:
+                    msg += f" in {delay}s"
+                msg += f", attempt {attempt}/{agent_default_max_retries}"
+                logger.warning(msg)
+
+                # wait before the next attempt
+                await asyncio.sleep(delay)
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens
