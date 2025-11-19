@@ -153,11 +153,12 @@ class SuggestDescriptionText(Feature):
                 - Include confidence and quality scores.
             """,
             rules="""
-                Description: one short paragraph of the form:
+                'description': one short paragraph of the form:
                 "A flaw was found in [component]. This vulnerability allows [impact] via [vector]."
                 - No versioning or extra commentary.
-                Title: <= 20 words, include product/component and vulnerability type.
-                Do not duplicate fields like versions; keep it focused and professional.
+                'title': <= 20 words, include product/component and vulnerability type.
+                - Do not duplicate fields like versions; keep it focused and professional.
+                - 'description' and 'title' need to be consistent with each other.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,
