@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import os
@@ -5,6 +6,7 @@ import os
 from rich.console import Console
 from typing import Sequence, Any
 
+from google.genai.errors import ServerError
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Dataset
@@ -18,7 +20,8 @@ from pydantic_evals.evaluators import (
 from pydantic_evals.evaluators.common import OutputConfig
 
 from aegis_ai import default_llm_model, default_llm_settings, llm_model
-from aegis_ai.features import llm_max_jobs
+from aegis_ai.agents import agent_default_max_retries
+from aegis_ai.features import llm_max_jobs, PROMPT_RETRY_503_DELAY_INIT
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -73,6 +76,41 @@ class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
         return score
 
 
+class LLMJudgeWrapper(LLMJudge):
+    """wrapper of LLMJudge that retries the prompt for specific exceptions"""
+
+    async def evaluate(self, ctx):
+        # how long we sleep before next attempt
+        delay = PROMPT_RETRY_503_DELAY_INIT
+
+        # retry loop
+        attempt = 0
+        while True:
+            try:
+                # regular evaluation of LLMJudge
+                return await super().evaluate(ctx)
+
+            except ServerError as e:
+                if agent_default_max_retries <= attempt or e.code != 503:
+                    # propagate other exceptions (or exceeded retry attempts)
+                    raise
+
+                # increment the counter of retries
+                attempt += 1
+
+                # print a warning that we retry the prompt
+                msg = f"LLMJudge raised an exception: {e}"
+                msg += f", retrying in {delay}s"
+                msg += f", attempt {attempt}/{agent_default_max_retries}"
+                logger.warning(msg)
+
+                # wait before the next attempt
+                await asyncio.sleep(delay)
+
+                # gradually increase the delay
+                delay *= 2
+
+
 def create_output_config(name):
     """return a fresh instance of OutputConfig if name is given, False otherwise"""
     return OutputConfig(evaluation_name=name, include_reason=True) if name else False
@@ -80,7 +118,7 @@ def create_output_config(name):
 
 def create_llm_judge(score_name=None, assertion_name=None, **kwargs):
     """construct an LLMJudge object based on the provided named arguments"""
-    return LLMJudge(
+    return LLMJudgeWrapper(
         model=evals_llm_model,
         model_settings=evals_llm_settings,
         score=create_output_config(score_name),
