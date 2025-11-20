@@ -8,7 +8,7 @@ import os
 import sys
 
 from pathlib import Path
-from typing import Any
+from typing import Dict, List, Any, Optional
 
 from google.genai.types import (
     HarmCategory,
@@ -169,6 +169,7 @@ class AppSettings(BaseSettings):
                 temperature=self.default_llm_temperature,
                 top_p=self.default_llm_top_p,
                 max_tokens=self.default_llm_max_tokens,
+                google_thinking_config={"include_thoughts": False},
                 google_safety_settings=google_safety_settings,
             )
         else:
@@ -279,3 +280,11 @@ def check_llm_status() -> bool:
     else:
         logging.warning("llm model health check failed")
         return False
+
+
+def remove_keys(
+    data: Optional[Dict[str, Any]], keys_to_remove: List[str]
+) -> Dict[str, Any]:
+    if not data:
+        return {}
+    return {k: v for k, v in data.items() if k not in keys_to_remove}

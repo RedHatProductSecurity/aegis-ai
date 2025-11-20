@@ -2,6 +2,7 @@ import cvss
 import logging
 from typing import Any
 
+from aegis_ai import remove_keys
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
@@ -13,6 +14,7 @@ from aegis_ai.features.cve.data_models import (
     SuggestDescriptionModel,
 )
 from aegis_ai.features.cve.data_models import CVEFeatureInput
+from aegis_ai.features.data_models import feature_deps
 from aegis_ai.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,7 @@ class SuggestImpact(Feature):
         output.cvss3_score = f"{cvss3_score_by_vector}"
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=["impact", "rh_cvss_score"])
         prompt = AegisPrompt(
             user_instruction="Analyze the CVE JSON and assess basic CVSS 3.1 vector/score from the perspective of Red Hat customers.  Based on the CVSS 3.1 score predict the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore existing labels and decide independently.",
             goals="""
@@ -70,12 +73,18 @@ class SuggestImpact(Feature):
                     - Provide confidence in [0.00..1.00]. Keep explanations concise.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=static_context,
+            static_context=remove_keys(
+                static_context, keys_to_remove=deps.exclude_osidb_fields
+            ),
             output_schema=SuggestImpactModel.model_json_schema(),
         )
-        result = await self.run_if_safe(prompt, output_type=SuggestImpactModel)
+        result = await self.run_if_safe(
+            prompt, deps=deps, output_type=SuggestImpactModel
+        )
         call_str = f"{self.__class__.__name__}({cve_id})"
-        self.post_process(result.output, call_str)
+        self.post_process(
+            result.output, call_str
+        )  # TODO: extract this to process on SuggestImpactModel data model rather then here.
         return result
 
 
@@ -83,6 +92,7 @@ class SuggestCWE(Feature):
     """Based on current CVE information and context assert CWE(s)."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=["cwe_id"])
         prompt = AegisPrompt(
             user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause of software weakness. Ignore any pre-labeled CWE.",
             goals="""
@@ -107,16 +117,19 @@ class SuggestCWE(Feature):
                 - confidence: [0.00..1.00].
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=static_context,
+            static_context=remove_keys(
+                static_context, keys_to_remove=deps.exclude_osidb_fields
+            ),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=SuggestCWEModel)
+        return await self.run_if_safe(prompt, deps=deps, output_type=SuggestCWEModel)
 
 
 class IdentifyPII(Feature):
     """Based on current CVE information (public comments, description, statement) and context assert if it contains any PII."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=[])
         prompt = AegisPrompt(
             user_instruction="Examine the CVE JSON and identify any PII (names, emails, phone numbers, IDs, IPs, health/genetic info, etc.).",
             goals="""
@@ -139,13 +152,14 @@ class IdentifyPII(Feature):
             static_context=static_context,
             output_schema=PIIReportModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=PIIReportModel)
+        return await self.run_if_safe(prompt, deps=deps, output_type=PIIReportModel)
 
 
 class SuggestDescriptionText(Feature):
     """Based on current CVE information and context suggest a description and title."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=["title", "cve_description"])
         prompt = AegisPrompt(
             user_instruction="Suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them.",
             goals="""
@@ -161,16 +175,21 @@ class SuggestDescriptionText(Feature):
                 - 'description' and 'title' need to be consistent with each other.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=static_context,
+            static_context=remove_keys(
+                static_context, keys_to_remove=deps.exclude_osidb_fields
+            ),
             output_schema=SuggestDescriptionModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=SuggestDescriptionModel)
+        return await self.run_if_safe(
+            prompt, deps=deps, output_type=SuggestDescriptionModel
+        )
 
 
 class SuggestStatementText(Feature):
     """Based on current CVE information and context suggest a statement."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=["statement", "mitigation"])
         prompt = AegisPrompt(
             user_instruction="Suggest the CVE statement to briefly explain RH-specific context for impact; leave empty if none.",
             goals="""
@@ -184,16 +203,21 @@ class SuggestStatementText(Feature):
                 - If no additional RH-specific context exists, return an empty statement.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=static_context,
+            static_context=remove_keys(
+                static_context, keys_to_remove=deps.exclude_osidb_fields
+            ),
             output_schema=SuggestStatementModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=SuggestStatementModel)
+        return await self.run_if_safe(
+            prompt, deps=deps, output_type=SuggestStatementModel
+        )
 
 
 class CVSSDiffExplainer(Feature):
     """Based on current CVE information and context explain CVSS score diff between nvd and rh."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=[])
         prompt = AegisPrompt(
             user_instruction="Compare Red Hat CVSS3 vs NVD CVSS3 for the CVE and explain any differences.",
             goals="""
@@ -208,4 +232,6 @@ class CVSSDiffExplainer(Feature):
             static_context=static_context,
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, output_type=CVSSDiffExplainerModel)
+        return await self.run_if_safe(
+            prompt, deps=deps, output_type=CVSSDiffExplainerModel
+        )

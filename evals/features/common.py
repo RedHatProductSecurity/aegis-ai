@@ -56,8 +56,8 @@ if evals_llm_host:
     evals_llm_settings = OpenAIResponsesModelSettings()
 else:
     # fallback to use the same LLM for evals
-    evals_llm_model = default_llm_model
-    evals_llm_settings = default_llm_settings
+    evals_llm_model = get_settings().default_llm_model
+    evals_llm_settings = get_settings().default_llm_settings
 
 
 class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
