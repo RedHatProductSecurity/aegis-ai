@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-all: check test test-web
+all: check test test-web test-feedback-schema
 
 install:
 	pip install . --force
@@ -47,6 +47,10 @@ test:
 
 test-web:
 	uv run pytest src/aegis_ai_web/tests
+
+test-feedback-schema:
+	uv run pytest scripts/test_feedback_schema.py -v
+
 
 upgrade-deps:
 	uv sync --upgrade

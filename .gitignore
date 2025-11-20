@@ -169,4 +169,6 @@ cython_debug/
 # Aegis specific
 .attic
 Makefile
-notes.orgtmp/
+notes.org
+tmp/
+

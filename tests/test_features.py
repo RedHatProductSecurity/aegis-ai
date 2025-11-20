@@ -4,16 +4,23 @@ from pydantic_core import ValidationError
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.features import component, cve
-from tests.utils.llm_cache import llm_cache_retrieve
+from tests.utils.llm_cache import get_cached_response, cache_response
 
 pytestmark = pytest.mark.asyncio
 
 
 async def test_suggest_impact_with_test_model():
-    def feature():
-        return cve.SuggestImpact(rh_feature_agent).exec("CVE-2025-0725")
+    test_name = "test_suggest_impact_with_test_model"
 
-    result = await llm_cache_retrieve(feature)
+    # Try to get cached response first
+    result = get_cached_response(test_name)
+
+    if not result:
+        # Make real LLM call and cache the response
+        llm_result = await cve.SuggestImpact(rh_feature_agent).exec("CVE-2025-0725")
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     suggestimpact = cve.SuggestImpactModel.model_validate_json(result)
     assert isinstance(suggestimpact, cve.SuggestImpactModel)
     assert suggestimpact.impact == "LOW"
@@ -24,32 +31,48 @@ async def test_suggest_impact_with_test_model():
 
 
 async def test_suggest_cwe_with_test_model(set_test_allowed_cwe_ids_env_var):
-    def feature():
-        return cve.SuggestCWE(rh_feature_agent).exec("CVE-2025-0725")
+    test_name = "test_suggest_cwe_with_test_model"
 
-    result = await llm_cache_retrieve(feature)
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await cve.SuggestCWE(rh_feature_agent).exec("CVE-2025-0725")
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     suggestcwe = cve.SuggestCWEModel.model_validate_json(result)
     assert isinstance(suggestcwe, cve.SuggestCWEModel)
     assert suggestcwe.cwe == ["CWE-190"]
 
 
 async def test_identify_pii_with_test_model():
-    def feature():
-        # we can directly use custom fields though auto validation happens during feature input
-        cve_id = "CVE-2025-0725"
-        return cve.IdentifyPII(rh_feature_agent).exec(cve_id)
+    test_name = "test_identify_pii_with_test_model"
+    cve_id = "CVE-2025-0725"
 
-    result = await llm_cache_retrieve(feature)
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await cve.IdentifyPII(rh_feature_agent).exec(cve_id)
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     piireport = cve.PIIReportModel.model_validate_json(result)
     assert isinstance(piireport, cve.PIIReportModel)
     assert not piireport.contains_PII  # is false
 
 
 async def test_suggest_description_with_test_model():
-    def feature():
-        return cve.SuggestDescriptionText(rh_feature_agent).exec("CVE-2025-0725")
+    test_name = "test_suggest_description_with_test_model"
 
-    result = await llm_cache_retrieve(feature)
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await cve.SuggestDescriptionText(rh_feature_agent).exec(
+            "CVE-2025-0725"
+        )
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     suggestdescription = cve.SuggestDescriptionModel.model_validate_json(result)
     assert isinstance(suggestdescription, cve.SuggestDescriptionModel)
     assert (
@@ -59,10 +82,17 @@ async def test_suggest_description_with_test_model():
 
 
 async def test_suggest_statement_with_test_model():
-    def feature():
-        return cve.SuggestStatementText(rh_feature_agent).exec("CVE-2025-0725")
+    test_name = "test_suggest_statement_with_test_model"
 
-    result = await llm_cache_retrieve(feature)
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await cve.SuggestStatementText(rh_feature_agent).exec(
+            "CVE-2025-0725"
+        )
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     suggeststatement = cve.SuggestStatementModel.model_validate_json(result)
     assert isinstance(suggeststatement, cve.SuggestStatementModel)
     assert (
@@ -72,10 +102,15 @@ async def test_suggest_statement_with_test_model():
 
 
 async def test_cvss_diff_explain_with_test_model():
-    def feature():
-        return cve.CVSSDiffExplainer(rh_feature_agent).exec("CVE-2025-0725")
+    test_name = "test_cvss_diff_explain_with_test_model"
 
-    result = await llm_cache_retrieve(feature)
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await cve.CVSSDiffExplainer(rh_feature_agent).exec("CVE-2025-0725")
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     cvssdiffexplain = cve.CVSSDiffExplainerModel.model_validate_json(result)
     assert isinstance(cvssdiffexplain, cve.CVSSDiffExplainerModel)
     assert (
@@ -85,10 +120,17 @@ async def test_cvss_diff_explain_with_test_model():
 
 
 async def test_component_intelligence_test_model():
-    def feature():
-        return component.ComponentIntelligence(rh_feature_agent).exec("curl")
+    test_name = "test_component_intelligence_test_model"
 
-    result = await llm_cache_retrieve(feature)
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await component.ComponentIntelligence(rh_feature_agent).exec(
+            "curl"
+        )
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
     componentintelligence = component.ComponentIntelligenceModel.model_validate_json(
         result
     )
@@ -98,10 +140,7 @@ async def test_component_intelligence_test_model():
 
 
 async def test_suggest_impact_with_bad_cve_test_model():
-    def feature():
-        return cve.SuggestImpact(rh_feature_agent).exec("BAD-CVE-ID")
-
     with pytest.raises(ValidationError) as excinfo:
-        await feature()
+        await cve.SuggestImpact(rh_feature_agent).exec("BAD-CVE-ID")
 
     assert "String should match pattern" in str(excinfo)

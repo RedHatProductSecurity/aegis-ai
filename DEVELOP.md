@@ -142,6 +142,30 @@ Our test suite uses **`pytest`** and `pytest-asyncio`.
     ```bash
     uv run pytest -k "test_suggest_impact_with_bad_cve"
     ```
+  * **Run Feedback Script Tests**:
+    ```bash
+    make test-feedback-scripts
+    ```
+
+### Feedback Log Analysis
+
+The web API logs user feedback directly to a CSV file (`feedback.csv`), which preserves all original data including special characters. Special characters (commas, quotes, newlines) are automatically escaped by Python's CSV library.
+
+  * **CSV Format**: Standard CSV with headers and proper escaping:
+    ```csv
+    datetime,feature,cve_id,actual,expected,request_time,accept
+    2025-11-20 13:07:26.894,suggest-impact,CVE-2025-23395,IMPORTANT,CRITICAL,,False
+    2025-11-20 13:07:30.123,suggest-cwe,CVE-2025-12345,"Value, with comma","Quote ""safety"" test",,True
+    ```
+
+  * **Analyze Feedback**: Use standard CSV tools:
+    ```bash
+    # Count by feature
+    tail -n +2 feedback.csv | cut -d, -f2 | sort | uniq -c
+    
+    # Open in spreadsheet
+    libreoffice feedback.csv
+    ```
 
 -----
 

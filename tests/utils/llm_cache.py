@@ -1,45 +1,67 @@
-import asyncio
-import inspect
+"""
+Caching utility for test responses to avoid LLM costs.
+Supports both web API tests and core library tests.
+"""
+
+import json
 import logging
 import os
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# directory where we cache CVE data retrieved from OSIDB
+# directory where we cache LLM data
 LLM_CACHE_DIR = os.getenv("TEST_LLM_CACHE_DIR", "tests/llm_cache")
 
-# global mutex for access to LLM_CACHE_DIR
-# Note that cache hits (which is the most common case) are handle very quickly.
-# So there is no need to implement any per-file locking for the OSIDB cache.
-cache_lock = asyncio.Lock()
 
+def get_cached_response(test_name: str):
+    """
+    Retrieve cached response if available.
 
-async def llm_cache_retrieve(feature):
-    """Return cached LLM data if available.  If not, retrieve LLM data"""
+    Args:
+        test_name: Name of the test function (used as cache key)
 
-    # use test function name as name of related cache file
-    test_name = inspect.stack()[1].function
+    Returns:
+        Cached response as JSON string, or None if not cached
+    """
     cache_file = Path(LLM_CACHE_DIR, f"{test_name}.json")
 
-    # acquire global mutex to access LLM_CACHE_DIR
-    async with cache_lock:
-        try:
-            # check whether the LLM data is cached already
-            with open(cache_file, "r") as f:
-                json_data = f.read()
+    try:
+        with open(cache_file, "r") as f:
+            content = f.read()
+        logger.info(f'Read cached response from "{cache_file}"')
+        return content
+    except OSError as e:
+        logger.debug(f'Cache miss for "{cache_file}": {e}')
+        return None
 
-            # try to load data from the existing JSON file
-            data = json_data
-            logger.info(f'read LLM data from "{cache_file}"')
 
-        except OSError:
-            # cached LLM data not available -> query LLM
-            llm_result = await feature()
-            data = llm_result.output
-            logger.info(data)
-            logger.info(f'writing LLM data cache to "{cache_file}"')
-            with open(cache_file, "w") as f:
-                f.write(data.model_dump_json(indent=4))
-                f.write("\n")
-    return data
+def cache_response(test_name: str, response_data):
+    """
+    Cache a response for future test runs.
+
+    Args:
+        test_name: Name of the test function (used as cache key)
+        response_data: Response to cache (dict, str, or object with model_dump_json)
+    """
+    cache_dir = Path(LLM_CACHE_DIR)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    cache_file = cache_dir / f"{test_name}.json"
+
+    with open(cache_file, "w") as f:
+        if isinstance(response_data, dict):
+            # Web API responses (already dicts)
+            json.dump(response_data, f, indent=2)
+        elif isinstance(response_data, str):
+            # Already a JSON string
+            f.write(response_data)
+        elif hasattr(response_data, "model_dump_json"):
+            # Pydantic models
+            f.write(response_data.model_dump_json(indent=4))
+        else:
+            # Fallback to json.dump
+            json.dump(response_data, f, indent=2)
+        f.write("\n")
+
+    logger.info(f'Cached response to "{cache_file}"')
