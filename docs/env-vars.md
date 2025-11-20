@@ -6,6 +6,9 @@
 | `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile               | `public`               |
 | `AEGIS_LLM_HOST`               | Aegis LLM host                                  | `localhost:11434`      |
 | `AEGIS_LLM_MODEL`              | Aegis LLM model                                 | `llama3.2:latest`      |
+| `AEGIS_LLM_TEMPERATURE`        | Aegis LLM default temperature                   | 0.055                  |
+| `AEGIS_LLM_TOP_P`              | Aegis LLM default top_p                         | .8                     |
+| `AEGIS_LLM_MAX_TOKENS`         | Aegis LLM max tokens                            | 16384                  |
 | `AEGIS_LLM_INPUT_TOKENS_WARN_THR` | Threshold for LLM input tokens to log a warning | 16384                  |
 | `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently      | 4                      |
 | `AEGIS_LLM_TIMEOUT_SECS`       | Timeout in seconds for a single LLM prompt      | 300                    |

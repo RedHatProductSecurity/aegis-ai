@@ -13,19 +13,8 @@ from pydantic_ai.toolsets import FunctionToolset, CombinedToolset
 from pydantic_ai.toolsets.wrapper import WrapperToolset
 from pydantic_ai._run_context import RunContext
 
-from aegis_ai import (
-    tavily_api_key,
-    truthy,
-    use_tavily_tool,
-    use_cwe_tool,
-    use_linux_cve_tool,
-    use_github_mcp_tool,
-    use_wikipedia_mcp_tool,
-    use_pypi_mcp_tool,
-    config_dir,
-    use_nvd_dev_tool,
-    use_cisa_kev_tool,
-)
+from aegis_ai import get_settings
+
 from aegis_ai.toolsets.tools.cwe import cwe_toolset
 from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.toolsets.tools.osidb import osidb_toolset
@@ -118,22 +107,22 @@ pypi_stdio_server = MCPServerStdio(
         "mcp-pypi",
         "stdio",
         "--cache-dir",
-        f"{config_dir}/pypi-mcp",
+        f"{get_settings().config_dir}/pypi-mcp",
     ],
     tool_prefix="pypi-mcp",
 )
 
 # Toolset for 'baked in' pydantic-ai tools
 pydantic_ai_tools = []
-if use_tavily_tool in truthy:
-    pydantic_ai_tools.append(tavily_search_tool(tavily_api_key))
+if get_settings().use_tavily_tool:
+    pydantic_ai_tools.append(tavily_search_tool(get_settings().tavily_api_key))
 pydantic_ai_toolset = FunctionToolset(tools=pydantic_ai_tools)
 
 # Enable public function tools
 public_tools = [wikipedia_tool]
-if use_linux_cve_tool in truthy:
+if get_settings().use_linux_cve_tool:
     public_tools.append(kernel_cve_tool)
-if use_cisa_kev_tool in truthy:
+if get_settings().use_cisa_kev_tool:
     public_tools.append(cisa_kev_tool)
 
 # TODO: in the future we might enable adding wikipedia_mcp_tool - dependent on wikipedia account
@@ -143,7 +132,7 @@ public_toolset = CombinedToolset(
 )
 
 # Enable toolsets
-if use_github_mcp_tool in truthy:
+if get_settings().use_github_mcp_tool:
     public_toolset = CombinedToolset(
         [
             github_stdio_server,
@@ -151,7 +140,7 @@ if use_github_mcp_tool in truthy:
         ]
     )
 
-if use_wikipedia_mcp_tool in truthy:
+if get_settings().use_wikipedia_mcp_tool:
     public_toolset = CombinedToolset(
         [
             wikipedia_stdio_server,
@@ -159,7 +148,7 @@ if use_wikipedia_mcp_tool in truthy:
         ]
     )
 
-if use_pypi_mcp_tool in truthy:
+if get_settings().use_pypi_mcp_tool:
     public_toolset = CombinedToolset(
         [
             pypi_stdio_server,
@@ -167,7 +156,7 @@ if use_pypi_mcp_tool in truthy:
         ]
     )
 
-if use_cwe_tool in truthy:
+if get_settings().use_cwe_tool:
     public_toolset = CombinedToolset(
         [
             cwe_toolset,
@@ -190,7 +179,7 @@ public_cve_toolset = CombinedToolset(
         FunctionToolset(tools=public_cve_tools),
     ]
 )
-if use_nvd_dev_tool in truthy:
+if get_settings().use_nvd_dev_tool:
     public_cve_toolset = CombinedToolset(
         [
             public_cve_toolset,

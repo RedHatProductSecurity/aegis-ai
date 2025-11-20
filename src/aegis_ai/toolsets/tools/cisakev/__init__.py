@@ -12,7 +12,7 @@ from requests import RequestException
 from pydantic import Field
 from pydantic_ai import RunContext, Tool
 
-from aegis_ai import config_dir
+from aegis_ai import get_settings
 from aegis_ai.toolsets.tools import (
     default_tool_http_headers,
     BaseToolOutput,
@@ -21,7 +21,7 @@ from aegis_ai.toolsets.tools import (
 
 logger = logging.getLogger(__name__)
 
-cache_dir = pathlib.Path(f"{config_dir}/cisakev")
+cache_dir = pathlib.Path(f"{get_settings().config_dir}/cisakev")
 cache_dir.mkdir(parents=True, exist_ok=True)
 
 CVEID: TypeAlias = str
