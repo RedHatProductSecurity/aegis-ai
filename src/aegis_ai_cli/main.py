@@ -11,7 +11,7 @@ import asyncio
 from rich.console import Console
 from rich.rule import Rule
 
-from aegis_ai import check_llm_status, config_logging
+from aegis_ai import check_llm_status, config_logging, get_settings
 from aegis_ai.agents import (
     rh_feature_agent,
     public_feature_agent,
@@ -50,6 +50,7 @@ def aegis_cli(debug):
     else:
         config_logging(level="DEBUG")
 
+    logging.info(f"Aegis version: {get_settings().app_version}")
     logging.info(f"Aegis cli_agent: {cli_agent.name}")
 
     if check_llm_status():

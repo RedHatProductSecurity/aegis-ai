@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 from pydantic import Field, BaseModel
 from pydantic_ai import Tool, RunContext
 
-from aegis_ai import config_dir
+from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
@@ -237,7 +237,7 @@ async def kernel_cve_lookup(cve_id: CVEID) -> LINUXCVEToolResponse:
             cve_id=cve_id, status="error", error_message="Failed to run tool."
         )
 
-    cache_path = Path(config_dir) / "kernel_cves"
+    cache_path = Path(get_settings().config_dir) / "kernel_cves"
     repo = KernelVulnsRepo(cache_path)
 
     try:

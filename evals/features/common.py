@@ -19,7 +19,7 @@ from pydantic_evals.evaluators import (
 )
 from pydantic_evals.evaluators.common import OutputConfig
 
-from aegis_ai import default_llm_model, default_llm_settings, llm_model
+from aegis_ai import get_settings
 from aegis_ai.agents import agent_default_max_retries
 from aegis_ai.features import llm_max_jobs, PROMPT_RETRY_503_DELAY_INIT
 from aegis_ai.features.data_models import AegisFeatureModel
@@ -42,7 +42,9 @@ logger = logging.getLogger(__name__)
 evals_llm_host = os.getenv("AEGIS_EVALS_LLM_HOST")
 if evals_llm_host:
     # use an independent LLM for evals
-    evals_llm_model_name = os.getenv("AEGIS_EVALS_LLM_MODEL", llm_model)
+    evals_llm_model_name = os.getenv(
+        "AEGIS_EVALS_LLM_MODEL", get_settings().default_llm_model_name
+    )
     evals_llm_api_key = os.getenv("AEGIS_EVALS_LLM_API_KEY", "")
     evals_llm_model = OpenAIChatModel(
         model_name=evals_llm_model_name,
@@ -54,8 +56,8 @@ if evals_llm_host:
     evals_llm_settings = OpenAIResponsesModelSettings()
 else:
     # fallback to use the same LLM for evals
-    evals_llm_model = default_llm_model
-    evals_llm_settings = default_llm_settings
+    evals_llm_model = get_settings().default_llm_model
+    evals_llm_settings = get_settings().default_llm_settings
 
 
 class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):

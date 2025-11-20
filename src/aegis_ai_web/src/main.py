@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from aegis_ai import config_logging
+from aegis_ai import config_logging, get_settings
 from aegis_ai.agents import public_feature_agent, rh_feature_agent
 
 from aegis_ai.data_models import CVEID, cveid_validator
@@ -129,14 +129,18 @@ async def get_openapi_yaml() -> Response:
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "version": get_settings().app_version}
+    )
 
 
 if ENABLE_CONSOLE:
 
     @app.get("/console", response_class=HTMLResponse)
     async def console(request: Request):
-        return templates.TemplateResponse("console.html", {"request": request})
+        return templates.TemplateResponse(
+            "console.html", {"request": request, "version": get_settings().app_version}
+        )
 
     @app.post("/console")
     async def generate_response(

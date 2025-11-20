@@ -7,13 +7,15 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from aegis_ai import config_dir, truthy
+from aegis_ai import truthy, get_settings
 from aegis_ai.data_models import CVEID
 
 AEGIS_REST_API_VERSION: str = "v1"
 
 feature_agent = os.getenv("AEGIS_WEB_FEATURE_AGENT", "public")
-feedback_log = os.getenv("AEGIS_WEB_FEEDBACK_LOG", f"{config_dir}/feedback.log")
+feedback_log = os.getenv(
+    "AEGIS_WEB_FEEDBACK_LOG", f"{get_settings().config_dir}/feedback.log"
+)
 
 ENABLE_CONSOLE = os.getenv("AEGIS_WEB_ENABLE_CONSOLE", "false").lower() in truthy
 

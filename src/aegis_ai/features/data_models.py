@@ -1,5 +1,26 @@
+import datetime
+from dataclasses import dataclass, field
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
+
+
+@dataclass
+class feature_deps:
+    """
+    A dataclass to hold feature data dependencies, including a dynamically
+    generated current datetime string.
+
+    These deps are used to dynamically provide information to tooling.
+    https://ai.pydantic.dev/dependencies/#defining-dependencies
+
+    """
+
+    current_dt: str = field(
+        default_factory=lambda: datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    exclude_osidb_fields: List[str] = field(
+        default_factory=list,
+    )
 
 
 class FeatureQueryInput(BaseModel):

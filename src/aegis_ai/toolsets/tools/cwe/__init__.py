@@ -18,7 +18,7 @@ from sentence_transformers import SentenceTransformer
 
 from pydantic_ai import Tool, RunContext
 from pydantic_ai.toolsets import FunctionToolset
-from aegis_ai import config_dir
+from aegis_ai import get_settings
 from aegis_ai.data_models import CWEID, cweid_validator
 from aegis_ai.toolsets.tools import default_tool_http_headers
 from aegis_ai.toolsets.tools.cwe.data_models import CWESearchInput, CWE, CWEToolInput
@@ -33,7 +33,7 @@ CWE_URLS = [
 ]
 
 EMBEDDING_MODEL = "all-mpnet-base-v2"
-CACHE_DIR = Path(config_dir) / "mitre_cwe"
+CACHE_DIR = Path(get_settings().config_dir) / "mitre_cwe"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 CWE_DEFS_FILE = CACHE_DIR / "cwe_full_defs.json"
 CWE_FAISS_INDEX_FILE = CACHE_DIR / "cwe_index.faiss"

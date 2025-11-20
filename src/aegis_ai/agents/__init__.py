@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 
-from aegis_ai import get_settings, default_llm_model
+from aegis_ai import get_settings
 from aegis_ai.features.data_models import AegisAnswer
 from aegis_ai.toolsets import (
     public_toolset,
@@ -24,11 +24,12 @@ def create_aegis_agent(**kwargs: Any) -> Agent:
     without subclassing the (final) `Agent` class.
     """
     return Agent(
-        model=default_llm_model,
+        model=get_settings().default_llm_model,
         model_settings=get_settings().default_llm_settings
         | {
-            "temperature": 0.055,
-            "top_p": 0.8,
+            "temperature": get_settings().default_llm_temperature,
+            "top_p": get_settings().default_llm_top_p,
+            "max_tokens": get_settings().default_llm_max_tokens,
             "seed": 42,
             "response_format": {"type": "json_object"},
         },
