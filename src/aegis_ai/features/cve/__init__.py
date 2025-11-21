@@ -170,6 +170,8 @@ class SuggestDescriptionText(Feature):
                 'description': one short paragraph of the form:
                 "A flaw was found in [component]. This vulnerability allows [impact] via [vector]."
                 - No versioning or extra commentary.
+                - Include detailed technical information.
+                - Expand each acronym in parentheses behind the acronym in the description text.
                 'title': <= 20 words, include product/component and vulnerability type.
                 - Do not duplicate fields like versions; keep it focused and professional.
                 - 'description' and 'title' need to be consistent with each other.
@@ -284,8 +286,9 @@ class CVSSDiffExplainer(Feature):
                 - If identical, explanation must be empty.
             """,
             rules="""
-                Be specific about which metrics drive the difference (AV, AC, PR, UI, CIA).
-                Keep the rationale brief and factual. If no difference, return an empty explanation.
+                - Be specific about which metrics drive the difference (AV, AC, PR, UI, CIA).
+                - Expand especially on *why* the metrics are different in the Red Hat context.
+                - Keep the rationale brief and factual. If no difference, return an empty explanation.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=static_context,

@@ -146,6 +146,11 @@ cases = [
         expected_description="A vulnerability has been identified in the GRUB2 bootloader's network module that poses an immediate Denial of Service (DoS) risk. This flaw is a Use-after-Free issue, caused because the net_set_vlan command is not properly unregistered when the network module is unloaded from memory. An attacker who can execute this command can force the system to access memory locations that are no longer valid. Successful exploitation leads directly to system instability, which can result in a complete crash and halt system availability.",
     ),
     SuggestDescriptionCase(
+        cve_id="CVE-2025-60876",
+        expected_title="BusyBox wget: CRLF Injection via unsanitized HTTP request-target allows header injection",
+        expected_description="A flaw was found in BusyBox wget. This vulnerability allows an attacker to inject arbitrary Hypertext Transfer Protocol (HTTP) headers by failing to sanitize raw Carriage Return (CR) (0x0D), Line Feed (LF) (0x0A), and other C0 control bytes in the HTTP request-target.",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2025-61661",
         expected_description="A vulnerability has been identified in the GRUB (Grand Unified Bootloader) component. This flaw occurs because the bootloader mishandles string conversion when reading information from a USB device, allowing an attacker to exploit inconsistent length values. A local attacker can connect a maliciously configured USB device during the boot sequence to trigger this issue. A successful exploitation may lead GRUB to crash, leading to a Denial of Service. Data corruption may be also possible, although given the complexity of the exploit the impact is most likely limited.",
     ),
@@ -176,7 +181,7 @@ evals = common_feature_evals + [
     PromptLeakEvaluator(),
     create_llm_judge(
         assertion_name="NoVersionInTitle",
-        rubric="suggested_title and suggested_description do not contain any versioning info",
+        rubric="suggested_title and suggested_description do not contain any versioning info.  Expanded acronyms do not count as versioning info.",
     ),
     create_llm_judge(
         assertion_name="TitleSummarizesDescription",
