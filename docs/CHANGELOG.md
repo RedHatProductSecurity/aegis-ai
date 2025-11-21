@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - bump to pydantic-evals,pydantic-ai 1.20.0
 - dynamic filtering of CVE data - using data deps injection with `osidb_tool`.
 - dynamic filtering of CVE data when supplied direct with static content.
-
+- enhanced `suggest-statement` analysis feature.
 
 ## [0.4.2] - 2025-11-14
 

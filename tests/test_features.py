@@ -67,7 +67,7 @@ async def test_suggest_statement_with_test_model():
     assert isinstance(suggeststatement, cve.SuggestStatementModel)
     assert (
         suggeststatement.suggested_statement
-        == "This flaw is only exploitable when libcurl uses zlib version 1.2.0.3 or older for gzip decompression. Supported versions of Red Hat Enterprise Linux are not affected as they ship with newer versions of the zlib library. Some Red Hat services that bundle older third-party tools may be affected."
+        == "This issue has a low impact on Red Hat products as it only affects libcurl when used with zlib versions 1.2.0.3 or older, which are not widely present in affected Red Hat components. The vulnerability requires specific conditions for exploitation related to automatic gzip decompression."
     )
 
 

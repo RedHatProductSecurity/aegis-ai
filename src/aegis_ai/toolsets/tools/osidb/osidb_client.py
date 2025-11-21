@@ -26,7 +26,7 @@ class OSIDBClient:
         logger.info(f"Retrieving raw flaw data for {cve_id} from OSIDB.")
         flaw_data = self._session.flaws.retrieve(
             id=cve_id,
-            include_fields="cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,components,comments,comment_zero,affects,references,embargoed",
+            include_fields="cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,mitigation,components,comments,comment_zero,affects,references,embargoed",
         )
 
         if not include_embargoed and flaw_data.embargoed:

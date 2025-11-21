@@ -186,11 +186,11 @@ class SuggestDescriptionModel(AegisFeatureModel):
 
 class SuggestStatementModel(AegisFeatureModel):
     """
-    Model to suggest Red Hat CVE statement.
+    Model to suggest Red Hat CVE statement and mitigation.
     """
 
     cve_id: CVEID = Field(
-        ...,  # Make it required
+        ...,
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
@@ -199,14 +199,18 @@ class SuggestStatementModel(AegisFeatureModel):
         description="Contains CVE title",
     )
 
+    impact: Literal["", "LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
+        ..., description="Contains CVE impact."
+    )
+
     components: List = Field(
         ...,
         description="List of affected components",
     )
 
-    statement: List = Field(
+    description: str = Field(
         ...,
-        description="Original CVE statement",
+        description="Contains CVE description",
     )
 
     explanation: str = Field(
@@ -216,14 +220,14 @@ class SuggestStatementModel(AegisFeatureModel):
         """,
     )
 
-    original_description: str = Field(
-        ...,
-        description="Contains the original CVE description provided by the osidb_tool.",
-    )
-
     suggested_statement: str = Field(
         ...,
         description="suggested Red Hat CVE statement explaining impact on Red Hat supported products.",
+    )
+
+    suggested_mitigation: str = Field(
+        ...,
+        description="suggested Red Hat CVE mitigation explaining how to mitigate impact on Red Hat supported products.",
     )
 
 
