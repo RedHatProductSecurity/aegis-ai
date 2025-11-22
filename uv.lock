@@ -648,7 +648,7 @@ wheels = [
 
 [[package]]
 name = "cyclopts"
-version = "4.2.4"
+version = "4.2.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -656,9 +656,9 @@ dependencies = [
     { name = "rich" },
     { name = "rich-rst" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/08/f20fe40a5db9cd1c42316de5a26209dd008f30d38eea297f94e744dea463/cyclopts-4.2.4.tar.gz", hash = "sha256:27e1d175df2889aba72cd960c4e34c8b0a501c5b0161e849c72d9fee5903ecbb", size = 149362, upload-time = "2025-11-14T21:38:46.722Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/f0/5a83ac365800969552a7eb261b03860dea38647fb6cc31574bdbcdc9f0f5/cyclopts-4.2.5.tar.gz", hash = "sha256:91aff5da5b8b841ccb32b5142c2d12fd93678fbc9eba7ef7319452323e24d6d4", size = 149497, upload-time = "2025-11-22T02:33:37.526Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/b2/fabcd6020b63b9d9f7a79cfc61b9c03c4e08ccb54f9cf9db9791be5669ef/cyclopts-4.2.4-py3-none-any.whl", hash = "sha256:41054f5e921a4f2b8ab9c839f12a274dec06a19560dc4898ce37cb775ca68ca4", size = 185023, upload-time = "2025-11-14T21:38:45.659Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/00/a9b81bdba88e2904602e970e46ffd18b6a833d902f18d91bdce6fc271c49/cyclopts-4.2.5-py3-none-any.whl", hash = "sha256:361be316ce7f6ce674cad8d34bf6c5e39c34daaeceae40632a55b599472975c7", size = 185196, upload-time = "2025-11-22T02:33:36.103Z" },
 ]
 
 [[package]]
@@ -813,11 +813,11 @@ wheels = [
 
 [[package]]
 name = "exceptiongroup"
-version = "1.3.0"
+version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/36/f4/c6e662dade71f56cd2f3735141b265c3c79293c109549c1e6933b0651ffc/exceptiongroup-1.3.0-py3-none-any.whl", hash = "sha256:4d111e6e0c13d0644cad6ddaa7ed0261a0b36971f6d23e7ec9b4b9097da78a10", size = 16674, upload-time = "2025-05-10T17:42:49.33Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl", hash = "sha256:a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598", size = 16740, upload-time = "2025-11-21T23:01:53.443Z" },
 ]
 
 [[package]]
@@ -1883,11 +1883,11 @@ wheels = [
 
 [[package]]
 name = "networkx"
-version = "3.5"
+version = "3.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6c/4f/ccdb8ad3a38e583f214547fd2f7ff1fc160c43a75af88e6aec213404b96a/networkx-3.5.tar.gz", hash = "sha256:d4c6f9cf81f52d69230866796b82afbccdec3db7ae4fbd1b65ea750feed50037", size = 2471065, upload-time = "2025-05-29T11:35:07.804Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/fc/7b6fd4d22c8c4dc5704430140d8b3f520531d4fe7328b8f8d03f5a7950e8/networkx-3.6.tar.gz", hash = "sha256:285276002ad1f7f7da0f7b42f004bcba70d381e936559166363707fdad3d72ad", size = 2511464, upload-time = "2025-11-24T03:03:47.158Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/8d/776adee7bbf76365fdd7f2552710282c79a4ead5d2a46408c9043a2b70ba/networkx-3.5-py3-none-any.whl", hash = "sha256:0030d386a9a06dee3565298b4a734b68589749a544acbb6c412dc9e2489ec6ec", size = 2034406, upload-time = "2025-05-29T11:35:04.961Z" },
+    { url = "https://files.pythonhosted.org/packages/07/c7/d64168da60332c17d24c0d2f08bdf3987e8d1ae9d84b5bbd0eec2eb26a55/networkx-3.6-py3-none-any.whl", hash = "sha256:cdb395b105806062473d3be36458d8f1459a4e4b98e236a66c3a48996e07684f", size = 2063713, upload-time = "2025-11-24T03:03:45.21Z" },
 ]
 
 [[package]]
@@ -2586,7 +2586,7 @@ email = [
 
 [[package]]
 name = "pydantic-ai-slim"
-version = "1.21.0"
+version = "1.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "genai-prices" },
@@ -2597,9 +2597,9 @@ dependencies = [
     { name = "pydantic-graph" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/56/21/ca6f85e13cc0ea043e6bf6e12e4049904635f0a24c7dd80f6498a863ed09/pydantic_ai_slim-1.21.0.tar.gz", hash = "sha256:3be74e7ac281d1106421fe6c95b8abdc4c6d2735f36c0944e2de6e8511cd5913", size = 305025, upload-time = "2025-11-21T01:39:07.447Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9d/4d/35875395f89a59fe7d0d8810457406db968ed9e9043012258a5c32624956/pydantic_ai_slim-1.22.0.tar.gz", hash = "sha256:0c962bac44ea81bd731e787e07106ebc49dc1ea9c842b131a5adec0e869aad37", size = 313768, upload-time = "2025-11-22T00:37:24.766Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/c3/ad9e2b2f668196aee307d6eb9dfe12c8d0e9f3f39a43713e8263b1682e6b/pydantic_ai_slim-1.21.0-py3-none-any.whl", hash = "sha256:25602a228070b85ec2828537b8b03877f87f69d8bfee7ebd9f2ef444d313b185", size = 405089, upload-time = "2025-11-21T01:38:52.428Z" },
+    { url = "https://files.pythonhosted.org/packages/21/80/c2049fdf0caf9b4fcf19dc9c0f8b4f802a0f32cce5672d844de31eaa7ee9/pydantic_ai_slim-1.22.0-py3-none-any.whl", hash = "sha256:9c2b0504daf3cfd4c06c2454ebf3011b6e08cf05cb18460f2a97c258b8cead6a", size = 414554, upload-time = "2025-11-22T00:37:13.726Z" },
 ]
 
 [package.optional-dependencies]
@@ -2649,7 +2649,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-evals"
-version = "1.21.0"
+version = "1.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -2659,14 +2659,14 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/a7/ccfc5b974760bf241839782c37315a6259306913538c95cef007a4d2a1c2/pydantic_evals-1.21.0.tar.gz", hash = "sha256:2fd95cea399f13dd89e2860c0758be98e9ee47dff66878ba42477afc54967587", size = 46985, upload-time = "2025-11-21T01:39:08.976Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/1c/532de07346c935c7c900fe1c9013a78a649e36a2f4697e1217f06a900b1b/pydantic_evals-1.22.0.tar.gz", hash = "sha256:576b589e8699a30892cab385e037acf65193783ee3532edd0c83b19355b636dd", size = 46987, upload-time = "2025-11-22T00:37:25.745Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/a3/60a300f4f0bbfc7a09fd07177c77a925751982e2f2f06d5f3f626b330d17/pydantic_evals-1.21.0-py3-none-any.whl", hash = "sha256:fe885cef7474d52ab2591d1ac88eefed68cd011f170ce5a1b85760d3e20d02e9", size = 56134, upload-time = "2025-11-21T01:38:54.512Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/0a/5dfaff5c495fdeebab272c86af0b90c316d037b113348e18c5b8b01198a3/pydantic_evals-1.22.0-py3-none-any.whl", hash = "sha256:94ef58c5fbc80bf75e535690fa964578c06341d5982f45781c987e0a6b8a4e0d", size = 56135, upload-time = "2025-11-22T00:37:15.067Z" },
 ]
 
 [[package]]
 name = "pydantic-graph"
-version = "1.21.0"
+version = "1.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -2674,9 +2674,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/1d/d3d062ac32651e76a700eaf58d157e86fc20a088031a042191fa6ba14030/pydantic_graph-1.21.0.tar.gz", hash = "sha256:2e0967482f2b41fc5470ba72845c5bc9fa2cd037297c4f6adbb5f15173c733c4", size = 58363, upload-time = "2025-11-21T01:39:10.351Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/de/f4dcfa706de97fce1d3d9983be84d632752c7b7ac03878bb6cc46a381e67/pydantic_graph-1.22.0.tar.gz", hash = "sha256:cc3d396e27f6a664211ed5ebacb205e6f1e2e42f1ca21846a587e3b52b438fe8", size = 58366, upload-time = "2025-11-22T00:37:26.64Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/11/ffee440b135ad23a36e3cbdb0503fdb32d5e953bf294768310ec0ee40e4a/pydantic_graph-1.21.0-py3-none-any.whl", hash = "sha256:1a6113051d4e7a4852b094af3599d98f0a1bc38361132cd109922e024249c1e4", size = 72260, upload-time = "2025-11-21T01:38:55.813Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/2e/b1cb0000768a39b00249c460f742f697a0f59785179862f1b33b8237b515/pydantic_graph-1.22.0-py3-none-any.whl", hash = "sha256:388c2153fddd7a7f7befcca24ff520fe29b26ac01b5ebc49051a4dcd7198226b", size = 72260, upload-time = "2025-11-22T00:37:16.294Z" },
 ]
 
 [[package]]
@@ -3281,15 +3281,15 @@ wheels = [
 
 [[package]]
 name = "secretstorage"
-version = "3.4.1"
+version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "jeepney" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/8a/ed6747b1cc723c81f526d4c12c1b1d43d07190e1e8258dbf934392fc850e/secretstorage-3.4.1.tar.gz", hash = "sha256:a799acf5be9fb93db609ebaa4ab6e8f1f3ed5ae640e0fa732bfea59e9c3b50e8", size = 19871, upload-time = "2025-11-11T11:30:23.798Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/6d/24ebb101484f1911a6be6695b76ce43219caa110ebbe07d8c3a5f3106cca/secretstorage-3.4.1-py3-none-any.whl", hash = "sha256:c55d57b4da3de568d8c3af89dad244ab24c35ca1da8625fc1b550edf005ebc41", size = 15301, upload-time = "2025-11-11T11:30:22.618Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/46/f5af3402b579fd5e11573ce652019a67074317e18c1935cc0b4ba9b35552/secretstorage-3.5.0-py3-none-any.whl", hash = "sha256:0ce65888c0725fcb2c5bc0fdb8e5438eece02c523557ea40ce0703c266248137", size = 15554, upload-time = "2025-11-23T19:02:51.545Z" },
 ]
 
 [[package]]
