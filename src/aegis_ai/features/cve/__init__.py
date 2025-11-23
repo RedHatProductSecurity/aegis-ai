@@ -186,21 +186,80 @@ class SuggestDescriptionText(Feature):
 
 
 class SuggestStatementText(Feature):
-    """Based on current CVE information and context suggest a statement."""
+    """Based on current CVE information and context suggest a statement and mitigation."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["statement", "mitigation"])
+        NO_MITIGATION_TEXT = (
+            "Mitigation for this issue is either not available or the currently available "
+            "options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, "
+            "applicability to widespread installation base, or stability."
+        )
+
         prompt = AegisPrompt(
-            user_instruction="Suggest the CVE statement to briefly explain RH-specific context for impact; leave empty if none.",
+            user_instruction=(
+                f"Analyze the provided CVE context ({cve_id}) and generate a Red Hat specific "
+                "Statement and Mitigation plan."
+            ),
             goals="""
-                - Clarify why RH impact may differ from industry reports.
-                - Provide customer-relevant context only.
+            You are a Red Hat Product Security analyst. Your goal is to populate two specific fields:
+
+            1. **Suggested Statement**: A technical rationale explaining the impact of this CVE specifically on Red Hat products. This clarifies why Red Hat's severity assessment might differ from the upstream NVD/CVSS score.
+            2. **Suggested Mitigation**: A practical, temporary workaround to reduce the attack surface without applying a software update.
             """,
-            rules="""
-                - Do not duplicate information available in other fields, such as flaw description.
-                - Do not include any low-level technical details, such as specific code changes.
-                - Do not advise applying patches, rebuilding software, or monitoring for updates.
-                - If no additional RH-specific context exists, return an empty statement.
+            rules=f"""
+            ### GLOBAL STYLE GUIDELINES
+            - **Consistency:** Ensure the Statement and Mitigation do not contradict each other.
+            - **Explanation:** Provide a brief explanation in the final output justifying your choices for both fields.
+
+            ### FIELD 1: SUGGESTED STATEMENT RULES
+            - **Length:** < 1000 characters.
+            - **Content:**
+                - Focus on *impact*: "The highest threat is to system availability."
+                - Explain *why*: "This issue only affects systems with X enabled."
+                - If no Red Hat specific context exists (generic flaw), return an empty string.
+            - **Prohibitions:**
+                - Do NOT duplicate CVE description 
+                - Do NOT repeat the technical explanation of the vulnerability already present in the 'description' field.
+                - Do NOT mention mitigations here.
+                - Do NOT include code blocks.
+                - Do NOT include anything about software updates or patching.
+
+            #### SPECIAL LOGIC (HIGHEST PRIORITY)
+            Apply these rationales EXACTLY if the conditions are met:
+
+            1. **CASE: Vim Fuzzing Issues**
+               - **IF** component is 'vim' **AND** requires explicit script mode ('-S') to trigger:
+               - **THEN** State: "Red Hat rates this Low because running an untrusted script with '-S' is equivalent to executing arbitrary code, regardless of the vulnerability."
+               - **ELSE** Do not apply this rationale.
+
+            2. **CASE: RHEL 8 Python36 Symlinks**
+               - **IF** platform is RHEL 8 **AND** package is 'python36' (symlink only) **AND** interpreter is main 'python3':
+               - **THEN** State: "This package is 'Not affected' as it only provides symlinks to the main python3 component."
+
+            3. **CASE: RHEL CLI Tools (Go-based)**
+               - **IF** component is a build-time Go dependency **AND** binary is a short-lived CLI tool (not a daemon/service):
+               - **THEN** State: "Rated Moderate because the utility is not a long-running service and the dependency is only used at build time."
+
+            4. **CASE: Xorg Server on RHEL 8/9**
+               - **IF** component is 'xorg-x11-server' **AND** OS is RHEL 8 or 9:
+               - **THEN** State: "Rated Moderate because Xorg server does not run with root privileges in RHEL 8/9."
+
+            ### FIELD 2: SUGGESTED MITIGATION RULES
+            - **Length:** < 2000 characters.
+            - **Definition:** A configuration change (config file, sysctl, service disable).
+            - **Prohibitions:**
+                - **NEVER** suggest updating/patching software. 
+                - **NEVER** invent config flags or commands.
+                - **NEVER** use the term 'update'.
+                - **NEVER** suggest dangerous commands (`rm -rf`, `chmod 777`, disabling SELinux globally) without explicit, dire warnings.
+            - **Structure:**
+                1. Summary of action ("Disable the X service").
+                2. Command examples (`sysctl`, `systemctl`).
+                3. Caveats ("This may impact performance").
+                4. Always warn if there is a potential for reload and restarts (If CVE is related to a service and mitigation provides concrete command line instructions, always provide a warning) 
+            - **Fallback:** If no configuration workaround exists (or the only fix is code patching), or if the CVE does not affect Red Hat products (Windows only), YOU MUST USE EXACTLY THIS TEXT:
+              "{NO_MITIGATION_TEXT}"
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=remove_keys(

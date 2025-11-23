@@ -52,10 +52,15 @@ class CVE(BaseToolOutput):
         ...,
         description="CVE title.",
     )
-    statement: str = Field(
-        ...,
+    statement: Optional[str] = Field(
+        default="",
         description="CVE statement.",
     )
+    mitigation: Optional[str] = Field(
+        default="",
+        description="CVE mitigation.",
+    )
+
     comment_zero: str = Field(..., description="CVE comment_zero.")
     comments: str = Field(
         ...,
@@ -131,6 +136,7 @@ async def cve_retrieve(cve_id: CVEID, exclude_fields: List[str] = []) -> CVE:
             comment_zero=flaw.comment_zero,
             comments=f"{comments}",
             statement="" if "statement" in exclude_fields else f"{flaw.statement}",
+            mitigation="" if "mitigation" in exclude_fields else f"{flaw.mitigation}",
             description=""
             if "cve_description" in exclude_fields
             else f"{flaw.cve_description}",
