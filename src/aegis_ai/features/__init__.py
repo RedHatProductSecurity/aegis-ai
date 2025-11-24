@@ -16,7 +16,7 @@ llm_max_jobs = int(os.getenv("AEGIS_LLM_MAX_JOBS", "4"))
 llm_sem = asyncio.Semaphore(llm_max_jobs)
 
 # The threshold for LLM input tokens to log a warning
-llm_input_tokens_warn_thr = int(os.getenv("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 16384))
+llm_input_tokens_warn_thr = int(os.getenv("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 65536))
 
 
 # initial delay in seconds after getting HTTP 503 status code from LLM (doubled on each attempt)
