@@ -4,14 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Added
-- added `AEGIS_LLM_TEMPERATURE`,`AEGIS_LLM_TOP_P` and `AEGIS_LLM_MAX_TOKENS` env var.
+## [0.4.3] - 2025-11-25
 
 ### Changed
-- bump to pydantic-evals,pydantic-ai 1.20.0
-- dynamic filtering of CVE data - using data deps injection with `osidb_tool`.
-- dynamic filtering of CVE data when supplied direct with static content.
-- enhanced `suggest-statement` analysis feature.
+- bump to pydantic-evals,pydantic-ai 1.22.0
+- dynamic filtering of CVE data - using data dependencies injection with `osidb_tool`
+- dynamic filtering of CVE data when supplied direct with static content
+- enhanced `suggest-statement` analysis feature to also suggest `mitigation`
+- increased `AEGIS_LLM_INPUT_TOKENS_WARN_THR` to 65536
+
+### Added
+- added `AEGIS_LLM_TEMPERATURE`, `AEGIS_LLM_TOP_P`, and `AEGIS_LLM_MAX_TOKENS` env vars
+- retry the prompt with a gradually increasing delay on an internal failure of the LLM provider
+- added evaluation cases based on the feedback from security analysts
+- `suggest-description` now expands all acronyms used in the description
+
+### Fixed
+- `title` and `description` are now more consistent with each other in `suggest-description`
+
 
 ## [0.4.2] - 2025-11-14
 
