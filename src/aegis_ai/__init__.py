@@ -99,7 +99,7 @@ class AppSettings(BaseSettings):
     default_llm_settings: Any = Field(default_factory=dict)
     default_llm_temperature: float = float(os.getenv("AEGIS_LLM_TEMPERATURE", 0.055))
     default_llm_top_p: float = float(os.getenv("AEGIS_LLM_TOP_P", 0.8))
-    default_llm_max_tokens: int = int(os.getenv("AEGIS_LLM_MAX_TOKENS", 16384))
+    default_llm_max_tokens: int = int(os.getenv("AEGIS_LLM_MAX_TOKENS", 0))
 
     # Aegis safety subagent
     safety_enabled: bool = os.getenv("AEGIS_SAFETY_ENABLED", "false").lower() in truthy
@@ -145,8 +145,11 @@ class AppSettings(BaseSettings):
         self.model_kwargs: Dict[str, Any] = {
             "temperature": self.default_llm_temperature,
             "top_p": self.default_llm_top_p,
-            "max_tokens": self.default_llm_max_tokens,
         }
+
+        # only override the max_tokens settings when a value is provided in env
+        if self.default_llm_max_tokens != 0:
+            self.model_kwargs["max_tokens"] = self.default_llm_max_tokens
 
         if "api.anthropic.com" in host:
             self.default_llm_settings = AnthropicModelSettings(**self.model_kwargs)
