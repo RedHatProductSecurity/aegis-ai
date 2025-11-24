@@ -132,6 +132,9 @@ class AppSettings(BaseSettings):
     # tavily key
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "   ")
 
+    # shared kwargs for model settings usage across the codebase
+    model_kwargs: Dict[str, Any] = Field(default_factory=dict)
+
     @model_validator(mode="after")
     def configure_llm_provider_settings(self):
         """
@@ -139,12 +142,14 @@ class AppSettings(BaseSettings):
         """
         host = self.default_llm_host
 
+        self.model_kwargs: Dict[str, Any] = {
+            "temperature": self.default_llm_temperature,
+            "top_p": self.default_llm_top_p,
+            "max_tokens": self.default_llm_max_tokens,
+        }
+
         if "api.anthropic.com" in host:
-            self.default_llm_settings = AnthropicModelSettings(
-                temperature=self.default_llm_temperature,
-                top_p=self.default_llm_top_p,
-                max_tokens=self.default_llm_max_tokens,
-            )
+            self.default_llm_settings = AnthropicModelSettings(**self.model_kwargs)
 
         elif "generativelanguage.googleapis.com" in host:
             google_safety_settings: list[SafetySettingDict] = [
@@ -166,18 +171,14 @@ class AppSettings(BaseSettings):
                 },
             ]
             self.default_llm_settings = GoogleModelSettings(
-                temperature=self.default_llm_temperature,
-                top_p=self.default_llm_top_p,
-                max_tokens=self.default_llm_max_tokens,
                 google_thinking_config={"include_thoughts": False},
                 google_safety_settings=google_safety_settings,
+                **self.model_kwargs,
             )
         else:
             # Fallback to OpenAI/Local
             self.default_llm_settings = OpenAIResponsesModelSettings(
-                temperature=self.default_llm_temperature,
-                top_p=self.default_llm_top_p,
-                max_tokens=self.default_llm_max_tokens,
+                **self.model_kwargs
             )
         return self
 

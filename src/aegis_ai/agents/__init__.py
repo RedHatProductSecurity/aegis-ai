@@ -26,10 +26,8 @@ def create_aegis_agent(**kwargs: Any) -> Agent:
     return Agent(
         model=get_settings().default_llm_model,
         model_settings=get_settings().default_llm_settings
+        | get_settings().model_kwargs
         | {
-            "temperature": get_settings().default_llm_temperature,
-            "top_p": get_settings().default_llm_top_p,
-            "max_tokens": get_settings().default_llm_max_tokens,
             "seed": 42,
             "response_format": {"type": "json_object"},
         },
