@@ -142,10 +142,6 @@ Our test suite uses **`pytest`** and `pytest-asyncio`.
     ```bash
     uv run pytest -k "test_suggest_impact_with_bad_cve"
     ```
-  * **Run Feedback Script Tests**:
-    ```bash
-    make test-feedback-scripts
-    ```
 
 ### Feedback Log Analysis
 

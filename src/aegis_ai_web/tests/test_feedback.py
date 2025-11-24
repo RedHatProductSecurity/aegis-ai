@@ -1,14 +1,15 @@
+import csv
 import pytest
 from fastapi.testclient import TestClient
 
-from aegis_ai_web.src import feedback_log
 from aegis_ai_web.src.main import app
+from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA
 from tests.utils.llm_cache import get_cached_response, cache_response
 
 client = TestClient(app)
 
 
-def test_save_feedback_success():
+def test_save_feedback_success(feedback_log_setup):
     """
     Test a successful feedback submission with valid data.
     """
@@ -26,14 +27,22 @@ def test_save_feedback_success():
     assert response.json() == {"status": "Feedback received and logged successfully."}
 
     try:
-        with open(feedback_log, "r") as f:
-            log_content = f.read()
-            assert "feature: 'suggest-cwe'" in log_content
+        with open(feedback_log_setup, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) > 0, "No rows found in feedback log"
+            # Check the last row (most recent entry)
+            last_row = rows[-1]
+            assert last_row["feature"] == "suggest-cwe"
+            assert last_row["cve_id"] == "CVE-2025-23395"
+            assert last_row["email"] == "joey@redhat.com"
+            assert last_row["actual"] == "CWE-120"
+            assert last_row["accept"] == "True"
     except FileNotFoundError:
-        pytest.fail(f"feedback log file was not created at: {feedback_log}")
+        pytest.fail(f"feedback log file was not created at: {feedback_log_setup}")
 
 
-def test_save_feedback_sanitization():
+def test_save_feedback_sanitization(feedback_log_setup):
     """
     Test simple sanitization.
     """
@@ -49,12 +58,18 @@ def test_save_feedback_sanitization():
     assert response.status_code == 200
 
     try:
-        with open(feedback_log, "r") as f:
-            log_content = f.read()
-            assert "Trying to inject anewline" in log_content
-            assert "feature: 'suggest-cwe'" in log_content
+        with open(feedback_log_setup, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) > 0, "No rows found in feedback log"
+            # Check the last row (most recent entry)
+            last_row = rows[-1]
+            # CSV library handles escaping, so newlines should be preserved in the CSV
+            # but the actual value should contain the newline character
+            assert "Trying to inject a" in last_row["actual"]
+            assert last_row["feature"] == "suggest-cwe"
     except FileNotFoundError:
-        pytest.fail(f"feedback log file was not created at: {feedback_log}")
+        pytest.fail(f"feedback log file was not created at: {feedback_log_setup}")
 
 
 def test_save_feedback_validation_error_missing_field():
@@ -89,11 +104,12 @@ def test_save_feedback_validation_error_bad_accept():
 
 
 @pytest.mark.asyncio
-async def test_submit_feedback_after_suggest_impact_analysis():
+async def test_submit_feedback_after_suggest_impact_analysis(feedback_log_setup):
     """
     End-to-end test: Run a suggest-impact analysis then submit feedback based on the results.
 
-    Note: Uses cached LLM responses by default. Set TEST_ALLOW_CAPTURE=true to recapture.
+    Note: Uses cached LLM responses by default. To recapture, delete the cache file
+    at tests/llm_cache/test_submit_feedback_after_suggest_impact_analysis.json
     """
     cve_id = "CVE-2025-23395"
     test_name = "test_submit_feedback_after_suggest_impact_analysis"
@@ -149,12 +165,21 @@ async def test_submit_feedback_after_suggest_impact_analysis():
 
     # Step 3: Verify the feedback was logged correctly
     try:
-        with open(feedback_log, "r") as f:
-            log_content = f.read()
-            assert "feature: 'suggest-impact'" in log_content
-            assert f"cve_id: '{cve_id}'" in log_content
-            assert f"actual: '{actual_impact}'" in log_content
-            assert f"expected: '{expected_impact}'" in log_content
-            assert "accept: 'False'" in log_content
+        with open(feedback_log_setup, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            assert len(rows) > 0, "No rows found in feedback log"
+            # Check the last row (most recent entry)
+            last_row = rows[-1]
+            # Validate against schema fields
+            expected_fields = set(FEEDBACK_SCHEMA.field_names)
+            assert set(last_row.keys()) == expected_fields, (
+                "CSV row fields don't match schema"
+            )
+            assert last_row["feature"] == "suggest-impact"
+            assert last_row["cve_id"] == cve_id
+            assert last_row["actual"] == actual_impact
+            assert last_row["expected"] == expected_impact
+            assert last_row["accept"] == "False"
     except FileNotFoundError:
-        pytest.fail(f"feedback log file was not created at: {feedback_log}")
+        pytest.fail(f"feedback log file was not created at: {feedback_log_setup}")

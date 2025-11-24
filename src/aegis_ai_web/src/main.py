@@ -33,7 +33,7 @@ from . import (
     write_feedback_to_csv,
     ENABLE_CONSOLE,
 )
-from .models import Feedback
+from .data_models import Feedback
 
 
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
@@ -304,6 +304,7 @@ async def save_feedback(feedback: Feedback):
             "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
             "feature": feedback.feature,
             "cve_id": feedback.cve_id or "",
+            "email": feedback.email or "",
             "actual": feedback.actual or "",
             "expected": feedback.expected or "",
             "request_time": feedback.request_time or "",

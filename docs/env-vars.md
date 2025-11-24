@@ -27,7 +27,7 @@
 | `AEGIS_WEB_FEATURE_AGENT`  | Set to `redhat` to use rh profile         | `public`                          |
 | `AEGIS_WEB_SPN`            | Service Principal Name for Kerberos auth  |                                   |
 | `KRB5_KTNAME`              | Path to the keytab file for Kerberos auth | `/etc/krb5.keytab`                |
-| `AEGIS_CORS_TARGET_REGEX`  | CORS origin URLs specified by a regex     | `http(s)?://localhost(:5173)?"`   |
+| `AEGIS_CORS_TARGET_REGEX`  | CORS origin URLs specified by a regex     | `http(s)?://localhost(:5173)?`    |
 | `AEGIS_WEB_FEEDBACK_LOG`    | Feedback log file (CSV format)            | `~/.config/aegis_ai/feedback.csv` |
 | `AEGIS_WEB_ENABLE_CONSOLE`  | Enable web console                        | `false`                            |
 

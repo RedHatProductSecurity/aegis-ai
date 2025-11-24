@@ -2,12 +2,15 @@
 """
 Tests for feedback_schema.py
 
-Run with: pytest scripts/test_feedback_schema.py -v
+Run with: pytest src/aegis_ai_web/tests/test_feedback_schema.py -v
 """
+
+import dataclasses
+from typing import Dict, cast
 
 import pytest
 
-from aegis_ai_web.src.models import (
+from aegis_ai_web.src.data_models import (
     FEEDBACK_SCHEMA,
     validate_log_parser_output,
     validate_csv_headers,
@@ -28,6 +31,7 @@ class TestFeedbackSchema:
             "datetime",
             "feature",
             "cve_id",
+            "email",
             "actual",
             "expected",
             "request_time",
@@ -46,6 +50,7 @@ class TestFeedbackSchema:
             "datetime": "2025-11-20 13:07:26.894",
             "feature": "suggest-impact",
             "cve_id": "CVE-2025-23395",
+            "email": "user@example.com",
             "actual": "IMPORTANT",
             "expected": "CRITICAL",
             "request_time": "",
@@ -60,7 +65,7 @@ class TestFeedbackSchema:
             "datetime": "2025-11-20 13:07:26.894",
             "feature": "suggest-impact",
             "cve_id": "CVE-2025-23395",
-            # Missing: actual, expected, request_time, accept
+            # Missing: email, actual, expected, request_time, accept
         }
 
         assert FEEDBACK_SCHEMA.validate_parsed_log(invalid_data) is False
@@ -71,6 +76,7 @@ class TestFeedbackSchema:
             "datetime": "2025-11-20 13:07:26.894",
             "feature": "suggest-impact",
             "cve_id": "CVE-2025-23395",
+            "email": "user@example.com",
             "actual": "IMPORTANT",
             "expected": "CRITICAL",
             "request_time": "",
@@ -84,12 +90,32 @@ class TestFeedbackSchema:
         """Test validation fails with None."""
         assert FEEDBACK_SCHEMA.validate_parsed_log(None) is False
 
+    def test_validate_parsed_log_none_values(self):
+        """Test validation fails when all keys are present but at least one value is None."""
+        invalid_data = {
+            "datetime": "2025-11-20 13:07:26.894",
+            "feature": "suggest-impact",
+            "cve_id": "CVE-2025-23395",
+            "email": None,  # None value
+            "actual": "IMPORTANT",
+            "expected": "CRITICAL",
+            "request_time": "",
+            "accept": "False",
+        }
+
+        # Cast to expected type for type checker; we're intentionally testing None values
+        assert (
+            FEEDBACK_SCHEMA.validate_parsed_log(cast(Dict[str, str], invalid_data))
+            is False
+        )
+
     def test_validate_csv_headers_valid(self):
         """Test validation of valid CSV headers."""
         valid_headers = [
             "datetime",
             "feature",
             "cve_id",
+            "email",
             "actual",
             "expected",
             "request_time",
@@ -104,6 +130,7 @@ class TestFeedbackSchema:
             "feature",  # Wrong order
             "datetime",
             "cve_id",
+            "email",
             "actual",
             "expected",
             "request_time",
@@ -118,7 +145,7 @@ class TestFeedbackSchema:
             "datetime",
             "feature",
             "cve_id",
-            # Missing: actual, expected, request_time, accept
+            # Missing: email, actual, expected, request_time, accept
         ]
 
         assert FEEDBACK_SCHEMA.validate_csv_headers(invalid_headers) is False
@@ -145,6 +172,7 @@ class TestValidationFunctions:
             "datetime": "2025-11-20 13:07:26.894",
             "feature": "suggest-impact",
             "cve_id": "CVE-2025-23395",
+            "email": "user@example.com",
             "actual": "IMPORTANT",
             "expected": "CRITICAL",
             "request_time": "",
@@ -179,6 +207,7 @@ class TestValidationFunctions:
             "datetime",
             "feature",
             "cve_id",
+            "email",
             "actual",
             "expected",
             "request_time",
@@ -213,10 +242,8 @@ class TestSchemaIntegration:
         """Test that schema fields cannot be modified."""
         original_fields = FEEDBACK_SCHEMA.field_names.copy()
 
-        # Schema is frozen, so this should raise FrozenInstanceError (subclass of AttributeError)
-        with pytest.raises(
-            (AttributeError, Exception)
-        ):  # FrozenInstanceError is a subclass
+        # Schema is frozen, so this should raise FrozenInstanceError (a subclass of AttributeError)
+        with pytest.raises(dataclasses.FrozenInstanceError):
             FEEDBACK_SCHEMA.FIELDS = ["new", "fields"]  # type: ignore[misc]
 
         # Verify fields unchanged

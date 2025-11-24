@@ -54,6 +54,7 @@ class FeedbackSchema:
                 "datetime",  # Timestamp with millisecond precision
                 "feature",  # Feature name (e.g., suggest-impact)
                 "cve_id",  # CVE identifier
+                "email",  # User email address
                 "actual",  # Actual value from system
                 "expected",  # Expected value from user
                 "request_time",  # Original request timestamp
@@ -121,6 +122,7 @@ class FeedbackSchema:
             "datetime": "Timestamp with millisecond precision (YYYY-MM-DD HH:MM:SS.mmm)",
             "feature": "Feature name (e.g., suggest-impact, suggest-cwe)",
             "cve_id": "CVE identifier (e.g., CVE-2025-23395)",
+            "email": "User email address",
             "actual": "Actual value returned by the system",
             "expected": "Expected value provided by the user",
             "request_time": "Timestamp of the original request",
