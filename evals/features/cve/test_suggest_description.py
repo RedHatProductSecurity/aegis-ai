@@ -180,8 +180,8 @@ cases = [
 evals = common_feature_evals + [
     PromptLeakEvaluator(),
     create_llm_judge(
-        assertion_name="NoVersionInTitle",
-        rubric="suggested_title and suggested_description do not contain any versioning info.  Expanded acronyms do not count as versioning info.",
+        assertion_name="NoVersionInfo",
+        rubric="suggested_title and suggested_description do not contain any versioning info, except in acronyms explanation.",
     ),
     create_llm_judge(
         assertion_name="TitleSummarizesDescription",
