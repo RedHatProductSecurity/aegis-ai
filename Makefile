@@ -48,6 +48,7 @@ test:
 test-web:
 	uv run pytest src/aegis_ai_web/tests
 
+
 upgrade-deps:
 	uv sync --upgrade
 

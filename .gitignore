@@ -170,3 +170,5 @@ cython_debug/
 .attic
 Makefile
 notes.org
+tmp/
+

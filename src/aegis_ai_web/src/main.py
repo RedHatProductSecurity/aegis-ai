@@ -30,10 +30,10 @@ from aegis_ai.features.data_models import AegisAnswer
 from . import (
     AEGIS_REST_API_VERSION,
     feature_agent,
-    setup_feedback_logger,
-    Feedback,
+    write_feedback_to_csv,
     ENABLE_CONSOLE,
 )
+from .data_models import Feedback
 
 
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
@@ -48,8 +48,6 @@ class HSTSHeaderMiddleware(BaseHTTPMiddleware):
 
 
 config_logging()
-
-feedback_logger = setup_feedback_logger()
 
 app: FastAPI = FastAPI(
     title="Aegis REST-API",
@@ -294,20 +292,31 @@ async def component_analysis(
 @app.post("/api/v1/feedback")
 async def save_feedback(feedback: Feedback):
     """
-    Receive feedback, validate, sanitize, and log it to a separate log file.
+    Receive feedback and log it to CSV file.
+
+    All data is preserved without modification. CSV library handles escaping.
     """
+    from datetime import datetime
 
     try:
-        log_message = (
-            f"FEEDBACK RECEIVED | "
-            f"feature: '{feedback.feature}' | "
-            f"cve_id: '{feedback.cve_id}' | "
-            f"actual: '{feedback.actual}' | "
-            f"expected: '{feedback.expected}' | "
-            f"request_time: '{feedback.request_time}' | "
-            f"accept: '{feedback.accept}'"
+        # Build row data with current timestamp
+        row_data = {
+            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+            "feature": feedback.feature,
+            "cve_id": feedback.cve_id or "",
+            "email": feedback.email or "",
+            "actual": feedback.actual or "",
+            "expected": feedback.expected or "",
+            "request_time": feedback.request_time or "",
+            "accept": str(feedback.accept),
+        }
+
+        # Write to CSV file (automatic escaping)
+        write_feedback_to_csv(row_data)
+
+        logging.info(
+            f"Feedback logged: feature={feedback.feature}, cve_id={feedback.cve_id}"
         )
-        feedback_logger.info(log_message)
         return {"status": "Feedback received and logged successfully."}
 
     except Exception as e:
