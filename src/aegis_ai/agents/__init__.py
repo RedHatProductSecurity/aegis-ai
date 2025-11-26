@@ -28,7 +28,7 @@ def create_aegis_agent(**kwargs: Any) -> Agent:
         model_settings=get_settings().default_llm_settings
         | get_settings().model_kwargs
         | {
-            "seed": 42,
+            "seed": 42,  # FIXME: we should not hardcode the seed
             "response_format": {"type": "json_object"},
         },
         **kwargs,

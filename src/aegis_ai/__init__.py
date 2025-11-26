@@ -3,12 +3,13 @@ aegis
 
 """
 
+import httpx
 import logging
 import os
 import sys
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TypedDict
 
 from google.genai.types import (
     HarmCategory,
@@ -30,7 +31,9 @@ from _pytest._io import TerminalWriter
 from _pytest.logging import ColoredLevelFormatter
 
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
+from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.providers.anthropic import AnthropicProvider
 
 load_dotenv()
 
@@ -87,6 +90,12 @@ class LivenessProbeLogFilter(logging.Filter):
         return args[1:] != ("GET", "/healthz", "1.1", 204)
 
 
+class _ProviderKwargs(TypedDict):
+    """named args of AI Providers"""
+
+    http_client: httpx.AsyncClient
+
+
 class AppSettings(BaseSettings):
     app_name: str = APP_NAME
     app_version: str = __version__
@@ -134,6 +143,25 @@ class AppSettings(BaseSettings):
 
     # shared kwargs for model settings usage across the codebase
     model_kwargs: Dict[str, Any] = Field(default_factory=dict)
+
+    # customized httpx.AsyncClient with enhanced logging
+    http_client: Optional[httpx.AsyncClient] = Field(
+        default=None, exclude=True, repr=False
+    )
+
+    def _get_http_client(self) -> httpx.AsyncClient:
+        """customized httpx.AsyncClient with enhanced logging"""
+        if self.http_client is None:
+            # create the object only once
+            async def _log_request(request: httpx.Request) -> None:
+                msg = f'HTTP Request: {request.method} {request.url} "sending request"'
+                logger.info(msg)
+
+            self.http_client = httpx.AsyncClient(
+                event_hooks={"request": [_log_request]}
+            )
+
+        return self.http_client
 
     @model_validator(mode="after")
     def configure_llm_provider_settings(self):
@@ -183,6 +211,10 @@ class AppSettings(BaseSettings):
             self.default_llm_settings = OpenAIResponsesModelSettings(
                 **self.model_kwargs
             )
+
+        # eagerly create the shared HTTP client to avoid race on first use
+        _ = self._get_http_client()
+
         return self
 
     @property
@@ -193,17 +225,27 @@ class AppSettings(BaseSettings):
 
         host = self.default_llm_host
 
+        provider_kwargs: _ProviderKwargs = {
+            "http_client": self._get_http_client(),
+        }
+
         if "api.anthropic.com" in host:
-            return AnthropicModel(model_name=self.default_llm_model_name)
+            return AnthropicModel(
+                model_name=self.default_llm_model_name,
+                provider=AnthropicProvider(**provider_kwargs),
+            )
 
         elif "generativelanguage.googleapis.com" in host:
             logger.info(f"model_name: {self.default_llm_model_name}")
-            return GoogleModel(model_name=self.default_llm_model_name)
+            return GoogleModel(
+                model_name=self.default_llm_model_name,
+                provider=GoogleProvider(**provider_kwargs),
+            )
 
         else:
             return OpenAIChatModel(
                 model_name=self.default_llm_model_name,
-                provider=OpenAIProvider(base_url=f"{host}/v1/"),
+                provider=OpenAIProvider(base_url=f"{host}/v1/", **provider_kwargs),
             )
 
 

@@ -11,10 +11,11 @@ default = Agent(
         provider=OpenAIProvider(
             base_url=f"{get_settings().safety_llm_host}/v1/",
             api_key=get_settings().safety_llm_openapi_key,
+            http_client=get_settings()._get_http_client(),
         ),
     ),
     model_settings=OpenAIResponsesModelSettings(
-        seed=42,
+        seed=42,  # FIXME: we should not hardcode the seed
     ),
     system_prompt=f"""
         You are Granite Guardian, an AI safety and security analyst. Your sole function is to
