@@ -130,6 +130,10 @@ cases = [
         expected_title="Django: Denial of service via Unicode input",
     ),
     SuggestDescriptionCase(
+        cve_id="CVE-2022-23125",
+        expected_title="Netatalk: Remote Code Execution via Buffer Overflow in copyapplfile function",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2023-39326",
         expected_description="A flaw was found in the Golang net/http/internal package. This issue may allow a malicious user to send an HTTP request and cause the receiver to read more bytes from network than are in the body (up to 1GiB), causing the receiver to fail reading the response, possibly leading to a Denial of Service (DoS).",
     ),
@@ -141,6 +145,19 @@ cases = [
         cve_id="CVE-2023-53669",
         expected_title="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
     ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-13204",
+        expected_description="A prototype pollution flaw was found in expr-eval. An attacker with access to express eval interface can use JavaScript prototype-based inheritance model to achieve arbitrary code execution.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-13609",
+        expected_description="A vulnerability has been identified in keylime where an attacker can exploit this flaw by registering a new agent using a different Trusted Platform Module (TPM) device but claiming an existing agent's unique identifier (UUID). This action overwrites the legitimate agent's identity, enabling the attacker to impersonate the compromised agent and potentially bypass security controls.",
+    ),
+    # FIXME: `suggest-description` should not talk about `Denial of Service`
+    # SuggestDescriptionCase(
+    #     cve_id="CVE-2025-37798",
+    #     expected_description="FIXME",
+    # ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-54770",
         expected_description="A vulnerability has been identified in the GRUB2 bootloader's network module that poses an immediate Denial of Service (DoS) risk. This flaw is a Use-after-Free issue, caused because the net_set_vlan command is not properly unregistered when the network module is unloaded from memory. An attacker who can execute this command can force the system to access memory locations that are no longer valid. Successful exploitation leads directly to system instability, which can result in a complete crash and halt system availability.",
@@ -161,6 +178,14 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-64434",
         expected_description="A flaw was found in KubeVirt. This vulnerability allows API identity spoofing, compromising integrity and availability of managed VMs via improper TLS certificate management handling after compromising a virt-handler instance.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-64756",
+        expected_title="A flaw was found in glob. This vulnerability allows arbitrary command execution via processing files",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-65073",
+        expected_description="A flaw was found in OpenStack Keystone. This vulnerability allows an attacker to obtain a valid OpenStack's Keystone token, leading to access to unauthorized resources or privilege escalation within the OpenStack instance via sending a valid AWS (Amazon Web Services) signature to the /v3/ec2tokens or /v3/s3tokens API (Application Programming Interface) endpoints.",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-91735",
