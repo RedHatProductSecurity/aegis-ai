@@ -1,5 +1,5 @@
 import logging
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import Field, BaseModel, field_validator
 
@@ -57,8 +57,8 @@ class SuggestImpactModel(AegisFeatureModel):
         description="Explain rationale behind suggested CVSS 3.1 score and impact rating.",
     )
 
-    impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
-        ..., description="Suggested Red Hat CVE impact."
+    impact: Optional[Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"]] = Field(
+        description="Suggested Red Hat CVE impact",
     )
 
     cvss3_score: str = Field(
@@ -66,8 +66,7 @@ class SuggestImpactModel(AegisFeatureModel):
         description="Suggested Red Hat CVSS3.1 score",
     )
 
-    cvss3_vector: CVSS3Vector = Field(
-        ...,
+    cvss3_vector: Optional[CVSS3Vector] = Field(
         description="Suggested Red Hat CVSS3.1 vector",
     )
 

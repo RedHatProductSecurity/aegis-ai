@@ -1,6 +1,8 @@
 import cvss
 import pytest
 
+from typing import get_args
+
 from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
@@ -30,14 +32,34 @@ NUM_BY_IMPACT = {
 
 
 class SuggestImpactCase(Case):
-    def __init__(self, cve_id, impact, cvss3_score):
-        """cve_id given as CVE-YYYY-NUM is the flaw we query Impact for.
-        impact is the expected impact as string. cvss3_score is the expected
-        score specified as float."""
+    def __init__(
+        self,
+        cve_id,
+        expected_impact=None,
+        expected_cvss3_score=None,
+        expected_cvss3_vector=None,
+    ):
+        """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
+        disclaimer_model = SuggestImpactModel.model_fields["disclaimer"]
+        disclaimer = get_args(disclaimer_model.annotation)[0]
+        expected_output = SuggestImpactModel(
+            cve_id=cve_id,
+            title="",
+            components=[],
+            affected_products=[],
+            explanation="",
+            impact=expected_impact,
+            cvss3_score=(str(expected_cvss3_score) if expected_cvss3_score else ""),
+            cvss3_vector=expected_cvss3_vector,
+            confidence=1.0,
+            tools_used=[],
+            disclaimer=disclaimer,
+        )
+
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",
             inputs=cve_id,
-            expected_output={"impact": impact, "cvss3_score": cvss3_score},
+            expected_output=expected_output,
             metadata={"difficulty": "easy"},
         )
 
@@ -74,15 +96,17 @@ class CVSSValidator(Evaluator[str, SuggestImpactModel]):
 class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
     def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
         """return score based on actual and expected results"""
+        assert ctx.expected_output is not None
+
         # compare actual and expected impact
         imp = NUM_BY_IMPACT[ctx.output.impact]
-        imp_exp = NUM_BY_IMPACT[ctx.expected_output["impact"]]  # type: ignore
+        imp_exp = NUM_BY_IMPACT[ctx.expected_output.impact]
         score = 1.0 - abs(imp - imp_exp) / 10.0
 
         try:
             # compare actual and expected cvss3_score
             cvss3 = float(ctx.output.cvss3_score)
-            cvss3_exp = ctx.expected_output["cvss3_score"]  # type: ignore
+            cvss3_exp = float(ctx.expected_output.cvss3_score)
             score *= 1.0 - abs(cvss3 - cvss3_exp) / 10.0
         except ValueError:
             # the provided cvss3_score field is not a number
