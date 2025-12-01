@@ -99,18 +99,24 @@ def is_title(value):
 
 def process_description_feedback(rows):
     for row in rows:
+        value = row[3]
         feature = row[8]
-        if feature != "suggest-description":
-            # skip feedback for other features
-            continue
+        match feature:
+            case "suggest-description":
+                field = "title" if is_title(value) else "description"
+
+            case "suggest-title":
+                field = "title"
+
+            case _:
+                # skip feedback for other features
+                continue
 
         # get CVE ID
         cve = row[1]
         osidb_cache_cve(cve)
 
         # get expected output
-        value = row[3]
-        field = "title" if is_title(value) else "description"
         print(f"{' ' * 4}SuggestDescriptionCase(")
         print(f"{' ' * 8}cve_id={json.dumps(cve)},")
         print(f"{' ' * 8}expected_{field}={json.dumps(value)},")
