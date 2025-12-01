@@ -32,6 +32,58 @@ NUM_BY_IMPACT = {
 # fmt: on
 
 
+# TODO: check whether the cvss Python module could anyhow help with this
+def score_cvss3_diff(cvss3: str, cvss3_exp: str) -> float:
+    """check how a pair of CVSS 3.1 vectors differ from each other.  0.0 means completely different, 1.0 means exact match"""
+    if cvss3 == cvss3_exp:
+        # exact match
+        return 1.0
+
+    def _parse(v: str) -> dict[str, str]:
+        parts = v.split("/")
+        if parts and parts[0].startswith("CVSS:"):
+            parts = parts[1:]
+        out: dict[str, str] = {}
+        for p in parts:
+            if ":" in p:
+                k, val = p.split(":", 1)
+                out[k] = val
+        return out
+
+    a = _parse(cvss3)
+    b = _parse(cvss3_exp)
+
+    # Ordinal scales per CVSS v3.1 base metric
+    scales: dict[str, list[str]] = {
+        "AV": ["P", "L", "A", "N"],
+        "AC": ["H", "L"],
+        "PR": ["H", "L", "N"],
+        "UI": ["R", "N"],
+        "S": ["U", "C"],
+        "C": ["N", "L", "H"],
+        "I": ["N", "L", "H"],
+        "A": ["N", "L", "H"],
+    }
+
+    def _norm_dist(metric: str) -> float:
+        order = scales[metric]
+        try:
+            ia = order.index(a.get(metric, ""))
+            ib = order.index(b.get(metric, ""))
+        except ValueError:
+            # unknown value → treat as maximum difference
+            return 1.0
+        max_d = len(order) - 1
+        if max_d == 0:
+            return 0.0
+        return abs(ia - ib) / max_d
+
+    metrics = tuple(scales.keys())
+    diffs = [_norm_dist(m) for m in metrics]
+    avg_diff = sum(diffs) / len(diffs)
+    return (1.0 - avg_diff) ** 2
+
+
 class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
     def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
         """return score based on actual and expected impact"""
@@ -62,10 +114,31 @@ class CVSSScoreEvaluator(Evaluator[str, SuggestImpactModel]):
         return reflect_confidence(ctx, score)
 
 
+class CVSSVectorEvaluator(Evaluator[str, SuggestImpactModel]):
+    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
+        """return score based on actual and expected CVSS score"""
+        assert ctx.expected_output is not None
+
+        # get actual and expected cvss3_vector
+        cvss3 = ctx.output.cvss3_vector
+        cvss3_exp = ctx.expected_output.cvss3_vector
+        assert cvss3 and cvss3_exp
+
+        # compare the vectors by individual metrics
+        try:
+            score = score_cvss3_diff(cvss3, cvss3_exp)
+        except Exception:
+            # parsing or comparison failed -> no credit
+            score = 0.0
+
+        return reflect_confidence(ctx, score)
+
+
 # some evaluators are only applicable if the expected output for a specific field is provided
 field_evaluators = {
     "impact": ImpactEvaluator(),
     "cvss3_score": CVSSScoreEvaluator(),
+    "cvss3_vector": CVSSVectorEvaluator(),
 }
 
 
