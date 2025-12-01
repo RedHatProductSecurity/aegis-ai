@@ -32,6 +32,43 @@ NUM_BY_IMPACT = {
 # fmt: on
 
 
+class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
+    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
+        """return score based on actual and expected impact"""
+        assert ctx.expected_output is not None
+
+        # compare actual and expected impact
+        imp = NUM_BY_IMPACT[ctx.output.impact]
+        imp_exp = NUM_BY_IMPACT[ctx.expected_output.impact]
+        score = 1.0 - abs(imp - imp_exp) / 10.0
+
+        return reflect_confidence(ctx, score)
+
+
+class CVSSScoreEvaluator(Evaluator[str, SuggestImpactModel]):
+    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
+        """return score based on actual and expected CVSS score"""
+        assert ctx.expected_output is not None
+
+        try:
+            # compare actual and expected cvss3_score
+            cvss3 = float(ctx.output.cvss3_score)
+            cvss3_exp = float(ctx.expected_output.cvss3_score)
+            score = 1.0 - abs(cvss3 - cvss3_exp) / 10.0
+        except ValueError:
+            # the provided cvss3_score field is not a number
+            score = 0.0
+
+        return reflect_confidence(ctx, score)
+
+
+# some evaluators are only applicable if the expected output for a specific field is provided
+field_evaluators = {
+    "impact": ImpactEvaluator(),
+    "cvss3_score": CVSSScoreEvaluator(),
+}
+
+
 class SuggestImpactCase(Case):
     def __init__(
         self,
@@ -57,11 +94,16 @@ class SuggestImpactCase(Case):
             disclaimer=disclaimer,
         )
 
+        # enable field-specific evaluators for this case
+        evaluators = tuple(
+            field_evaluators[f] for f in field_evaluators if getattr(expected_output, f)
+        )
+
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",
             inputs=cve_id,
             expected_output=expected_output,
-            metadata={"difficulty": "easy"},
+            evaluators=evaluators,
         )
 
 
@@ -94,36 +136,6 @@ class CVSSValidator(Evaluator[str, SuggestImpactModel]):
         return EvaluationReason(True)
 
 
-class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
-    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
-        """return score based on actual and expected impact"""
-        assert ctx.expected_output is not None
-
-        # compare actual and expected impact
-        imp = NUM_BY_IMPACT[ctx.output.impact]
-        imp_exp = NUM_BY_IMPACT[ctx.expected_output.impact]
-        score = 1.0 - abs(imp - imp_exp) / 10.0
-
-        return reflect_confidence(ctx, score)
-
-
-class CVSSScoreEvaluator(Evaluator[str, SuggestImpactModel]):
-    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
-        """return score based on actual and expected CVSS score"""
-        assert ctx.expected_output is not None
-
-        try:
-            # compare actual and expected cvss3_score
-            cvss3 = float(ctx.output.cvss3_score)
-            cvss3_exp = float(ctx.expected_output.cvss3_score)
-            score = 1.0 - abs(cvss3 - cvss3_exp) / 10.0
-        except ValueError:
-            # the provided cvss3_score field is not a number
-            score = 0.0
-
-        return reflect_confidence(ctx, score)
-
-
 async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
     """use rh_feature_agent to suggest Impact for the given CVE"""
     feature = SuggestImpact(rh_feature_agent)
@@ -133,22 +145,56 @@ async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
 
 # test cases
 cases = [
-    SuggestImpactCase("CVE-2022-48701", "MODERATE", 4.9),
-    SuggestImpactCase("CVE-2023-39326", "MODERATE", 7.5),
-    SuggestImpactCase("CVE-2023-53693", "MODERATE", 5.5),
-    SuggestImpactCase("CVE-2024-53232", "MODERATE", 4.4),
-    SuggestImpactCase("CVE-2025-5399", "MODERATE", 4.3),
-    SuggestImpactCase("CVE-2025-9573", "IMPORTANT", 7.2),
-    SuggestImpactCase("CVE-2025-12735", "CRITICAL", 9.8),
-    SuggestImpactCase("CVE-2025-23395", "MODERATE", 6.8),
-    SuggestImpactCase("CVE-2025-59840", "IMPORTANT", 8.1),
+    SuggestImpactCase(
+        cve_id="CVE-2022-48701",
+        expected_impact="MODERATE",
+        expected_cvss3_score=4.9,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2023-39326",
+        expected_impact="MODERATE",
+        expected_cvss3_score=7.5,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2023-53693",
+        expected_impact="MODERATE",
+        expected_cvss3_score=5.5,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2024-53232",
+        expected_impact="MODERATE",
+        expected_cvss3_score=4.4,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-5399",
+        expected_impact="MODERATE",
+        expected_cvss3_score=4.3,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-9573",
+        expected_impact="IMPORTANT",
+        expected_cvss3_score=7.2,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-12735",
+        expected_impact="CRITICAL",
+        expected_cvss3_score=9.8,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-23395",
+        expected_impact="MODERATE",
+        expected_cvss3_score=6.8,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-59840",
+        expected_impact="IMPORTANT",
+        expected_cvss3_score=8.1,
+    ),
 ]
 
 # evaluators
 evals = common_feature_evals + [
     CVSSValidator(),
-    ImpactEvaluator(),
-    CVSSScoreEvaluator(),
     create_llm_judge(
         assertion_name="NoAffectsInExplanation",
         rubric="The 'explanation' output field does not list affected Red Hat products.  Red Hat is not a product.",
