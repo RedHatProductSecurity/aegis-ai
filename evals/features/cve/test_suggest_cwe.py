@@ -8,13 +8,11 @@ from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestCWE, SuggestCWEModel
 
-from evals.features.common import common_feature_evals, run_evaluation
-
-
-# penalize models providing correct results but low confidence (the difference
-# between score and confidence is divided by this number and subtracted from
-# the final score)
-LOW_CONFIDENCE_PENALTY_DIVISOR = 4.0
+from evals.features.common import (
+    common_feature_evals,
+    reflect_confidence,
+    run_evaluation,
+)
 
 
 class SuggestCweCase(Case):
@@ -56,15 +54,7 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
             # penalize too many suggested CWEs for a CVE
             score *= 0.9**len_diff
 
-        conf_diff = ctx.output.confidence - score
-        if 0.0 < conf_diff:
-            # penalize confident models providing (partially) wrong results
-            score -= conf_diff
-        else:
-            # negligibly penalize models providing correct results but low confidence
-            score += conf_diff / LOW_CONFIDENCE_PENALTY_DIVISOR
-
-        return score
+        return reflect_confidence(ctx, score)
 
 
 async def suggest_cwe(cve_id: CVEID) -> SuggestCWEModel:

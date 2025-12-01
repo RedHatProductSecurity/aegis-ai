@@ -14,6 +14,7 @@ from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
     make_eval_reason,
+    reflect_confidence,
     run_evaluation,
 )
 
@@ -112,15 +113,7 @@ class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
             # the provided cvss3_score field is not a number
             score -= 1.0
 
-        conf_diff = ctx.output.confidence - score
-        if 0.0 < conf_diff:
-            # penalize confident models providing (partially) wrong results
-            score -= conf_diff
-        else:
-            # negligibly penalize models providing correct results but low confidence
-            score += conf_diff / 4.0
-
-        return score
+        return reflect_confidence(ctx, score)
 
 
 async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:

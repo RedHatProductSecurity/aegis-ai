@@ -28,6 +28,11 @@ from aegis_ai.features.data_models import AegisFeatureModel
 # minimal acceptable length of an explanation (where applicable)
 EXPLANATION_MIN_LEN = 80
 
+# penalize models providing correct results but low confidence (the difference
+# between score and confidence is divided by this number and subtracted from
+# the final score)
+LOW_CONFIDENCE_PENALTY_DIVISOR = 4.0
+
 # minimal acceptable score returned by an evaluator
 MIN_SCORE_THRESHOLD = 0.1
 
@@ -58,6 +63,17 @@ else:
     # fallback to use the same LLM for evals
     evals_llm_model = get_settings().default_llm_model
     evals_llm_settings = get_settings().default_llm_settings
+
+
+def reflect_confidence(ctx, score):
+    """reflect `confidence` ratio in the score"""
+    conf_diff = ctx.output.confidence - score
+    if 0.0 < conf_diff:
+        # penalize confident models providing (partially) wrong results
+        return score - conf_diff
+    else:
+        # negligibly penalize models providing correct results but low confidence
+        return score + conf_diff / LOW_CONFIDENCE_PENALTY_DIVISOR
 
 
 class FeatureMetricsEvaluator(Evaluator[str, AegisFeatureModel]):
