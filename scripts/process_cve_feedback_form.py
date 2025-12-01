@@ -97,15 +97,17 @@ def is_title(value):
     return not value.endswith(".") and len(value) < 128
 
 
-def process_description_feedback(rows):
+def process_generic_feedback(rows):
     for row in rows:
         value = row[3]
         feature = row[8]
         match feature:
             case "suggest-description":
+                evaluator = "Description"
                 field = "title" if is_title(value) else "description"
 
             case "suggest-title":
+                evaluator = "Description"
                 field = "title"
 
             case _:
@@ -117,7 +119,7 @@ def process_description_feedback(rows):
         osidb_cache_cve(cve)
 
         # get expected output
-        print(f"{' ' * 4}SuggestDescriptionCase(")
+        print(f"{' ' * 4}Suggest{evaluator}Case(")
         print(f"{' ' * 8}cve_id={json.dumps(cve)},")
         print(f"{' ' * 8}expected_{field}={json.dumps(value)},")
         print(f"{' ' * 4}),")
@@ -134,7 +136,7 @@ def process_feedback(file_path):
 
     # run specific processors
     process_cwe_feedback(rows)
-    process_description_feedback(rows)
+    process_generic_feedback(rows)
 
 
 def main():
