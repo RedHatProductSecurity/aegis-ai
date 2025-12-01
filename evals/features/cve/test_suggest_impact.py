@@ -94,9 +94,9 @@ class CVSSValidator(Evaluator[str, SuggestImpactModel]):
         return EvaluationReason(True)
 
 
-class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
+class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
     def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
-        """return score based on actual and expected results"""
+        """return score based on actual and expected impact"""
         assert ctx.expected_output is not None
 
         # compare actual and expected impact
@@ -104,14 +104,22 @@ class SuggestImpactEvaluator(Evaluator[str, SuggestImpactModel]):
         imp_exp = NUM_BY_IMPACT[ctx.expected_output.impact]
         score = 1.0 - abs(imp - imp_exp) / 10.0
 
+        return reflect_confidence(ctx, score)
+
+
+class CVSSScoreEvaluator(Evaluator[str, SuggestImpactModel]):
+    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
+        """return score based on actual and expected CVSS score"""
+        assert ctx.expected_output is not None
+
         try:
             # compare actual and expected cvss3_score
             cvss3 = float(ctx.output.cvss3_score)
             cvss3_exp = float(ctx.expected_output.cvss3_score)
-            score *= 1.0 - abs(cvss3 - cvss3_exp) / 10.0
+            score = 1.0 - abs(cvss3 - cvss3_exp) / 10.0
         except ValueError:
             # the provided cvss3_score field is not a number
-            score -= 1.0
+            score = 0.0
 
         return reflect_confidence(ctx, score)
 
@@ -139,7 +147,8 @@ cases = [
 # evaluators
 evals = common_feature_evals + [
     CVSSValidator(),
-    SuggestImpactEvaluator(),
+    ImpactEvaluator(),
+    CVSSScoreEvaluator(),
     create_llm_judge(
         assertion_name="NoAffectsInExplanation",
         rubric="The 'explanation' output field does not list affected Red Hat products.  Red Hat is not a product.",
