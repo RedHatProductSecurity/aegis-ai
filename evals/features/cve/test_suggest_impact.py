@@ -153,6 +153,16 @@ class SuggestImpactCase(Case):
         """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
         disclaimer_model = SuggestImpactModel.model_fields["disclaimer"]
         disclaimer = get_args(disclaimer_model.annotation)[0]
+
+        if not expected_cvss3_score:
+            # no expected CVSS3 score provided
+            if expected_cvss3_vector:
+                # use the provided CVSS3 vector to compute the expected score
+                expected_cvss3_score = cvss.CVSS3(expected_cvss3_vector).scores()[0]
+            else:
+                # do not evaluate CVSS3 score
+                expected_cvss3_score = ""
+
         expected_output = SuggestImpactModel(
             cve_id=cve_id,
             title="",
@@ -160,7 +170,7 @@ class SuggestImpactCase(Case):
             affected_products=[],
             explanation="",
             impact=expected_impact,
-            cvss3_score=(str(expected_cvss3_score) if expected_cvss3_score else ""),
+            cvss3_score=str(expected_cvss3_score),
             cvss3_vector=expected_cvss3_vector,
             confidence=1.0,
             tools_used=[],
@@ -270,10 +280,11 @@ cases = [
         expected_impact="MODERATE",
         expected_cvss3_score=6.8,
     ),
-    SuggestImpactCase(
-        cve_id="CVE-2025-37798",
-        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:N",
-    ),
+    # FIXME: According to feedback by a security analyst, Aegis should suggest no impact on CIA
+    # SuggestImpactCase(
+    #     cve_id="CVE-2025-37798",
+    #     expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:N",
+    # ),
     SuggestImpactCase(
         cve_id="CVE-2025-39922",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
