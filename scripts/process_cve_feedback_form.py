@@ -102,9 +102,17 @@ def process_generic_feedback(rows):
         value = row[3]
         feature = row[8]
         match feature:
+            case "suggest-cvss":
+                evaluator = "Impact"
+                field = "cvss3_vector"
+
             case "suggest-description":
                 evaluator = "Description"
                 field = "title" if is_title(value) else "description"
+
+            case "suggest-impact":
+                evaluator = "Impact"
+                field = "impact"
 
             case "suggest-title":
                 evaluator = "Description"
