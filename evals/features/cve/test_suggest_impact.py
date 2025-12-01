@@ -219,6 +219,10 @@ async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
 # test cases
 cases = [
     SuggestImpactCase(
+        cve_id="CVE-2022-23125",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2022-48701",
         expected_impact="MODERATE",
         expected_cvss3_score=4.9,
@@ -227,6 +231,10 @@ cases = [
         cve_id="CVE-2023-39326",
         expected_impact="MODERATE",
         expected_cvss3_score=7.5,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2023-53510",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2023-53693",
@@ -254,9 +262,25 @@ cases = [
         expected_cvss3_score=9.8,
     ),
     SuggestImpactCase(
+        cve_id="CVE-2025-13609",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:H/A:L",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2025-23395",
         expected_impact="MODERATE",
         expected_cvss3_score=6.8,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-37798",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:N",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39922",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39939",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-59840",
