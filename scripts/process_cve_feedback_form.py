@@ -97,7 +97,7 @@ def is_title(value):
     return not value.endswith(".") and len(value) < 128
 
 
-def process_generic_feedback(rows):
+def process_generic_feedback(rows, current_evaluator):
     for row in rows:
         value = row[3]
         feature = row[8]
@@ -122,6 +122,10 @@ def process_generic_feedback(rows):
                 # skip feedback for other features
                 continue
 
+        if evaluator != current_evaluator:
+            # skip feedback for other evaluators
+            continue
+
         # get CVE ID
         cve = row[1]
         osidb_cache_cve(cve)
@@ -144,7 +148,8 @@ def process_feedback(file_path):
 
     # run specific processors
     process_cwe_feedback(rows)
-    process_generic_feedback(rows)
+    for evaluator in ("Description", "Impact"):
+        process_generic_feedback(rows, evaluator)
 
 
 def main():
