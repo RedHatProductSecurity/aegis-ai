@@ -25,9 +25,10 @@ class Feedback(BaseModel):
     cve_id: Optional[CVEID] = Field("", max_length=50)
     email: Optional[str] = Field("", max_length=100)
     request_time: Optional[str] = Field("", max_length=50)
-    actual: Optional[str] = Field("", max_length=200)  # Increased for longer values
-    expected: Optional[str] = Field("", max_length=200)  # Increased for longer values
+    actual: Optional[str] = Field("", max_length=5000)  # Increased for longer values
+    expected: Optional[str] = Field("", max_length=5000)  # Increased for longer values
     accept: bool = Field(False)
+    rejection_comment: Optional[str] = Field("", max_length=5000)
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ class FeedbackSchema:
                 "expected",  # Expected value from user
                 "request_time",  # Original request timestamp
                 "accept",  # User acceptance (True/False)
+                "rejection_comment",  # Comment provided when rejecting the result
             ],
         )
 
@@ -127,6 +129,7 @@ class FeedbackSchema:
             "expected": "Expected value provided by the user",
             "request_time": "Timestamp of the original request",
             "accept": "Whether the user accepted the result (True/False)",
+            "rejection_comment": "Comment provided by the user when rejecting the result",
         }
         return descriptions.get(field_name)
 

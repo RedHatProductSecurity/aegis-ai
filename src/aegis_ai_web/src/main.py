@@ -309,6 +309,7 @@ async def save_feedback(feedback: Feedback):
             "expected": feedback.expected or "",
             "request_time": feedback.request_time or "",
             "accept": str(feedback.accept),
+            "rejection_comment": feedback.rejection_comment or "",
         }
 
         # Write to CSV file (automatic escaping)
