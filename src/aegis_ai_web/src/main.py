@@ -309,6 +309,7 @@ async def save_feedback(feedback: Feedback):
             "expected": feedback.expected or "",
             "request_time": feedback.request_time or "",
             "accept": str(feedback.accept),
+            "rejection_comment": feedback.rejection_comment or "",
         }
 
         # Write to CSV file (automatic escaping)
@@ -320,7 +321,13 @@ async def save_feedback(feedback: Feedback):
         return {"status": "Feedback received and logged successfully."}
 
     except Exception as e:
-        logging.error(f"Failed to process feedback: {e}", exc_info=True)
+        entry = f"{feedback.cve_id}/{feedback.feature}"
+        logging.warning(
+            f"Failed to process feedback for {entry}: {e.__class__.__name__}"
+        )
+        logging.debug(
+            f"Error details for feedback submission {entry}: {e}", exc_info=True
+        )
         raise HTTPException(
             status_code=500,
             detail="An internal error occurred while processing feedback.",

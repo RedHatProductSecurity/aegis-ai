@@ -36,6 +36,7 @@ class TestFeedbackSchema:
             "expected",
             "request_time",
             "accept",
+            "rejection_comment",
         ]
 
         assert FEEDBACK_SCHEMA.field_names == expected_fields
@@ -55,6 +56,7 @@ class TestFeedbackSchema:
             "expected": "CRITICAL",
             "request_time": "",
             "accept": "False",
+            "rejection_comment": "",
         }
 
         assert FEEDBACK_SCHEMA.validate_parsed_log(valid_data) is True
@@ -81,6 +83,7 @@ class TestFeedbackSchema:
             "expected": "CRITICAL",
             "request_time": "",
             "accept": "False",
+            "rejection_comment": "",
             "extra_field": "should not be here",  # Extra field
         }
 
@@ -101,6 +104,7 @@ class TestFeedbackSchema:
             "expected": "CRITICAL",
             "request_time": "",
             "accept": "False",
+            "rejection_comment": "",
         }
 
         # Cast to expected type for type checker; we're intentionally testing None values
@@ -120,6 +124,7 @@ class TestFeedbackSchema:
             "expected",
             "request_time",
             "accept",
+            "rejection_comment",
         ]
 
         assert FEEDBACK_SCHEMA.validate_csv_headers(valid_headers) is True
@@ -135,6 +140,7 @@ class TestFeedbackSchema:
             "expected",
             "request_time",
             "accept",
+            "rejection_comment",
         ]
 
         assert FEEDBACK_SCHEMA.validate_csv_headers(invalid_headers) is False
@@ -177,6 +183,7 @@ class TestValidationFunctions:
             "expected": "CRITICAL",
             "request_time": "",
             "accept": "False",
+            "rejection_comment": "",
         }
 
         assert validate_log_parser_output(valid_data) is True
@@ -212,6 +219,7 @@ class TestValidationFunctions:
             "expected",
             "request_time",
             "accept",
+            "rejection_comment",
         ]
 
         assert validate_csv_headers(valid_headers) is True
