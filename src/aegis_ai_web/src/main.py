@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Type, Annotated, cast, Any
 
 import yaml
-from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi import FastAPI, Request, HTTPException, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -33,7 +33,8 @@ from . import (
     write_feedback_to_csv,
     ENABLE_CONSOLE,
 )
-from .data_models import Feedback
+from .data_models import Feedback, KPIScoreResponse
+from .endpoints.kpi import get_cve_kpi, SortOrder
 
 
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
@@ -289,6 +290,69 @@ async def component_analysis(
         )
 
 
+@app.get(
+    f"/api/{AEGIS_REST_API_VERSION}/analysis/kpi/cve",
+    response_model=KPIScoreResponse,
+    summary="Get CVE Analysis KPI Metrics",
+    description="Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns the acceptance score percentage and all matching log entries sorted by datetime.",
+    responses={
+        200: {
+            "description": "Successful response with KPI metrics",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "acceptance_percentage": 75.0,
+                        "entries": [
+                            {
+                                "datetime": "2025-01-15 10:30:45.123",
+                                "accepted": True,
+                                "aegis_version": "1.0.0",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "Validation error - invalid order parameter or missing feature",
+        },
+        500: {
+            "description": "Internal server error",
+        },
+    },
+)
+async def cve_kpi(
+    feature: str = Query(
+        ...,
+        description="Feature name to filter entries by (e.g., 'suggest-impact', 'suggest-cwe')",
+    ),
+    order: SortOrder = Query(
+        default=SortOrder.ASC,
+        description="Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first)",
+    ),
+):
+    """
+    Get KPI metrics for CVE analysis feedback filtered by feature.
+
+    This endpoint calculates the acceptance rate (percentage of entries where accept=True)
+    for a specific feature and returns all matching log entries sorted by datetime.
+
+    **Parameters:**
+    - **feature**: Required. The feature name to filter by (e.g., 'suggest-impact', 'suggest-cwe')
+    - **order**: Optional. Sort order for entries by datetime ('asc' or 'desc'). Defaults to 'asc'.
+
+    **Returns:**
+    - **acceptance_percentage**: Acceptance score as a percentage float (e.g., 75.0 for 75%)
+    - **entries**: List of log entries matching the feature, sorted by datetime
+
+    **Example:**
+    ```
+    GET /api/v1/analysis/kpi/cve?feature=suggest-impact&order=desc
+    ```
+    """
+    return get_cve_kpi(feature, order)
+
+
 @app.post("/api/v1/feedback")
 async def save_feedback(feedback: Feedback):
     """
@@ -300,6 +364,8 @@ async def save_feedback(feedback: Feedback):
 
     try:
         # Build row data with current timestamp
+        # Normalize accept to lowercase for consistency
+        accept_str = str(feedback.accept).lower()
         row_data = {
             "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
             "feature": feedback.feature,
@@ -308,7 +374,7 @@ async def save_feedback(feedback: Feedback):
             "actual": feedback.actual or "",
             "expected": feedback.expected or "",
             "request_time": feedback.request_time or "",
-            "accept": str(feedback.accept),
+            "accept": accept_str,
             "rejection_comment": feedback.rejection_comment or "",
         }
 

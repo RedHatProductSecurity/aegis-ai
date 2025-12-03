@@ -37,7 +37,7 @@ def test_save_feedback_success(feedback_log_setup):
             assert last_row["cve_id"] == "CVE-2025-23395"
             assert last_row["email"] == "joey@redhat.com"
             assert last_row["actual"] == "CWE-120"
-            assert last_row["accept"] == "True"
+            assert last_row["accept"] == "true"  # Normalized to lowercase
     except FileNotFoundError:
         pytest.fail(f"feedback log file was not created at: {feedback_log_setup}")
 
@@ -180,6 +180,6 @@ async def test_submit_feedback_after_suggest_impact_analysis(feedback_log_setup)
             assert last_row["cve_id"] == cve_id
             assert last_row["actual"] == actual_impact
             assert last_row["expected"] == expected_impact
-            assert last_row["accept"] == "False"
+            assert last_row["accept"] == "false"  # Normalized to lowercase
     except FileNotFoundError:
         pytest.fail(f"feedback log file was not created at: {feedback_log_setup}")

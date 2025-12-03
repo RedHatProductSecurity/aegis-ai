@@ -191,3 +191,31 @@ def validate_csv_headers(csv_headers: List[str]) -> bool:
         )
 
     return True
+
+
+class KPIEntry(BaseModel):
+    """
+    Individual KPI entry model.
+
+    Contains datetime, acceptance status, and AEGIS version for a feedback entry.
+    """
+
+    datetime: str = Field(..., description="Timestamp of the feedback entry")
+    accepted: bool = Field(..., description="Whether the feedback was accepted")
+    aegis_version: str = Field(..., description="AEGIS version at time of feedback")
+
+
+class KPIScoreResponse(BaseModel):
+    """
+    Response model for KPI endpoint.
+
+    Contains the acceptance score percentage and filtered log entries.
+    """
+
+    acceptance_percentage: float = Field(
+        ..., description="Acceptance score as a percentage (e.g., 75.0 for 75%)"
+    )
+    entries: List[KPIEntry] = Field(
+        ...,
+        description="List of log entries filtered by feature, sorted by datetime",
+    )
