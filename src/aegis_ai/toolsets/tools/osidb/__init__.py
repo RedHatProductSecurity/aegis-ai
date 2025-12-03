@@ -34,43 +34,60 @@ class OSIDBToolInput(BaseToolInput):
 
 
 class CVE(BaseToolOutput):
-    """ """
+    """data model used to retrieve security flaw data from OSIDB"""
 
     cve_id: CVEID = Field(
         ...,
-        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw",
     )
     cwe_id: Optional[str] = Field(
         default="",
-        description="CVE CWE ID.",
+        description="CVE CWE ID",
     )
     impact: Optional[str] = Field(
         default="",
-        description="CVE impact.",
+        description="CVE impact",
     )
     title: str = Field(
-        ...,
-        description="CVE title.",
+        default="",
+        description="CVE title",
     )
     statement: Optional[str] = Field(
         default="",
-        description="CVE statement.",
+        description="CVE statement",
     )
     mitigation: Optional[str] = Field(
         default="",
-        description="CVE mitigation.",
+        description="CVE mitigation",
     )
-
-    comment_zero: str = Field(..., description="CVE comment_zero.")
+    comment_zero: str = Field(
+        default="",
+        description="CVE comment_zero",
+    )
     comments: str = Field(
-        ...,
-        description="all public comments.",
+        default="",
+        description="all public comments",
     )
-    description: str = Field(..., description="CVE cve_description.")
-    components: List = Field(..., description="list of components")
-    references: List = Field(..., description="list of references")
-    affects: List = Field(..., description="list of affects")
-    cvss_scores: List = Field(..., description="list of cvss scores")
+    description: str = Field(
+        default="",
+        description="CVE cve_description",
+    )
+    components: List = Field(
+        default=[],
+        description="list of components",
+    )
+    references: List = Field(
+        default=[],
+        description="list of references",
+    )
+    affects: List = Field(
+        default=[],
+        description="list of affects",
+    )
+    cvss_scores: List = Field(
+        default=[],
+        description="list of cvss scores",
+    )
 
 
 async def cve_retrieve(cve_id: CVEID, exclude_fields: List[str] = []) -> CVE:
