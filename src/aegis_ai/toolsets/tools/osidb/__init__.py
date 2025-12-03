@@ -90,7 +90,25 @@ class CVE(BaseToolOutput):
     )
 
 
-async def cve_retrieve(cve_id: CVEID, exclude_fields: List[str] = []) -> CVE:
+def cve_exclude_fields(cve: CVE, exclude_fields: List[str]):
+    """return a CVE object with data removed in fields specified by exclude_fields"""
+    # "cve_description" is used in OSIM, "description" is used in OSIDB
+    fields_to_exclude = set(
+        [field.replace("cve_description", "description") for field in exclude_fields]
+    )
+
+    # create a local copy so that we can change the CVE object
+    cve = cve.model_copy()
+    if "rh_cvss_score" in fields_to_exclude:
+        # exclude RH-provided CVSS
+        cve.cvss_scores = [cvss for cvss in cve.cvss_scores if cvss["issuer"] != "RH"]
+
+    # finally remove all fields listed in fields_to_exclude
+    filtered_dump = cve.model_dump(exclude=fields_to_exclude)
+    return CVE(**filtered_dump)
+
+
+async def cve_retrieve(cve_id: CVEID) -> CVE:
     logger.info(f"retrieving {cve_id} from osidb")
     validated_cve_id = cveid_validator.validate_python(cve_id)
 
@@ -134,29 +152,25 @@ async def cve_retrieve(cve_id: CVEID, exclude_fields: List[str] = []) -> CVE:
                         "url": reference.url,
                     }
                 )
-        cvss_scores = []
-        for cvss_score in flaw.cvss_scores:
-            if not (cvss_score.issuer == "RH" and "rh_cvss_score" in exclude_fields):
-                cvss_scores.append(
-                    {
-                        "issuer": cvss_score.issuer,
-                        "vector": cvss_score.vector,
-                    }
-                )
-        # dynamically filter fields based on feature_deps injection ... note we could do something a bit more
-        # clever though cvss_scores being 'out of band' decided to go with naive approach.
+
+        cvss_scores = [
+            {
+                "issuer": score.issuer,
+                "vector": score.vector,
+            }
+            for score in flaw.cvss_scores
+        ]
+
         return CVE(
             cve_id=flaw.cve_id,
-            title="" if "title" in exclude_fields else f"{flaw.title}",
-            cwe_id="" if "cwe_id" in exclude_fields else f"{flaw.cwe_id}",
-            impact="" if "impact" in exclude_fields else f"{flaw.impact}",
+            title=flaw.title,
+            cwe_id=flaw.cwe_id,
+            impact=flaw.impact,
             comment_zero=flaw.comment_zero,
             comments=f"{comments}",
-            statement="" if "statement" in exclude_fields else f"{flaw.statement}",
-            mitigation="" if "mitigation" in exclude_fields else f"{flaw.mitigation}",
-            description=""
-            if "cve_description" in exclude_fields
-            else f"{flaw.cve_description}",
+            statement=flaw.statement,
+            mitigation=flaw.mitigation,
+            description=flaw.cve_description,
             components=flaw.components,
             references=references,
             affects=affects,
@@ -182,10 +196,10 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
     logger.debug(input.cve_id)
-    exclude_fields = []
-    if ctx.deps.exclude_osidb_fields:
-        exclude_fields = ctx.deps.exclude_osidb_fields
-    return await cve_retrieve(input.cve_id, exclude_fields=exclude_fields)
+    cve = await cve_retrieve(input.cve_id)
+
+    # exclude CVE fields according to feature_deps
+    return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
 
 
 @Tool
