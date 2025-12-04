@@ -185,7 +185,10 @@ def handle_eval_report(report: EvaluationReport):
         # bool assertions
         for result in ecase.assertions.values():
             if result.value is False:
-                failures += f"{ecase.name}: {result.source}: {result.reason}\n"
+                failures += f"{ecase.name}: {result.name}: False"
+                if result.reason:
+                    failures += f", reason: {result.reason}"
+                failures += "\n"
 
         # evaluator failures
         for ef in ecase.evaluator_failures:
