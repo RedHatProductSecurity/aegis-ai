@@ -177,25 +177,25 @@ def handle_eval_report(report: EvaluationReport):
     failures = ""
 
     # handle case failures (LLM quota exceeded, LLM response timed out, etc.)
-    for case in report.failures:
-        failures += f"{case.name}: case failure: {case.error_message}\n"
+    for ecase in report.failures:
+        failures += f"{ecase.name}: case failure: {ecase.error_message}\n"
 
     # iterate through evaluated cases
-    for case in report.cases:
+    for ecase in report.cases:
         # bool assertions
-        for result in case.assertions.values():
+        for result in ecase.assertions.values():
             if result.value is False:
-                failures += f"{case.name}: {result.source}: {result.reason}\n"
+                failures += f"{ecase.name}: {result.source}: {result.reason}\n"
 
         # evaluator failures
-        for ef in case.evaluator_failures:
-            failures += f"{case.name}: {ef.name}: {ef.error_message}\n"
+        for ef in ecase.evaluator_failures:
+            failures += f"{ecase.name}: {ef.name}: {ef.error_message}\n"
 
         # score threshold
-        for result in case.scores.values():
+        for result in ecase.scores.values():
             score = result.value
             if score < MIN_SCORE_THRESHOLD:
-                failures += f"{case.name}: {result.source}: score below threshold: "
+                failures += f"{ecase.name}: {result.source}: score below threshold: "
                 failures += f"{score} < {MIN_SCORE_THRESHOLD}\n"
 
     # report all failures at once (if any)
