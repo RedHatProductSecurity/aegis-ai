@@ -20,7 +20,13 @@ from evals.features.common import (
 field_evaluators = {
     "suggested_statement": create_llm_judge(
         score_name="StatementEvaluator",
-        rubric="Score how much the actual suggested_statement field is semantically equivalent to the expected suggested_statement field.  If the key message is the same but the style is different, the score should not be zero.  If the style is different, the score should not be 1.0.",
+        rubric=(
+            "Score semantic equivalence between the actual suggested_statement and the expected suggested_statement. "
+            "Emphasize matching rationale (impact justification in RH context, preconditions, scope). "
+            "If style differs but the core message overlaps, the score should be > 0.0 and < 1.0 depending on overlap. "
+            "Only assign 0.0 if the actual is irrelevant to the CVE or contradicts the expected meaning. "
+            "When partially aligned but missing details, prefer a low non-zero score (e.g., 0.12–0.3) rather than 0.0."
+        ),
         include_expected_output=True,
     ),
     "suggested_mitigation": create_llm_judge(
