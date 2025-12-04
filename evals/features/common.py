@@ -150,6 +150,16 @@ def make_eval_reason(value: bool = False, fail_reason: str = None):  # type: ign
     return EvaluationReason(value=value, reason=(fail_reason if not value else None))
 
 
+def eval_name_from_result(result):
+    """return human-readable evaluator name associated with the evaluation result"""
+    try:
+        # This works for our custom evaluators
+        return result.name
+    except AttributeError:
+        # This works for a scoring LLMJudge
+        return result.source.arguments["score"]["evaluation_name"]
+
+
 def handle_eval_report(report: EvaluationReport):
     """print evaluation summary and trigger assertion failure in case any assertion failed"""
     # capture the report as a string
@@ -198,8 +208,12 @@ def handle_eval_report(report: EvaluationReport):
         for result in ecase.scores.values():
             score = result.value
             if score < MIN_SCORE_THRESHOLD:
-                failures += f"{ecase.name}: {result.source}: score below threshold: "
-                failures += f"{score} < {MIN_SCORE_THRESHOLD}\n"
+                eval_name = eval_name_from_result(result)
+                failures += f"{ecase.name}: {eval_name}: score below threshold: "
+                failures += f"{score:.4f} < {MIN_SCORE_THRESHOLD}"
+                if result.reason:
+                    failures += f", reason: {result.reason}"
+                failures += "\n"
 
     # report all failures at once (if any)
     assert not failures, f"Unsatisfied assertion(s):\n{failures}"
