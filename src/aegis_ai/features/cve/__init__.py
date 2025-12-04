@@ -208,59 +208,35 @@ class SuggestStatementText(Feature):
         )
 
         prompt = AegisPrompt(
-            user_instruction=(
-                f"Analyze the provided CVE context ({cve_id}) and generate a Red Hat specific "
-                "Statement and Mitigation plan."
-            ),
+            user_instruction=f"Analyze the provided CVE context ({cve_id}) and generate a Red Hat specific Statement and Mitigation.",
             goals="""
-            You are a Red Hat Product Security analyst. Your goal is to populate two specific fields:
-
-            1. **Suggested Statement**: A technical rationale explaining the impact of this CVE specifically on Red Hat products. This clarifies why Red Hat's severity assessment might differ from the upstream NVD/CVSS score.
-            2. **Suggested Mitigation**: A practical, temporary workaround to reduce the attack surface without applying a software update.
+            - Provide two fields tailored for Red Hat products:
+              1) Suggested Statement: brief rationale of impact in RH context
+              2) Suggested Mitigation: practical configuration or operational workaround tailored to Red Hat
+            - Keep outputs concise and consistent; avoid contradiction between fields.
             """,
             rules=f"""
-            ### GLOBAL STYLE GUIDELINES
-            - **Consistency:** Ensure the Statement and Mitigation do not contradict each other.
-            - **Explanation:** Provide a brief explanation in the final output justifying your choices for both fields.
-
-            ### FIELD 1: SUGGESTED STATEMENT RULES
-            - **Length:** < 1000 characters.
-            - **Content:**
-                - Focus on *impact*: "The highest threat is to system availability."
-                - Explain *why*: "This issue only affects systems with X enabled."
-                - If no Red Hat specific context exists (generic flaw), return an empty string.
+            ### STATEMENT (suggested_statement)
+            - Focus on impact and RH relevance (deployment model, defaults, hardening).
+            - Start with a concise severity-and-why sentence tailored for Red Hat, e.g.:
+              "This vulnerability is rated Moderate for Red Hat because ..." or
+              "In the Red Hat context, impact is limited because ...".
+            - Explain briefly why impact applies (e.g., feature disabled by default, needs uncommon configuration, requires physical access, short-lived CLI use).
+            - Explicitly note scope and applicability:
+              - Call out affected/unaffected Red Hat product versions when the rationale depends on defaults (e.g., feature disabled by default on RHEL 8/9).
+              - If the vulnerability requires a feature that is disabled by default on common RH releases, state those releases are not affected and why.
+              - If exploit requires physical access or specialized hardware, highlight that requirement; mention if virtualized/emulated devices could still enable exploitation.
+            - When applicable, note preconditions and what is not affected (e.g., versions, roles, disabled-by-default features).
+            - Must NOT:
+              - Duplicate the CVE description verbatim.
+              - Include code-level details or command examples.
+              - Mention mitigation steps or software updates/patching.
+            - Style: 2–4 concise sentences, < 1000 characters total.
+            
+            ### MITIGATION (suggested_mitigation)
+            - **Definition:** A configuration or operational control that reduces exposure without patching (e.g., config file, environment variable or feature toggle, sysctl, service disable, or removing optional packages).
             - **Prohibitions:**
-                - Do NOT duplicate CVE description 
-                - Do NOT repeat the technical explanation of the vulnerability already present in the 'description' field.
-                - Do NOT mention mitigations here.
-                - Do NOT include code blocks.
-                - Do NOT include anything about software updates or patching.
-
-            #### SPECIAL LOGIC (HIGHEST PRIORITY)
-            Apply these rationales EXACTLY if the conditions are met:
-
-            1. **CASE: Vim Fuzzing Issues**
-               - **IF** component is 'vim' **AND** requires explicit script mode ('-S') to trigger:
-               - **THEN** State: "Red Hat rates this Low because running an untrusted script with '-S' is equivalent to executing arbitrary code, regardless of the vulnerability."
-               - **ELSE** Do not apply this rationale.
-
-            2. **CASE: RHEL 8 Python36 Symlinks**
-               - **IF** platform is RHEL 8 **AND** package is 'python36' (symlink only) **AND** interpreter is main 'python3':
-               - **THEN** State: "This package is 'Not affected' as it only provides symlinks to the main python3 component."
-
-            3. **CASE: RHEL CLI Tools (Go-based)**
-               - **IF** component is a build-time Go dependency **AND** binary is a short-lived CLI tool (not a daemon/service):
-               - **THEN** State: "Rated Moderate because the utility is not a long-running service and the dependency is only used at build time."
-
-            4. **CASE: Xorg Server on RHEL 8/9**
-               - **IF** component is 'xorg-x11-server' **AND** OS is RHEL 8 or 9:
-               - **THEN** State: "Rated Moderate because Xorg server does not run with root privileges in RHEL 8/9."
-
-            ### FIELD 2: SUGGESTED MITIGATION RULES
-            - **Length:** < 2000 characters.
-            - **Definition:** A configuration change (config file, sysctl, service disable).
-            - **Prohibitions:**
-                - **NEVER** suggest updating/patching software. 
+                - **NEVER** suggest updating/patching software.
                 - **NEVER** invent config flags or commands.
                 - **NEVER** use the term 'update'.
                 - **NEVER** suggest dangerous commands (`rm -rf`, `chmod 777`, disabling SELinux globally) without explicit, dire warnings.
@@ -268,9 +244,17 @@ class SuggestStatementText(Feature):
                 1. Summary of action ("Disable the X service").
                 2. Command examples (`sysctl`, `systemctl`).
                 3. Caveats ("This may impact performance").
-                4. Always warn if there is a potential for reload and restarts (If CVE is related to a service and mitigation provides concrete command line instructions, always provide a warning) 
-            - **Fallback:** If no configuration workaround exists (or the only fix is code patching), or if the CVE does not affect Red Hat products (Windows only), YOU MUST USE EXACTLY THIS TEXT:
+                4. Always warn if there is a potential for reload and restarts (If CVE is related to a service and mitigation provides concrete command line instructions, always provide a warning)
+            - Prefer configuration-only or operational hardening patterns when applicable:
+                - Limit service exposure: restrict access to trusted networks, apply rate limiting or firewall rules, and enable protocol validation features if available (e.g., DNSSEC for resolvers).
+                - Disable optional features required to trigger the flaw: use configuration or environment toggles to turn off risky engines or modes; remove optional packages that provide the risky component if not needed.
+                - Web content engines or embedded browsers (e.g., WebKitGTK): advise avoiding untrusted web content; if exploitation depends on JIT, disable it via a documented toggle when available (example for WebKitGTK: set environment variable JavaScriptCoreUseJIT=0 on affected systems).
+                - If exposure is introduced by optional desktop/GUI packages, list common packages that pull in the vulnerable component and suggest removing them if not needed; clearly warn that removing these may also remove GNOME or related packages and break functionality; note that servers remain usable via terminal.
+                - For components that process untrusted content (browsers, renderers, document viewers), advise operational controls such as avoiding untrusted content and sandboxing. If a JIT or optional execution engine can be disabled via a documented environment variable or config flag, suggest disabling it (e.g., an environment variable toggle).
+                - Kernel driver vulnerabilities: prevent autoloading of the affected module via an /etc/modprobe.d rule (install/blacklist); note that a restart or service reload may be required and may impact functionality.
+            - **Fallback:** If neither a configuration nor an operational workaround exists (and the only fix is code patching), or if the CVE does not affect Red Hat products (Windows only), YOU MUST USE EXACTLY THIS TEXT:
               "{NO_MITIGATION_TEXT}"
+            - Length: < 2000 characters.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=remove_keys(
