@@ -48,29 +48,38 @@ class SuggestImpact(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["impact", "rh_cvss_score"])
         prompt = AegisPrompt(
-            user_instruction="Analyze the CVE JSON and assess basic CVSS 3.1 vector/score from the perspective of Red Hat customers.  Based on the CVSS 3.1 score predict the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore existing labels and decide independently.",
+            user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore any pre-labeled impact/CVSS and decide independently.",
             goals="""
-                - User Interaction is Required for an application to connect a malicious server.
-                - Denial of Service (DoS) has lower impact on applications compared to daemons and servers.
-                - Do not base analysis decisions on which RH products are affected.
-                - Based on all the previous analysis, identify the most appropriate CVSS 3.1 vector and score - using this identify impact rating (Critical, Important, Moderate, or Low).
+                - Return exactly one CVSS:3.1 base vector and score consistent with each other.
+                - Provide short reasoning for each base metric (AV, AC, PR, UI, S, C, I, A).
+                - Prefer AV:L for local-only flaws; use AV:N only if remote/network reachable without local access; AV:A when limited to same-link/adjacent network; AV:P for physical.
+                - For DoS-only flaws, emphasize A over C/I; for LPE, emphasize PR>UI and I (and C when secrets are exposed).
+                - Do not base metric choices on which RH products are affected; reason from technical preconditions and exploit mechanics.
+                - Pick impact (Critical/Important/Moderate/Low) from the computed score.
             """,
             rules="""
-                - Assess impact within the context of Red Hat's defense-in-depth architecture, specifically noting that mandatory MFA and least privilege access can limit attack surface.  
-                - Use the following Red Hat Impact scale as a guide:
-                    - CRITICAL: A remote unauthenticated user can execute arbitrary code. Does not require user interaction.  9.0 < cvss3_score
-                    - IMPORTANT: Allows local users to gain privileges.  Unauthenticated remote users can view resources.  Authenticated remote users can execute arbitrary code.  7.0 < cvss3_score <= 9.0
-                    - MODERATE: Harder to exploit or limited scope/conditions.  4.0 < cvss3_score <= 7.0
-                    - LOW: Unlikely or minimal consequence.  cvss3_score <= 4.0
-                - Consider: basic CVSS 3.1 metrics (Attack Vector, Attack Complexity, Privileges Required, User Interaction, Scope, Confidentiality, Integrity, Availability.
-                - Retrieve and summarise context from vulnerability reference urls.
-                - Use github mcp tool to retrieve additional context from vulnerability reference url.
-                - Always use kernel_cve tool to provide additional CVE context if CVE component is kernel.
-                - If cisa_kev_tool tool is available check if there are any related known exploits.
+                - Output format (must follow exactly):
+                    - cvss3_vector: "CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X"
+                      where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
+                    - cvss3_score: numeric string matching the vector (we will verify and adjust if needed).
+                    - impact: Critical/Important/Moderate/Low based on the score.
+                - Metric selection guide:
+                    - AV: N if reachable over network from off-host; A if same subnet/Bluetooth/802.11 link-limited; L if requires local account/session/CLI/local IPC; P if requires physical access.
+                    - AC: H if requires uncommon configuration, precise timing/race, multiple conditions, or lengthy preparation; else L.
+                    - PR: N if no prior auth; L if basic/local user privileges are enough; H if admin/root/high-privileges are required to trigger.
+                    - UI: R if victim must click/open/provide content; else N.
+                    - S: C if exploitation crosses a trust boundary (e.g., container escape, VM escape, kernel boundary affecting other contexts); else U.
+                    - CIA: Set each based on consequences described: use A for availability-only DoS; use C/I when data disclosure/modification or code execution with escalated privileges is plausible.
+                - Consider Red Hat hardening defaults (SELinux enforcing, least privilege) only to inform AC and S, not AV.
+                - Retrieve and summarize additional context from vulnerability references:
+                    - Use github mcp and web search tools to resolve reference URLs.
+                    - Always use kernel_cve tool if the component is the Linux kernel.
+                    - If cisa_kev_tool is available, check for known exploits.
+                - Confidence:
+                    - Calibrate confidence to the fraction of base metrics you are ≥80% sure about (e.g., 0.75 if 6/8 are certain).
                 - Output
-                    - output a plausible CVSS 3.1 base vector and score.
-                    - output a impact (which directly correlates to identified CVSS score)
-                    - Provide confidence in [0.00..1.00]. Keep explanations concise.
+                    - Provide the vector and score first, then impact, then a concise explanation with metric-by-metric rationale.
+                    - Keep explanations concise.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=remove_keys(
