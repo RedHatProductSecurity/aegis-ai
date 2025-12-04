@@ -33,11 +33,13 @@ NUM_BY_IMPACT = {
 
 
 # TODO: check whether the cvss Python module could anyhow help with this
-def score_cvss3_diff(cvss3: str, cvss3_exp: str) -> float:
-    """check how a pair of CVSS 3.1 vectors differ from each other.  0.0 means completely different, 1.0 means exact match"""
+def score_cvss3_diff(cvss3: str, cvss3_exp: str) -> tuple[float, str | None]:
+    """Compare two CVSS 3.1 vectors and return (score, reason).
+    0.0 means completely different, 1.0 means exact match.
+    When the score is not 1.0, reason enumerates mismatched metrics."""
     if cvss3 == cvss3_exp:
         # exact match
-        return 1.0
+        return (1.0, None)
 
     def _parse(v: str) -> dict[str, str]:
         parts = v.split("/")
@@ -81,7 +83,20 @@ def score_cvss3_diff(cvss3: str, cvss3_exp: str) -> float:
     metrics = tuple(scales.keys())
     diffs = [_norm_dist(m) for m in metrics]
     avg_diff = sum(diffs) / len(diffs)
-    return (1.0 - avg_diff) ** 2
+    score = (1.0 - avg_diff) ** 2
+
+    # Build human-friendly reason for mismatches
+    mismatch_list: list[str] = []
+    for m in metrics:
+        va = a.get(m)
+        vb = b.get(m)
+        if va is None or vb is None:
+            continue
+        if va != vb:
+            mismatch_list.append(f"{m}: got {va}, expected {vb}")
+
+    reason = "mismatched metrics: " + "; ".join(mismatch_list)
+    return (score, reason)
 
 
 class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
@@ -115,8 +130,10 @@ class CVSSScoreEvaluator(Evaluator[str, SuggestImpactModel]):
 
 
 class CVSSVectorEvaluator(Evaluator[str, SuggestImpactModel]):
-    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
-        """return score based on actual and expected CVSS score"""
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestImpactModel]
+    ) -> EvaluationReason:
+        """return score based on actual and expected CVSS vector and include a reason when the score is low"""
         assert ctx.expected_output is not None
 
         # get actual and expected cvss3_vector
@@ -126,12 +143,14 @@ class CVSSVectorEvaluator(Evaluator[str, SuggestImpactModel]):
 
         # compare the vectors by individual metrics
         try:
-            score = score_cvss3_diff(cvss3, cvss3_exp)
-        except Exception:
+            score, reason = score_cvss3_diff(cvss3, cvss3_exp)
+        except Exception as e:
             # parsing or comparison failed -> no credit
             score = 0.0
+            reason = f"unhandled exception: {e}"
 
-        return reflect_confidence(ctx, score)
+        score = reflect_confidence(ctx, score)
+        return EvaluationReason(value=score, reason=reason)
 
 
 # some evaluators are only applicable if the expected output for a specific field is provided
