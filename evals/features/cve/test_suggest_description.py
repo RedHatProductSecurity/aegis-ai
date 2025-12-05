@@ -206,7 +206,7 @@ evals = common_feature_evals + [
     PromptLeakEvaluator(),
     create_llm_judge(
         assertion_name="NoVersionInfo",
-        rubric="suggested_title and suggested_description do not contain versions of affected components, except in acronyms explanation and in acronyms themselves.",
+        rubric="suggested_title and suggested_description do not contain versions of affected components, except in acronyms explanation and in acronyms themselves.  Do not confuse API endpoint versions with component versions.",
     ),
     create_llm_judge(
         assertion_name="TitleSummarizesDescription",
