@@ -1,239 +1,212 @@
-components:
-  schemas:
-    Body_generate_response_console_post:
-      properties:
-        goals:
-          title: Goals
-          type: string
-        rules:
-          title: Rules
-          type: string
-        user_instruction:
-          title: User Instruction
-          type: string
-      required:
-      - user_instruction
-      - goals
-      - rules
-      title: Body_generate_response_console_post
-      type: object
-    Feedback:
-      description: Data structure for feedback.
-      properties:
-        accept:
-          default: false
-          title: Accept
-          type: boolean
-        actual:
-          anyOf:
-          - maxLength: 50
-            type: string
-          - type: 'null'
-          default: ''
-          title: Actual
-        cve_id:
-          anyOf:
-          - maxLength: 50
-            pattern: ^CVE-[0-9]{4}-[0-9]{4,7}$
-            type: string
-          - type: 'null'
-          default: ''
-          title: Cve Id
-        email:
-          anyOf:
-          - maxLength: 100
-            type: string
-          - type: 'null'
-          default: ''
-          title: Email
-        expected:
-          anyOf:
-          - maxLength: 50
-            type: string
-          - type: 'null'
-          default: ''
-          title: Expected
-        feature:
-          maxLength: 100
-          title: Feature
-          type: string
-        request_time:
-          anyOf:
-          - maxLength: 50
-            type: string
-          - type: 'null'
-          default: ''
-          title: Request Time
-      required:
-      - feature
-      title: Feedback
-      type: object
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          title: Detail
-          type: array
-      title: HTTPValidationError
-      type: object
-    ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          title: Location
-          type: array
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
-      type: object
-    aegis_ai_web__src__main__ComponentFeatureName__1:
-      enum:
-      - suggest-impact
-      - suggest-cwe
-      - suggest-description
-      - suggest-statement
-      - identify-pii
-      - cvss-diff-explainer
-      title: ComponentFeatureName
-      type: string
-    aegis_ai_web__src__main__ComponentFeatureName__2:
-      enum:
-      - component-intelligence
-      title: ComponentFeatureName
-      type: string
-info:
-  description: A simple web console and REST API for Aegis.
-  title: Aegis REST-API
-  version: v1
 openapi: 3.1.0
+info:
+  title: Aegis REST-API
+  description: A simple web console and REST API for Aegis.
+  version: v1
 paths:
   /:
     get:
+      summary: Home
       operationId: home__get
       responses:
         '200':
+          description: Successful Response
           content:
             text/html:
               schema:
                 type: string
-          description: Successful Response
-      summary: Home
-  /api/v1/analysis/component:
-    get:
-      operationId: component_analysis_api_v1_analysis_component_get
-      parameters:
-      - in: query
-        name: feature
-        required: true
-        schema:
-          $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName__2'
-      - in: query
-        name: component_name
-        required: true
-        schema:
-          title: Component Name
-          type: string
-      - in: query
-        name: detail
-        required: false
-        schema:
-          default: false
-          title: Detail
-          type: boolean
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Component Analysis
   /api/v1/analysis/cve:
     get:
+      summary: Cve Analysis
       operationId: cve_analysis_api_v1_analysis_cve_get
       parameters:
-      - in: query
-        name: feature
+      - name: feature
+        in: query
         required: true
         schema:
           $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName__1'
-      - in: query
-        name: cve_id
+      - name: cve_id
+        in: query
         required: true
         schema:
+          type: string
           pattern: ^CVE-[0-9]{4}-[0-9]{4,7}$
           title: Cve Id
-          type: string
-      - in: query
-        name: detail
+      - name: detail
+        in: query
         required: false
         schema:
+          type: boolean
           default: false
           title: Detail
-          type: boolean
       responses:
         '200':
+          description: Successful Response
           content:
             application/json:
               schema: {}
-          description: Successful Response
         '422':
+          description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Cve Analysis
   /api/v1/analysis/cve/{feature}:
     post:
+      summary: Cve Analysis With Body
       operationId: cve_analysis_with_body_api_v1_analysis_cve__feature__post
       parameters:
-      - in: path
-        name: feature
+      - name: feature
+        in: path
         required: true
         schema:
           $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName__1'
-      - in: query
-        name: detail
+      - name: detail
+        in: query
         required: false
         schema:
+          type: boolean
           default: false
           title: Detail
-          type: boolean
       responses:
         '200':
+          description: Successful Response
           content:
             application/json:
               schema: {}
-          description: Successful Response
         '422':
+          description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/analysis/component:
+    get:
+      summary: Component Analysis
+      operationId: component_analysis_api_v1_analysis_component_get
+      parameters:
+      - name: feature
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/aegis_ai_web__src__main__ComponentFeatureName'
+      - name: component_name
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Component Name
+      - name: detail
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Detail
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
           description: Validation Error
-      summary: Cve Analysis With Body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/analysis/kpi/cve:
+    get:
+      summary: Get CVE Analysis KPI Metrics
+      description: Retrieve Key Performance Indicator (KPI) metrics for CVE analysis
+        feedback, filtered by feature name. Returns the acceptance score percentage
+        and all matching log entries sorted by datetime.
+      operationId: cve_kpi_api_v1_analysis_kpi_cve_get
+      parameters:
+      - name: feature
+        in: query
+        required: true
+        schema:
+          type: string
+          description: 'Feature name to filter entries by. Valid values include: ''suggest-impact'',
+            ''suggest-cwe'', ''suggest-description'', ''suggest-statement'', ''identify-pii'',
+            ''cvss-diff-explainer'''
+          examples:
+          - suggest-impact
+          - suggest-cwe
+          - suggest-description
+          title: Feature
+        description: 'Feature name to filter entries by. Valid values include: ''suggest-impact'',
+          ''suggest-cwe'', ''suggest-description'', ''suggest-statement'', ''identify-pii'',
+          ''cvss-diff-explainer'''
+      - name: order
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SortOrder'
+          description: Sort order for datetime field. Must be 'asc' (ascending, oldest
+            first) or 'desc' (descending, newest first). Defaults to 'asc'.
+          examples:
+          - asc
+          - desc
+          default: asc
+        description: Sort order for datetime field. Must be 'asc' (ascending, oldest
+          first) or 'desc' (descending, newest first). Defaults to 'asc'.
+      responses:
+        '200':
+          description: Successful response with KPI metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPIScoreResponse'
+              examples:
+                with_entries:
+                  summary: Response with multiple entries
+                  value:
+                    acceptance_percentage: 75.0
+                    entries:
+                    - datetime: '2025-01-15 10:30:45.123'
+                      accepted: true
+                      aegis_version: 1.0.0
+                    - datetime: '2025-01-15 11:00:00.456'
+                      accepted: true
+                      aegis_version: 1.0.0
+                    - datetime: '2025-01-15 11:30:15.789'
+                      accepted: false
+                      aegis_version: 1.0.0
+                    - datetime: '2025-01-15 12:00:30.012'
+                      accepted: true
+                      aegis_version: 1.0.0
+                empty_response:
+                  summary: Response when no entries exist for feature
+                  value:
+                    acceptance_percentage: 0.0
+                    entries: []
+        '422':
+          description: Validation error - invalid order parameter or missing feature
+          content:
+            application/json:
+              example:
+                detail:
+                - type: missing
+                  loc:
+                  - query
+                  - feature
+                  msg: Field required
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              example:
+                detail: 'Error retrieving KPI data for feature ''suggest-impact'':
+                  <error message>'
   /api/v1/feedback:
     post:
-      description: Receive feedback, validate, sanitize, and log it to a separate
-        log file.
+      summary: Save Feedback
+      description: 'Receive feedback and log it to CSV file.
+
+
+        All data is preserved without modification. CSV library handles escaping.'
       operationId: save_feedback_api_v1_feedback_post
       requestBody:
         content:
@@ -243,49 +216,175 @@ paths:
         required: true
       responses:
         '200':
+          description: Successful Response
           content:
             application/json:
               schema: {}
-          description: Successful Response
         '422':
+          description: Validation Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Save Feedback
-  /console:
-    get:
-      operationId: console_console_get
-      responses:
-        '200':
-          content:
-            text/html:
-              schema:
-                type: string
-          description: Successful Response
-      summary: Console
-    post:
-      description: 'Handles the submission of a prompt, simulates an LLM response,
+components:
+  schemas:
+    Feedback:
+      properties:
+        feature:
+          type: string
+          maxLength: 100
+          title: Feature
+        cve_id:
+          anyOf:
+          - type: string
+            maxLength: 50
+            pattern: ^CVE-[0-9]{4}-[0-9]{4,7}$
+          - type: 'null'
+          title: Cve Id
+          default: ''
+        email:
+          anyOf:
+          - type: string
+            maxLength: 100
+          - type: 'null'
+          title: Email
+          default: ''
+        request_time:
+          anyOf:
+          - type: string
+            maxLength: 50
+          - type: 'null'
+          title: Request Time
+          default: ''
+        actual:
+          anyOf:
+          - type: string
+            maxLength: 5000
+          - type: 'null'
+          title: Actual
+          default: ''
+        expected:
+          anyOf:
+          - type: string
+            maxLength: 5000
+          - type: 'null'
+          title: Expected
+          default: ''
+        accept:
+          type: boolean
+          title: Accept
+          default: false
+        rejection_comment:
+          anyOf:
+          - type: string
+            maxLength: 5000
+          - type: 'null'
+          title: Rejection Comment
+          default: ''
+      type: object
+      required:
+      - feature
+      title: Feedback
+      description: 'Data structure for feedback.
 
-        and re-renders the console with the results.'
-      operationId: generate_response_console_post
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Body_generate_response_console_post'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Generate Response
+
+        All fields are stored without modification to preserve original data.
+
+        CSV escaping is handled automatically by the csv library during logging.'
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    KPIEntry:
+      properties:
+        datetime:
+          type: string
+          title: Datetime
+          description: Timestamp of the feedback entry
+        accepted:
+          type: boolean
+          title: Accepted
+          description: Whether the feedback was accepted
+        aegis_version:
+          type: string
+          title: Aegis Version
+          description: AEGIS version at time of feedback
+      type: object
+      required:
+      - datetime
+      - accepted
+      - aegis_version
+      title: KPIEntry
+      description: 'Individual KPI entry model.
+
+
+        Contains datetime, acceptance status, and AEGIS version for a feedback entry.'
+    KPIScoreResponse:
+      properties:
+        acceptance_percentage:
+          type: number
+          title: Acceptance Percentage
+          description: Acceptance score as a percentage (e.g., 75.0 for 75%)
+        entries:
+          items:
+            $ref: '#/components/schemas/KPIEntry'
+          type: array
+          title: Entries
+          description: List of log entries filtered by feature, sorted by datetime
+      type: object
+      required:
+      - acceptance_percentage
+      - entries
+      title: KPIScoreResponse
+      description: 'Response model for KPI endpoint.
+
+
+        Contains the acceptance score percentage and filtered log entries.'
+    SortOrder:
+      type: string
+      enum:
+      - asc
+      - desc
+      title: SortOrder
+      description: Sort order for datetime field.
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    aegis_ai_web__src__main__ComponentFeatureName:
+      type: string
+      enum:
+      - component-intelligence
+      title: ComponentFeatureName
+    aegis_ai_web__src__main__ComponentFeatureName__1:
+      type: string
+      enum:
+      - suggest-impact
+      - suggest-cwe
+      - suggest-description
+      - suggest-statement
+      - identify-pii
+      - cvss-diff-explainer
+      title: ComponentFeatureName

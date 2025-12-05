@@ -300,35 +300,84 @@ async def component_analysis(
             "description": "Successful response with KPI metrics",
             "content": {
                 "application/json": {
-                    "example": {
-                        "acceptance_percentage": 75.0,
-                        "entries": [
-                            {
-                                "datetime": "2025-01-15 10:30:45.123",
-                                "accepted": True,
-                                "aegis_version": "1.0.0",
-                            }
-                        ],
-                    }
+                    "examples": {
+                        "with_entries": {
+                            "summary": "Response with multiple entries",
+                            "value": {
+                                "acceptance_percentage": 75.0,
+                                "entries": [
+                                    {
+                                        "datetime": "2025-01-15 10:30:45.123",
+                                        "accepted": True,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                    {
+                                        "datetime": "2025-01-15 11:00:00.456",
+                                        "accepted": True,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                    {
+                                        "datetime": "2025-01-15 11:30:15.789",
+                                        "accepted": False,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                    {
+                                        "datetime": "2025-01-15 12:00:30.012",
+                                        "accepted": True,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                ],
+                            },
+                        },
+                        "empty_response": {
+                            "summary": "Response when no entries exist for feature",
+                            "value": {
+                                "acceptance_percentage": 0.0,
+                                "entries": [],
+                            },
+                        },
+                    },
                 }
             },
         },
         422: {
             "description": "Validation error - invalid order parameter or missing feature",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {
+                                "type": "missing",
+                                "loc": ["query", "feature"],
+                                "msg": "Field required",
+                            }
+                        ]
+                    }
+                }
+            },
         },
         500: {
             "description": "Internal server error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Error retrieving KPI data for feature 'suggest-impact': <error message>"
+                    }
+                }
+            },
         },
     },
 )
 async def cve_kpi(
     feature: str = Query(
         ...,
-        description="Feature name to filter entries by (e.g., 'suggest-impact', 'suggest-cwe')",
+        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer'",
+        examples=["suggest-impact", "suggest-cwe", "suggest-description"],
     ),
     order: SortOrder = Query(
         default=SortOrder.ASC,
-        description="Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first)",
+        description="Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'.",
+        examples=["asc", "desc"],
     ),
 ):
     """
