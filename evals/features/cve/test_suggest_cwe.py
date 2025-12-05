@@ -2,7 +2,7 @@ import pytest
 import re
 
 from pydantic_evals import Case
-from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
@@ -43,10 +43,11 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
         # no match
         return 0.0
 
-    def evaluate(self, ctx: EvaluatorContext[str, SuggestCWEModel]) -> float:
+    def evaluate(self, ctx: EvaluatorContext[str, SuggestCWEModel]) -> EvaluationReason:
         """return score based on actual and expected results"""
         cwe_list_out = ctx.output.cwe
-        score = self._base_score(cwe_list_out, ctx.expected_output)
+        cwe_list_exp = ctx.expected_output
+        score = self._base_score(cwe_list_out, cwe_list_exp)
 
         # check how many CWEs were suggested and how man CWEs are accepted
         len_diff = len(cwe_list_out) - len(ctx.expected_output)  # type: ignore
@@ -54,7 +55,12 @@ class SuggestCweEvaluator(Evaluator[str, SuggestCWEModel]):
             # penalize too many suggested CWEs for a CVE
             score *= 0.9**len_diff
 
-        return reflect_confidence(ctx, score)
+        reason = None
+        if score < 1.0:
+            reason = f"got {cwe_list_out}, expected {cwe_list_exp}"
+
+        score = reflect_confidence(ctx, score)
+        return EvaluationReason(value=score, reason=reason)
 
 
 async def suggest_cwe(cve_id: CVEID) -> SuggestCWEModel:
