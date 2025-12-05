@@ -79,17 +79,17 @@ async def suggest_statement(cve_id: CVEID) -> SuggestStatementModel:
 # test cases
 cases = [
     SuggestStatementCase(
-        "CVE-2022-1012",
-        """Red Hat Enterprise Linux version 7 (RHEL7) is not affected by this issue. While RHEL7 implements the TCP port randomization algorithm 3 (the Simple Hash-Based Port Selection Algorithm), which knowingly has shortcomings (as per RFC 6056, item 3.3.3), the object of study of this flaw was the TCP port selector algorithm 4, the Double-Hash Port Selection Algorithm, which is not existent in RHEL7.
+        cve_id="CVE-2022-1012",
+        expected_statement="""Red Hat Enterprise Linux version 7 (RHEL7) is not affected by this issue. While RHEL7 implements the TCP port randomization algorithm 3 (the Simple Hash-Based Port Selection Algorithm), which knowingly has shortcomings (as per RFC 6056, item 3.3.3), the object of study of this flaw was the TCP port selector algorithm 4, the Double-Hash Port Selection Algorithm, which is not existent in RHEL7.
             This flaw is ranked as a Moderate impact due to:
             * Limited exposure of the data in the TCP stack;
             * The impact of this vulnerability is limited to a system fingerprinting;
             * The requirements to carry the attack are elevated, requiring monitoring of the data flow.
             """,
-        """Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base, or stability.""",
+        expected_mitigation="""Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base, or stability.""",
     ),
     SuggestStatementCase(
-        "CVE-2023-48795",
+        cve_id="CVE-2023-48795",
         expected_statement="""This CVE is classified as moderate because the attack requires an active Man-in-the-Middle (MITM) who can intercept and modify the connection's traffic at the TCP/IP layer.
     Although the attack is cryptographically innovative, its security impact is fortunately quite limited. It only allows the deletion of consecutive messages, and deleting most messages at this protocol stage prevents user authentication from proceeding, leading to a stalled connection.
     The most significant identified impact is that it enables a MITM to delete the SSH2_MSG_EXT_INFO message sent before authentication begins. This allows the attacker to disable a subset of keystroke timing obfuscation features. However, there is no other observable impact on session secrecy or session integrity.""",
@@ -117,7 +117,7 @@ cases = [
 
         This procedure does limit the interoperability of the host and is only suggested as a temporary mitigation until the issue is fully resolved with an update.
 
-        For RHEL-7: 
+        For RHEL-7:
         We can recommend to use strict MACs and Ciphers on RHEL7 in both files /etc/ssh/ssh_config and /etc/ssh/sshd_config.
 
         Below strict set of Ciphers and MACs can be used as mitigation for RHEL 7.
@@ -133,7 +133,7 @@ cases = [
         [1] https://access.redhat.com/solutions/7071748""",
     ),
     SuggestStatementCase(
-        "CVE-2024-44308",
+        cve_id="CVE-2024-44308",
         expected_statement="""In order to exploit this vulnerability, the WebKitGTK JIT engine must be enabled and an attacker needs to trick a user into processing or loading malicious web content.  This feature is disabled in Red Hat Enterprise Linux versions 8 and 9, meaning these releases are not affected by this vulnerability.
             """,
         expected_mitigation="""Do not process or load untrusted web content with WebKitGTK.
@@ -145,7 +145,7 @@ cases = [
             """,
     ),
     SuggestStatementCase(
-        "CVE-2024-53197",
+        cve_id="CVE-2024-53197",
         expected_statement="""This CVE marked as important vulnerability because it allows a malicious or compromised USB device to trigger out-of-bounds memory accesses in the Linux kernel’s ALSA USB audio subsystem. This occurs due to improper handling of bNumConfigurations, which can lead to memory corruption or even privilege escalation if exploited. Since USB devices can be dynamically plugged in, an attacker with physical access could potentially exploit this flaw to execute arbitrary code in kernel space or cause a system crash.
             Because the kernel supports virtual USB devices, this vulnerability could still be exploited by an attacker without physical access, but is able to create virtual USB devices which use the vulnerable device drivers.
             """,
@@ -157,24 +157,30 @@ cases = [
             If you need further assistance, see KCS article https://access.redhat.com/solutions/41278 or contact Red Hat Global Support Services.
             """,
     ),
-    SuggestStatementCase("CVE-2025-5399"),
     SuggestStatementCase(
-        "CVE-2025-8677",
+        cve_id="CVE-2025-5399",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-8677",
         expected_statement="""This vulnerability is considered Important because it allows a remote, unauthenticated attacker to cause significant CPU exhaustion on vulnerable BIND resolvers by serving zones containing malformed DNSKEY records. The flaw triggers excessive computational effort during DNSKEY validation, leading to degraded performance and potential denial of service for legitimate clients. However, the issue affects availability only—it does not enable code execution, data exposure, or privilege escalation—so it is not classified as critical. Furthermore, authoritative servers are not impacted, limiting the scope of exposure to recursive resolvers. While the attack is easy to launch and can disrupt DNS operations, its effect ceases once the malicious traffic stops and recursive access control effective mitigations.""",
         expected_mitigation="""Mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.
             To reduce risk, restrict recursive queries to trusted or internal networks only, and apply rate limiting or firewall rules to prevent excessive or repetitive requests. Enabling DNSSEC validation helps reject forged records, while isolating recursive resolvers from authoritative servers limits the impact of potential cache poisoning. Active monitoring of CPU usage, query volume, and cache anomalies can provide early warning of abuse or attacks.""",
     ),
-    SuggestStatementCase("CVE-2025-22097"),
-    SuggestStatementCase("CVE-2025-23395"),
     SuggestStatementCase(
-        "CVE-2025-29781",
-        expected_statement="""This vulnerability is rated as Important for OpenShift Baremetal Operator, because RBAC is cluster-scoped and, while WATCH_NAMESPACE is set to openshift-machine-api by default, it is common for deployments to have a less restrictive value configured. It breaks Kubernetes' namespace isolation by allowing a user to create a BMCEventSubscription that references Secrets from unauthorized namespaces. In OpenShift, where Secrets often store high-value assets like kubeadmin credentials or cloud API keys, this enables unauthorized access to sensitive data across tenant boundaries. It effectively becomes a horizontal privilege escalation vector, allowing a namespace-scoped user to exfiltrate secrets intended for other components or tenants.  Given the minimal exploit complexity and high-impact potential, especially in multi-tenant environments, this issue is more severe than a moderate flaw and justifies a high CVSS rating.        
+        cve_id="CVE-2025-22097",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-23395",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-29781",
+        expected_statement="""This vulnerability is rated as Important for OpenShift Baremetal Operator, because RBAC is cluster-scoped and, while WATCH_NAMESPACE is set to openshift-machine-api by default, it is common for deployments to have a less restrictive value configured. It breaks Kubernetes' namespace isolation by allowing a user to create a BMCEventSubscription that references Secrets from unauthorized namespaces. In OpenShift, where Secrets often store high-value assets like kubeadmin credentials or cloud API keys, this enables unauthorized access to sensitive data across tenant boundaries. It effectively becomes a horizontal privilege escalation vector, allowing a namespace-scoped user to exfiltrate secrets intended for other components or tenants.  Given the minimal exploit complexity and high-impact potential, especially in multi-tenant environments, this issue is more severe than a moderate flaw and justifies a high CVSS rating.
         """,
         expected_mitigation="""Operator can configure BMO role-based access control (RBAC) to be namespace scoped instead of cluster scoped to prevent BMO from accessing Secrets from other namespaces, or use the `WATCH_NAMESPACE` configuration option to limit BMO to a single namespace.
         """,
     ),
     SuggestStatementCase(
-        "CVE-2025-32463",
+        cve_id="CVE-2025-32463",
         expected_statement="""The severity of this vulnerability is rated as Important due to the requirement that an attacker must have access to a valid account on a system and that it allows a local unprivileged attacker to escalate their privileges even if the account is not listed in the sudoers file.
         """,
         expected_mitigation="""Mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.
