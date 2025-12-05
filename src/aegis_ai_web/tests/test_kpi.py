@@ -18,7 +18,7 @@ class TestReadFeedbackLogs:
     def test_read_feedback_logs_empty_file(self, feedback_log_setup):
         """Test reading from non-existent file returns empty list."""
         # File doesn't exist yet
-        entries = AegisLogger().read()
+        entries = AegisLogger.read()
         assert entries == []
 
     def test_read_feedback_logs_valid_entries(self, feedback_log_setup):
@@ -54,7 +54,7 @@ class TestReadFeedbackLogs:
                 }
             )
 
-        entries = AegisLogger().read()
+        entries = AegisLogger.read()
         assert len(entries) == 2
         assert entries[0]["feature"] == "suggest-impact"
         assert entries[1]["feature"] == "suggest-cwe"
@@ -86,7 +86,7 @@ class TestReadFeedbackLogs:
             # This will cause DictReader to return None for missing columns
             f.write("2025-01-15 11:00:00.456,suggest-cwe\n")
 
-        entries = AegisLogger().read()
+        entries = AegisLogger.read()
         assert len(entries) == 1
         assert entries[0]["feature"] == "suggest-impact"
 

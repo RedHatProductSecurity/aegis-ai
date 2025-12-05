@@ -33,7 +33,7 @@ def get_cve_kpi(feature: str, order: SortOrder = SortOrder.ASC) -> KPIScoreRespo
     """
     try:
         # Read all log entries
-        all_entries = AegisLogger().read()
+        all_entries = AegisLogger.read()
 
         # Filter entries by feature
         filtered_entries: List[Dict[str, Any]] = [

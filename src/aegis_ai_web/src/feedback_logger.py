@@ -1,7 +1,7 @@
 """
 Feedback logger module for Aegis Web API.
 
-Provides AegisLogger singleton class for thread-safe CSV feedback logging.
+Provides AegisLogger utility class with static methods for thread-safe CSV feedback logging.
 """
 
 import csv
@@ -25,15 +25,8 @@ class AegisLogger:
     Encapsulates CSV reading and writing with thread-safe file locking.
     """
 
-    _instance = None
-
-    def __new__(cls):
-        """Singleton pattern: return the same instance on every instantiation."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def _get_log_path(self) -> Path:
+    @staticmethod
+    def _get_log_path() -> Path:
         """
         Get the log file path from environment variable or default location.
 
@@ -44,7 +37,8 @@ class AegisLogger:
         )
         return Path(log_file)
 
-    def write(self, feedback_data: dict) -> None:
+    @staticmethod
+    def write(feedback_data: dict) -> None:
         """
         Write feedback data to CSV file.
 
@@ -55,7 +49,7 @@ class AegisLogger:
         Args:
             feedback_data: Dictionary containing feedback data to write
         """
-        log_path = self._get_log_path()
+        log_path = AegisLogger._get_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Add datetime and version fields if not already present
@@ -87,7 +81,8 @@ class AegisLogger:
                 # Release lock
                 fcntl.flock(csvfile.fileno(), fcntl.LOCK_UN)
 
-    def read(self) -> List[Dict[str, str]]:
+    @staticmethod
+    def read() -> List[Dict[str, str]]:
         """
         Read and parse feedback log entries from CSV file.
 
@@ -95,7 +90,7 @@ class AegisLogger:
             List of Dict entries where all values are strings from CSV.
             Returns empty list if file doesn't exist or has no valid entries.
         """
-        log_path = self._get_log_path()
+        log_path = AegisLogger._get_log_path()
         entries = []
 
         # Open file unconditionally and handle FileNotFoundError to avoid TOCTOU race

@@ -424,7 +424,7 @@ async def save_feedback(feedback: Feedback):
         }
 
         # Write to CSV file (automatic escaping)
-        AegisLogger().write(row_data)
+        AegisLogger.write(row_data)
 
         logging.info(
             f"Feedback logged: feature={feedback.feature}, cve_id={feedback.cve_id}"
