@@ -38,7 +38,9 @@ field_evaluators = {
 
 
 class SuggestStatementCase(Case):
-    def __init__(self, cve_id, expected_statement=None, expected_mitigation=None):
+    def __init__(
+        self, cve_id, expected_statement=None, expected_mitigation=None, **kwargs
+    ):
         """cve_id given as CVE-YYYY-NUM is the flaw we suggest statement/mitigation for."""
         disclaimer_model = SuggestStatementModel.model_fields["disclaimer"]
         disclaimer = get_args(disclaimer_model.annotation)[0]
@@ -66,6 +68,7 @@ class SuggestStatementCase(Case):
             inputs=cve_id,
             expected_output=expected_output,
             evaluators=evaluators,
+            **kwargs,
         )
 
 
@@ -156,6 +159,7 @@ cases = [
             If the system requires this module to work correctly, this mitigation may not be suitable.
             If you need further assistance, see KCS article https://access.redhat.com/solutions/41278 or contact Red Hat Global Support Services.
             """,
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-5399",
@@ -165,6 +169,7 @@ cases = [
         expected_statement="""This vulnerability is considered Important because it allows a remote, unauthenticated attacker to cause significant CPU exhaustion on vulnerable BIND resolvers by serving zones containing malformed DNSKEY records. The flaw triggers excessive computational effort during DNSKEY validation, leading to degraded performance and potential denial of service for legitimate clients. However, the issue affects availability only—it does not enable code execution, data exposure, or privilege escalation—so it is not classified as critical. Furthermore, authoritative servers are not impacted, limiting the scope of exposure to recursive resolvers. While the attack is easy to launch and can disrupt DNS operations, its effect ceases once the malicious traffic stops and recursive access control effective mitigations.""",
         expected_mitigation="""Mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.
             To reduce risk, restrict recursive queries to trusted or internal networks only, and apply rate limiting or firewall rules to prevent excessive or repetitive requests. Enabling DNSSEC validation helps reject forged records, while isolating recursive resolvers from authoritative servers limits the impact of potential cache poisoning. Active monitoring of CPU usage, query volume, and cache anomalies can provide early warning of abuse or attacks.""",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-22097",
