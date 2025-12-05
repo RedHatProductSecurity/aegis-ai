@@ -19,7 +19,6 @@ from google.genai.types import (
 from platformdirs import user_config_dir
 from functools import lru_cache
 
-import logfire
 from dotenv import load_dotenv
 from pydantic import Field, model_validator
 from pydantic_ai.models import Model
@@ -311,6 +310,9 @@ def config_logging(level="INFO"):
     logger.debug(f"starting aegis-{__version__}")
 
     if get_settings().otel_enabled:
+        # Import logfire lazily to avoid importing OpenTelemetry when OTEL is disabled
+        import logfire
+
         logfire.configure(send_to_logfire=False)
         logfire.instrument_pydantic_ai(event_mode="logs")
         logfire.instrument_pydantic_ai()

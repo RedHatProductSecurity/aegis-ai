@@ -21,7 +21,7 @@ dependencies = [
     "fastapi-gssapi>=0.1.1",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
-    "logfire[fastapi,httpx,sqlite3]>=4.14.2",
+    "logfire[fastapi,httpx,sqlite3]==4.15.1",
     "mcp-nvd>=0.0.1",
     "mcp-pypi>=2.7.1",
     "numpy>=2.3.3",
