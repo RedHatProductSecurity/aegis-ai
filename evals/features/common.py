@@ -160,6 +160,13 @@ def eval_name_from_result(result):
         return result.source.arguments["score"]["evaluation_name"]
 
 
+def is_evaluator_known_to_fail(ecase, eval_name):
+    """return True if the eval_name evaluator is known to fail for the ecase evaluation case"""
+    return ecase.metadata and eval_name in ecase.metadata.get(
+        "known_to_fail_evaluators", []
+    )
+
+
 def handle_eval_report(report: EvaluationReport):
     """print evaluation summary and trigger assertion failure in case any assertion failed"""
     # capture the report as a string
@@ -209,6 +216,10 @@ def handle_eval_report(report: EvaluationReport):
             score = result.value
             if score < MIN_SCORE_THRESHOLD:
                 eval_name = eval_name_from_result(result)
+                if is_evaluator_known_to_fail(ecase, eval_name):
+                    # this evaluator is known to fail --> no assertion failure
+                    continue
+
                 failures += f"{ecase.name}: {eval_name}: score below threshold: "
                 failures += f"{score:.4f} < {MIN_SCORE_THRESHOLD}"
                 if result.reason:

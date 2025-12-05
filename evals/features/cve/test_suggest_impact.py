@@ -168,6 +168,7 @@ class SuggestImpactCase(Case):
         expected_impact=None,
         expected_cvss3_score=None,
         expected_cvss3_vector=None,
+        **kwargs,
     ):
         """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
         disclaimer_model = SuggestImpactModel.model_fields["disclaimer"]
@@ -206,6 +207,7 @@ class SuggestImpactCase(Case):
             inputs=cve_id,
             expected_output=expected_output,
             evaluators=evaluators,
+            **kwargs,
         )
 
 
@@ -300,20 +302,25 @@ cases = [
         expected_cvss3_score=6.8,
     ),
     # FIXME: According to feedback by a security analyst, Aegis should suggest no impact on CIA
-    # SuggestImpactCase(
-    #     cve_id="CVE-2025-37798",
-    #     expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:N",
-    # ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-37798",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:N",
+        metadata={
+            "known_to_fail_evaluators": ["CVSSVectorEvaluator", "CVSSScoreEvaluator"]
+        },
+    ),
     # FIXME: According to feedback by a security analyst, Aegis currently suggests a wrong vector
-    # SuggestImpactCase(
-    #     cve_id="CVE-2025-39922",
-    #     expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
-    # ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39922",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
+        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+    ),
     # FIXME: According to feedback by a security analyst, Aegis currently suggests a wrong vector
-    # SuggestImpactCase(
-    #     cve_id="CVE-2025-39939",
-    #     expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:H",
-    # ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39939",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:H",
+        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+    ),
     SuggestImpactCase(
         cve_id="CVE-2025-59840",
         expected_impact="IMPORTANT",
