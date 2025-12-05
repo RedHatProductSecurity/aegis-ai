@@ -6,19 +6,19 @@ import csv
 from fastapi.testclient import TestClient
 
 from aegis_ai_web.src.main import app
-from aegis_ai_web.src.endpoints.kpi import read_feedback_logs
+from aegis_ai_web.src.feedback_logger import AegisLogger
 from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA
 
 client = TestClient(app)
 
 
 class TestReadFeedbackLogs:
-    """Test cases for read_feedback_logs() function."""
+    """Test cases for AegisLogger.read() method."""
 
     def test_read_feedback_logs_empty_file(self, feedback_log_setup):
         """Test reading from non-existent file returns empty list."""
         # File doesn't exist yet
-        entries = read_feedback_logs()
+        entries = AegisLogger().read()
         assert entries == []
 
     def test_read_feedback_logs_valid_entries(self, feedback_log_setup):
@@ -54,11 +54,11 @@ class TestReadFeedbackLogs:
                 }
             )
 
-        entries = read_feedback_logs()
+        entries = AegisLogger().read()
         assert len(entries) == 2
         assert entries[0]["feature"] == "suggest-impact"
         assert entries[1]["feature"] == "suggest-cwe"
-        # Ensure accept field is normalized to lowercase by read_feedback_logs
+        # Ensure accept field is normalized to lowercase by AegisLogger.read()
         assert entries[0]["accept"] == "true"
         assert entries[1]["accept"] == "false"
 
@@ -86,7 +86,7 @@ class TestReadFeedbackLogs:
             # This will cause DictReader to return None for missing columns
             f.write("2025-01-15 11:00:00.456,suggest-cwe\n")
 
-        entries = read_feedback_logs()
+        entries = AegisLogger().read()
         assert len(entries) == 1
         assert entries[0]["feature"] == "suggest-impact"
 
@@ -394,7 +394,12 @@ class TestGetCveKpi:
         data = response.json()
         assert len(data["entries"]) == 2
         # Should be sorted correctly despite different datetime formats
-        assert data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"  # Older entry first
+        assert (
+            data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+        )  # Older entry first
+        assert (
+            data["entries"][1]["datetime"] == "2025-01-15 10:35:45"
+        )  # Newer entry second
 
     def test_get_cve_kpi_sorting_unparsable_datetime(self, feedback_log_setup):
         """Test KPI endpoint handles unparsable datetime values with fallback sorting."""
@@ -438,7 +443,9 @@ class TestGetCveKpi:
         assert (
             data["entries"][0]["datetime"] == "not-a-date"
         )  # Invalid datetime first (epoch)
-        assert data["entries"][1]["datetime"] == "2025-01-15 10:30:45.123"  # Valid datetime second
+        assert (
+            data["entries"][1]["datetime"] == "2025-01-15 10:30:45.123"
+        )  # Valid datetime second
 
         # Test descending order - invalid datetime should be last
         response = client.get(
@@ -447,7 +454,9 @@ class TestGetCveKpi:
         assert response.status_code == 200
         data = response.json()
         assert len(data["entries"]) == 2
-        assert data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"  # Valid datetime first
+        assert (
+            data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+        )  # Valid datetime first
         assert (
             data["entries"][1]["datetime"] == "not-a-date"
         )  # Invalid datetime last (epoch)

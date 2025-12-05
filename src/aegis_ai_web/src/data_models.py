@@ -61,6 +61,7 @@ class FeedbackSchema:
                 "request_time",  # Original request timestamp
                 "accept",  # User acceptance (True/False)
                 "rejection_comment",  # Comment provided when rejecting the result
+                "version",  # AEGIS version at time of feedback
             ],
         )
 
@@ -130,6 +131,7 @@ class FeedbackSchema:
             "request_time": "Timestamp of the original request",
             "accept": "Whether the user accepted the result (True/False)",
             "rejection_comment": "Comment provided by the user when rejecting the result",
+            "version": "AEGIS version at time of feedback submission",
         }
         return descriptions.get(field_name)
 

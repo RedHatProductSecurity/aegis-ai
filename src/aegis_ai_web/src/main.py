@@ -29,12 +29,12 @@ from aegis_ai.features.data_models import AegisAnswer
 
 from . import (
     AEGIS_REST_API_VERSION,
-    feature_agent,
-    write_feedback_to_csv,
+    web_feature_agent,
     ENABLE_CONSOLE,
 )
 from .data_models import Feedback, KPIScoreResponse
 from .endpoints.kpi import get_cve_kpi, SortOrder
+from .feedback_logger import AegisLogger
 
 
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
@@ -105,7 +105,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 favicon_path = os.path.join(STATIC_DIR, "favicon.ico")
 
-if "public" in feature_agent:
+if "public" in web_feature_agent:
     llm_agent = public_feature_agent
 else:
     llm_agent = rh_feature_agent
@@ -360,14 +360,10 @@ async def save_feedback(feedback: Feedback):
 
     All data is preserved without modification. CSV library handles escaping.
     """
-    from datetime import datetime
-
     try:
-        # Build row data with current timestamp
         # Normalize accept to lowercase for consistency
         accept_str = str(feedback.accept).lower()
         row_data = {
-            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
             "feature": feedback.feature,
             "cve_id": feedback.cve_id or "",
             "email": feedback.email or "",
@@ -379,7 +375,7 @@ async def save_feedback(feedback: Feedback):
         }
 
         # Write to CSV file (automatic escaping)
-        write_feedback_to_csv(row_data)
+        AegisLogger().write(row_data)
 
         logging.info(
             f"Feedback logged: feature={feedback.feature}, cve_id={feedback.cve_id}"
