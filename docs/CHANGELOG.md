@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2025-12-08
+
+### Changed
+- the feedback API endpoint now writes the data to a shared CSV file protected by a file lock
+- suggested impact and CVSS score are now evaluated separately in the evaluation suite
+- the evaluation suite now provides more user-friendly error messages on failure
+
+### Added
+- the feedback log now includes additional fields (rejection reason and Aegis version)
+- initiation of HTTP connections is now logged (previously only their completion was logged)
+- added evaluation cases based on the feedback from security analysts
+- the evaluation suite now covers also the suggested CVSS vector
+- added an API endpoint to query redacted data from the feedback log
+- fine-grained tagging of known-to-fail cases in the evaluation suite
+
+### Fixed
+- OSIDB fields exclusion now works properly with `osidb_cache` used by the evaluation suite
+- tweaked `suggest-impact` and `suggest-statement` LLM prompts to provide better suggestions
+
+
 ## [0.4.3] - 2025-11-25
 
 ### Changed
