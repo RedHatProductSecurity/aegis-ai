@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Type, Annotated, cast, Any
 
 import yaml
-from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi import FastAPI, Request, HTTPException, Form, Query
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -29,11 +29,12 @@ from aegis_ai.features.data_models import AegisAnswer
 
 from . import (
     AEGIS_REST_API_VERSION,
-    feature_agent,
-    write_feedback_to_csv,
+    web_feature_agent,
     ENABLE_CONSOLE,
 )
-from .data_models import Feedback
+from .data_models import Feedback, KPIScoreResponse
+from .endpoints.kpi import get_cve_kpi, SortOrder
+from .feedback_logger import AegisLogger
 
 
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
@@ -104,7 +105,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 favicon_path = os.path.join(STATIC_DIR, "favicon.ico")
 
-if "public" in feature_agent:
+if "public" in web_feature_agent:
     llm_agent = public_feature_agent
 else:
     llm_agent = rh_feature_agent
@@ -289,6 +290,118 @@ async def component_analysis(
         )
 
 
+@app.get(
+    f"/api/{AEGIS_REST_API_VERSION}/analysis/kpi/cve",
+    response_model=KPIScoreResponse,
+    summary="Get CVE Analysis KPI Metrics",
+    description="Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns the acceptance score percentage and all matching log entries sorted by datetime.",
+    responses={
+        200: {
+            "description": "Successful response with KPI metrics",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "with_entries": {
+                            "summary": "Response with multiple entries",
+                            "value": {
+                                "acceptance_percentage": 75.0,
+                                "entries": [
+                                    {
+                                        "datetime": "2025-01-15 10:30:45.123",
+                                        "accepted": True,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                    {
+                                        "datetime": "2025-01-15 11:00:00.456",
+                                        "accepted": True,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                    {
+                                        "datetime": "2025-01-15 11:30:15.789",
+                                        "accepted": False,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                    {
+                                        "datetime": "2025-01-15 12:00:30.012",
+                                        "accepted": True,
+                                        "aegis_version": "1.0.0",
+                                    },
+                                ],
+                            },
+                        },
+                        "empty_response": {
+                            "summary": "Response when no entries exist for feature",
+                            "value": {
+                                "acceptance_percentage": 0.0,
+                                "entries": [],
+                            },
+                        },
+                    },
+                }
+            },
+        },
+        422: {
+            "description": "Validation error - invalid order parameter or missing feature",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {
+                                "type": "missing",
+                                "loc": ["query", "feature"],
+                                "msg": "Field required",
+                            }
+                        ]
+                    }
+                }
+            },
+        },
+        500: {
+            "description": "Internal server error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Error retrieving KPI data for feature 'suggest-impact': <error message>"
+                    }
+                }
+            },
+        },
+    },
+)
+async def cve_kpi(
+    feature: str = Query(
+        ...,
+        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer'",
+        examples=["suggest-impact", "suggest-cwe", "suggest-description"],
+    ),
+    order: SortOrder = Query(
+        default=SortOrder.ASC,
+        description="Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'.",
+        examples=["asc", "desc"],
+    ),
+):
+    """
+    Get KPI metrics for CVE analysis feedback filtered by feature.
+
+    This endpoint calculates the acceptance rate (percentage of entries where accept=True)
+    for a specific feature and returns all matching log entries sorted by datetime.
+
+    **Parameters:**
+    - **feature**: Required. The feature name to filter by (e.g., 'suggest-impact', 'suggest-cwe')
+    - **order**: Optional. Sort order for entries by datetime ('asc' or 'desc'). Defaults to 'asc'.
+
+    **Returns:**
+    - **acceptance_percentage**: Acceptance score as a percentage float (e.g., 75.0 for 75%)
+    - **entries**: List of log entries matching the feature, sorted by datetime
+
+    **Example:**
+    ```
+    GET /api/v1/analysis/kpi/cve?feature=suggest-impact&order=desc
+    ```
+    """
+    return get_cve_kpi(feature, order)
+
+
 @app.post("/api/v1/feedback")
 async def save_feedback(feedback: Feedback):
     """
@@ -296,24 +409,22 @@ async def save_feedback(feedback: Feedback):
 
     All data is preserved without modification. CSV library handles escaping.
     """
-    from datetime import datetime
-
     try:
-        # Build row data with current timestamp
+        # Normalize accept to lowercase for consistency
+        accept_str = str(feedback.accept).lower()
         row_data = {
-            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
             "feature": feedback.feature,
             "cve_id": feedback.cve_id or "",
             "email": feedback.email or "",
             "actual": feedback.actual or "",
             "expected": feedback.expected or "",
             "request_time": feedback.request_time or "",
-            "accept": str(feedback.accept),
+            "accept": accept_str,
             "rejection_comment": feedback.rejection_comment or "",
         }
 
         # Write to CSV file (automatic escaping)
-        write_feedback_to_csv(row_data)
+        AegisLogger.write(row_data)
 
         logging.info(
             f"Feedback logged: feature={feedback.feature}, cve_id={feedback.cve_id}"

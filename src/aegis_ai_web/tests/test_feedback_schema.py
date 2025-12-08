@@ -37,6 +37,7 @@ class TestFeedbackSchema:
             "request_time",
             "accept",
             "rejection_comment",
+            "version",
         ]
 
         assert FEEDBACK_SCHEMA.field_names == expected_fields
@@ -57,6 +58,7 @@ class TestFeedbackSchema:
             "request_time": "",
             "accept": "False",
             "rejection_comment": "",
+            "version": "1.0.0",
         }
 
         assert FEEDBACK_SCHEMA.validate_parsed_log(valid_data) is True
@@ -84,6 +86,7 @@ class TestFeedbackSchema:
             "request_time": "",
             "accept": "False",
             "rejection_comment": "",
+            "version": "1.0.0",
             "extra_field": "should not be here",  # Extra field
         }
 
@@ -105,6 +108,7 @@ class TestFeedbackSchema:
             "request_time": "",
             "accept": "False",
             "rejection_comment": "",
+            "version": "1.0.0",
         }
 
         # Cast to expected type for type checker; we're intentionally testing None values
@@ -125,6 +129,7 @@ class TestFeedbackSchema:
             "request_time",
             "accept",
             "rejection_comment",
+            "version",
         ]
 
         assert FEEDBACK_SCHEMA.validate_csv_headers(valid_headers) is True
@@ -141,6 +146,7 @@ class TestFeedbackSchema:
             "request_time",
             "accept",
             "rejection_comment",
+            "version",
         ]
 
         assert FEEDBACK_SCHEMA.validate_csv_headers(invalid_headers) is False
@@ -184,6 +190,7 @@ class TestValidationFunctions:
             "request_time": "",
             "accept": "False",
             "rejection_comment": "",
+            "version": "1.0.0",
         }
 
         assert validate_log_parser_output(valid_data) is True
@@ -220,6 +227,7 @@ class TestValidationFunctions:
             "request_time",
             "accept",
             "rejection_comment",
+            "version",
         ]
 
         assert validate_csv_headers(valid_headers) is True
