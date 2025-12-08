@@ -234,12 +234,17 @@ class SuggestStatementText(Feature):
             - Style: 2–4 concise sentences, < 1000 characters total.
             
             ### MITIGATION (suggested_mitigation)
-            - **Definition:** A configuration or operational control that reduces exposure without patching (e.g., config file, environment variable or feature toggle, sysctl, service disable, or removing optional packages).
+            - **Definition:** A configuration or operational control that reduces exposure without patching (e.g., config file, environment variable or feature toggle, sysctl, service disable, or removing optional packages). Prefer a conservative, documented mitigation over declaring that none exists.
             - **Prohibitions:**
                 - **NEVER** suggest updating/patching software.
                 - **NEVER** invent config flags or commands.
                 - **NEVER** use the term 'update'.
                 - **NEVER** suggest dangerous commands (`rm -rf`, `chmod 777`, disabling SELinux globally) without explicit, dire warnings.
+            - **Decision process (use before considering fallback):**
+                1. Identify what exposes the vulnerable component in RH context (network daemon, optional plugin/format, kernel module/driver, desktop-only feature).
+                2. Check for documented, supported controls to reduce exposure: restrict network reachability, disable optional features/plugins/filters, sandbox, or blacklist/avoid autoloading kernel modules.
+                3. If any safe, documented configuration or operational control exists, provide it even if it only partially reduces risk; clearly note caveats.
+                4. Only if no such control exists or the CVE does not affect RH products, proceed to the fallback.
             - **Structure:**
                 1. Summary of action ("Disable the X service").
                 2. Command examples (`sysctl`, `systemctl`).
@@ -252,7 +257,8 @@ class SuggestStatementText(Feature):
                 - If exposure is introduced by optional desktop/GUI packages, list common packages that pull in the vulnerable component and suggest removing them if not needed; clearly warn that removing these may also remove GNOME or related packages and break functionality; note that servers remain usable via terminal.
                 - For components that process untrusted content (browsers, renderers, document viewers), advise operational controls such as avoiding untrusted content and sandboxing. If a JIT or optional execution engine can be disabled via a documented environment variable or config flag, suggest disabling it (e.g., an environment variable toggle).
                 - Kernel driver vulnerabilities: prevent autoloading of the affected module via an /etc/modprobe.d rule (install/blacklist); note that a restart or service reload may be required and may impact functionality.
-            - **Fallback:** If neither a configuration nor an operational workaround exists (and the only fix is code patching), or if the CVE does not affect Red Hat products (Windows only), YOU MUST USE EXACTLY THIS TEXT:
+                - Network daemons (e.g., CUPS, dnsmasq, httpd): restrict service to localhost or trusted networks, disable remote administration, and firewall the relevant port(s) if feasible in your environment.
+            - **Fallback:** Use only after the decision process above confirms that no safe, documented configuration or operational control exists in Red Hat products, or if the CVE does not affect Red Hat products (e.g., Windows-only). If any partial risk reduction is possible (e.g., firewalling, limiting to localhost, disabling optional plugins/filters, sandboxing, or blacklisting a kernel module), DO NOT use the fallback. When applicable, YOU MUST USE EXACTLY THIS TEXT:
               "{NO_MITIGATION_TEXT}"
             - Length: < 2000 characters.
             """,
