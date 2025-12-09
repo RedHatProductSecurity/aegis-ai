@@ -170,7 +170,7 @@ class SuggestDescriptionText(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["title", "cve_description"])
         prompt = AegisPrompt(
-            user_instruction="Suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them. Write for a non-technical/executive audience (e.g., a CISO): use plain English, active voice, avoid jargon; if a technical term is unavoidable, define it briefly.",
+            user_instruction="Analyze the CVE JSON and suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them. Write for a non-technical/executive audience (e.g., a CISO) using plain English; avoid jargon and define unavoidable terms briefly.",
             goals="""
                 - Provide a concise description and a short title.
                 - Include confidence and quality scores.
@@ -187,10 +187,16 @@ class SuggestDescriptionText(Feature):
                 - If a term or acronym is needed, briefly define it and expand the acronym in parentheses on first use.
                 - Do not include product/version lists, package names, or mitigation/update guidance.
                 - Avoid generic CIA boilerplate; name the concrete impact (e.g., data disclosure, code execution, denial of service).
+                - Ambiguity and uncertainty:
+                  - Do NOT invent a specific component, function, trigger, CWE, or impact if the source data and references do not clearly support it.
+                  - If a single component or trigger cannot be reliably identified, use neutral wording (e.g., "in the affected component") and describe the mechanism at a high level.
+                  - Prefer calibrated phrasing when evidence is weak (e.g., "may allow", "can enable") rather than asserting specifics.
+                  - Only include a CWE category or precise impact (e.g., "arbitrary code execution", "privilege escalation") when it is well-supported; otherwise, use a generic but accurate type (e.g., "input validation vulnerability", "memory corruption vulnerability") or simply "vulnerability".
                 'title': <= 20 words, summarize the description; include product/component and vulnerability type or consequence.
                 - Style: "<Component>: <primary consequence> via <trigger/cause>" when applicable.
                 - The title may include a specific function or primitive if it is the salient trigger; avoid extraneous implementation details.
-                - Do not include versions.
+                - If the trigger is unclear, omit the "via <trigger/cause>" clause. If the component is unclear, name the project/product or keep a consequence-first title without fabricating specifics.
+                - Strictly exclude versions: never include any version numbers or ranges (e.g., "5.0.0", "v2", "2.x", "9.x and earlier") in the title.
                 - Keep it focused and professional.
                 - 'description' and 'title' need to be consistent with each other.
             """,
