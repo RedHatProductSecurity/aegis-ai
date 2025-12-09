@@ -170,19 +170,28 @@ class SuggestDescriptionText(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["title", "cve_description"])
         prompt = AegisPrompt(
-            user_instruction="Suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them.",
+            user_instruction="Suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them. Write for a non-technical/executive audience (e.g., a CISO): use plain English, active voice, avoid jargon; if a technical term is unavoidable, define it briefly.",
             goals="""
                 - Provide a concise description and a short title.
                 - Include confidence and quality scores.
+                - The description should be 2–5 sentences and easy to read.
+                - The title should briefly summarize the core impact and trigger in one line.
             """,
             rules="""
-                'description': one short paragraph of the form:
-                "A flaw was found in [component]. This vulnerability allows [impact] via [vector]."
-                - No versioning or extra commentary.
-                - Include detailed technical information.
-                - Expand each acronym in parentheses behind the acronym in the description text.
-                'title': <= 20 words, include product/component and vulnerability type.
-                - Do not duplicate fields like versions; keep it focused and professional.
+                'description': one short paragraph.
+                - Begin with: "A flaw was found in <component>."
+                - Clearly state: who can exploit the flaw (e.g., a remote attacker, a local user, a malicious server), how it can be exploited (method/conditions), and the concrete consequences.
+                - Include the vulnerability type when clear (use CWE category when obvious), the affected component, the trigger/cause, and the primary impact.
+                - Highlight the most important consequence first. Prefer domain phrases such as "arbitrary code execution", "privilege escalation", "information disclosure", or "Denial of Service (DoS)".
+                - Use plain English; avoid deep implementation jargon. If a function or symbol name is central to exploitation, you may mention a single example and explain it briefly.
+                - If a term or acronym is needed, briefly define it and expand the acronym in parentheses on first use.
+                - Do not include product/version lists, package names, or mitigation/update guidance.
+                - Avoid generic CIA boilerplate; name the concrete impact (e.g., data disclosure, code execution, denial of service).
+                'title': <= 20 words, summarize the description; include product/component and vulnerability type or consequence.
+                - Style: "<Component>: <primary consequence> via <trigger/cause>" when applicable.
+                - The title may include a specific function or primitive if it is the salient trigger; avoid extraneous implementation details.
+                - Do not include versions.
+                - Keep it focused and professional.
                 - 'description' and 'title' need to be consistent with each other.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
