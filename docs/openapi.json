@@ -184,7 +184,7 @@
     "/api/v1/analysis/kpi/cve": {
       "get": {
         "summary": "Get CVE Analysis KPI Metrics",
-        "description": "Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns the acceptance score percentage and all matching log entries sorted by datetime.",
+        "description": "Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns the acceptance score percentage and all matching log entries sorted by datetime. Use feature='all' to get KPIs for all features.",
         "operationId": "cve_kpi_api_v1_analysis_kpi_cve_get",
         "parameters": [
           {
@@ -193,15 +193,16 @@
             "required": true,
             "schema": {
               "type": "string",
-              "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer'",
+              "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
               "examples": [
                 "suggest-impact",
                 "suggest-cwe",
-                "suggest-description"
+                "suggest-description",
+                "all"
               ],
               "title": "Feature"
             },
-            "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer'"
+            "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features."
           },
           {
             "name": "order",
@@ -221,13 +222,49 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response with KPI metrics",
+            "description": "Successful response with KPI metrics. When feature='all', returns a JSON object with each feature name as a key and its FeatureKPI as the value.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/KPIScoreResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/FeatureKPI"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/components/schemas/FeatureKPI"
+                      },
+                      "description": "Response when feature='all'. Keys are feature names, values are FeatureKPI objects."
+                    }
+                  ]
                 },
                 "examples": {
+                  "all_features": {
+                    "summary": "Response when feature='all'",
+                    "value": {
+                      "suggest-impact": {
+                        "acceptance_percentage": 75.0,
+                        "entries": [
+                          {
+                            "datetime": "2025-01-15 10:30:45.123",
+                            "accepted": true,
+                            "aegis_version": "1.0.0"
+                          }
+                        ]
+                      },
+                      "suggest-cwe": {
+                        "acceptance_percentage": 80.0,
+                        "entries": [
+                          {
+                            "datetime": "2025-01-15 11:00:00.456",
+                            "accepted": true,
+                            "aegis_version": "1.0.0"
+                          }
+                        ]
+                      }
+                    }
+                  },
                   "with_entries": {
                     "summary": "Response with multiple entries",
                     "value": {
@@ -478,12 +515,12 @@
         "title": "KPIEntry",
         "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry."
       },
-      "KPIScoreResponse": {
+      "FeatureKPI": {
         "properties": {
           "acceptance_percentage": {
             "type": "number",
             "title": "Acceptance Percentage",
-            "description": "Acceptance score as a percentage (e.g., 75.0 for 75%)"
+            "description": "Acceptance score as a percentage (0.0 to 100.0, e.g., 75.0 for 75%)"
           },
           "entries": {
             "items": {
@@ -499,8 +536,8 @@
           "acceptance_percentage",
           "entries"
         ],
-        "title": "KPIScoreResponse",
-        "description": "Response model for KPI endpoint.\n\nContains the acceptance score percentage and filtered log entries."
+        "title": "FeatureKPI",
+        "description": "Feature KPI model for CVE analysis feedback.\n\nContains the acceptance score percentage and filtered log entries for a feature."
       },
       "SortOrder": {
         "type": "string",

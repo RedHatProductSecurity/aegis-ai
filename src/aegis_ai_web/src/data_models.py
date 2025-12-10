@@ -202,20 +202,29 @@ class KPIEntry(BaseModel):
     Contains datetime, acceptance status, and AEGIS version for a feedback entry.
     """
 
-    datetime: str = Field(..., description="Timestamp of the feedback entry")
+    datetime: str = Field(
+        ...,
+        description="Timestamp of the feedback entry (format: YYYY-MM-DD HH:MM:SS.mmm or YYYY-MM-DD HH:MM:SS)",
+    )
     accepted: bool = Field(..., description="Whether the feedback was accepted")
-    aegis_version: str = Field(..., description="AEGIS version at time of feedback")
+    aegis_version: str = Field(
+        default="",
+        description="AEGIS version at time of feedback (may be empty string if not available)",
+    )
 
 
-class KPIScoreResponse(BaseModel):
+class FeatureKPI(BaseModel):
     """
-    Response model for KPI endpoint.
+    Feature KPI model for CVE analysis feedback.
 
-    Contains the acceptance score percentage and filtered log entries.
+    Contains the acceptance score percentage and filtered log entries for a feature.
     """
 
     acceptance_percentage: float = Field(
-        ..., description="Acceptance score as a percentage (e.g., 75.0 for 75%)"
+        ...,
+        ge=0.0,
+        le=100.0,
+        description="Acceptance score as a percentage (0.0 to 100.0, e.g., 75.0 for 75%)",
     )
     entries: List[KPIEntry] = Field(
         ...,

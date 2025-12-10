@@ -32,7 +32,7 @@ from . import (
     web_feature_agent,
     ENABLE_CONSOLE,
 )
-from .data_models import Feedback, KPIScoreResponse
+from .data_models import Feedback, FeatureKPI
 from .endpoints.kpi import get_cve_kpi, SortOrder
 from .feedback_logger import AegisLogger
 
@@ -292,48 +292,65 @@ async def component_analysis(
 
 @app.get(
     f"/api/{AEGIS_REST_API_VERSION}/analysis/kpi/cve",
-    response_model=KPIScoreResponse,
     summary="Get CVE Analysis KPI Metrics",
-    description="Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns the acceptance score percentage and all matching log entries sorted by datetime.",
+    description="Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns a dictionary mapping feature names to their KPI responses (acceptance score percentage and all matching log entries sorted by datetime). Use feature='all' to get KPIs for all features. For single feature queries, the dict contains one key-value pair.",
+    response_model=Dict[str, FeatureKPI],
     responses={
         200: {
             "description": "Successful response with KPI metrics",
             "content": {
                 "application/json": {
                     "examples": {
-                        "with_entries": {
-                            "summary": "Response with multiple entries",
+                        "single_feature": {
+                            "summary": "Response for single feature query",
                             "value": {
-                                "acceptance_percentage": 75.0,
-                                "entries": [
-                                    {
-                                        "datetime": "2025-01-15 10:30:45.123",
-                                        "accepted": True,
-                                        "aegis_version": "1.0.0",
-                                    },
-                                    {
-                                        "datetime": "2025-01-15 11:00:00.456",
-                                        "accepted": True,
-                                        "aegis_version": "1.0.0",
-                                    },
-                                    {
-                                        "datetime": "2025-01-15 11:30:15.789",
-                                        "accepted": False,
-                                        "aegis_version": "1.0.0",
-                                    },
-                                    {
-                                        "datetime": "2025-01-15 12:00:30.012",
-                                        "accepted": True,
-                                        "aegis_version": "1.0.0",
-                                    },
-                                ],
+                                "suggest-impact": {
+                                    "acceptance_percentage": 75.0,
+                                    "entries": [
+                                        {
+                                            "datetime": "2025-01-15 10:30:45.123",
+                                            "accepted": True,
+                                            "aegis_version": "1.0.0",
+                                        },
+                                        {
+                                            "datetime": "2025-01-15 11:00:00.456",
+                                            "accepted": True,
+                                            "aegis_version": "1.0.0",
+                                        },
+                                        {
+                                            "datetime": "2025-01-15 11:30:15.789",
+                                            "accepted": False,
+                                            "aegis_version": "1.0.0",
+                                        },
+                                        {
+                                            "datetime": "2025-01-15 12:00:30.012",
+                                            "accepted": True,
+                                            "aegis_version": "1.0.0",
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                        "all_features": {
+                            "summary": "Response when feature='all'",
+                            "value": {
+                                "suggest-impact": {
+                                    "acceptance_percentage": 75.0,
+                                    "entries": [],
+                                },
+                                "suggest-cwe": {
+                                    "acceptance_percentage": 50.0,
+                                    "entries": [],
+                                },
                             },
                         },
                         "empty_response": {
                             "summary": "Response when no entries exist for feature",
                             "value": {
-                                "acceptance_percentage": 0.0,
-                                "entries": [],
+                                "suggest-impact": {
+                                    "acceptance_percentage": 0.0,
+                                    "entries": [],
+                                },
                             },
                         },
                     },
@@ -371,15 +388,15 @@ async def component_analysis(
 async def cve_kpi(
     feature: str = Query(
         ...,
-        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer'",
-        examples=["suggest-impact", "suggest-cwe", "suggest-description"],
+        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
+        examples=["suggest-impact", "suggest-cwe", "suggest-description", "all"],
     ),
     order: SortOrder = Query(
         default=SortOrder.ASC,
         description="Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'.",
         examples=["asc", "desc"],
     ),
-):
+) -> Dict[str, FeatureKPI]:
     """
     Get KPI metrics for CVE analysis feedback filtered by feature.
 
@@ -387,19 +404,24 @@ async def cve_kpi(
     for a specific feature and returns all matching log entries sorted by datetime.
 
     **Parameters:**
-    - **feature**: Required. The feature name to filter by (e.g., 'suggest-impact', 'suggest-cwe')
+    - **feature**: Required. The feature name to filter by (e.g., 'suggest-impact', 'suggest-cwe', or 'all' for all features)
     - **order**: Optional. Sort order for entries by datetime ('asc' or 'desc'). Defaults to 'asc'.
 
     **Returns:**
-    - **acceptance_percentage**: Acceptance score as a percentage float (e.g., 75.0 for 75%)
-    - **entries**: List of log entries matching the feature, sorted by datetime
+    - Dict[str, FeatureKPI] mapping feature names to their KPI responses.
+      For a single feature query, the dict contains one key-value pair.
+      For feature='all', the dict contains all features.
 
     **Example:**
     ```
     GET /api/v1/analysis/kpi/cve?feature=suggest-impact&order=desc
+    GET /api/v1/analysis/kpi/cve?feature=all
     ```
     """
-    return get_cve_kpi(feature, order)
+    result = get_cve_kpi(feature, order)
+    # Always return Dict[str, FeatureKPI] for consistent API structure
+    # FastAPI will automatically serialize using response_model
+    return result
 
 
 @app.post("/api/v1/feedback")
