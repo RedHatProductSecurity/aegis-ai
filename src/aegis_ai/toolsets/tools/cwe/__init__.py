@@ -43,6 +43,25 @@ CWE_INDEX_MAP_FILE = CACHE_DIR / "cwe_index_map.json"
 # Cosine similarity threshold for TF-IDF retrieval
 SIMILARITY_THRESHOLD = 0.12
 
+# Heuristic boosts for common CWE patterns to improve ranking
+# fmt: off
+KEYWORD_BOOSTS: List[Tuple[re.Pattern[str], str, float]] = [
+    (re.compile(r"\buse[- ]?after[- ]?free\b"), "CWE-416", 0.25),
+    (re.compile(r"\bnull (pointer|deref\w*)\b"), "CWE-476", 0.2),
+    (re.compile(r"\bheap buffer overflow\b|\bout[- ]of[- ]bounds write\b|\boob write\b"), "CWE-787", 0.25),
+    (re.compile(r"\bout[- ]of[- ]bounds read\b|\boob read\b"), "CWE-125", 0.2),
+    (re.compile(r"\binteger (overflow|wrap|underflow)\b"), "CWE-190", 0.25),
+    (re.compile(r"\bdenial[- ]of[- ]service\b|\bDoS\b|\bresource exhaustion\b|\bunbounded\b|\bno (limits|throttling)\b"), "CWE-770", 0.25),
+    (re.compile(r"\b(regex|regular expression|catastrophic backtracking|exponential)\b"), "CWE-1333", 0.2),
+    (re.compile(r"\bsession fixation\b"), "CWE-613", 0.25),
+    (re.compile(r"\bcommand injection\b"), "CWE-78", 0.25),
+    (re.compile(r"\bpath traversal\b"), "CWE-22", 0.2),
+    (re.compile(r"\bimproper input validation\b"), "CWE-20", 0.15),
+    (re.compile(r"\bdouble free\b"), "CWE-415", 0.25),
+    (re.compile(r"\brace (condition)?\b"), "CWE-366", 0.2),
+]
+# fmt: on
+
 
 class CWEManager:
     """
@@ -282,6 +301,20 @@ class CWEManager:
             q_vec = q_vec / norm
 
         sims = self._tfidf_matrix @ q_vec  # cosine similarity
+
+        # Heuristic boosts for common CWE patterns to improve ranking
+        boosts: Dict[int, float] = {}
+        for pattern, cwe_id, boost in KEYWORD_BOOSTS:
+            if pattern.search(query):
+                try:
+                    idx = self._index_to_cweid.index(cwe_id)
+                except ValueError:
+                    continue
+                boosts[idx] = max(boosts.get(idx, 0.0), boost)
+        if boosts:
+            sims = sims.copy()
+            for idx, add in boosts.items():
+                sims[idx] += add
         k = min(top_k, sims.shape[0])
         if k <= 0:
             return []
