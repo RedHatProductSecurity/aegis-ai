@@ -89,7 +89,10 @@ def process_cwe_feedback(rows):
 
         # print single instantiation of SuggestCweCase
         cwe_list = ", ".join(f'"{cwe}"' for cwe in cwe_list)
-        print(f'{" " * 4}SuggestCweCase("{cve}", [{cwe_list}]),')
+        print(f"{' ' * 4}SuggestCweCase(")
+        print(f'{" " * 8}cve_id="{cve}",')
+        print(f"{' ' * 8}cwe_list=[{cwe_list}],")
+        print(f"{' ' * 4}),")
 
 
 def is_title(value):
@@ -113,6 +116,14 @@ def process_generic_feedback(rows, current_evaluator):
             case "suggest-impact":
                 evaluator = "Impact"
                 field = "impact"
+
+            case "suggest-mitigation":
+                evaluator = "Statement"
+                field = "mitigation"
+
+            case "suggest-statement":
+                evaluator = "Statement"
+                field = "statement"
 
             case "suggest-title":
                 evaluator = "Description"
@@ -148,7 +159,7 @@ def process_feedback(file_path):
 
     # run specific processors
     process_cwe_feedback(rows)
-    for evaluator in ("Description", "Impact"):
+    for evaluator in ("Description", "Impact", "Statement"):
         process_generic_feedback(rows, evaluator)
 
 
