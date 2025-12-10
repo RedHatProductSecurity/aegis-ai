@@ -273,6 +273,12 @@ cases = [
         expected_cvss3_score=5.5,
     ),
     SuggestImpactCase(
+        cve_id="CVE-2023-53733",
+        expected_impact="MODERATE",
+        expected_cvss3_score=5.5,
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2024-53232",
         expected_impact="MODERATE",
         expected_cvss3_score=4.4,
@@ -325,6 +331,15 @@ cases = [
         cve_id="CVE-2025-59840",
         expected_impact="IMPORTANT",
         expected_cvss3_score=8.1,
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-64524",
+        expected_impact="MODERATE",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-66448",
+        expected_impact="IMPORTANT",
     ),
 ]
 

@@ -391,6 +391,14 @@ cases = [
         cve_id="CVE-2025-39915",
         cwe_list=["CWE-833"],
     ),
+    # Aegis suggests ['CWE-843', 'CWE-787', 'CWE-476']
+    # CWE-787 (Out-of-bounds Write) is close
+    # CWE-125 (Out-of-bounds Read) is correct though
+    SuggestCweCase(
+        cve_id="CVE-2025-39939",
+        cwe_list=["CWE-125"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
     SuggestCweCase(
         cve_id="CVE-2025-39992",
         cwe_list=["CWE-820"],

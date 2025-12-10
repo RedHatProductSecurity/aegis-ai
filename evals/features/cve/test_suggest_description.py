@@ -159,6 +159,10 @@ cases = [
     #     expected_description="FIXME",
     # ),
     SuggestDescriptionCase(
+        cve_id="CVE-2025-21494",
+        expected_description="This vulnerability allows an unauthenticated attacker to cause a hang or frequently repeatable crash via logon to the infrastructure where MySQL Server executes.",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2025-54770",
         expected_description="A vulnerability has been identified in the GRUB2 bootloader's network module that poses an immediate Denial of Service (DoS) risk. This flaw is a Use-after-Free issue, caused because the net_set_vlan command is not properly unregistered when the network module is unloaded from memory. An attacker who can execute this command can force the system to access memory locations that are no longer valid. Successful exploitation leads directly to system instability, which can result in a complete crash and halt system availability.",
     ),
@@ -180,12 +184,24 @@ cases = [
         expected_description="A flaw was found in KubeVirt. This vulnerability allows API identity spoofing, compromising integrity and availability of managed VMs via improper TLS certificate management handling after compromising a virt-handler instance.",
     ),
     SuggestDescriptionCase(
+        cve_id="CVE-2025-64503",
+        expected_title="cups-filters: Out-of-bounds write via crafted PDF MediaBox",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-64524",
+        expected_description="A flaw was found in cups-filters. This vulnerability allows a heap buffer overflow and memory corruption, potentially leading to arbitrary code execution, via an unvalidated length parameter in the CompressData function of the rastertopclx filter. This can be exploited by an attacker with permissions to install a printer with a PPD (PostScript Printer Description) file or remotely via the CUPS (Common Unix Printing System) web interface. Additionally a Denial-of-Service may be triggered due to a segmentation fault when writing out-of-bounds, compromising the availability of the CUPS service.",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2025-64756",
         expected_title="A flaw was found in glob. This vulnerability allows arbitrary command execution via processing files",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-65073",
         expected_description="A flaw was found in OpenStack Keystone. This vulnerability allows an attacker to obtain a valid OpenStack's Keystone token, leading to access to unauthorized resources or privilege escalation within the OpenStack instance via sending a valid AWS (Amazon Web Services) signature to the /v3/ec2tokens or /v3/s3tokens API (Application Programming Interface) endpoints.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-66448",
+        expected_description="A remote code execution vulnerability has been identified in vLLM. An attacker can exploit a weakness in the model loading process to silently fetch and run unauthorized, malicious Python code on the host system. This happens because the engine mistakenly executes code from a remote repository referenced in a model's configuration, even when explicit security measures are set to prevent it.",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-91735",

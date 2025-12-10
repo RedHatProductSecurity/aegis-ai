@@ -189,6 +189,12 @@ cases = [
         expected_mitigation="""Operator can configure BMO role-based access control (RBAC) to be namespace scoped instead of cluster scoped to prevent BMO from accessing Secrets from other namespaces, or use the `WATCH_NAMESPACE` configuration option to limit BMO to a single namespace.
         """,
     ),
+    # FIXME: The actual suggested_statement indicates the vulnerability is 'Important for Red Hat' and some products are 'under investigation'
+    SuggestStatementCase(
+        cve_id="CVE-2025-30706",
+        expected_statement="No Red Hat products are affected by this vulnerability.",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+    ),
     SuggestStatementCase(
         cve_id="CVE-2025-32463",
         expected_statement="""The severity of this vulnerability is rated as Important due to the requirement that an attacker must have access to a valid account on a system and that it allows a local unprivileged attacker to escalate their privileges even if the account is not listed in the sudoers file.
@@ -198,7 +204,12 @@ cases = [
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-64524",
+        expected_statement="Red Hat rates this Moderate. While the `rastertopclx` filter runs under the `lp` user, limiting direct root compromise, the vulnerability can be exploited remotely via the CUPS web interface by an attacker with low privileges to install a printer with a crafted PPD file. This could lead to a denial of service or potentially arbitrary code execution, impacting system availability.",
         expected_mitigation='To reduce exposure, restrict network access to the CUPS service (port 631) to trusted hosts only using firewall rules. For example, using `firewall-cmd`: `firewall-cmd --permanent --add-rich-rule=\'rule family="ipv4" source address="<TRUSTED_IP_ADDRESS>" port port="631" protocol="tcp" accept\'` `firewall-cmd --reload` Alternatively, if printing services are not required, disable the CUPS service: `systemctl stop cups` `systemctl disable cups` Note that disabling CUPS will prevent all printing functionality on the system. If firewall rules are applied, ensure they are persistent across reboots.',
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-64527",
+        expected_statement="",
     ),
 ]
 
