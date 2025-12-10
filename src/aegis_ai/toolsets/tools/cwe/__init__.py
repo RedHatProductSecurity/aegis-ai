@@ -6,15 +6,16 @@ import io
 import json
 import logging
 import os
+import re
+
+from math import log
 from pathlib import Path
 from typing import List, Optional, Dict, Tuple, no_type_check
 from zipfile import ZipFile
 
 import aiofiles
-import faiss
 import httpx
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from pydantic_ai import Tool, RunContext
 from pydantic_ai.toolsets import FunctionToolset
@@ -32,15 +33,15 @@ CWE_URLS = [
     # "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
 ]
 
-EMBEDDING_MODEL = "all-mpnet-base-v2"
 CACHE_DIR = Path(get_settings().config_dir) / "mitre_cwe"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 CWE_DEFS_FILE = CACHE_DIR / "cwe_full_defs.json"
-CWE_FAISS_INDEX_FILE = CACHE_DIR / "cwe_index.faiss"
+CWE_TFIDF_MATRIX_FILE = CACHE_DIR / "cwe_tfidf.npy"
+CWE_VOCAB_FILE = CACHE_DIR / "cwe_vocab.json"
 CWE_INDEX_MAP_FILE = CACHE_DIR / "cwe_index_map.json"
 
-# Semantic search similarity score threshold
-SIMILARITY_THRESHOLD = 0.45
+# Cosine similarity threshold for TF-IDF retrieval
+SIMILARITY_THRESHOLD = 0.12
 
 
 class CWEManager:
@@ -51,20 +52,14 @@ class CWEManager:
     @no_type_check
     def __init__(self):
         self._definitions: Optional[Dict[str, Dict]] = None
-        self._faiss_index: Optional[faiss.Index] = None
+        # Lightweight TF-IDF artifacts
+        self._tfidf_matrix: Optional[np.ndarray] = None  # shape: (num_docs, vocab_size)
+        self._idf_vector: Optional[np.ndarray] = None  # shape: (vocab_size,)
+        self._vocab: Optional[Dict[str, int]] = None  # token -> column index
         self._index_to_cweid: Optional[List[str]] = None
-        self._embedding_model: Optional[SentenceTransformer] = None
         self._lock = asyncio.Lock()
         self._is_initialized = False
         self._debug = False
-
-    async def _load_embedding_model(self):
-        """Load SentenceTransformer model if not loaded."""
-        if self._embedding_model is None:
-            logger.info(f"Loading sentence-transformer model: {EMBEDDING_MODEL}")
-            self._embedding_model = await asyncio.to_thread(
-                SentenceTransformer, EMBEDDING_MODEL
-            )
 
     async def _fetch_and_parse_cwe_data(self) -> Dict[str, Dict]:
         """Fetch CWE CSVs from MITRE, parse em, and return dict."""
@@ -108,39 +103,73 @@ class CWEManager:
         return defs
 
     @no_type_check
-    async def _build_vector_index(
+    async def _build_tfidf_index(
         self, cwe_data: Dict[str, Dict]
-    ) -> Tuple[faiss.Index, List[str]]:
-        """Build/cache FAISS index from CWE data."""
-        logger.info("Building and caching new FAISS vector index...")
-        await self._load_embedding_model()
+    ) -> Tuple[np.ndarray, np.ndarray, Dict[str, int], List[str]]:
+        """Build/cache a TF-IDF matrix from CWE data (pure NumPy)."""
+        logger.info("Building and caching new TF-IDF index...")
 
-        corpus = [
-            f"{cwe_id}: {details['name'].lower()}. {details['description'].lower()} {details['extended_description'].lower()}"
-            for cwe_id, details in cwe_data.items()
-        ]
-        cwe_ids = list(cwe_data.keys())
+        def normalize(text: str) -> str:
+            return text.lower()
 
-        logger.info(
-            f"Generating embeddings for {len(corpus)} CWEs. This may take a moment..."
-        )
+        def tokenize(text: str) -> List[str]:
+            return re.findall(r"[a-z0-9]+", text)
 
-        embeddings = await asyncio.to_thread(
-            self._embedding_model.encode, corpus, show_progress_bar=self._debug
-        )
-        embeddings = np.array(embeddings).astype("float32")
-        faiss.normalize_L2(embeddings)
+        # Compose corpus texts and ids
+        corpus_texts: List[str] = []
+        cwe_ids: List[str] = []
+        for cwe_id, details in cwe_data.items():
+            text = f"{cwe_id} {details.get('name', '')} {details.get('description', '')} {details.get('extended_description', '')}"
+            corpus_texts.append(normalize(text))
+            cwe_ids.append(cwe_id)
 
-        index = faiss.IndexFlatIP(embeddings.shape[1])
-        index.add(embeddings)
+        # Build vocab
+        vocab: Dict[str, int] = {}
+        docs_tokens: List[List[str]] = []
+        for text in corpus_texts:
+            tokens = tokenize(text)
+            docs_tokens.append(tokens)
+            for tok in tokens:
+                if tok not in vocab:
+                    vocab[tok] = len(vocab)
 
+        vocab_size = len(vocab)
+        num_docs = len(docs_tokens)
+        if self._debug:
+            logger.debug(f"TF-IDF vocab size={vocab_size}, docs={num_docs}")
+
+        # Term frequency (log-scaled)
+        tf_matrix = np.zeros((num_docs, vocab_size), dtype=np.float32)
+        df_counts = np.zeros(vocab_size, dtype=np.int32)
+        for di, tokens in enumerate(docs_tokens):
+            if not tokens:
+                continue
+            counts: Dict[int, int] = {}
+            for tok in tokens:
+                ti = vocab[tok]
+                counts[ti] = counts.get(ti, 0) + 1
+            for ti, cnt in counts.items():
+                tf_matrix[di, ti] = 1.0 + log(cnt)
+                df_counts[ti] += 1
+
+        # Inverse document frequency (smoothed)
+        idf = np.log((1.0 + num_docs) / (1.0 + df_counts.astype(np.float32))) + 1.0
+
+        # TF-IDF and L2 normalize rows
+        tfidf = tf_matrix * idf
+        norms = np.linalg.norm(tfidf, axis=1, keepdims=True)
+        norms[norms == 0.0] = 1.0
+        tfidf = tfidf / norms
+
+        # Persist artifacts
         await asyncio.gather(
-            asyncio.to_thread(faiss.write_index, index, str(CWE_FAISS_INDEX_FILE)),
+            asyncio.to_thread(np.save, str(CWE_TFIDF_MATRIX_FILE), tfidf),
+            write_json_async(CWE_VOCAB_FILE, vocab),
             write_json_async(CWE_INDEX_MAP_FILE, cwe_ids),
         )
 
-        logger.info(f"FAISS index built and cached at '{CACHE_DIR}'.")
-        return index, cwe_ids
+        logger.info(f"TF-IDF index built and cached at '{CACHE_DIR}'.")
+        return tfidf, idf, vocab, cwe_ids
 
     @no_type_check
     async def initialize(self):
@@ -153,7 +182,6 @@ class CWEManager:
                 return
 
             self._debug = logger.isEnabledFor(logging.DEBUG)
-            await self._load_embedding_model()
 
             if CWE_DEFS_FILE.exists():
                 logger.info(f"Loading CWE definitions from '{CWE_DEFS_FILE}'.")
@@ -164,17 +192,30 @@ class CWEManager:
                 logger.info(f"Writing CWE definitions to '{CWE_DEFS_FILE}'.")
                 await write_json_async(CWE_DEFS_FILE, self._definitions)
 
-            if CWE_FAISS_INDEX_FILE.exists() and CWE_INDEX_MAP_FILE.exists():
-                logger.info(f"Loading FAISS index from '{CACHE_DIR}'.")
-                self._faiss_index = await asyncio.to_thread(
-                    faiss.read_index, str(CWE_FAISS_INDEX_FILE)
+            if (
+                CWE_TFIDF_MATRIX_FILE.exists()
+                and CWE_VOCAB_FILE.exists()
+                and CWE_INDEX_MAP_FILE.exists()
+            ):
+                logger.info(f"Loading TF-IDF index from '{CACHE_DIR}'.")
+                self._tfidf_matrix = await asyncio.to_thread(
+                    np.load, str(CWE_TFIDF_MATRIX_FILE)
                 )
+                self._vocab = await read_json_async(CWE_VOCAB_FILE)
                 self._index_to_cweid = await read_json_async(CWE_INDEX_MAP_FILE)
+                # Reconstruct IDF vector from matrix sparsity as an approximation
+                # (exact DF not stored; this is sufficient for ranking stability)
+                nonzero = (self._tfidf_matrix > 0).astype(np.int32)
+                df_counts = nonzero.sum(axis=0)
+                num_docs = self._tfidf_matrix.shape[0]
+                self._idf_vector = np.log((1.0 + num_docs) / (1.0 + df_counts)) + 1.0
             else:
                 (
-                    self._faiss_index,
+                    self._tfidf_matrix,
+                    self._idf_vector,
+                    self._vocab,
                     self._index_to_cweid,
-                ) = await self._build_vector_index(self._definitions)
+                ) = await self._build_tfidf_index(self._definitions)
 
             self._is_initialized = True
 
@@ -202,36 +243,61 @@ class CWEManager:
         )
 
     @no_type_check
-    async def search_cwes(self, query: str, top_k: int = 8) -> List[CWE]:
-        """Perform semantic search for CWEs using in-memory index."""
+    async def search_cwes(self, query: str, top_k: int = 12) -> List[CWE]:
+        """Perform lightweight TF-IDF cosine-similarity search for CWEs."""
         if (
-            not self._faiss_index
-            or not self._embedding_model
+            self._tfidf_matrix is None
+            or self._idf_vector is None
+            or self._vocab is None
             or not self._index_to_cweid
             or not self._definitions
         ):
             logger.error("Search artifacts not loaded. Please initialize the manager.")
             return []
 
-        query_vector = await asyncio.to_thread(
-            self._embedding_model.encode, [query.lower()], show_progress_bar=self._debug
-        )
-        query_vector = np.array(query_vector).astype("float32")
-        faiss.normalize_L2(query_vector)
+        # Tokenize and build query TF-IDF vector
+        def tokenize(text: str) -> List[str]:
+            return re.findall(r"[a-z0-9]+", text.lower())
 
-        distances, indices = await asyncio.to_thread(
-            self._faiss_index.search, query_vector, top_k
-        )
+        tokens = tokenize(query)
+        if not tokens:
+            return []
 
-        results = []
-        for i, idx in enumerate(indices[0]):
-            score = float(distances[0][i])
-            if score > SIMILARITY_THRESHOLD:
-                cwe_id = self._index_to_cweid[idx]
-                cwe_details = self._definitions.get(cwe_id)
-                if cwe_details and not cwe_details["disallowed"]:
-                    logger.debug(f"Matched on allowed {cwe_id} with score: {score:.4f}")
-                    results.append(CWE(cwe_id=cwe_id, score=score, **cwe_details))
+        vocab = self._vocab
+        counts: Dict[int, int] = {}
+        for tok in tokens:
+            if tok in vocab:
+                ti = vocab[tok]
+                counts[ti] = counts.get(ti, 0) + 1
+
+        if not counts:
+            return []
+
+        q_vec = np.zeros(self._idf_vector.shape[0], dtype=np.float32)
+        for ti, cnt in counts.items():
+            q_vec[ti] = 1.0 + log(cnt)
+        q_vec *= self._idf_vector
+        norm = np.linalg.norm(q_vec)
+        if norm > 0:
+            q_vec = q_vec / norm
+
+        sims = self._tfidf_matrix @ q_vec  # cosine similarity
+        k = min(top_k, sims.shape[0])
+        if k <= 0:
+            return []
+        top_idx = np.argpartition(-sims, kth=k - 1)[:k]
+        top_idx = top_idx[np.argsort(-sims[top_idx])]
+
+        results: List[CWE] = []
+        for idx in top_idx:
+            score = float(sims[idx])
+            if score < SIMILARITY_THRESHOLD:
+                continue
+            cwe_id = self._index_to_cweid[idx]
+            cwe_details = self._definitions.get(cwe_id)
+            if cwe_details and not cwe_details["disallowed"]:
+                logger.debug(f"Matched on allowed {cwe_id} with score: {score:.4f}")
+                results.append(CWE(cwe_id=cwe_id, score=score, **cwe_details))
         return results
 
     def get_allowed_cwe_ids(self) -> List[CWEID]:
