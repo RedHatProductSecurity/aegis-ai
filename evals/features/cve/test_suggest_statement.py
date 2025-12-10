@@ -91,6 +91,11 @@ cases = [
             """,
         expected_mitigation="""Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base, or stability.""",
     ),
+    # NOTE: After merging https://github.com/RedHatProductSecurity/aegis-ai/pull/370
+    # LLM does not get the correct answer on its input from the `mitigation` field
+    # in the `osidb_cache` data.  However, the correct answer is still provided to LLM
+    # from a public comment in `osdib_cache`.  So we are not exercising here anything
+    # complex or very practical.
     SuggestStatementCase(
         cve_id="CVE-2023-48795",
         expected_statement="""This CVE is classified as moderate because the attack requires an active Man-in-the-Middle (MITM) who can intercept and modify the connection's traffic at the TCP/IP layer.
