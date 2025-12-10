@@ -195,11 +195,12 @@ class SuggestStatementModel(AegisFeatureModel):
 
     title: str = Field(
         ...,
-        description="Contains CVE title",
+        description="CVE title",
     )
 
     impact: Literal["", "LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
-        ..., description="Contains CVE impact."
+        ...,
+        description="CVE impact",
     )
 
     components: List = Field(
@@ -209,7 +210,7 @@ class SuggestStatementModel(AegisFeatureModel):
 
     description: str = Field(
         ...,
-        description="Contains CVE description",
+        description="CVE description",
     )
 
     explanation: str = Field(
@@ -219,13 +220,11 @@ class SuggestStatementModel(AegisFeatureModel):
         """,
     )
 
-    suggested_statement: str = Field(
-        ...,
+    suggested_statement: Optional[str] = Field(
         description="suggested Red Hat CVE statement explaining impact on Red Hat supported products.",
     )
 
-    suggested_mitigation: str = Field(
-        ...,
+    suggested_mitigation: Optional[str] = Field(
         description="suggested Red Hat CVE mitigation explaining how to mitigate impact on Red Hat supported products.",
     )
 

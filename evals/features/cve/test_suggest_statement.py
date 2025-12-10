@@ -51,8 +51,8 @@ class SuggestStatementCase(Case):
             components=[],
             description="",
             explanation="",
-            suggested_statement=(expected_statement or ""),
-            suggested_mitigation=(expected_mitigation or ""),
+            suggested_statement=expected_statement,
+            suggested_mitigation=expected_mitigation,
             confidence=1.0,
             tools_used=[],
             disclaimer=disclaimer,
@@ -60,7 +60,9 @@ class SuggestStatementCase(Case):
 
         # enable field-specific evaluators for this case
         evaluators = tuple(
-            field_evaluators[f] for f in field_evaluators if getattr(expected_output, f)
+            field_evaluators[f]
+            for f in field_evaluators
+            if getattr(expected_output, f) is not None
         )
 
         super().__init__(
@@ -207,9 +209,11 @@ cases = [
         expected_statement="Red Hat rates this Moderate. While the `rastertopclx` filter runs under the `lp` user, limiting direct root compromise, the vulnerability can be exploited remotely via the CUPS web interface by an attacker with low privileges to install a printer with a crafted PPD file. This could lead to a denial of service or potentially arbitrary code execution, impacting system availability.",
         expected_mitigation='To reduce exposure, restrict network access to the CUPS service (port 631) to trusted hosts only using firewall rules. For example, using `firewall-cmd`: `firewall-cmd --permanent --add-rich-rule=\'rule family="ipv4" source address="<TRUSTED_IP_ADDRESS>" port port="631" protocol="tcp" accept\'` `firewall-cmd --reload` Alternatively, if printing services are not required, disable the CUPS service: `systemctl stop cups` `systemctl disable cups` Note that disabling CUPS will prevent all printing functionality on the system. If firewall rules are applied, ensure they are persistent across reboots.',
     ),
+    # FIXME: security analysts expect statement to be empty in this case
     SuggestStatementCase(
         cve_id="CVE-2025-64527",
         expected_statement="",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
     ),
 ]
 
