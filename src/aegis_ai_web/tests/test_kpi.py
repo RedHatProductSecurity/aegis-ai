@@ -99,8 +99,9 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert data["acceptance_percentage"] == 0.0
-        assert data["entries"] == []
+        assert "suggest-impact" in data
+        assert data["suggest-impact"]["acceptance_percentage"] == 0.0
+        assert data["suggest-impact"]["entries"] == []
 
     def test_get_cve_kpi_filter_by_feature(self, feedback_log_setup):
         """Test KPI endpoint filters entries by feature."""
@@ -140,19 +141,21 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 1
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 1
         # Verify datetime, accepted, and aegis_version fields are included
-        assert "datetime" in data["entries"][0]
-        assert "accepted" in data["entries"][0]
-        assert "aegis_version" in data["entries"][0]
-        assert data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+        assert "datetime" in feature_data["entries"][0]
+        assert "accepted" in feature_data["entries"][0]
+        assert "aegis_version" in feature_data["entries"][0]
+        assert feature_data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
         # Verify accepted field is converted to boolean
-        assert data["entries"][0]["accepted"] is True
-        assert isinstance(data["entries"][0]["accepted"], bool)
+        assert feature_data["entries"][0]["accepted"] is True
+        assert isinstance(feature_data["entries"][0]["accepted"], bool)
         # Verify all three fields are present
-        assert len(data["entries"][0]) == 3
+        assert len(feature_data["entries"][0]) == 3
         # Verify score only includes entries for the requested feature
-        assert data["acceptance_percentage"] == 100.0
+        assert feature_data["acceptance_percentage"] == 100.0
 
     def test_get_cve_kpi_score_calculation_all_accepted(self, feedback_log_setup):
         """Test KPI score calculation when all entries are accepted."""
@@ -177,8 +180,10 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert data["acceptance_percentage"] == 100.0
-        assert len(data["entries"]) == 5
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert feature_data["acceptance_percentage"] == 100.0
+        assert len(feature_data["entries"]) == 5
 
     def test_get_cve_kpi_score_calculation_mixed_acceptance(self, feedback_log_setup):
         """Test KPI score calculation with mixed acceptance values."""
@@ -218,12 +223,16 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert data["acceptance_percentage"] == 60.0  # 3/5 = 60%
-        assert len(data["entries"]) == 5
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert feature_data["acceptance_percentage"] == 60.0  # 3/5 = 60%
+        assert len(feature_data["entries"]) == 5
         # Verify accepted fields are converted to booleans
-        assert data["entries"][0]["accepted"] is True
-        assert data["entries"][3]["accepted"] is False
-        assert all(isinstance(entry["accepted"], bool) for entry in data["entries"])
+        assert feature_data["entries"][0]["accepted"] is True
+        assert feature_data["entries"][3]["accepted"] is False
+        assert all(
+            isinstance(entry["accepted"], bool) for entry in feature_data["entries"]
+        )
 
     def test_get_cve_kpi_score_calculation_lowercase_true(self, feedback_log_setup):
         """Test KPI score calculation accepts lowercase 'true'."""
@@ -260,7 +269,9 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert data["acceptance_percentage"] == 50.0  # 1/2 = 50%
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert feature_data["acceptance_percentage"] == 50.0  # 1/2 = 50%
 
     def test_get_cve_kpi_sorting_ascending(self, feedback_log_setup):
         """Test KPI endpoint sorts entries ascending by datetime."""
@@ -300,15 +311,17 @@ class TestGetCveKpi:
         )
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 2
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 2
         # Should be sorted ascending (oldest first)
-        assert data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
-        assert data["entries"][1]["datetime"] == "2025-01-15 10:35:45.123"
+        assert feature_data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+        assert feature_data["entries"][1]["datetime"] == "2025-01-15 10:35:45.123"
         # Verify datetime, accepted, and aegis_version fields are present
-        assert len(data["entries"][0]) == 3
-        assert "datetime" in data["entries"][0]
-        assert "accepted" in data["entries"][0]
-        assert "aegis_version" in data["entries"][0]
+        assert len(feature_data["entries"][0]) == 3
+        assert "datetime" in feature_data["entries"][0]
+        assert "accepted" in feature_data["entries"][0]
+        assert "aegis_version" in feature_data["entries"][0]
 
     def test_get_cve_kpi_sorting_descending(self, feedback_log_setup):
         """Test KPI endpoint sorts entries descending by datetime."""
@@ -348,12 +361,14 @@ class TestGetCveKpi:
         )
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 2
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 2
         # Should be sorted descending (newest first)
-        assert data["entries"][0]["datetime"] == "2025-01-15 10:35:45.123"
-        assert data["entries"][1]["datetime"] == "2025-01-15 10:30:45.123"
+        assert feature_data["entries"][0]["datetime"] == "2025-01-15 10:35:45.123"
+        assert feature_data["entries"][1]["datetime"] == "2025-01-15 10:30:45.123"
         # Verify datetime, accepted, and aegis_version fields are present
-        assert len(data["entries"][0]) == 3
+        assert len(feature_data["entries"][0]) == 3
 
     def test_get_cve_kpi_sorting_without_milliseconds(self, feedback_log_setup):
         """Test KPI endpoint handles datetime without milliseconds."""
@@ -392,13 +407,15 @@ class TestGetCveKpi:
         )
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 2
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 2
         # Should be sorted correctly despite different datetime formats
         assert (
-            data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+            feature_data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
         )  # Older entry first
         assert (
-            data["entries"][1]["datetime"] == "2025-01-15 10:35:45"
+            feature_data["entries"][1]["datetime"] == "2025-01-15 10:35:45"
         )  # Newer entry second
 
     def test_get_cve_kpi_sorting_unparsable_datetime(self, feedback_log_setup):
@@ -439,12 +456,14 @@ class TestGetCveKpi:
         )
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 2
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 2
         assert (
-            data["entries"][0]["datetime"] == "not-a-date"
+            feature_data["entries"][0]["datetime"] == "not-a-date"
         )  # Invalid datetime first (epoch)
         assert (
-            data["entries"][1]["datetime"] == "2025-01-15 10:30:45.123"
+            feature_data["entries"][1]["datetime"] == "2025-01-15 10:30:45.123"
         )  # Valid datetime second
 
         # Test descending order - invalid datetime should be last
@@ -453,12 +472,14 @@ class TestGetCveKpi:
         )
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 2
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 2
         assert (
-            data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+            feature_data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
         )  # Valid datetime first
         assert (
-            data["entries"][1]["datetime"] == "not-a-date"
+            feature_data["entries"][1]["datetime"] == "not-a-date"
         )  # Invalid datetime last (epoch)
 
     def test_get_cve_kpi_missing_feature_parameter(self, feedback_log_setup):
@@ -520,10 +541,12 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["entries"]) == 2
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert len(feature_data["entries"]) == 2
         # Should be sorted ascending (oldest first) by default
-        assert data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
-        assert data["entries"][1]["datetime"] == "2025-01-15 10:35:45.123"
+        assert feature_data["entries"][0]["datetime"] == "2025-01-15 10:30:45.123"
+        assert feature_data["entries"][1]["datetime"] == "2025-01-15 10:35:45.123"
 
     def test_get_cve_kpi_score_rounding(self, feedback_log_setup):
         """Test KPI score rounding (e.g., 33.33% rounds to 33%)."""
@@ -562,4 +585,59 @@ class TestGetCveKpi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
         assert response.status_code == 200
         data = response.json()
-        assert data["acceptance_percentage"] == 33.3  # 1/3 = 33.33% rounded to 33.3
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+        assert (
+            feature_data["acceptance_percentage"] == 33.3
+        )  # 1/3 = 33.33% rounded to 33.3
+
+    def test_get_cve_kpi_all_features(self, feedback_log_setup):
+        """Test KPI endpoint with feature='all' returns dict with all features."""
+        # Create test CSV with entries for multiple features
+        with open(feedback_log_setup, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FEEDBACK_SCHEMA.field_names)
+            writer.writeheader()
+            # Entry for suggest-impact
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:30:45.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23395",
+                    "email": "test@example.com",
+                    "actual": "IMPORTANT",
+                    "expected": "",
+                    "request_time": "2025-01-15 10:30:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                }
+            )
+            # Entry for suggest-cwe
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 11:00:00.456",
+                    "feature": "suggest-cwe",
+                    "cve_id": "CVE-2025-23396",
+                    "email": "test2@example.com",
+                    "actual": "CWE-120",
+                    "expected": "",
+                    "request_time": "2025-01-15 11:00:00",
+                    "accept": "False",
+                    "rejection_comment": "",
+                }
+            )
+
+        response = client.get("/api/v1/analysis/kpi/cve?feature=all")
+        assert response.status_code == 200
+        data = response.json()
+        # Should return a dict with all features
+        assert isinstance(data, dict)
+        assert "suggest-impact" in data
+        assert "suggest-cwe" in data
+        # Verify each feature has the expected structure
+        assert "acceptance_percentage" in data["suggest-impact"]
+        assert "entries" in data["suggest-impact"]
+        assert "acceptance_percentage" in data["suggest-cwe"]
+        assert "entries" in data["suggest-cwe"]
+        # Verify scores
+        assert data["suggest-impact"]["acceptance_percentage"] == 100.0
+        assert data["suggest-cwe"]["acceptance_percentage"] == 0.0
