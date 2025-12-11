@@ -72,13 +72,15 @@ class CWEManager:
         async with httpx.AsyncClient(
             timeout=10, headers=default_tool_http_headers
         ) as client:
-            for i, url in enumerate(CWE_URLS):
+            for idx, url in enumerate(CWE_URLS):
+                # The first URL (699) is the source of truth for allowed CWEs
+                cwe_699_view = not idx
+
                 try:
                     logger.info(f"Fetching CWE definitions from '{url}'...")
                     response = await client.get(url)
                     response.raise_for_status()
 
-                    is_primary_view = i == 0
                     zip_file = ZipFile(io.BytesIO(response.content))
 
                     for file_name in zip_file.namelist():
@@ -88,23 +90,19 @@ class CWEManager:
 
                         for line in reader:
                             cwe_id = f"CWE-{line[0]}"
-                            # The first URL (699) is the source of truth for allowed CWEs
-                            if cwe_id in defs and is_primary_view:
-                                logger.warning(
-                                    f"CWE redefinition in primary view for {cwe_id}"
-                                )
-                                continue
-                            disallowed = not is_primary_view
                             if cwe_id not in defs:
-                                if not disallowed:
-                                    defs[cwe_id] = {
-                                        "name": line[1],
-                                        "description": line[4],
-                                        "extended_description": line[5],
-                                        "affected_resources": line[19],
-                                        "notes": line[22],
-                                        "disallowed": not is_primary_view,
-                                    }
+                                defs[cwe_id] = {
+                                    "name": line[1],
+                                    "description": line[4],
+                                    "extended_description": line[5],
+                                    "affected_resources": line[19],
+                                    "notes": line[22],
+                                    "disallowed": not cwe_699_view,
+                                }
+                            elif cwe_699_view:
+                                logger.warning(
+                                    f"CWE redefinition in CWE-699 view: {cwe_id}"
+                                )
                 except httpx.HTTPError as e:
                     logger.error(f"Failed to retrieve CWEs from {url}: {e}")
         return defs
