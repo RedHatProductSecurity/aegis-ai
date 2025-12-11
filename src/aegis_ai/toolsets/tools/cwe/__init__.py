@@ -269,10 +269,18 @@ cwe_manager = CWEManager()
 async def search_cwes(ctx: RunContext, inputs: CWESearchInput) -> List[CWE]:
     """Perform semantic search to find the most relevant CWEs based on a query."""
     await cwe_manager.initialize()  # Ensures data is loaded, but only runs once
-    logger.info(
-        f"Searching for candidate CWEs with query: '{inputs.query.lower().replace('-', ' ')}'"
-    )
-    return await cwe_manager.search_cwes(inputs.query.lower().replace("-", " "))
+
+    # log initiation of the search (debug only)
+    query = inputs.query.lower().replace("-", " ")
+    logger.debug(f"Searching for candidate CWEs with query: '{query}'")
+
+    result = await cwe_manager.search_cwes(query)
+
+    # log the search query and the resulting CWE list
+    cwe_list = [cwe.cwe_id for cwe in result]
+    logger.info(f"search_cwes(query='{query}') = {cwe_list}")
+
+    return result
 
 
 @Tool
