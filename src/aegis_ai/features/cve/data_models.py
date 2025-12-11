@@ -1,7 +1,7 @@
 import logging
 from typing import List, Literal, Optional
 
-from pydantic import Field, BaseModel, field_validator
+from pydantic import Field, BaseModel, field_validator, ValidationInfo
 
 from aegis_ai.data_models import CVEID, CVSS3Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
@@ -109,10 +109,19 @@ class SuggestCWEModel(AegisFeatureModel):
 
     @field_validator("cwe")
     @classmethod
-    def filter_allowed_cwes(cls, cwes: List[CWEID]) -> List[CWEID]:
+    def filter_allowed_cwes(
+        cls, unfiltered_cwes: List[CWEID], info: ValidationInfo
+    ) -> List[CWEID]:
         allowed_cwe_ids = set(cwe_manager.get_allowed_cwe_ids())
-        logging.debug(f"Filtering {cwes} in allowed cwe ids: {allowed_cwe_ids}.")
-        return [cwe for cwe in cwes if cwe in allowed_cwe_ids]
+        filtered_out = set(unfiltered_cwes) - allowed_cwe_ids
+        if not filtered_out:
+            # we should not get disallowed CWEs on the LLM output under normal circumstances
+            return unfiltered_cwes
+
+        cve_id = info.data.get("cve_id")
+        f_list = list(filtered_out)
+        logging.warning(f"{cve_id}: filtering out disallowed CWE IDs: {f_list}")
+        return [cwe for cwe in unfiltered_cwes if cwe not in filtered_out]
 
     def printable_outcome(self) -> str:
         """override the logging hook to print the resulting CWE list"""
