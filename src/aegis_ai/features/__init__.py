@@ -2,9 +2,12 @@ import asyncio
 import logging
 import os
 
+from typing import Awaitable
+
 from google.genai.errors import ServerError
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
+from pydantic_ai.run import AgentRunResult
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,38 @@ PROMPT_RETRY_503_DELAY_INIT = 8
 # temperature override while retrying a prompt
 PROMPT_RETRY_TEMPERATURE = 0.9
 
+# the period of time to monitor a running prompt
+PROMPT_INFO_PERIOD = 60
+
+
+async def run_with_heartbeat(runner: Awaitable, prefix: str) -> AgentRunResult:
+    """await runner with llm_prompt_timeout and periodically log INFO messages
+    with the given prefix each PROMPT_INFO_PERIOD seconds until runner finishes"""
+
+    # Periodic warning logger while the run is in progress
+    done_event = asyncio.Event()
+
+    async def _warn_loop():
+        loop = asyncio.get_running_loop()
+        start_ts = loop.time()
+        while not done_event.is_set():
+            try:
+                await asyncio.wait_for(done_event.wait(), timeout=PROMPT_INFO_PERIOD)
+            except asyncio.TimeoutError:
+                elapsed = int(loop.time() - start_ts)
+                logger.info(f"{prefix}: still running after {elapsed}s")
+
+    warn_task = asyncio.create_task(_warn_loop())
+    try:
+        return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
+    finally:
+        done_event.set()
+        warn_task.cancel()
+        try:
+            await warn_task
+        except asyncio.CancelledError:
+            pass
+
 
 class Feature:
     def __init__(self, agent: Agent):
@@ -33,7 +68,7 @@ class Feature:
     async def _run(self, call_str, prompt, **kwargs):
         try:
             runner = self.agent.run(prompt.to_string(), **kwargs)
-            return await asyncio.wait_for(runner, timeout=llm_prompt_timeout)
+            return await run_with_heartbeat(runner, prefix=call_str)
 
         except asyncio.TimeoutError:
             # fmt: off
