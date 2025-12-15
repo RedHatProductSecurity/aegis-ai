@@ -158,10 +158,11 @@ cases = [
     #     cve_id="CVE-2025-37798",
     #     expected_description="FIXME",
     # ),
-    SuggestDescriptionCase(
-        cve_id="CVE-2025-21494",
-        expected_description="This vulnerability allows an unauthenticated attacker to cause a hang or frequently repeatable crash via logon to the infrastructure where MySQL Server executes.",
-    ),
+    # FIXME: clarify the expected_description for this evaluation case with a security analyst
+    # SuggestDescriptionCase(
+    #     cve_id="CVE-2025-21494",
+    #     expected_description="This vulnerability allows an unauthenticated attacker to cause a hang or frequently repeatable crash via logon to the infrastructure where MySQL Server executes.",
+    # ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-54770",
         expected_description="A vulnerability has been identified in the GRUB2 bootloader's network module that poses an immediate Denial of Service (DoS) risk. This flaw is a Use-after-Free issue, caused because the net_set_vlan command is not properly unregistered when the network module is unloaded from memory. An attacker who can execute this command can force the system to access memory locations that are no longer valid. Successful exploitation leads directly to system instability, which can result in a complete crash and halt system availability.",
