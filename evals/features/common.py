@@ -7,6 +7,7 @@ from rich.console import Console
 from typing import Sequence, Any
 
 from google.genai.errors import ServerError
+from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Dataset
@@ -108,8 +109,9 @@ class LLMJudgeWrapper(LLMJudge):
                 # regular evaluation of LLMJudge
                 return await super().evaluate(ctx)
 
-            except ServerError as e:
-                if agent_default_max_retries <= attempt or e.code != 503:
+            except (ModelHTTPError, ServerError) as e:
+                code = e.status_code if isinstance(e, ModelHTTPError) else e.code
+                if agent_default_max_retries <= attempt or code != 503:
                     # propagate other exceptions (or exceeded retry attempts)
                     raise
 

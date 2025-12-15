@@ -4,7 +4,7 @@ import os
 
 from google.genai.errors import ServerError
 from pydantic_ai import Agent
-from pydantic_ai.exceptions import UnexpectedModelBehavior
+from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,9 @@ class Feature:
                     # success (no exception)
                     break
 
-                except ServerError as e:
-                    if agent_default_max_retries <= attempt or e.code != 503:
+                except (ModelHTTPError, ServerError) as e:
+                    code = e.status_code if isinstance(e, ModelHTTPError) else e.code
+                    if agent_default_max_retries <= attempt or code != 503:
                         # propagate other exceptions (or exceeded retry attempts)
                         raise
 
