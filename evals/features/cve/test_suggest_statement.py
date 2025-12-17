@@ -215,6 +215,11 @@ cases = [
         expected_statement="",
         metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
     ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-66623",
+        expected_statement="This vulnerability is rated Important for Red Hat AMQ Streams. Affected Strimzi versions 0.47.0 through 0.49.0 create an incorrect Kubernetes Role, granting Apache Kafka Connect and Apache Kafka MirrorMaker 2 operands unauthorized GET access to all Kubernetes Secrets within the operator's namespace. This could lead to sensitive information disclosure.",
+        expected_mitigation="Mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+    ),
 ]
 
 # evaluators
