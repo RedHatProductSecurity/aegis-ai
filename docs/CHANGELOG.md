@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-18
+
+### Changed
+- improved `suggest-description` based on a CVE Description Gem used by security analysts at Red Hat
+- the `search_cwes` tool was reimplemented using `TF-IDF` (Term Frequency-Inverse Document Frequency)
+- the size of the `aegis-ai` container image was reduced from 2.89 GB to 1.14 GB
+
+### Added
+- added evaluation cases based on the feedback from security analysts
+- the feedback API endpoint now supports querying for all features
+- the result of the `search_cwes` tool is now logged
+- a warning is now logged when a disallowed CWE is filtered out from the output of `suggest-cwe`
+- long running LLM prompts are now periodically logged every 60 seconds
+
+### Fixed
+- fixed handling of the `disallowed` flag in CWE cache
+- the LLM prompt is now retried on `ModelHTTPError` to recover from occasional failures of the LLM engine
+
+
 ## [0.4.4] - 2025-12-08
 
 ### Changed
