@@ -686,7 +686,7 @@ wheels = [
 
 [[package]]
 name = "ddgs"
-version = "9.9.3"
+version = "9.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -695,9 +695,9 @@ dependencies = [
     { name = "lxml" },
     { name = "primp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/e5/93cb56402815f86f29fccc1beae0e879e991273c2731dcd4743c299df260/ddgs-9.9.3.tar.gz", hash = "sha256:367b4b055790a44c11e96c2f85ca570e65dbeb59c7399817e00c5eaa0b7076db", size = 36103, upload-time = "2025-12-05T12:25:21.102Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/07/76/8dc0323d1577037abad7a679f8af150ebb73a94995d3012de71a8898e6e6/ddgs-9.10.0.tar.gz", hash = "sha256:d9381ff75bdf1ad6691d3d1dc2be12be190d1d32ecd24f1002c492143c52c34f", size = 31491, upload-time = "2025-12-17T23:30:15.021Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/4d/0ab756d83e06e18f4a7ef48adc2940577bf308bfdd19c6cea6dab00baec1/ddgs-9.9.3-py3-none-any.whl", hash = "sha256:60a1d5d4b72cf23991495ea6b87d9389640d5fb3452224ecaad8e2ff17b93466", size = 41635, upload-time = "2025-12-05T12:25:19.47Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/0e/d4b7d6a8df5074cf67bc14adead39955b0bf847c947ff6cad0bb527887f4/ddgs-9.10.0-py3-none-any.whl", hash = "sha256:81233d79309836eb03e7df2a0d2697adc83c47c342713132c0ba618f1f2c6eee", size = 40311, upload-time = "2025-12-17T23:30:13.606Z" },
 ]
 
 [[package]]
@@ -865,7 +865,7 @@ lua = [
 
 [[package]]
 name = "fastapi"
-version = "0.124.4"
+version = "0.125.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -873,9 +873,9 @@ dependencies = [
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/21/ade3ff6745a82ea8ad88552b4139d27941549e4f19125879f848ac8f3c3d/fastapi-0.124.4.tar.gz", hash = "sha256:0e9422e8d6b797515f33f500309f6e1c98ee4e85563ba0f2debb282df6343763", size = 378460, upload-time = "2025-12-12T15:00:43.891Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/71/2df15009fb4bdd522a069d2fbca6007c6c5487fce5cb965be00fc335f1d1/fastapi-0.125.0.tar.gz", hash = "sha256:16b532691a33e2c5dee1dac32feb31dc6eb41a3dd4ff29a95f9487cb21c054c0", size = 370550, upload-time = "2025-12-17T21:41:44.15Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/57/aa70121b5008f44031be645a61a7c4abc24e0e888ad3fc8fda916f4d188e/fastapi-0.124.4-py3-none-any.whl", hash = "sha256:6d1e703698443ccb89e50abe4893f3c84d9d6689c0cf1ca4fad6d3c15cf69f15", size = 113281, upload-time = "2025-12-12T15:00:42.44Z" },
+    { url = "https://files.pythonhosted.org/packages/34/2f/ff2fcc98f500713368d8b650e1bbc4a0b3ebcdd3e050dcdaad5f5a13fd7e/fastapi-0.125.0-py3-none-any.whl", hash = "sha256:2570ec4f3aecf5cca8f0428aed2398b774fcdfee6c2116f86e80513f2f86a7a1", size = 112888, upload-time = "2025-12-17T21:41:41.286Z" },
 ]
 
 [[package]]
@@ -3645,16 +3645,16 @@ wheels = [
 
 [[package]]
 name = "tavily-python"
-version = "0.7.16"
+version = "0.7.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "requests" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/34/98/305a25fda4044df531225dada1bd92f93f9f1f26305473eac56d7240ff22/tavily_python-0.7.16.tar.gz", hash = "sha256:7962c8404242fdc0dccf32d5ed67cad7b9e5e8ad095bf1f1596374e7f8412b53", size = 21243, upload-time = "2025-12-16T21:33:31.32Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/eb/d7371ee68119380ab6561c6998eacf3031327ba89c6081d36128ab4a2184/tavily_python-0.7.17.tar.gz", hash = "sha256:437ba064639dfdce1acdbc37cbb73246abe500ab735e988a4b8698a8d5fb7df7", size = 21321, upload-time = "2025-12-17T17:08:39.3Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/4a/c1a23d29237ebc47208f3bca352da4cc911895b4eafe8e3dd0a6d1474a7e/tavily_python-0.7.16-py3-none-any.whl", hash = "sha256:2b52b264d6f219ca44ee8fc1225d12cdc569a1af5d3691e5b2b8a1ea6fe0ca99", size = 18178, upload-time = "2025-12-16T21:33:28.643Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/ce/88565f0c9f7654bc90e19f1e76b3bffee7ff9c1741a2124ec2f2900fb080/tavily_python-0.7.17-py3-none-any.whl", hash = "sha256:a2725b9cba71e404e73d19ff277df916283c10100137c336e07f8e1bd7789fcf", size = 18214, upload-time = "2025-12-17T17:08:38.442Z" },
 ]
 
 [[package]]
