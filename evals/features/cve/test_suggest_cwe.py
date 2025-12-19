@@ -252,9 +252,10 @@ cases = [
         cwe_list=["CWE-347"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
+    # kdudka: according to Comment#0, CWE-377 and CWE-367 are also applicable, and CWE-378 is in OSIM
     SuggestCweCase(
         cve_id="CVE-2025-7647",
-        cwe_list=["CWE-379"],
+        cwe_list=["CWE-379", "CWE-377", "CWE-367", "CWE-378"],
     ),
     SuggestCweCase(
         cve_id="CVE-2025-9319",
