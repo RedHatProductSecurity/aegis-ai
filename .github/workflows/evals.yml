@@ -78,7 +78,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Run evaluation suite
-        run: make eval
+        run: make eval-in-parallel
 
       - name: Upload Evals Log
         uses: actions/upload-artifact@v4
