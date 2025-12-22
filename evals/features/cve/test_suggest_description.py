@@ -146,8 +146,17 @@ cases = [
         expected_title="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
     ),
     SuggestDescriptionCase(
+        cve_id="CVE-2025-12816",
+        expected_title="node-forge: Interpretation conflict vulnerability allows bypassing cryptographic verifications",
+        expected_description="A flaw was found in node-forge. This vulnerability allows unauthenticated attackers to bypass downstream cryptographic verifications and security decisions via crafting ASN.1 (Abstract Syntax Notation One) structures to desynchronize schema validations, yielding a semantic divergence.",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2025-13204",
         expected_description="A prototype pollution flaw was found in expr-eval. An attacker with access to express eval interface can use JavaScript prototype-based inheritance model to achieve arbitrary code execution.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-13327",
+        expected_description="A flaw was found in uv. This vulnerability allows an attacker to execute malicious code during package resolution or installation via specially crafted ZIP (Zipped Information Package) archives that exploit parsing differentials, requiring user interaction to install an attacker-controlled package.",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-13609",

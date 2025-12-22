@@ -179,6 +179,14 @@ cases = [
         metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     SuggestStatementCase(
+        cve_id="CVE-2025-12816",
+        expected_statement="This vulnerability is rated Important for Red Hat products due to an interpretation conflict in the node-forge library. An unauthenticated attacker could exploit this flaw by crafting malicious ASN.1 structures, leading to a bypass of cryptographic verifications and security decisions in affected applications. This impacts various Red Hat products that utilize node-forge for cryptographic operations.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-13327",
+        expected_statement="This vulnerability is rated Moderate for Red Hat products. It allows arbitrary code execution through specially crafted ZIP archives when using the `uv` tool to install attacker-controlled Python packages. Exploitation requires user interaction to initiate the package installation. This affects components within Red Hat AI Inference Server and Red Hat OpenShift AI.",
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2025-22097",
     ),
     SuggestStatementCase(
@@ -205,6 +213,23 @@ cases = [
         """,
     ),
     SuggestStatementCase(
+        cve_id="CVE-2025-38512",
+        expected_statement="This vulnerability in the Linux kernel's Wi-Fi component allows an adjacent attacker to perform A-MSDU spoofing attacks in mesh networks, leading to a high integrity impact. Confidentiality could potentially be impacted, if there is exposure of network\u2011internal traffic or services via the spoofed Ethernet frames. Similarly, availability may be impacted if the spoofed packets cause problems like traffic disruption or routing instabilities.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-43529",
+        expected_statement="This vulnerability is rated IMPORTANT for Red Hat products. A use-after-free flaw in webkitgtk, when processing maliciously crafted web content, can lead to remote code execution. Successful exploitation requires user interaction, where a victim must visit a malicious website.",
+        expected_mitigation="To mitigate this issue, avoid processing untrusted web content. Additionally, disabling the JavaScript JIT compiler can reduce the attack surface. For applications using WebKitGTK, set the environment variable `JavaScriptCoreUseJIT=0` before launching the application. This may impact performance for JavaScript-heavy web content.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-59088",
+        expected_statement="I didn't have an expected value, but I expected that the suggested statement would include supporting information that I might have missed. But the result seems to just rephrase the flaw description and was off on the impact. The flaw impact was rated Important, while the suggestion rated it a critical.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-64503",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux because a specially crafted PDF file, when processed by the `cups-filters` `pdftoraster` tool, can lead to an out-of-bounds write, potentially causing a denial of service. This affects Red Hat Enterprise Linux 7, 8, 9, and 10.",
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2025-64524",
         expected_statement="Red Hat rates this Moderate. While the `rastertopclx` filter runs under the `lp` user, limiting direct root compromise, the vulnerability can be exploited remotely via the CUPS web interface by an attacker with low privileges to install a printer with a crafted PPD file. This could lead to a denial of service or potentially arbitrary code execution, impacting system availability.",
         expected_mitigation='To reduce exposure, restrict network access to the CUPS service (port 631) to trusted hosts only using firewall rules. For example, using `firewall-cmd`: `firewall-cmd --permanent --add-rich-rule=\'rule family="ipv4" source address="<TRUSTED_IP_ADDRESS>" port port="631" protocol="tcp" accept\'` `firewall-cmd --reload` Alternatively, if printing services are not required, disable the CUPS service: `systemctl stop cups` `systemctl disable cups` Note that disabling CUPS will prevent all printing functionality on the system. If firewall rules are applied, ensure they are persistent across reboots.',
@@ -219,6 +244,10 @@ cases = [
         cve_id="CVE-2025-66623",
         expected_statement="This vulnerability is rated Important for Red Hat AMQ Streams. Affected Strimzi versions 0.47.0 through 0.49.0 create an incorrect Kubernetes Role, granting Apache Kafka Connect and Apache Kafka MirrorMaker 2 operands unauthorized GET access to all Kubernetes Secrets within the operator's namespace. This could lead to sensitive information disclosure.",
         expected_mitigation="Mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-68469",
+        expected_mitigation="To mitigate this issue, avoid processing untrusted TIFF files with ImageMagick. In environments where ImageMagick processes files automatically, ensure that all input files originate from trusted sources or implement strict input validation to prevent the processing of malicious TIFF files.",
     ),
 ]
 

@@ -263,6 +263,16 @@ cases = [
         expected_impact="MODERATE",
         expected_cvss3_score=7.5,
     ),
+    # FIXME: scope is wrong (Aegis suggests S:C while S:U is expected)
+    SuggestImpactCase(
+        cve_id="CVE-2023-53222",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:H",
+        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2023-53491",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
     SuggestImpactCase(
         cve_id="CVE-2023-53510",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
@@ -277,6 +287,10 @@ cases = [
         expected_impact="MODERATE",
         expected_cvss3_score=5.5,
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2023-53843",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2024-53232",
@@ -299,6 +313,10 @@ cases = [
         expected_cvss3_score=9.8,
     ),
     SuggestImpactCase(
+        cve_id="CVE-2025-12816",
+        expected_impact="IMPORTANT",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2025-13609",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:H/A:L",
     ),
@@ -315,6 +333,14 @@ cases = [
             "known_to_fail_evaluators": ["CVSSVectorEvaluator", "CVSSScoreEvaluator"]
         },
     ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-38512",
+        expected_cvss3_vector="CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:L",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39677",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:H",
+    ),
     # FIXME: According to feedback by a security analyst, Aegis currently suggests a wrong vector
     SuggestImpactCase(
         cve_id="CVE-2025-39922",
@@ -326,6 +352,16 @@ cases = [
         cve_id="CVE-2025-39939",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:H",
         metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+    ),
+    # FIXME: scope is wrong (Aegis suggests S:C while S:U is expected)
+    SuggestImpactCase(
+        cve_id="CVE-2025-40320",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:L/I:H/A:H",
+        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-53000",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-59840",
