@@ -70,6 +70,9 @@ def process_cwe_feedback(rows):
         # create a well formatted list out of the full-text field
         cwe_list = [item.strip() for item in re.split(r" *(?:[,/|]|or) *", exp_cwe)]
 
+        # replace NNN or NNNN by CWE-NNN or CWE-NNNN, respectively
+        cwe_list = [re.sub(r"^([0-9]{3,4})$", r"CWE-\1", cwe) for cwe in cwe_list]
+
         # the rows are sorted by CVE -> check for subsequent rows with identical CVE
         if data and data[-1][0] == cve:
             # merge the CWE list with the last item
