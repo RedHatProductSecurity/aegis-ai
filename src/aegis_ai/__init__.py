@@ -72,6 +72,14 @@ def get_env_flag(key: str, default: bool) -> bool:
     return value.strip().lower() in truthy
 
 
+def get_env_float(key: str, default: float) -> float:
+    """Return a float if the value of env var "key" can be interpreted as float.
+    Return "default" if env var "key" is not defined.
+    Otherwise throw a ValueError exception."""
+    value = os.getenv(key)
+    return default if value is None else float(value)
+
+
 def get_env_int(key: str, default: int) -> int:
     """Return an int if the value of env var "key" can be interpreted as int.
     Return "default" if env var "key" is not defined.
@@ -124,8 +132,8 @@ class AppSettings(BaseSettings):
     default_llm_host: str = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
     default_llm_model_name: str = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
     default_llm_settings: Any = Field(default_factory=dict)
-    default_llm_temperature: float = float(os.getenv("AEGIS_LLM_TEMPERATURE", 0.055))
-    default_llm_top_p: float = float(os.getenv("AEGIS_LLM_TOP_P", 0.8))
+    default_llm_temperature: float = get_env_float("AEGIS_LLM_TEMPERATURE", 0.055)
+    default_llm_top_p: float = get_env_float("AEGIS_LLM_TOP_P", 0.8)
     default_llm_max_tokens: int = get_env_int("AEGIS_LLM_MAX_TOKENS", 0)
 
     # Aegis safety subagent
