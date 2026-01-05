@@ -113,73 +113,54 @@ pypi_stdio_server = MCPServerStdio(
 )
 
 # Enable public function tools
-public_tools = [wikipedia_tool]
-
-if get_settings().use_linux_cve_tool:
-    public_tools.append(kernel_cve_tool)
-if get_settings().use_cisa_kev_tool:
-    public_tools.append(cisa_kev_tool)
-if get_settings().use_tavily_tool:
-    tavily_tool = tavily_search_tool(get_settings().tavily_api_key)
-    public_tools.append(tavily_tool)
-
-public_toolset = FunctionToolset(tools=public_tools)
-
-# Enable toolsets
-if get_settings().use_github_mcp_tool:
-    public_toolset = CombinedToolset(
-        [
-            github_stdio_server,
-            public_toolset,
-        ]
-    )
-
-if get_settings().use_wikipedia_mcp_tool:
-    public_toolset = CombinedToolset(
-        [
-            wikipedia_stdio_server,
-            public_toolset,
-        ]
-    )
-
-if get_settings().use_pypi_mcp_tool:
-    public_toolset = CombinedToolset(
-        [
-            pypi_stdio_server,
-            public_toolset,
-        ]
-    )
+public_toolset_list = []
 
 if get_settings().use_cwe_tool:
-    public_toolset = CombinedToolset(
-        [
-            cwe_toolset,
-            public_toolset,
-        ]
-    )
+    public_toolset_list.append(cwe_toolset)
+
+if get_settings().use_linux_cve_tool:
+    public_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
+
+if get_settings().use_cisa_kev_tool:
+    public_toolset_list.append(FunctionToolset(tools=[cisa_kev_tool]))
+
+if get_settings().use_tavily_tool:
+    tavily_tool = tavily_search_tool(get_settings().tavily_api_key)
+    public_toolset_list.append(FunctionToolset(tools=[tavily_tool]))
+
+if get_settings().use_github_mcp_tool:
+    public_toolset_list.append(github_stdio_server)
+
+# FIXME: there is no way to disable wikipedia_tool
+public_toolset_list.append(FunctionToolset(tools=[wikipedia_tool]))
+
+if get_settings().use_wikipedia_mcp_tool:
+    public_toolset_list.append(wikipedia_stdio_server)
+
+if get_settings().use_pypi_mcp_tool:
+    public_toolset_list.append(pypi_stdio_server)
+
+public_toolset = CombinedToolset(public_toolset_list)
+
 
 # Toolset containing rh specific tooling for CVE
-redhat_cve_toolset = CombinedToolset(
-    [
-        osidb_toolset,
-    ]
-)
+redhat_cve_toolset_list = [
+    osidb_toolset,
+]
+
+redhat_cve_toolset = CombinedToolset(redhat_cve_toolset_list)
 
 
 # Toolset containing generic tooling for CVE
-public_cve_tools = [osv_dev_cve_tool]
-public_cve_toolset = CombinedToolset(
-    [
-        FunctionToolset(tools=public_cve_tools),
-    ]
-)
+public_cve_toolset_list = [
+    FunctionToolset(tools=[osv_dev_cve_tool]),
+]
+
 if get_settings().use_nvd_dev_tool:
-    public_cve_toolset = CombinedToolset(
-        [
-            public_cve_toolset,
-            nvd_stdio_server,
-        ]
-    )
+    public_cve_toolset_list.append(nvd_stdio_server)
+
+public_cve_toolset = CombinedToolset(public_cve_toolset_list)
+
 
 # chain logging wrappers
 public_toolset = LoggingToolset(public_toolset)
