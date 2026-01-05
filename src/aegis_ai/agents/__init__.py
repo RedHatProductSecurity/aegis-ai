@@ -2,12 +2,11 @@
 aegis agents
 """
 
-import os
 from typing import Any
 
 from pydantic_ai import Agent
 
-from aegis_ai import get_settings
+from aegis_ai import get_env_int, get_settings
 from aegis_ai.features.data_models import AegisAnswer
 from aegis_ai.toolsets import (
     public_toolset,
@@ -15,7 +14,7 @@ from aegis_ai.toolsets import (
     redhat_cve_toolset,
 )
 
-agent_default_max_retries = int(os.getenv("AEGIS_AGENT_MAX_RETRIES", "5"))
+agent_default_max_retries = get_env_int("AEGIS_AGENT_MAX_RETRIES", 5)
 
 
 def create_aegis_agent(**kwargs: Any) -> Agent:

@@ -1,9 +1,9 @@
 import asyncio
 import logging
-import os
 
 from typing import Awaitable
 
+from aegis_ai import get_env_int
 from google.genai.errors import ServerError
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
@@ -12,14 +12,14 @@ from pydantic_ai.run import AgentRunResult
 logger = logging.getLogger(__name__)
 
 # Timeout in seconds for a single LLM prompt
-llm_prompt_timeout = int(os.getenv("AEGIS_LLM_TIMEOUT_SECS", "300"))
+llm_prompt_timeout = get_env_int("AEGIS_LLM_TIMEOUT_SECS", 300)
 
 # Cap concurrent LLM calls across the process
-llm_max_jobs = int(os.getenv("AEGIS_LLM_MAX_JOBS", "4"))
+llm_max_jobs = get_env_int("AEGIS_LLM_MAX_JOBS", 4)
 llm_sem = asyncio.Semaphore(llm_max_jobs)
 
 # The threshold for LLM input tokens to log a warning
-llm_input_tokens_warn_thr = int(os.getenv("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 65536))
+llm_input_tokens_warn_thr = get_env_int("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 65536)
 
 
 # initial delay in seconds after getting HTTP 503 status code from LLM (doubled on each attempt)

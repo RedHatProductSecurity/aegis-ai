@@ -72,6 +72,14 @@ def get_env_flag(key: str, default: bool) -> bool:
     return value.strip().lower() in truthy
 
 
+def get_env_int(key: str, default: int) -> int:
+    """Return an int if the value of env var "key" can be interpreted as int.
+    Return "default" if env var "key" is not defined.
+    Otherwise throw a ValueError exception."""
+    value = os.getenv(key)
+    return default if value is None else int(value)
+
+
 # Ensure console logs include project-relative path and line number
 class RelativePathFilter(logging.Filter):
     def __init__(self) -> None:
@@ -118,7 +126,7 @@ class AppSettings(BaseSettings):
     default_llm_settings: Any = Field(default_factory=dict)
     default_llm_temperature: float = float(os.getenv("AEGIS_LLM_TEMPERATURE", 0.055))
     default_llm_top_p: float = float(os.getenv("AEGIS_LLM_TOP_P", 0.8))
-    default_llm_max_tokens: int = int(os.getenv("AEGIS_LLM_MAX_TOKENS", 0))
+    default_llm_max_tokens: int = get_env_int("AEGIS_LLM_MAX_TOKENS", 0)
 
     # Aegis safety subagent
     safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
