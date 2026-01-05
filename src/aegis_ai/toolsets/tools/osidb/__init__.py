@@ -1,5 +1,4 @@
 import logging
-import os
 
 from typing import List, Any, Optional
 
@@ -11,6 +10,7 @@ from pydantic_ai import (
 )
 from pydantic_ai.toolsets import FunctionToolset
 
+from aegis_ai import get_env_flag
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import BaseToolOutput, BaseToolInput
@@ -18,9 +18,7 @@ from aegis_ai.toolsets.tools.osidb.osidb_client import OSIDBClient
 
 logger = logging.getLogger(__name__)
 
-OSIDB_RETRIEVE_EMBARGOED = os.getenv(
-    "AEGIS_OSIDB_RETRIEVE_EMBARGOED", "false"
-).lower() in ("true", "1", "t", "y", "yes")
+OSIDB_RETRIEVE_EMBARGOED = get_env_flag("AEGIS_OSIDB_RETRIEVE_EMBARGOED", False)
 
 
 client = OSIDBClient()

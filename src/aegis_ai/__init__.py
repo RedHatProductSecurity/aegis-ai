@@ -38,14 +38,6 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-truthy = (
-    "true",
-    "1",
-    "t",
-    "y",
-    "yes",
-)
-
 try:
     # populated by hatch-vcs at build time
     from ._version import __version__  # type: ignore
@@ -59,6 +51,25 @@ except Exception:  # pragma: no cover
 APP_NAME = "aegis_ai"
 config_dir = Path(user_config_dir(appname=APP_NAME))
 config_dir.mkdir(parents=True, exist_ok=True)
+
+
+def get_env_flag(key: str, default: bool) -> bool:
+    """Return True if the value of env var "key" is interpreted as True.
+    Return "default" if env var "key" is not defined.
+    Otherwise return False."""
+    value = os.getenv(key)
+    if value is None:
+        return default
+
+    truthy = (
+        "true",
+        "1",
+        "t",
+        "y",
+        "yes",
+    )
+
+    return value.strip().lower() in truthy
 
 
 # Ensure console logs include project-relative path and line number
@@ -99,7 +110,7 @@ class AppSettings(BaseSettings):
     app_name: str = APP_NAME
     app_version: str = __version__
     config_dir: str = str(config_dir)
-    otel_enabled: bool = os.getenv("AEGIS_OTEL_ENABLED", "false").lower() in truthy
+    otel_enabled: bool = get_env_flag("AEGIS_OTEL_ENABLED", False)
 
     # Aegis top level agent
     default_llm_host: str = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
@@ -110,32 +121,22 @@ class AppSettings(BaseSettings):
     default_llm_max_tokens: int = int(os.getenv("AEGIS_LLM_MAX_TOKENS", 0))
 
     # Aegis safety subagent
-    safety_enabled: bool = os.getenv("AEGIS_SAFETY_ENABLED", "false").lower() in truthy
+    safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
     safety_llm_host: str = os.getenv("AEGIS_SAFETY_LLM_HOST", "localhost:11434")
     safety_llm_model: str = os.getenv("AEGIS_SAFETY_LLM_MODEL", "granite3-guardian-2b")
     safety_llm_openapi_key: str = os.getenv("AEGIS_SAFETY_OPENAPI_KEY", "")
 
     # tool flags
-    use_tavily_tool: bool = (
-        os.getenv("AEGIS_USE_TAVILY_TOOL_CONTEXT", "false") in truthy
+    use_tavily_tool: bool = get_env_flag("AEGIS_USE_TAVILY_TOOL_CONTEXT", False)
+    use_cwe_tool: bool = get_env_flag("AEGIS_USE_CWE_TOOL_CONTEXT", True)
+    use_linux_cve_tool: bool = get_env_flag("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", False)
+    use_github_mcp_tool: bool = get_env_flag("AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT", False)
+    use_wikipedia_mcp_tool: bool = get_env_flag(
+        "AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", False
     )
-    use_cwe_tool: bool = os.getenv("AEGIS_USE_CWE_TOOL_CONTEXT", "true") in truthy
-    use_linux_cve_tool: bool = (
-        os.getenv("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", "false") in truthy
-    )
-    use_github_mcp_tool: bool = (
-        os.getenv("AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT", "false") in truthy
-    )
-    use_wikipedia_mcp_tool: bool = (
-        os.getenv("AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", "false") in truthy
-    )
-    use_pypi_mcp_tool: bool = os.getenv("AEGIS_USE_PYPI_MCP_CONTEXT", "false") in truthy
-    use_nvd_dev_tool: bool = (
-        os.getenv("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", "false") in truthy
-    )
-    use_cisa_kev_tool: bool = (
-        os.getenv("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", "false") in truthy
-    )
+    use_pypi_mcp_tool: bool = get_env_flag("AEGIS_USE_PYPI_MCP_CONTEXT", False)
+    use_nvd_dev_tool: bool = get_env_flag("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", False)
+    use_cisa_kev_tool: bool = get_env_flag("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", False)
 
     # tavily key
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "   ")
