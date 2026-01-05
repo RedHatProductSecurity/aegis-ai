@@ -49,5 +49,5 @@ rh_feature_agent = create_aegis_agent(
 public_feature_agent = create_aegis_agent(
     name="PublicFeatureAgent",
     retries=agent_default_max_retries,
-    toolsets=[public_toolset, public_cve_toolset],
+    toolsets=[public_cve_toolset, public_toolset],
 )
