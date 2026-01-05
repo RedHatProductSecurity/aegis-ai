@@ -112,24 +112,18 @@ pypi_stdio_server = MCPServerStdio(
     tool_prefix="pypi-mcp",
 )
 
-# Toolset for 'baked in' pydantic-ai tools
-pydantic_ai_tools = []
-if get_settings().use_tavily_tool:
-    pydantic_ai_tools.append(tavily_search_tool(get_settings().tavily_api_key))
-pydantic_ai_toolset = FunctionToolset(tools=pydantic_ai_tools)
-
 # Enable public function tools
 public_tools = [wikipedia_tool]
+
 if get_settings().use_linux_cve_tool:
     public_tools.append(kernel_cve_tool)
 if get_settings().use_cisa_kev_tool:
     public_tools.append(cisa_kev_tool)
+if get_settings().use_tavily_tool:
+    tavily_tool = tavily_search_tool(get_settings().tavily_api_key)
+    public_tools.append(tavily_tool)
 
-# TODO: in the future we might enable adding wikipedia_mcp_tool - dependent on wikipedia account
-
-public_toolset = CombinedToolset(
-    [FunctionToolset(tools=public_tools), pydantic_ai_toolset]
-)
+public_toolset = FunctionToolset(tools=public_tools)
 
 # Enable toolsets
 if get_settings().use_github_mcp_tool:
