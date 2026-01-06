@@ -199,6 +199,7 @@ class SuggestDescriptionText(Feature):
                 - Strictly exclude versions: never include any version numbers or ranges (e.g., "5.0.0", "v2", "2.x", "9.x and earlier") in the title.
                 - Keep it focused and professional.
                 - 'description' and 'title' need to be consistent with each other.
+                - Never output meta-diagnostic text such as "information is inconsistent", "insufficient data", "cannot determine", or similar. Provide the best-supported description instead with calibrated confidence.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=remove_keys(
