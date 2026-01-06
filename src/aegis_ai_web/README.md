@@ -12,7 +12,7 @@ uv run uvicorn src.aegis_ai_web.src.main:app --port 8000
 ```
 ## REST-API
 
-Open api definition is available dynamically:
+OpenAPI definition is available dynamically:
 http://localhost:9000/openapi.json
 http://localhost:9000/openapi.yml
 
