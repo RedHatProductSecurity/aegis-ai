@@ -129,7 +129,7 @@ async def get_openapi_yaml() -> Response:
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse(
-        "index.html", {"request": request, "version": get_settings().app_version}
+        request, "index.html", {"version": get_settings().app_version}
     )
 
 
@@ -138,7 +138,7 @@ if ENABLE_CONSOLE:
     @app.get("/console", response_class=HTMLResponse)
     async def console(request: Request):
         return templates.TemplateResponse(
-            "console.html", {"request": request, "version": get_settings().app_version}
+            request, "console.html", {"version": get_settings().app_version}
         )
 
     @app.post("/console")
@@ -159,9 +159,9 @@ if ENABLE_CONSOLE:
             )
             response = llm_response.output
             return templates.TemplateResponse(
+                request,
                 "console.html",
                 {
-                    "request": request,
                     "user_instruction": user_instruction,
                     "goals": goals,
                     "rules": rules,
