@@ -59,6 +59,14 @@ KEYWORD_BOOSTS: List[Tuple[re.Pattern[str], str, float]] = [
     (re.compile(r"\bimproper input validation\b"), "CWE-20", 0.15),
     (re.compile(r"\bdouble free\b"), "CWE-415", 0.25),
     (re.compile(r"\brace (condition)?\b"), "CWE-366", 0.2),
+    # CWE-825: Expired/Dangling Pointer Dereference
+    (re.compile(r"\b(dangling|stale|expired) pointer\b"), "CWE-825", 0.25),
+    # CWE-459: Incomplete Cleanup (temp files, leftover artifacts)
+    (re.compile(r"\b(incomplete|missing) cleanup\b|\bnot (deleted|removed)\b|\btemporary file\b|\bleft in (/tmp|tmp|temp)\b"), "CWE-459", 0.25),
+    # CWE-772: Missing Release of Resource after Effective Lifetime (resource leak)
+    (re.compile(r"\b(resource|handle|file|socket|descriptor)\b.*\b(leak|not (freed|released|closed)|missing (free|release|close))\b"), "CWE-772", 0.25),
+    # CWE-354: Improper Validation of Integrity Check Value (signature/MAC/checksum not verified)
+    (re.compile(r"\b(signature|sig|mac|hmac|checksum|integrity (check|value))\b.*\b(not|missing|skipped|no)\b.*\b(verify|validation|check)\b"), "CWE-354", 0.3),
 ]
 # fmt: on
 

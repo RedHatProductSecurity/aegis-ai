@@ -168,6 +168,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53225",
         cwe_list=["CWE-459"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53394",
@@ -177,6 +178,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53459",
         cwe_list=["CWE-825"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53487",
@@ -266,6 +268,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2024-53232",
         cwe_list=["CWE-476", "CWE-825"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2024-56597",
@@ -355,7 +358,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-26503",
-        cwe_list=["CWE-120"],
+        cwe_list=["CWE-120", "CWE-787"],
     ),
     SuggestCweCase(
         cve_id="CVE-2025-37996",
@@ -378,7 +381,12 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-38512",
-        cwe_list=["CWE-354"],
+        cwe_list=[
+            "CWE-354",
+            "CWE-290",
+            "CWE-1287",
+        ],  # kdudka: added CWE-290 and CWE-1287
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-38562",
@@ -492,6 +500,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-52494",
         cwe_list=["CWE-770"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-54770",

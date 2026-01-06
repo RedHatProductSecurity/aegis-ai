@@ -147,6 +147,7 @@ class AppSettings(BaseSettings):
     use_cwe_tool: bool = get_env_flag("AEGIS_USE_CWE_TOOL_CONTEXT", True)
     use_linux_cve_tool: bool = get_env_flag("AEGIS_USE_LINUX_CVE_TOOL_CONTEXT", False)
     use_github_mcp_tool: bool = get_env_flag("AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT", False)
+    use_wikipedia_tool: bool = get_env_flag("AEGIS_USE_WIKIPEDIA_TOOL_CONTEXT", False)
     use_wikipedia_mcp_tool: bool = get_env_flag(
         "AEGIS_USE_WIKIPEDIA_MCP_CONTEXT", False
     )

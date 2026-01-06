@@ -110,10 +110,10 @@ class SuggestCWE(Feature):
             """,
             rules="""
                 - When CVE component is kernel always use kernel_cve tool to retrieve additional context.
-                - Retrieve and summarise additional context from vulnerability reference urls.
-                    - Use github mcp tool to resolve vulnerability reference urls.
-                    - Use tavily to resolve vulnerability reference urls.
-                    - Use google search to resolve vulnerability reference urls.
+                - Retrieve and summarise additional context strictly from vulnerability reference URLs and CWE tool outputs.
+                    - Prefer mitre_cwe tools (retrieve_allowed_cwe_ids, search_cwes, retrieve_cwes) for CWE selection and definitions.
+                    - Use github mcp tool to resolve vulnerability reference URLs if present.
+                    - Avoid using general-purpose web search or encyclopedic tools for CWE selection unless references are insufficient.
                 - Identify set of candidate CWEs - always use the mitre cwe tool retrieve_allowed_cwe_ids to filter candidate CWE list.
                     - Analyze vulnerability, identify CWE that matches root cause of weakness, being careful about memory management and buffer overflows.
                     - Perform search using mitre cwe tool cwe_searches to identify candidate CWEs (perform cwe_searches with 2-3 different queries).

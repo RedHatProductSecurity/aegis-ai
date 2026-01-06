@@ -28,8 +28,8 @@
 | `AEGIS_WEB_SPN`            | Service Principal Name for Kerberos auth  |                                   |
 | `KRB5_KTNAME`              | Path to the keytab file for Kerberos auth | `/etc/krb5.keytab`                |
 | `AEGIS_CORS_TARGET_REGEX`  | CORS origin URLs specified by a regex     | `http(s)?://localhost(:5173)?`    |
-| `AEGIS_WEB_FEEDBACK_LOG`    | Feedback log file (CSV format)            | `~/.config/aegis_ai/feedback.csv` |
-| `AEGIS_WEB_ENABLE_CONSOLE`  | Enable web console                        | `false`                            |
+| `AEGIS_WEB_FEEDBACK_LOG`   | Feedback log file (CSV format)            | `~/.config/aegis_ai/feedback.csv` |
+| `AEGIS_WEB_ENABLE_CONSOLE` | Enable web console                        | `false`                           |
 
 
 # Tool settings
@@ -40,12 +40,13 @@
 | `AEGIS_USE_TAVILY_TOOL_CONTEXT`        | Use Tavily search api tool            | `false`                  |
 | `TAVILY_API_KEY`                       | Use Tavily search api tool            |                          |
 | `NVD_API_KEY`                          | Use NVD tool (for public)             |                          |
-| `AEGIS_USE_CWE_TOOL_CONTEXT`           | Use mitre CWE tool                    | `true`                   |
-| `AEGIS_CWE_TOOL_ALLOWED_CWE_IDS`       | Define mitre CWE tool allowed cwe ids | ``                   |
+| `AEGIS_USE_CWE_TOOL_CONTEXT`           | Use MITRE CWE tool                    | `true`                   |
+| `AEGIS_CWE_TOOL_ALLOWED_CWE_IDS`       | Allowed CWE IDs for MITRE CWE tool    |                          |
 | `AEGIS_USE_LINUX_CVE_TOOL_CONTEXT`     | Use linux kernel tool                 | `false`                  |
 | `AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT`    | Use github mcp tool                   | `true`                   |
 | `GITHUB_PERSONAL_ACCESS_TOKEN`         | Use linux kernel tool                 |                          |
-| `AEGIS_USE_WIKIPEDIA_MCP_CONTEXT`      | Use wikipedia mcp tool                | `false`                  |
+| `AEGIS_USE_WIKIPEDIA_TOOL_CONTEXT`     | Use Wikipedia search tool             | `false`                  |
+| `AEGIS_USE_WIKIPEDIA_MCP_CONTEXT`      | Use Wikipedia mcp tool                | `false`                  |
 | `AEGIS_USE_PYPI_MCP_CONTEXT`           | Use pypi mcp tool                     | `false`                  |
 | `AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT` | Use nvd mitre tool                    | `false`                  |
 | `AEGIS_USE_CISA_KEV_TOOL_CONTEXT`      | Use cisa kev tool                     | `false`                  |

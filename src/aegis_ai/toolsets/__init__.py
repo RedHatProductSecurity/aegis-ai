@@ -131,8 +131,8 @@ if get_settings().use_tavily_tool:
 if get_settings().use_github_mcp_tool:
     public_toolset_list.append(github_stdio_server)
 
-# FIXME: there is no way to disable wikipedia_tool
-public_toolset_list.append(FunctionToolset(tools=[wikipedia_tool]))
+if get_settings().use_wikipedia_tool:
+    public_toolset_list.append(FunctionToolset(tools=[wikipedia_tool]))
 
 if get_settings().use_wikipedia_mcp_tool:
     public_toolset_list.append(wikipedia_stdio_server)
