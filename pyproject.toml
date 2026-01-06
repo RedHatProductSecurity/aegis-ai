@@ -76,6 +76,8 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 filterwarnings = [
     # Third-party pydantic deprecation from google.genai; safe to ignore in our tests
     "ignore:Using `@model_validator` with mode='after' on a classmethod is deprecated\\..*",
+    # Third-party DeprecationWarning from google.genai.types on _UnionGenericAlias (Python 3.14+)
+    "ignore:.*'_UnionGenericAlias' is deprecated.*:DeprecationWarning:google\\.genai\\.types",
     # Deprecations originating from importlib bootstrap around SWIG types
     "ignore:.*SwigPy(Packed|Object).*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
     "ignore:.*swigvarlink.*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
