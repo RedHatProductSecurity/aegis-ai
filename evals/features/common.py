@@ -29,9 +29,14 @@ from aegis_ai.features.data_models import AegisFeatureModel
 # minimal acceptable length of an explanation (where applicable)
 EXPLANATION_MIN_LEN = 80
 
-# penalize models providing correct results but low confidence (the difference
-# between score and confidence is divided by this number and subtracted from
-# the final score)
+# penalize incorrect suggestions with high confidence rate (the difference
+# between the base score and confidence rate is divided by this number and
+# subtracted from the base score)
+HIGH_CONFIDENCE_PENALTY_DIVISOR = 4.0
+
+# penalize correct suggestions with low confidence rate (the difference
+# between the base score and confidence rate is divided by this number and
+# subtracted from the base score)
 LOW_CONFIDENCE_PENALTY_DIVISOR = 4.0
 
 # minimal acceptable score returned by an evaluator
@@ -70,10 +75,10 @@ def reflect_confidence(ctx, score):
     """reflect `confidence` ratio in the score"""
     conf_diff = ctx.output.confidence - score
     if 0.0 < conf_diff:
-        # penalize confident models providing (partially) wrong results
-        return score - conf_diff
+        # penalize incorrect suggestions with high confidence rate
+        return score - conf_diff / HIGH_CONFIDENCE_PENALTY_DIVISOR
     else:
-        # negligibly penalize models providing correct results but low confidence
+        # penalize correct suggestions with low confidence rate
         return score + conf_diff / LOW_CONFIDENCE_PENALTY_DIVISOR
 
 
