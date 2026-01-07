@@ -352,18 +352,12 @@ class SecBERTClassifier:
         """Train the SecBERT classification model"""
         print("Starting SecBERT fine-tuning...")
 
-        # Force CPU mode for maximum compatibility with AdamW
-        print("Using CPU mode for AdamW compatibility...")
-        self.device = torch.device("cpu")
-        self.model = self.model.to(self.device)
-
         # CPU optimized settings
         train_batch_size = 4  # Smaller batch for stability
         eval_batch_size = 8
         dataloader_num_workers = 0  # Avoid multiprocessing issues
 
         print(f"Batch sizes - Train: {train_batch_size}, Eval: {eval_batch_size}")
-        print("Note: Using CPU mode avoids AdamW/MPS compatibility issues")
 
         # Create training arguments with stable optimizer settings
         training_args = TrainingArguments(
@@ -393,7 +387,7 @@ class SecBERTClassifier:
             optim="adamw_torch",  # Use PyTorch AdamW
             seed=42,  # Set seed for reproducibility
             data_seed=42,
-            use_cpu=True,  # Force CPU usage
+            use_cpu=False,
         )
 
         # Put model in training mode before creating trainer
