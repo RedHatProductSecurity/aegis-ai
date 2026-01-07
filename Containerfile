@@ -5,9 +5,9 @@ LABEL summary="AEGIS" \
 
 ARG PIP_INDEX_URL="https://pypi.org/simple"
 ENV PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=off \
+    PIP_NO_CACHE_DIR=true \
     PIP_INDEX_URL="${PIP_INDEX_URL}" \
-    UV_NO_CACHE=off \
+    UV_NO_CACHE=true \
     UV_NATIVE_TLS=true \
     UV_PROJECT_ENVIRONMENT="/opt/app-root/.venv" \
     REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
@@ -42,8 +42,10 @@ COPY --chown=aegis . /opt/app-root
 
 # install uv, install local dependencies and initialize version string
 RUN set -o pipefail \
+    && set -x \
     && pip3 install --no-cache-dir gssapi uv \
     && uv sync --no-cache --frozen \
+    && make install-ml-deps \
     && printf '\n[tool.hatch.version.raw-options]\nfallback_version = "%s"\n' \
         "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
     | tee -a pyproject.toml
