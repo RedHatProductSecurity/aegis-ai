@@ -54,7 +54,6 @@ upgrade-deps:
 
 install-ml-deps: upgrade-deps
 	uv pip install .[ml_deps]
-	uv run $(PYTHON) -c 'from src.aegis_ai_ml.src import util; util.install_nltk_deps()'
 
 build-dist:
 	uv run $(PYTHON) -m build

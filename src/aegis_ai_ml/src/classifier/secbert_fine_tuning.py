@@ -24,8 +24,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm.auto import tqdm
 
-from aegis_ai_ml.src.util import normalize_text
-
 
 CVSS3_BASIC_METRICS = ["AV", "AC", "PR", "UI", "S", "C", "I", "A"]
 
@@ -90,7 +88,7 @@ def compute_pred_impact(row, classifier_by_metric):
     text_input = row["text_input"]
     for cvss3_metric in CVSS3_BASIC_METRICS:
         classifier = classifier_by_metric[cvss3_metric]
-        value, _ = classifier.predict_severity(normalize_text(text_input))
+        value, _ = classifier.predict_severity(text_input)
         cvss3_str += f"/{cvss3_metric}:{value[0]}"
 
     cvss3 = cvss.CVSS3(cvss3_str)
@@ -129,7 +127,6 @@ def load_and_preprocess_data_from_local(data_directory: str):
     df = df.dropna(subset=["impact", "title", "cve_description"])
 
     df["text_input"] = df["title"].astype(str) + " " + df["cve_description"].astype(str)
-    df["text_input"] = df["text_input"].apply(normalize_text)
 
     # Remove empty text inputs
     df = df[df["text_input"].str.len() > 0]
@@ -624,7 +621,7 @@ def main():
         cvss3_str = "CVSS:3.1"
         for cvss3_metric in CVSS3_BASIC_METRICS:
             classifier = classifier_by_metric[cvss3_metric]
-            value, confidence = classifier.predict_severity(normalize_text(text))
+            value, confidence = classifier.predict_severity(text)
             print(
                 f"   Predicted {cvss3_metric}: {value} (confidence: {confidence:.3f})"
             )
