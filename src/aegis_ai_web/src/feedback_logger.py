@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Dict, Protocol
 
 from aegis_ai import __version__, get_settings
-from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA
+from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA, PROGRAMMATIC_FEEDBACK_SCHEMA
 
 logger = logging.getLogger(__name__)
 
@@ -154,4 +154,11 @@ AegisLogger = FeedbackLogger(
     schema=FEEDBACK_SCHEMA,
     env_var="AEGIS_WEB_FEEDBACK_LOG",
     default_filename="feedback.csv",
+)
+
+# Pre-configured logger instance for programmatic feedback
+ProgrammaticFeedbackLogger = FeedbackLogger(
+    schema=PROGRAMMATIC_FEEDBACK_SCHEMA,
+    env_var="AEGIS_WEB_PROGRAMMATIC_FEEDBACK_LOG",
+    default_filename="programmatic_feedback.csv",
 )

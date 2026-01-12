@@ -33,9 +33,9 @@ from . import (
     web_feature_agent,
     ENABLE_CONSOLE,
 )
-from .data_models import Feedback, FeatureKPI
+from .data_models import Feedback, ProgrammaticFeedback, FeatureKPI
 from .endpoints.kpi import get_cve_kpi, SortOrder
-from .feedback_logger import AegisLogger
+from .feedback_logger import AegisLogger, ProgrammaticFeedbackLogger
 
 
 def log_exception_safely(e: Exception, context: str) -> None:
@@ -511,4 +511,125 @@ async def save_feedback(feedback: Feedback):
         raise HTTPException(
             status_code=500,
             detail="An internal error occurred while processing feedback.",
+        )
+
+
+def calculate_acceptance_score(suggested: str, submitted: str) -> float | None:
+    """
+    Calculate acceptance score based on suggested and submitted values.
+
+    Args:
+        suggested: The AI-suggested value
+        submitted: The value actually submitted by the user
+
+    Returns:
+        1.0 if values match exactly, None otherwise
+    """
+    if not suggested or not submitted:
+        return None
+    if suggested == submitted:
+        return 1.0
+    return None
+
+
+def is_duplicate_programmatic_feedback(
+    feature: str,
+    cve_id: str,
+    email: str,
+    suggested_value: str,
+    submitted_value: str,
+) -> bool:
+    """
+    Check if identical programmatic feedback already exists.
+
+    Args:
+        feature: Feature name
+        cve_id: CVE identifier
+        email: User email
+        suggested_value: AI-suggested value
+        submitted_value: User-submitted value
+
+    Returns:
+        True if duplicate exists, False otherwise
+    """
+    existing_entries = ProgrammaticFeedbackLogger.read()
+    for entry in existing_entries:
+        if (
+            entry.get("feature") == feature
+            and entry.get("cve_id") == cve_id
+            and entry.get("email") == email
+            and entry.get("suggested_value") == suggested_value
+            and entry.get("submitted_value") == submitted_value
+        ):
+            return True
+    return False
+
+
+@app.post("/api/v1/programmatic-feedback")
+async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
+    """
+    Receive programmatic feedback and log it to CSV file.
+
+    This endpoint captures AI suggestion acceptance data when users save flaws,
+    including the suggested value and submitted value. The acceptance score is
+    calculated server-side based on whether the values match.
+
+    Duplicate submissions (matching feature, cve_id, email, suggested_value,
+    and submitted_value) are rejected with a 409 Conflict response.
+    """
+    try:
+        feature = feedback.feature
+        cve_id = feedback.cve_id or ""
+        email = feedback.email or ""
+        suggested = feedback.suggested_value or ""
+        submitted = feedback.submitted_value or ""
+
+        # Check for duplicate submission
+        if is_duplicate_programmatic_feedback(
+            feature, cve_id, email, suggested, submitted
+        ):
+            logging.info(
+                f"Duplicate programmatic feedback rejected: feature={feature}, cve_id={cve_id}"
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Duplicate feedback entry already exists.",
+            )
+
+        acceptance_score = calculate_acceptance_score(suggested, submitted)
+        acceptance_score_str = (
+            str(acceptance_score) if acceptance_score is not None else ""
+        )
+
+        row_data = {
+            "feature": feature,
+            "cve_id": cve_id,
+            "email": email,
+            "suggested_value": suggested,
+            "submitted_value": submitted,
+            "acceptance_score": acceptance_score_str,
+        }
+
+        ProgrammaticFeedbackLogger.write(row_data)
+
+        logging.info(
+            f"Programmatic feedback logged: feature={feature}, cve_id={cve_id}"
+        )
+        return {"status": "Programmatic feedback received and logged successfully."}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 409 Conflict) without wrapping
+        raise
+    except Exception as e:
+        entry = f"{feedback.cve_id}/{feedback.feature}"
+        logging.warning(
+            f"Failed to process programmatic feedback for {entry}: {e.__class__.__name__}"
+        )
+        logging.error(
+            f"Error details for programmatic feedback submission {entry}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while processing programmatic feedback.",
         )

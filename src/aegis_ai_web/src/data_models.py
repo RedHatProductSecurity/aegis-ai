@@ -143,6 +143,78 @@ class FeedbackSchema:
 FEEDBACK_SCHEMA = FeedbackSchema()
 
 
+class ProgrammaticFeedback(BaseModel):
+    """
+    Data structure for programmatic feedback collected when user saves a flaw.
+
+    Captures the AI suggested value and the actual submitted value for comparison.
+    The acceptance_score is calculated server-side and should not be sent by clients.
+    """
+
+    feature: str = Field(..., max_length=100)
+    cve_id: Optional[CVEID] = Field("", max_length=50)
+    email: Optional[str] = Field("", max_length=100)
+    suggested_value: Optional[str] = Field("", max_length=5000)
+    submitted_value: Optional[str] = Field("", max_length=5000)
+
+
+@dataclass(frozen=True)
+class ProgrammaticFeedbackSchema:
+    """
+    Canonical schema for programmatic feedback log entries.
+
+    This schema defines the exact fields and their order for CSV logging.
+    """
+
+    FIELDS: List[str] = field(init=False)
+
+    def __post_init__(self):
+        object.__setattr__(
+            self,
+            "FIELDS",
+            [
+                "datetime",  # Timestamp with millisecond precision
+                "feature",  # Feature name (e.g., suggest-impact)
+                "cve_id",  # CVE identifier
+                "email",  # User email address
+                "suggested_value",  # Value suggested by AI
+                "submitted_value",  # Value actually submitted by user
+                "acceptance_score",  # Score 0-1 or empty
+                "version",  # AEGIS version at time of feedback
+            ],
+        )
+
+    @property
+    def field_names(self) -> List[str]:
+        """Get list of field names in order."""
+        return self.FIELDS
+
+    @property
+    def csv_headers(self) -> List[str]:
+        """Get CSV header names (same as field names)."""
+        return self.FIELDS
+
+    def validate_parsed_log(self, parsed_data: Optional[Dict[str, str]]) -> bool:
+        """
+        Validate that parsed log data contains exactly the schema fields with non-None values.
+
+        Args:
+            parsed_data: Dictionary from parse_log_line()
+
+        Returns:
+            True if valid, False otherwise
+        """
+        if parsed_data is None:
+            return False
+        return set(parsed_data.keys()) == set(self.FIELDS) and all(
+            v is not None for v in parsed_data.values()
+        )
+
+
+# Singleton instance
+PROGRAMMATIC_FEEDBACK_SCHEMA = ProgrammaticFeedbackSchema()
+
+
 def validate_log_parser_output(parsed_data: Optional[Dict[str, str]]) -> bool:
     """
     Convenience function to validate parsed log data.
