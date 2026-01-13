@@ -172,7 +172,7 @@ class AppSettings(BaseSettings):
             # create the object only once
             async def _log_request(request: httpx.Request) -> None:
                 msg = f'HTTP Request: {request.method} {request.url} "sending request"'
-                logger.info(msg)
+                logger.debug(msg)
 
             self.http_client = httpx.AsyncClient(
                 event_hooks={"request": [_log_request]}

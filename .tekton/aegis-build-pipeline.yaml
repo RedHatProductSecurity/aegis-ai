@@ -653,7 +653,7 @@ spec:
         secret:
           secretName: $(tasks.provision-eaas-space.results.secretRef)
       steps:
-      - name: deploy
+      - name: run
         image: registry.redhat.io/openshift4/ose-cli-rhel9:4.16@sha256:bb4a8bc89ebb9857c528839ff57fcc199b655fae40ef788dc473705a5e2bd1e6
         volumeMounts:
         - name: eaas-space
@@ -688,7 +688,7 @@ spec:
               env:
                 # make the tables in pydantic-eval reports readable
                 - name: COLUMNS
-                  value: "200"
+                  value: "236"
                 # enable colorized text when output is redirected
                 - name: PYTEST_ADDOPTS
                   value: "--color=yes"
