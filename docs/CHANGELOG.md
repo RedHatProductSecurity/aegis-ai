@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-01-14
+
+### Changed
+- enabled GPU acceleration in `SecBERT` fine-tuning (bringing approx. 300x speedup)
+- the `wikipedia` tool (introduced in Aegis 0.2.6) is no longer enabled by default
+- dropped the constraint on the highest Python version
+
+### Added
+- introduced `HIGH_CONFIDENCE_PENALTY_DIVISOR` parameter in evals to provide more useful score
+- the `SecBERT` classifier is now included in the container image for ML experiments
+- added evaluation cases based on the feedback from security analysts
+- updated/extended Aegis documentation and improved its structure
+
+
 ## [0.5.0] - 2025-12-18
 
 ### Changed
