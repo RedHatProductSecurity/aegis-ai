@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 try:
     # populated by hatch-vcs at build time
-    from ._version import __version__  # type: ignore
+    from ._version import __version__
 except Exception:  # pragma: no cover
     # fallback to Python packaging version
     from importlib.metadata import version as pkg_version

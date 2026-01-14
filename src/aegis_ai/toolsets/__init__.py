@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class LoggingToolset(WrapperToolset):
-    async def call_tool(self, name: str, tool_args: dict, ctx: RunContext, tool):  # type: ignore[override]
+    async def call_tool(self, name: str, tool_args: dict, ctx: RunContext, tool):
         # log tool call entry
         args = str(tool_args) if tool_args else ""
         prefix = f"[tool call] {name}({args})"
