@@ -14,7 +14,6 @@
     ],
     "explanation": "The vulnerability is caused by an integer overflow during gzip decompression, which leads to an incorrect calculation of buffer size, ultimately resulting in a buffer overflow.",
     "cwe": [
-        "CWE-190",
-        "CWE-131"
+        "CWE-190"
     ]
 }

@@ -16,6 +16,7 @@ from aegis_ai.features.cve.data_models import (
 from aegis_ai.features.cve.data_models import CVEFeatureInput
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.prompt import AegisPrompt
+from aegis_ai.toolsets.tools.cwe import cwe_manager
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,20 @@ class SuggestCWE(Feature):
             ),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, deps=deps, output_type=SuggestCWEModel)
+        result = await self.run_if_safe(prompt, deps=deps, output_type=SuggestCWEModel)
+        # Post-process: filter out any disallowed CWE IDs (guardrail in case LLM misses rules)
+        await cwe_manager.initialize()
+        allowed_cwe_ids = set(cwe_manager.get_allowed_cwe_ids())
+        suggested_cwes = result.output.cwe
+        filtered_out = [cwe for cwe in suggested_cwes if cwe not in allowed_cwe_ids]
+        if filtered_out:
+            logger.warning(
+                f"{self.__class__.__name__}({cve_id}): filtering out disallowed CWE IDs: {filtered_out}"
+            )
+            result.output.cwe = [
+                cwe for cwe in suggested_cwes if cwe in allowed_cwe_ids
+            ]
+        return result
 
 
 class IdentifyPII(Feature):
