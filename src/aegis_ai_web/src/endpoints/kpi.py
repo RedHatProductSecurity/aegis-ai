@@ -4,14 +4,17 @@ KPI endpoint module for CVE analysis feedback.
 
 import logging
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
 from enum import Enum
 
 from fastapi import HTTPException
 
 from aegis_ai_web.src.data_models import KPIEntry, FeatureKPI
-from aegis_ai_web.src.feedback_logger import AegisLogger
+from aegis_ai_web.src.feedback_logger import (
+    feedback_logger,
+    programmatic_feedback_logger,
+)
 
 
 class SortOrder(str, Enum):
@@ -21,114 +24,109 @@ class SortOrder(str, Enum):
     DESC = "desc"
 
 
-def _parse_datetime(entry: Dict[str, Any]) -> datetime:
-    """
-    Parse datetime string to datetime object for sorting.
-
-    Args:
-        entry: Log entry dictionary
-
-    Returns:
-        Parsed datetime object
-    """
-    dt_str = entry.get("datetime", "")
+def _parse_datetime_str(dt_str: str) -> datetime:
+    """Parse datetime string to datetime object for sorting."""
     try:
-        # Format: "YYYY-MM-DD HH:MM:SS.mmm"
         return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S.%f")
     except ValueError:
-        # Fallback for entries without milliseconds
         try:
             return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            # Return epoch if parsing fails
             return datetime.fromtimestamp(0)
 
 
-def _compute_kpi_for_entries(
-    filtered_entries: List[Dict[str, Any]], order: SortOrder
-) -> FeatureKPI:
+def _standard_entry_to_kpi(entry: Dict[str, Any]) -> KPIEntry:
+    """Convert standard feedback log entry to KPIEntry."""
+    accept_value = entry.get("accept", "")
+    return KPIEntry(
+        datetime=entry.get("datetime", ""),
+        accepted=accept_value == "true",
+        aegis_version=entry.get("version", ""),
+    )
+
+
+def _programmatic_entry_to_kpi(entry: Dict[str, Any]) -> KPIEntry | None:
+    """Convert programmatic feedback entry to KPIEntry, or None if no valid score."""
+    score_str = entry.get("acceptance_score", "")
+    if not score_str:
+        return None
+    try:
+        score = float(score_str)
+    except ValueError:
+        return None
+    return KPIEntry(
+        datetime=entry.get("datetime", ""),
+        accepted=score == 1.0,
+        aegis_version=entry.get("version", ""),
+    )
+
+
+def _deduplicate_programmatic_feedback(
+    entries: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """
-    Compute KPI metrics for a list of filtered entries.
+    Deduplicate programmatic feedback entries by (cve_id, feature), keeping the most recent.
 
     Args:
-        filtered_entries: List of log entries filtered by feature
-        order: Sort order for datetime field
+        entries: List of programmatic feedback entry dictionaries
 
     Returns:
-        FeatureKPI with score and entries
+        List of deduplicated entries, keeping only the most recent entry per (cve_id, feature)
     """
-    if not filtered_entries:
-        return FeatureKPI(
-            acceptance_percentage=0.0,
-            entries=[],
-        )
+    deduped: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
-    # Sort entries by datetime
-    filtered_entries.sort(
-        key=_parse_datetime,
+    for entry in entries:
+        # Always overwrite the entry with the most recent one
+        cve_id = entry.get("cve_id", "")
+        feature = entry.get("feature", "")
+        key = (cve_id, feature)
+        deduped[key] = entry
+
+    return list(deduped.values())
+
+
+def _compute_kpi(entries: List[KPIEntry], order: SortOrder) -> FeatureKPI:
+    """Compute KPI metrics from a list of KPIEntry objects."""
+    if not entries:
+        return FeatureKPI(acceptance_percentage=0.0, entries=[])
+
+    entries.sort(
+        key=lambda e: _parse_datetime_str(e.datetime),
         reverse=(order == SortOrder.DESC),
     )
 
-    # Convert accept field from normalized lowercase string to boolean and calculate acceptance score
-    # Create KPIEntry models with datetime, accepted, and aegis_version
-    accepted_count = 0
-    filtered_response_entries: List[KPIEntry] = []
-    for entry in filtered_entries:
-        accept_value = entry.get("accept", "")
-        # Convert normalized lowercase string to boolean
-        # accept_value is already normalized to lowercase during parsing, so it's always a string
-        accept_bool = accept_value == "true"
-        if accept_bool:
-            accepted_count += 1
+    accepted_count = sum(1 for e in entries if e.accepted)
+    acceptance_percentage = round((accepted_count / len(entries)) * 100, 1)
 
-        # Create KPIEntry with datetime, accepted, and aegis_version
-        filtered_response_entries.append(
-            KPIEntry(
-                datetime=entry.get("datetime", ""),
-                accepted=accept_bool,
-                aegis_version=entry.get("version", ""),
-            )
-        )
-
-    total_count = len(filtered_entries)
-    acceptance_percentage = (
-        round((accepted_count / total_count) * 100, 1) if total_count > 0 else 0.0
-    )
-
-    return FeatureKPI(
-        acceptance_percentage=acceptance_percentage,
-        entries=filtered_response_entries,
-    )
+    return FeatureKPI(acceptance_percentage=acceptance_percentage, entries=entries)
 
 
 def _get_all_features_kpi(order: SortOrder = SortOrder.ASC) -> Dict[str, FeatureKPI]:
-    """
-    Get KPI metrics for all features in a single pass over log data.
+    """Get KPI metrics for all features in a single pass over log data."""
+    entries_by_feature: Dict[str, List[KPIEntry]] = {}
 
-    Args:
-        order: Sort order for datetime field (default: ASC)
-
-    Returns:
-        Dict[str, FeatureKPI] mapping feature names to their KPI responses
-    """
-    # Read all log entries once
-    all_entries = AegisLogger.read()
-
-    # Group entries by feature
-    entries_by_feature: Dict[str, List[Dict[str, Any]]] = {}
-    for entry in all_entries:
+    # Process standard feedback
+    for entry in feedback_logger.read():
         feature = entry.get("feature")
         if feature:
-            if feature not in entries_by_feature:
-                entries_by_feature[feature] = []
-            entries_by_feature[feature].append(entry.copy())
+            entries_by_feature.setdefault(feature, []).append(
+                _standard_entry_to_kpi(entry)
+            )
 
-    # Compute KPIs for each feature
-    result: Dict[str, FeatureKPI] = {}
-    for feature, feature_entries in entries_by_feature.items():
-        result[feature] = _compute_kpi_for_entries(feature_entries, order)
+    # Process programmatic feedback with deduplication
+    programmatic_entries = programmatic_feedback_logger.read()
+    deduped_programmatic = _deduplicate_programmatic_feedback(programmatic_entries)
+    for entry in deduped_programmatic:
+        feature = entry.get("feature")
+        if feature:
+            kpi_entry = _programmatic_entry_to_kpi(entry)
+            if kpi_entry:
+                entries_by_feature.setdefault(feature, []).append(kpi_entry)
 
-    return result
+    return {
+        feature: _compute_kpi(entries, order)
+        for feature, entries in entries_by_feature.items()
+    }
 
 
 def get_cve_kpi(
@@ -143,10 +141,7 @@ def get_cve_kpi(
 
     Returns:
         Dict[str, FeatureKPI] mapping feature names to their KPI responses.
-        For a single feature query, the dict contains one key-value pair.
-        For feature="all", the dict contains all features.
     """
-    # Handle "all" case
     if feature == "all":
         try:
             return _get_all_features_kpi(order)
@@ -160,34 +155,24 @@ def get_cve_kpi(
                 detail="An internal error occurred while retrieving KPI data for all features.",
             )
 
-    # Handle single feature case - wrap in dict for consistent return type
-    kpi_response = _get_single_feature_kpi(feature, order)
-    return {feature: kpi_response}
-
-
-def _get_single_feature_kpi(
-    feature: str, order: SortOrder = SortOrder.ASC
-) -> FeatureKPI:
-    """
-    Get KPI metrics for a single CVE analysis feedback feature.
-
-    Args:
-        feature: Feature name to filter entries by
-        order: Sort order for datetime field (default: ASC)
-
-    Returns:
-        FeatureKPI with score and entries
-    """
     try:
-        # Read all log entries
-        all_entries = AegisLogger.read()
+        entries: List[KPIEntry] = []
 
-        # Filter entries by feature
-        filtered_entries: List[Dict[str, Any]] = [
-            entry.copy() for entry in all_entries if entry.get("feature") == feature
-        ]
+        # Standard feedback
+        for entry in feedback_logger.read():
+            if entry.get("feature") == feature:
+                entries.append(_standard_entry_to_kpi(entry))
 
-        return _compute_kpi_for_entries(filtered_entries, order)
+        # Programmatic feedback with deduplication
+        programmatic_entries = programmatic_feedback_logger.read()
+        deduped_programmatic = _deduplicate_programmatic_feedback(programmatic_entries)
+        for entry in deduped_programmatic:
+            if entry.get("feature") == feature:
+                kpi_entry = _programmatic_entry_to_kpi(entry)
+                if kpi_entry:
+                    entries.append(kpi_entry)
+
+        return {feature: _compute_kpi(entries, order)}
 
     except Exception:
         logging.error(

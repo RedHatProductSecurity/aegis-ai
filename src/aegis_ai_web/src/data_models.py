@@ -293,6 +293,7 @@ class FeatureKPI(BaseModel):
     Feature KPI model for CVE analysis feedback.
 
     Contains the acceptance score percentage and filtered log entries for a feature.
+    Entries include both standard user feedback and programmatic (automatic) feedback.
     """
 
     acceptance_percentage: float = Field(

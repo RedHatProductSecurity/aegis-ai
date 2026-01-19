@@ -181,9 +181,12 @@ def test_save_programmatic_feedback_rejects_acceptance_score_in_payload():
     assert response.status_code == 200
 
 
-def test_save_programmatic_feedback_rejects_duplicate(programmatic_feedback_log_setup):
+def test_save_programmatic_feedback_allows_duplicate_submissions(
+    programmatic_feedback_log_setup,
+):
     """
-    Test that duplicate programmatic feedback submissions are rejected with 409.
+    Test that duplicate programmatic feedback submissions are allowed at write time.
+    Deduplication happens at KPI read time, not at write time.
     """
     feedback_data = {
         "feature": "suggest-cwe",
@@ -197,12 +200,11 @@ def test_save_programmatic_feedback_rejects_duplicate(programmatic_feedback_log_
     response1 = client.post("/api/v1/programmatic-feedback", json=feedback_data)
     assert response1.status_code == 200
 
-    # Second identical submission should be rejected as duplicate
+    # Second identical submission should also succeed (deduplication at read time)
     response2 = client.post("/api/v1/programmatic-feedback", json=feedback_data)
-    assert response2.status_code == 409
-    assert response2.json()["detail"] == "Duplicate feedback entry already exists."
+    assert response2.status_code == 200
 
-    # Verify only one entry was written to the log
+    # Both entries are written to the log (deduplication happens at KPI read time)
     try:
         with open(
             programmatic_feedback_log_setup, "r", newline="", encoding="utf-8"
@@ -216,7 +218,7 @@ def test_save_programmatic_feedback_rejects_duplicate(programmatic_feedback_log_
                 and r["cve_id"] == "CVE-2025-14322"
                 and r["email"] == "user@example.com"
             ]
-            assert len(matching_rows) == 1, "Expected exactly one entry in log"
+            assert len(matching_rows) == 2, "Expected two entries in log"
     except FileNotFoundError:
         pytest.fail(
             f"programmatic feedback log file was not created at: {programmatic_feedback_log_setup}"

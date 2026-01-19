@@ -149,15 +149,14 @@ class FeedbackLogger:
 
 
 # Pre-configured logger instance for standard feedback
-# Maintains backward compatibility - existing code using AegisLogger.write() continues to work
-AegisLogger = FeedbackLogger(
+feedback_logger = FeedbackLogger(
     schema=FEEDBACK_SCHEMA,
     env_var="AEGIS_WEB_FEEDBACK_LOG",
     default_filename="feedback.csv",
 )
 
 # Pre-configured logger instance for programmatic feedback
-ProgrammaticFeedbackLogger = FeedbackLogger(
+programmatic_feedback_logger = FeedbackLogger(
     schema=PROGRAMMATIC_FEEDBACK_SCHEMA,
     env_var="AEGIS_WEB_PROGRAMMATIC_FEEDBACK_LOG",
     default_filename="programmatic_feedback.csv",
