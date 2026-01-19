@@ -23,7 +23,7 @@ class Feedback(BaseModel):
 
     feature: str = Field(..., max_length=100)
     cve_id: Optional[CVEID] = Field("", max_length=50)
-    cveid: Optional[CVEID] = Field(
+    cveId: Optional[CVEID] = Field(
         "", max_length=50
     )  # FIXME: an interim compatibility fix for OSIM
     email: Optional[str] = Field("", max_length=100)

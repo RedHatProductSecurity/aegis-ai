@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.2] - 2026-01-19
 
 ## Fixed
-- an interim fix for OSIM-submitted feedback (read `cveid` if `cve_id` is not available)
+- an interim fix for OSIM-submitted feedback (read `cveId` if `cve_id` is not available)
 
 
 ## [0.5.1] - 2026-01-14
