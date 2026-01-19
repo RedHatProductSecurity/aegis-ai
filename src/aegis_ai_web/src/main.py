@@ -436,7 +436,9 @@ async def save_feedback(feedback: Feedback):
         accept_str = str(feedback.accept).lower()
         row_data = {
             "feature": feedback.feature,
-            "cve_id": feedback.cve_id or "",
+            "cve_id": feedback.cve_id
+            or feedback.cveid
+            or "",  # FIXME: an interim compatibility fix for OSIM
             "email": feedback.email or "",
             "actual": feedback.actual or "",
             "expected": feedback.expected or "",
