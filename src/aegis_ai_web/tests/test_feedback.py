@@ -183,3 +183,35 @@ async def test_submit_feedback_after_suggest_impact_analysis(feedback_log_setup)
             assert last_row["accept"] == "false"  # Normalized to lowercase
     except FileNotFoundError:
         pytest.fail(f"feedback log file was not created at: {feedback_log_setup}")
+
+
+def test_save_feedback_exception_handling(feedback_log_setup, monkeypatch):
+    """
+    Test that exceptions in save_feedback are handled properly without leaking traceback.
+    This tests the log_and_raise_http_exception helper function.
+    """
+
+    # Mock AegisLogger.write to raise an exception
+    def mock_write_raises(*args, **kwargs):
+        raise IOError("Simulated file write error")
+
+    from aegis_ai_web.src import feedback_logger
+
+    monkeypatch.setattr(feedback_logger.AegisLogger, "write", mock_write_raises)
+
+    feedback_data = {
+        "feature": "suggest-impact",
+        "cve_id": "CVE-2025-12345",
+        "accept": True,
+    }
+    response = client.post("/api/v1/feedback", json=feedback_data)
+
+    assert response.status_code == 500
+    assert "detail" in response.json()
+    assert (
+        "An internal error occurred while processing feedback"
+        in response.json()["detail"]
+    )
+    # Verify traceback is not present in response
+    assert "Traceback" not in response.text
+    assert "stack" not in response.text
