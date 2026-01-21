@@ -59,10 +59,35 @@ class FeedbackLogger:
 
         Reads env var dynamically to support test fixtures that set it.
         """
+        return self.get_log_path()
+
+    def get_log_path(self) -> Path:
+        """
+        Get the log file path from environment variable or default location.
+
+        Public API for accessing the log file path.
+
+        Reads env var dynamically to support test fixtures that set it.
+
+        Returns:
+            Path to the log file
+        """
         log_file = os.getenv(
             self._env_var, f"{get_settings().config_dir}/{self._default_filename}"
         )
         return Path(log_file)
+
+    @property
+    def schema(self) -> FeedbackSchemaProtocol:
+        """
+        Get the schema used by this logger.
+
+        Public API for accessing the schema.
+
+        Returns:
+            The feedback schema protocol instance
+        """
+        return self._schema
 
     def write(self, feedback_data: dict) -> None:
         """
@@ -146,6 +171,87 @@ class FeedbackLogger:
             return []
 
         return entries
+
+    def update_entry(
+        self,
+        datetime_str: str,
+        cve_id: str,
+        feature: str,
+        updates: Dict[str, str],
+    ) -> bool:
+        """
+        Update fields in a specific CSV log entry.
+
+        Performs an atomic read-modify-write operation to prevent race conditions
+        where new entries could be lost between read and write.
+
+        Args:
+            datetime_str: Timestamp of the entry to update
+            cve_id: CVE identifier of the entry to update
+            feature: Feature name of the entry to update
+            updates: Dictionary of field names to new values to update
+
+        Returns:
+            True if entry was found and updated, False otherwise
+        """
+        log_path = self.get_log_path()
+
+        if not log_path.exists():
+            logger.warning(f"CSV log file does not exist: {log_path}")
+            return False
+
+        # Perform atomic read-modify-write under a single exclusive lock
+        # This prevents race conditions where new entries could be lost
+        with open(log_path, "r+", newline="", encoding="utf-8") as csvfile:
+            # Acquire exclusive lock BEFORE reading to make the entire operation atomic
+            fcntl.flock(csvfile.fileno(), fcntl.LOCK_EX)
+            try:
+                # Read all entries while holding the lock
+                csvfile.seek(0)
+                reader = csv.DictReader(csvfile)
+                entries = []
+                for row in reader:
+                    # Validate entry matches schema
+                    if self._schema.validate_parsed_log(row):
+                        entries.append(row)
+
+                # Find and update the matching entry
+                updated = False
+                for entry in entries:
+                    if (
+                        entry.get("datetime") == datetime_str
+                        and entry.get("cve_id") == cve_id
+                        and entry.get("feature") == feature
+                    ):
+                        # Update the specified fields
+                        for field, value in updates.items():
+                            entry[field] = str(value)
+                        updated = True
+                        break
+
+                if not updated:
+                    logger.warning(
+                        f"Could not find CSV entry to update: "
+                        f"datetime={datetime_str}, cve_id={cve_id}, feature={feature}"
+                    )
+                    return False
+
+                # Truncate and rewrite while still holding the lock
+                csvfile.seek(0)
+                csvfile.truncate(0)
+
+                writer = csv.DictWriter(csvfile, fieldnames=self._schema.field_names)
+                writer.writeheader()
+                for entry in entries:
+                    writer.writerow(entry)
+            finally:
+                fcntl.flock(csvfile.fileno(), fcntl.LOCK_UN)
+
+        logger.debug(
+            f"Updated CSV entry: datetime={datetime_str}, "
+            f"cve_id={cve_id}, feature={feature}, updates={updates}"
+        )
+        return True
 
 
 # Pre-configured logger instance for standard feedback
