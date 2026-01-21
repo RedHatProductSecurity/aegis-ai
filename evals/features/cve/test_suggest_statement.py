@@ -93,6 +93,14 @@ cases = [
             """,
         expected_mitigation="""Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base, or stability.""",
     ),
+    SuggestStatementCase(
+        cve_id="CVE-2022-50087",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 8 and 9. A use-after-free flaw in the `arm_scpi` firmware component of the Linux kernel could allow a local attacker to escalate privileges. ",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2022-50390",
+        expected_statement="This vulnerability is rated Low for Red Hat. The flaw in the Linux kernel's drm/ttm component, specifically an undefined behavior in bit shifting, could lead to local information disclosure and denial of service. This vulnerability could theoretically affect integrity, though it is unlikely and non-deterministic. Similarly, availability may be affected as the flaw can result in a kernel warning or panic. ",
+    ),
     # NOTE: After merging https://github.com/RedHatProductSecurity/aegis-ai/pull/370
     # LLM does not get the correct answer on its input from the `mitigation` field
     # in the `osidb_cache` data.  However, the correct answer is still provided to LLM
@@ -143,6 +151,26 @@ cases = [
         [1] https://access.redhat.com/solutions/7071748""",
     ),
     SuggestStatementCase(
+        cve_id="CVE-2023-53176",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux. A privileged local attacker (ex. with `CAP_SYS_ADMIN` privileges) could cause a denial of service by unbinding a serial port hardware-specific 8250 driver, leading to a kernel oops.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2023-53188",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux. A race condition in the Open vSwitch kernel module can lead to a denial of service, causing a CPU to become stuck in an infinite loop. Exploitation requires a specific setup involving Open vSwitch, veth pairs, and concurrent deletion of network namespaces while traffic is active; these actions require elevated privileges such as `CAP_NET_ADMIN`. Attack complexity is similarly high, since triggering this vulnerability requires a specific timing window, sustained parallel traffic, and a namespace teardown. The only meaningful impact from successfully causing the vulnerability is to availability. No data leakage, memory disclosure, or information exposure is involved, and there is no evidence of memory corruption. ",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2023-53205",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux on the s390x architecture. The flaw is a race condition in the KVM s390/diag handler that could lead to out-of-bounds access. Triggering this vulnerability requires precise timing and repeated invocations and will most likely result in a denial-of-service. Confidentiality is not impacted as the bug does not directly expose guest or host memory contents. Availability is also highly unlikely to be impacted, though out-of-bounds access could in theory corrupt the kernel or KVM internal state. ",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2023-53333",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux. The flaw is a stack-out-of-bounds read in the netfilter DCCP connection tracking module. Exploitation requires an attacker to send specially crafted DCCP packets to a system with the `nf_conntrack_dccp` module loaded. The vulnerability's impact is primarily on availability, since a malformed packet can lead to a warning or panic, though it can also pose a potential (though unlikely) risk to confidentiality, since kernel stack values could be exposed indirectly through side channels or other error-dependent behaviors. ",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2023-54108",
+        expected_statement="This vulnerability is rated Low for Red Hat Enterprise Linux 8 and 9. The flaw in the `qla2xxx` SCSI driver can lead to a DMA-API call trace, potentially impacting system availability. This issue affects systems utilizing QLogic Fibre Channel HBAs with NVMe LS requests. Triggering this vulnerability affects availability, though it will not typically crash the kernel, but more likely degrade system stability or flood logs. ",
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2024-44308",
         expected_statement="""In order to exploit this vulnerability, the WebKitGTK JIT engine must be enabled and an attacker needs to trick a user into processing or loading malicious web content.  This feature is disabled in Red Hat Enterprise Linux versions 8 and 9, meaning these releases are not affected by this vulnerability.
             """,
@@ -186,12 +214,20 @@ cases = [
         },
     ),
     SuggestStatementCase(
+        cve_id="CVE-2025-9222",
+        expected_statement="...rated Important.",
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2025-12816",
         expected_statement="This vulnerability is rated Important for Red Hat products due to an interpretation conflict in the node-forge library. An unauthenticated attacker could exploit this flaw by crafting malicious ASN.1 structures, leading to a bypass of cryptographic verifications and security decisions in affected applications. This impacts various Red Hat products that utilize node-forge for cryptographic operations.",
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-13327",
         expected_statement="This vulnerability is rated Moderate for Red Hat products. It allows arbitrary code execution through specially crafted ZIP archives when using the `uv` tool to install attacker-controlled Python packages. Exploitation requires user interaction to initiate the package installation. This affects components within Red Hat AI Inference Server and Red Hat OpenShift AI.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-15284",
+        expected_statement="This vulnerability is rated Important for Red Hat products that utilize the `qs` module for parsing query strings, particularly when processing user-controlled input with bracket notation. The `arrayLimit` option, intended to prevent resource exhaustion, is bypassed when bracket notation (`a[]=value`) is used, allowing a remote attacker to cause a denial of service through memory exhaustion. This can lead to application crashes or unresponsiveness, making the service unavailable.",
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-22097",
@@ -223,6 +259,14 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-38512",
         expected_statement="This vulnerability in the Linux kernel's Wi-Fi component allows an adjacent attacker to perform A-MSDU spoofing attacks in mesh networks, leading to a high integrity impact. Confidentiality could potentially be impacted, if there is exposure of network\u2011internal traffic or services via the spoofed Ethernet frames. Similarly, availability may be impacted if the spoofed packets cause problems like traffic disruption or routing instabilities.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-39822",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 10 as it could lead to a local privilege escalation due to a signedness error in the io_uring subsystem. Red Hat Enterprise Linux 6, 7, 8, and 9 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability can lead to integrity and availability issues, as an improperly computed `this_len` could lead to memory corruption, data truncation, or incorrect writes, which in turn could increase the likelihood of a crash. ",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-39832",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 9 and 10. The flaw in the `net/mlx5` driver could lead to a kernel lockdep assertion during a synchronous reset unload event, specifically when using the `devlink reload fw_activate` option. This issue affects systems utilizing Mellanox network adapters and performing firmware activation reloads. Triggering this vulnerability requires elevated privileges and primarily impacts availability, as it can lead to kernel warnings or firmware failures.",
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-43529",

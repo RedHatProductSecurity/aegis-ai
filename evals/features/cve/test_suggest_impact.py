@@ -298,6 +298,10 @@ cases = [
         expected_cvss3_score=4.4,
     ),
     SuggestImpactCase(
+        cve_id="CVE-2023-54201",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2025-5399",
         expected_impact="MODERATE",
         expected_cvss3_score=4.3,
@@ -321,6 +325,14 @@ cases = [
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:H/A:L",
     ),
     SuggestImpactCase(
+        cve_id="CVE-2025-13772",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-14922",
+        expected_impact="MODERATE",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2025-23395",
         expected_impact="MODERATE",
         expected_cvss3_score=6.8,
@@ -341,6 +353,14 @@ cases = [
         cve_id="CVE-2025-39677",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:H",
     ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39754",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39822",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:H",
+    ),
     # FIXME: According to feedback by a security analyst, Aegis currently suggests a wrong vector
     SuggestImpactCase(
         cve_id="CVE-2025-39922",
@@ -360,8 +380,17 @@ cases = [
         metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
     ),
     SuggestImpactCase(
+        cve_id="CVE-2025-50334",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2025-53000",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-56225",
+        expected_cvss3_score=5.5,
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-59840",
@@ -372,6 +401,10 @@ cases = [
         cve_id="CVE-2025-64524",
         expected_impact="MODERATE",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-65518",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-66448",

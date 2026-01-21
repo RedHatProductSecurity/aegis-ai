@@ -133,6 +133,11 @@ cases = [
         cve_id="CVE-2022-23125",
         expected_title="Netatalk: Remote Code Execution via Buffer Overflow in copyapplfile function",
     ),
+    # FIXME: expected_description violates the (IMO valid) requirement that description should not focus on code-level details
+    # SuggestDescriptionCase(
+    #     cve_id="CVE-2022-50714",
+    #     expected_description="the driver's mt7921_pci_remove() function is called while the associated mt76_dev (driver private data) has not been properly initialized or is missing.",
+    # ),
     SuggestDescriptionCase(
         cve_id="CVE-2023-39326",
         expected_description="A flaw was found in the Golang net/http/internal package. This issue may allow a malicious user to send an HTTP request and cause the receiver to read more bytes from network than are in the body (up to 1GiB), causing the receiver to fail reading the response, possibly leading to a Denial of Service (DoS).",
@@ -144,6 +149,10 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2023-53669",
         expected_title="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2023-54120",
+        expected_description="A flaw was identified in the Bluetooth HIDP (Human Interface Device Protocol) implementation of the Linux kernel where a race condition in the hidp_session_thread handling can lead to a use-after-free vulnerability. Under certain timing conditions, the session object may be freed while a timer callback is still active, resulting in dereferencing freed memory and potential kernel panic or local escalation of privileges. The underlying cause is the use of hidp_del_timer without ensuring that the timer has fully stopped, which allows concurrent access to freed session resources",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-12816",
@@ -212,6 +221,10 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-66448",
         expected_description="A remote code execution vulnerability has been identified in vLLM. An attacker can exploit a weakness in the model loading process to silently fetch and run unauthorized, malicious Python code on the host system. This happens because the engine mistakenly executes code from a remote repository referenced in a model's configuration, even when explicit security measures are set to prevent it.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2025-68493",
+        expected_title="An XML processing flaw has been found in Apache Struts. Parsing of XML configuration in the XWork component does not validate XML in proper way and it's vulnerable to XML external entity (XXE) injection.",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-91735",
