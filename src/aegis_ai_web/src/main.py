@@ -4,6 +4,7 @@ aegis web
 
 """
 
+import json
 import logging
 import os
 from enum import Enum
@@ -37,6 +38,12 @@ from .endpoints.kpi import get_cve_kpi, SortOrder
 from .feedback_logger import AegisLogger
 
 
+def log_exception_safely(e: Exception, context: str) -> None:
+    """Log exception with warning (no traceback) and debug (with traceback), then raise HTTPException."""
+    logging.warning(f"{context}: {e.__class__.__name__}")
+    logging.debug(f"Error details for {context}: {e}", exc_info=True)
+
+
 class HSTSHeaderMiddleware(BaseHTTPMiddleware):
     """middleware to add HSTS header to HTTP responses"""
 
@@ -55,6 +62,31 @@ app: FastAPI = FastAPI(
     description="A simple web console and REST API for Aegis.",
     version=AEGIS_REST_API_VERSION,
 )
+
+
+@app.exception_handler(json.JSONDecodeError)
+async def json_decode_exception_handler(request: Request, exc: json.JSONDecodeError):
+    """Handle JSON decode errors from invalid request bodies."""
+    logging.warning(
+        f"Invalid JSON in request body: {exc.msg} at line {exc.lineno} column {exc.colno}"
+    )
+    return JSONResponse(
+        status_code=400,
+        content={"detail": f"Invalid JSON in request body: {exc.msg}"},
+    )
+
+
+@app.exception_handler(UnicodeDecodeError)
+async def unicode_decode_exception_handler(request: Request, exc: UnicodeDecodeError):
+    """Handle Unicode decode errors from invalid request body encoding."""
+    logging.warning(
+        f"Invalid UTF-8 encoding in request body: {exc.reason} at position {exc.start}"
+    )
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Invalid UTF-8 encoding in request body"},
+    )
+
 
 # middleware to add HSTS header to HTTP responses (it is safe to send the HSTS
 # header over plain-text HTTP because the header shall be ignored by the client
@@ -174,7 +206,11 @@ if ENABLE_CONSOLE:
             )
 
         except Exception as e:
-            raise HTTPException(500, detail=f"Error executing general query': {e}")
+            log_exception_safely(e, "Error executing general query")
+            raise HTTPException(
+                status_code=500,
+                detail="An internal error occurred while executing the query.",
+            )
 
 
 cve_feature_registry: Dict[str, Type] = {
@@ -205,9 +241,9 @@ async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = Fa
     try:
         validated_input = cveid_validator.validate_python(cve_id)
     except Exception as e:
-        raise HTTPException(
-            422, detail=f"Invalid input for CVE feature '{feature}': {e}"
-        )
+        msg = f"Invalid input for CVE feature '{feature}'"
+        log_exception_safely(e, msg)
+        raise HTTPException(status_code=422, detail=msg)
 
     try:
         feature_instance = FeatureClass(agent=llm_agent)
@@ -216,7 +252,11 @@ async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = Fa
             return result
         return result.output
     except Exception as e:
-        raise HTTPException(500, detail=f"Error executing CVE feature '{feature}': {e}")
+        log_exception_safely(e, f"Error executing CVE feature '{feature}'")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while executing CVE feature '{feature}'.",
+        )
 
 
 @app.post(
@@ -226,8 +266,12 @@ async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = Fa
 async def cve_analysis_with_body(
     feature: CVEFeatureName, cve_data: Request, detail: bool = False
 ):
-    cve_data = await cve_data.json()
-    cve_id = cve_data["cve_id"]
+    try:
+        cve_data = await cve_data.json()
+        cve_id = cve_data["cve_id"]
+    except KeyError as e:
+        log_exception_safely(e, "Missing required field: 'cve_id'")
+        raise HTTPException(status_code=400, detail="Missing required field: 'cve_id'")
 
     if feature.value not in cve_feature_registry:
         raise HTTPException(404, detail=f"CVE feature '{feature.value}' not found.")
@@ -235,9 +279,9 @@ async def cve_analysis_with_body(
     try:
         validated_input = cve_data
     except Exception as e:
-        raise HTTPException(
-            422, detail=f"Invalid input for CVE feature '{feature}': {e}"
-        )
+        msg = f"Invalid input for CVE feature '{feature}'"
+        log_exception_safely(e, msg)
+        raise HTTPException(status_code=422, detail=msg)
     try:
         feature_instance = FeatureClass(agent=llm_agent)
         result = await feature_instance.exec(cve_id, static_context=validated_input)
@@ -245,7 +289,11 @@ async def cve_analysis_with_body(
             return result
         return result.output
     except Exception as e:
-        raise HTTPException(500, detail=f"Error executing CVE feature '{feature}': {e}")
+        log_exception_safely(e, f"Error executing CVE feature '{feature}'")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while executing CVE feature '{feature}'.",
+        )
 
 
 component_feature_registry: Dict[str, Type] = {
@@ -274,9 +322,9 @@ async def component_analysis(
     try:
         validated_input = component_name
     except Exception as e:
-        raise HTTPException(
-            422, detail=f"Invalid input for Component feature '{feature}': {e}"
-        )
+        msg = f"Invalid input for Component feature '{feature}'"
+        log_exception_safely(e, msg)
+        raise HTTPException(status_code=422, detail=msg)
 
     try:
         feature_instance = FeatureClass(agent=llm_agent)
@@ -285,8 +333,10 @@ async def component_analysis(
             return result
         return result.output
     except Exception as e:
+        log_exception_safely(e, f"Error executing Component feature '{feature}'")
         raise HTTPException(
-            500, detail=f"Error executing Component feature '{feature}': {e}"
+            status_code=500,
+            detail=f"An internal error occurred while executing Component feature '{feature}'.",
         )
 
 
@@ -457,12 +507,7 @@ async def save_feedback(feedback: Feedback):
 
     except Exception as e:
         entry = f"{feedback.cve_id}/{feedback.feature}"
-        logging.warning(
-            f"Failed to process feedback for {entry}: {e.__class__.__name__}"
-        )
-        logging.debug(
-            f"Error details for feedback submission {entry}: {e}", exc_info=True
-        )
+        log_exception_safely(e, f"Failed to process feedback for {entry}")
         raise HTTPException(
             status_code=500,
             detail="An internal error occurred while processing feedback.",
