@@ -248,9 +248,9 @@ class SuggestStatementText(Feature):
             rules=f"""
             ### STATEMENT (suggested_statement)
             - Focus on impact and RH relevance (deployment model, defaults, hardening).
-            - Start with a concise severity-and-why sentence tailored for Red Hat, e.g.:
-              "This vulnerability is rated Moderate for Red Hat because ..." or
-              "In the Red Hat context, impact is limited because ...".
+            - Start with a concise severity-and-why sentence tailored for Red Hat that is consistent with the provided 'impact' field if available:
+              - If 'impact' is present in context, reuse that label verbatim (LOW/MODERATE/IMPORTANT/CRITICAL) and do not contradict it.
+              - If 'impact' is not present, avoid assigning an explicit severity label; describe impact qualitatively instead.
             - Explain briefly why impact applies (e.g., feature disabled by default, needs uncommon configuration, requires physical access, short-lived CLI use).
             - Explicitly note scope and applicability:
               - Call out affected/unaffected Red Hat product versions when the rationale depends on defaults (e.g., feature disabled by default on RHEL 8/9).
@@ -258,7 +258,7 @@ class SuggestStatementText(Feature):
               - If exploit requires physical access or specialized hardware, highlight that requirement; mention if virtualized/emulated devices could still enable exploitation.
             - When applicable, note preconditions and what is not affected (e.g., versions, roles, disabled-by-default features).
             - Must NOT:
-              - Duplicate the CVE description verbatim.
+              - Duplicate the CVE description verbatim or copy any sentence or 7+ consecutive words from it; paraphrase and focus on RH-specific context.
               - Include code-level details or command examples.
               - Mention mitigation steps or software updates/patching.
             - Style: 2–4 concise sentences, < 1000 characters total.
