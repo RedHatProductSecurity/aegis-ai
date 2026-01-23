@@ -3,7 +3,7 @@ import logging
 
 from typing import Awaitable
 
-from aegis_ai import get_env_int
+from aegis_ai import get_env_int, get_settings
 from google.genai.errors import ServerError
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
@@ -12,7 +12,7 @@ from pydantic_ai.run import AgentRunResult
 logger = logging.getLogger(__name__)
 
 # Timeout in seconds for a single LLM prompt
-llm_prompt_timeout = get_env_int("AEGIS_LLM_TIMEOUT_SECS", 300)
+llm_prompt_timeout = get_settings().default_llm_prompt_timeout
 
 # Cap concurrent LLM calls across the process
 llm_max_jobs = get_env_int("AEGIS_LLM_MAX_JOBS", 4)

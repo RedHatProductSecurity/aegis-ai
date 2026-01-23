@@ -135,6 +135,7 @@ class AppSettings(BaseSettings):
     default_llm_temperature: float = get_env_float("AEGIS_LLM_TEMPERATURE", 0.055)
     default_llm_top_p: float = get_env_float("AEGIS_LLM_TOP_P", 0.8)
     default_llm_max_tokens: int = get_env_int("AEGIS_LLM_MAX_TOKENS", 0)
+    default_llm_prompt_timeout: int = get_env_int("AEGIS_LLM_TIMEOUT_SECS", 300)
 
     # Aegis safety subagent
     safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
@@ -175,7 +176,11 @@ class AppSettings(BaseSettings):
                 logger.debug(msg)
 
             self.http_client = httpx.AsyncClient(
-                event_hooks={"request": [_log_request]}
+                # Use a generous timeout so providers that map HTTP timeouts to
+                # model deadlines (e.g., Gemini) don't end up with a too-short
+                # deadline (5s). Default aligns with AEGIS_LLM_TIMEOUT_SECS.
+                timeout=httpx.Timeout(self.default_llm_prompt_timeout),
+                event_hooks={"request": [_log_request]},
             )
 
         return self.http_client
