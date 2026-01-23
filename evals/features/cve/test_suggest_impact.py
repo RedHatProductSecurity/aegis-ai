@@ -289,6 +289,10 @@ cases = [
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
     ),
     SuggestImpactCase(
+        cve_id="CVE-2023-53764",
+        expected_cvss3_vector="CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:H",  # A:L because corrupted or stale `peer` structures can potentially lead to incorrect packet routing/driver state inconsistencies.
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2023-53843",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:H",
     ),
@@ -356,6 +360,30 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2025-39754",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39792",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:N/A:H",  # need `CAP_SYS_ADMIN` privileges to be able to create/manage dm devices (ex. using the cli tool dmsetup)
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39795",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:L",  # if chunk_sectors is erroneously treated as aligned, it could incorrectly write to storage
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39809",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:H",  # Since Integrity can in theory be affeceted if the stack memory corruption overwrite adjacent local variables. Sure, the overwrite is small, one byte, but could still technically cause problems depending what it overwrites.
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39810",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:H/A:H",  # C:N bc OOBW could overwrite adjacent k memory, but no direct exposure implied. AC:H bc exploitation requires hw-dependent firmware behavior, TC configuration, and precise timing around ifdown and fw resource renegotiation. PR:H bc you need `CAP_NET_ADMIN` privileges to be able to configure traffic classes (tc)
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39816",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:H",  # Scope is unchanged. nAC is L, since exploitation requires concurrent modifications and correct timing, but does not require cpu races, and user and kernel memory is already shared.
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2025-39821",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",  # C: no kernel memory disclosed and no data copied from kernel to userspace, I: bug can cause invalid pmu register operations, but doesn't allow controlled corruption of arbitrary k memory, A: invalid pmu operations could destabilize the perf subsystem.
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-39822",

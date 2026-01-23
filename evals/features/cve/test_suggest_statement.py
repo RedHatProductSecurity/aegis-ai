@@ -261,6 +261,28 @@ cases = [
         expected_statement="This vulnerability in the Linux kernel's Wi-Fi component allows an adjacent attacker to perform A-MSDU spoofing attacks in mesh networks, leading to a high integrity impact. Confidentiality could potentially be impacted, if there is exposure of network\u2011internal traffic or services via the spoofed Ethernet frames. Similarly, availability may be impacted if the spoofed packets cause problems like traffic disruption or routing instabilities.",
     ),
     SuggestStatementCase(
+        cve_id="CVE-2025-39791",
+        expected_statement="This vulnerability is rated Moderate for Red Hat, as it can lead to a kernel deadlock or file system data corruption (xfs or btrfs) when using dm-crypt with zoned targets. This flaw primarily targets Integrity and Availability as incorrect sector reporting during zone append operations can lead to corrupt filesystem metadata as well as I/O hangs or system stalls.",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-39795",
+        expected_statement="This vulnerability is rated Low for Red Hat Enterprise Linux because a possible integer overflow in the `blk_stack_limits()` function within the kernel's block layer could be exploited by an attacker with high privileges. Successful exploitation may lead to a denial of service or information disclosure. Triggering this vulnerability requires elevated privileges (ex. `CAP_SYS_ADMIN`) as modifying or creating block stacks is a privileged operation. If the bug is triggered, then there are potentially impacts to integrity and availability, in that a misalignment could result in an incorrect write to storage which in turn could cause some I/O errors, though they are unlikely to hang the system outright.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-39809",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 9, 10, and Red Hat In-Vehicle OS 1. The flaw, a stack-out-of-bounds in the `intel_quicki2c` kernel module, can lead to a kernel crash due to improper handling of ACPI DSD method lengths. Red Hat Enterprise Linux 6, 7, and 8 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability only affects integrity and availability, as the stack-out-of-bounds overwrite could affect adjacent local variables (even if the overwrite is of one byte) and malformed or affected acpi tables could lead to a kernel crash. There is no reason to assume confidentiality is impacted, as the vulnerability is of a write nature, and not a read.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-39810",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 8 and 9. A memory corruption flaw exists in the `bnxt_en` kernel driver, which could be triggered when firmware resources change during an interface down operation. Triggering this vulnerability requires elevated privileges (ex. `CAP_NET_ADMIN`) as configuring traffic classes is a privileged operation. If the vulnerability is triggered, then the primary impact will be on integrity and availability, as the bug can cause kernel memory corruption in the kernel heap structures related to network i/o, which in turn can lead to a kernel crash. Confidentiality is most probably not impacted, as an out-of-bounds write could overwrite adjacent kernel memory, but no direct read exposure is implied.\n\nRed Hat Enterprise Linux 6, 7, and Red Hat In-Vehicle OS are not affected as the vulnerable code is not present in these versions.",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-39816",
+        expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 10.x. The flaw exists in the io_uring/kbuf component of the kernel, where improper handling of ring provided buffer lengths from userspace could lead to an issue. Red Hat Enterprise Linux 6, 7, 8, and 9 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability affects integrity and availability, as the bug can cause inconsistent internal states and lead to stalls or system instability in the io_uring subsystem.",
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2025-39822",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 10 as it could lead to a local privilege escalation due to a signedness error in the io_uring subsystem. Red Hat Enterprise Linux 6, 7, 8, and 9 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability can lead to integrity and availability issues, as an improperly computed `this_len` could lead to memory corruption, data truncation, or incorrect writes, which in turn could increase the likelihood of a crash. ",
     ),
@@ -301,6 +323,14 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-68469",
         expected_mitigation="To mitigate this issue, avoid processing untrusted TIFF files with ImageMagick. In environments where ImageMagick processes files automatically, ensure that all input files originate from trusted sources or implement strict input validation to prevent the processing of malicious TIFF files.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2025-69262",
+        expected_statement="This vulnerability is rated Moderate for Red Hat. The flaw in pnpm allows for remote code execution via command injection when environment variable substitution is used in `.npmrc` files with `tokenHelper` settings. Exploitation requires an attacker to control environment variables and place malicious scripts, primarily impacting build environments such as CI/CD pipelines or Docker builds. Red Hat products like Enterprise Application Platform are not directly affected by this pnpm vulnerability.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-22822",
+        expected_mitigation="To mitigate this issue, implement a policy engine such as Kubernetes, Kyverno, Kubewarden, or OPA. Configure the policy engine to prevent the usage of the `getSecretKey` function within any ExternalSecret resource. This will block the insecure cross-namespace secret retrieval capability.",
     ),
 ]
 
