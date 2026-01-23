@@ -31,6 +31,7 @@ jobs:
       AEGIS_LLM_HOST: ${{ vars.AEGIS_LLM_HOST }}
       AEGIS_LLM_MODEL: ${{ vars.AEGIS_LLM_MODEL }}
       AEGIS_LLM_MAX_JOBS: ${{ vars.AEGIS_LLM_MAX_JOBS }}
+      AEGIS_LLM_TIMEOUT_SECS: ${{ vars.AEGIS_LLM_TIMEOUT_SECS }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       # safety checks (optional)
@@ -78,7 +79,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Run evaluation suite
-        run: make eval-in-parallel
+        run: make eval
 
       - name: Upload Evals Log
         uses: actions/upload-artifact@v4
