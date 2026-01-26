@@ -688,7 +688,7 @@ spec:
               env:
                 # make the tables in pydantic-eval reports readable
                 - name: COLUMNS
-                  value: "236"
+                  value: "512"
                 # enable colorized text when output is redirected
                 - name: PYTEST_ADDOPTS
                   value: "--color=yes"
