@@ -30,7 +30,7 @@ async def osidb_cache_retrieve(cve_id: CVEID) -> CVE:
 
             # try to load data from the existing JSON file
             cve_data = CVE.model_validate_json(json_data)
-            logger.info(f'read CVE data from "{cache_file}"')
+            logger.debug(f'read CVE data from "{cache_file}"')
 
         except OSError:
             # cached CVE data not available -> query OSIDB
