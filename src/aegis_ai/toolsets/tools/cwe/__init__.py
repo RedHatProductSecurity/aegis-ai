@@ -377,15 +377,13 @@ async def search_cwes(ctx: RunContext, inputs: CWESearchInput) -> List[CWE]:
     """Perform semantic search to find the most relevant CWEs based on a query."""
     await cwe_manager.initialize()  # Ensures data is loaded, but only runs once
 
-    # log initiation of the search (debug only)
+    # initiate the search query
     query = inputs.query.lower().replace("-", " ")
-    logger.debug(f"Searching for candidate CWEs with query: '{query}'")
-
     result = await cwe_manager.search_cwes(query)
 
-    # log the search query and the resulting CWE list
+    # log the search query and the resulting CWE list (debug only)
     cwe_list = [cwe.cwe_id for cwe in result]
-    logger.info(f"search_cwes(query='{query}') = {cwe_list}")
+    logger.debug(f"search_cwes(query='{query}') = {cwe_list}")
 
     return result
 
@@ -394,7 +392,7 @@ async def search_cwes(ctx: RunContext, inputs: CWESearchInput) -> List[CWE]:
 async def retrieve_cwes(ctx: RunContext, inputs: CWEToolInput) -> List[CWE]:
     """Look up CWE definitions by IDs."""
     await cwe_manager.initialize()
-    logger.info(f"Retrieving definitions for CWEs: {inputs.cwe_ids}")
+    logger.debug(f"Retrieving definitions for CWEs: {inputs.cwe_ids}")
 
     tasks = [cwe_manager.lookup_cwe(cwe_id) for cwe_id in inputs.cwe_ids]
     results = await asyncio.gather(*tasks)
@@ -406,7 +404,7 @@ async def retrieve_cwes(ctx: RunContext, inputs: CWEToolInput) -> List[CWE]:
 async def retrieve_allowed_cwe_ids(ctx: RunContext) -> List[CWEID]:
     """Retrieve list of allowed CWE IDs."""
     await cwe_manager.initialize()
-    logger.info("Retrieving all allowed CWE-IDs.")
+    logger.debug("Retrieving all allowed CWE-IDs.")
     return cwe_manager.get_allowed_cwe_ids()
 
 
