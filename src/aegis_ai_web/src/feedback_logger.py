@@ -1,7 +1,7 @@
 """
 Feedback logger module for Aegis Web API.
 
-Provides AegisLogger utility class with static methods for thread-safe CSV feedback logging.
+Provides FeedbackLogger class for thread-safe CSV feedback logging.
 """
 
 import csv
@@ -10,35 +10,61 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Protocol
 
 from aegis_ai import __version__, get_settings
-from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA
+from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA, PROGRAMMATIC_FEEDBACK_SCHEMA
 
 logger = logging.getLogger(__name__)
 
 
-class AegisLogger:
+class FeedbackSchemaProtocol(Protocol):
+    """Protocol for feedback schema classes."""
+
+    @property
+    def field_names(self) -> List[str]: ...
+
+    def validate_parsed_log(self, parsed_data: Dict[str, str] | None) -> bool: ...
+
+
+class FeedbackLogger:
     """
-    Singleton class for managing feedback log file operations.
+    Generic class for managing feedback log file operations.
 
     Encapsulates CSV reading and writing with thread-safe file locking.
+    Can be configured for different schemas and log paths.
     """
 
-    @staticmethod
-    def _get_log_path() -> Path:
+    def __init__(
+        self,
+        schema: FeedbackSchemaProtocol,
+        env_var: str,
+        default_filename: str,
+    ):
+        """
+        Initialize a FeedbackLogger instance.
+
+        Args:
+            schema: Schema defining field names and validation
+            env_var: Environment variable name for log file path override
+            default_filename: Default filename if env var not set
+        """
+        self._schema = schema
+        self._env_var = env_var
+        self._default_filename = default_filename
+
+    def _get_log_path(self) -> Path:
         """
         Get the log file path from environment variable or default location.
 
         Reads env var dynamically to support test fixtures that set it.
         """
         log_file = os.getenv(
-            "AEGIS_WEB_FEEDBACK_LOG", f"{get_settings().config_dir}/feedback.csv"
+            self._env_var, f"{get_settings().config_dir}/{self._default_filename}"
         )
         return Path(log_file)
 
-    @staticmethod
-    def write(feedback_data: dict) -> None:
+    def write(self, feedback_data: dict) -> None:
         """
         Write feedback data to CSV file.
 
@@ -49,7 +75,7 @@ class AegisLogger:
         Args:
             feedback_data: Dictionary containing feedback data to write
         """
-        log_path = AegisLogger._get_log_path()
+        log_path = self._get_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Add datetime and version fields if not already present
@@ -69,7 +95,7 @@ class AegisLogger:
                 file_size = os.fstat(csvfile.fileno()).st_size
                 file_exists = file_size > 0
 
-                writer = csv.DictWriter(csvfile, fieldnames=FEEDBACK_SCHEMA.field_names)
+                writer = csv.DictWriter(csvfile, fieldnames=self._schema.field_names)
 
                 # Write headers if this is a new file
                 if not file_exists:
@@ -81,8 +107,7 @@ class AegisLogger:
                 # Release lock
                 fcntl.flock(csvfile.fileno(), fcntl.LOCK_UN)
 
-    @staticmethod
-    def read() -> List[Dict[str, str]]:
+    def read(self) -> List[Dict[str, str]]:
         """
         Read and parse feedback log entries from CSV file.
 
@@ -90,7 +115,7 @@ class AegisLogger:
             List of Dict entries where all values are strings from CSV.
             Returns empty list if file doesn't exist or has no valid entries.
         """
-        log_path = AegisLogger._get_log_path()
+        log_path = self._get_log_path()
         entries = []
 
         # Open file unconditionally and handle FileNotFoundError to avoid TOCTOU race
@@ -102,7 +127,7 @@ class AegisLogger:
                     reader = csv.DictReader(csvfile)
                     for row in reader:
                         # Validate entry matches schema
-                        if FEEDBACK_SCHEMA.validate_parsed_log(row):
+                        if self._schema.validate_parsed_log(row):
                             # Normalize accept field to lowercase
                             if "accept" in row and row["accept"]:
                                 row["accept"] = row["accept"].lower()
@@ -121,3 +146,18 @@ class AegisLogger:
             return []
 
         return entries
+
+
+# Pre-configured logger instance for standard feedback
+feedback_logger = FeedbackLogger(
+    schema=FEEDBACK_SCHEMA,
+    env_var="AEGIS_WEB_FEEDBACK_LOG",
+    default_filename="feedback.csv",
+)
+
+# Pre-configured logger instance for programmatic feedback
+programmatic_feedback_logger = FeedbackLogger(
+    schema=PROGRAMMATIC_FEEDBACK_SCHEMA,
+    env_var="AEGIS_WEB_PROGRAMMATIC_FEEDBACK_LOG",
+    default_filename="programmatic_feedback.csv",
+)

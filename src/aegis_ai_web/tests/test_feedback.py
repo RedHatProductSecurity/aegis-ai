@@ -188,16 +188,16 @@ async def test_submit_feedback_after_suggest_impact_analysis(feedback_log_setup)
 def test_save_feedback_exception_handling(feedback_log_setup, monkeypatch):
     """
     Test that exceptions in save_feedback are handled properly without leaking traceback.
-    This tests the log_and_raise_http_exception helper function.
+    This tests the log_exception_safely helper function.
     """
 
-    # Mock AegisLogger.write to raise an exception
+    # Mock feedback_logger.write to raise an exception
     def mock_write_raises(*args, **kwargs):
         raise IOError("Simulated file write error")
 
-    from aegis_ai_web.src import feedback_logger
+    from aegis_ai_web.src import main
 
-    monkeypatch.setattr(feedback_logger.AegisLogger, "write", mock_write_raises)
+    monkeypatch.setattr(main.feedback_logger, "write", mock_write_raises)
 
     feedback_data = {
         "feature": "suggest-impact",

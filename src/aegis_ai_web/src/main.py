@@ -33,9 +33,9 @@ from . import (
     web_feature_agent,
     ENABLE_CONSOLE,
 )
-from .data_models import Feedback, FeatureKPI
+from .data_models import Feedback, ProgrammaticFeedback, FeatureKPI
 from .endpoints.kpi import get_cve_kpi, SortOrder
-from .feedback_logger import AegisLogger
+from .feedback_logger import feedback_logger, programmatic_feedback_logger
 
 
 def log_exception_safely(e: Exception, context: str) -> None:
@@ -498,7 +498,7 @@ async def save_feedback(feedback: Feedback):
         }
 
         # Write to CSV file (automatic escaping)
-        AegisLogger.write(row_data)
+        feedback_logger.write(row_data)
 
         logging.info(
             f"Feedback logged: feature={feedback.feature}, cve_id={feedback.cve_id}"
@@ -511,4 +511,77 @@ async def save_feedback(feedback: Feedback):
         raise HTTPException(
             status_code=500,
             detail="An internal error occurred while processing feedback.",
+        )
+
+
+def calculate_acceptance_score(suggested: str, submitted: str) -> float | None:
+    """
+    Calculate acceptance score based on suggested and submitted values.
+
+    Args:
+        suggested: The AI-suggested value
+        submitted: The value actually submitted by the user
+
+    Returns:
+        1.0 if values match exactly, None otherwise
+    """
+    if not suggested or not submitted:
+        return None
+    if suggested == submitted:
+        return 1.0
+    return None
+
+
+@app.post("/api/v1/programmatic-feedback")
+async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
+    """
+    Receive programmatic feedback and log it to CSV file.
+
+    This endpoint captures AI suggestion acceptance data when users save flaws,
+    including the suggested value and submitted value. The acceptance score is
+    calculated server-side based on whether the values match.
+    """
+    try:
+        feature = feedback.feature
+        cve_id = feedback.cve_id or ""
+        email = feedback.email or ""
+        suggested = feedback.suggested_value or ""
+        submitted = feedback.submitted_value or ""
+
+        acceptance_score = calculate_acceptance_score(suggested, submitted)
+        acceptance_score_str = (
+            str(acceptance_score) if acceptance_score is not None else ""
+        )
+
+        row_data = {
+            "feature": feature,
+            "cve_id": cve_id,
+            "email": email,
+            "suggested_value": suggested,
+            "submitted_value": submitted,
+            "acceptance_score": acceptance_score_str,
+        }
+
+        programmatic_feedback_logger.write(row_data)
+
+        logging.info(
+            f"Programmatic feedback logged: feature={feature}, cve_id={cve_id}"
+        )
+        return {"status": "Programmatic feedback received and logged successfully."}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 409 Conflict) without wrapping
+        raise
+    except Exception as e:
+        entry = f"{feedback.cve_id}/{feedback.feature}"
+        logging.warning(
+            f"Failed to process programmatic feedback for {entry}: {e.__class__.__name__}"
+        )
+        logging.debug(
+            f"Error details for programmatic feedback submission {entry}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while processing programmatic feedback.",
         )

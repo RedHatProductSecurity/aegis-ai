@@ -6,19 +6,19 @@ import csv
 from fastapi.testclient import TestClient
 
 from aegis_ai_web.src.main import app
-from aegis_ai_web.src.feedback_logger import AegisLogger
-from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA
+from aegis_ai_web.src.feedback_logger import feedback_logger
+from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA, PROGRAMMATIC_FEEDBACK_SCHEMA
 
 client = TestClient(app)
 
 
 class TestReadFeedbackLogs:
-    """Test cases for AegisLogger.read() method."""
+    """Test cases for feedback_logger.read() method."""
 
     def test_read_feedback_logs_empty_file(self, feedback_log_setup):
         """Test reading from non-existent file returns empty list."""
         # File doesn't exist yet
-        entries = AegisLogger.read()
+        entries = feedback_logger.read()
         assert entries == []
 
     def test_read_feedback_logs_valid_entries(self, feedback_log_setup):
@@ -54,11 +54,11 @@ class TestReadFeedbackLogs:
                 }
             )
 
-        entries = AegisLogger.read()
+        entries = feedback_logger.read()
         assert len(entries) == 2
         assert entries[0]["feature"] == "suggest-impact"
         assert entries[1]["feature"] == "suggest-cwe"
-        # Ensure accept field is normalized to lowercase by AegisLogger.read()
+        # Ensure accept field is normalized to lowercase by feedback_logger.read()
         assert entries[0]["accept"] == "true"
         assert entries[1]["accept"] == "false"
 
@@ -86,7 +86,7 @@ class TestReadFeedbackLogs:
             # This will cause DictReader to return None for missing columns
             f.write("2025-01-15 11:00:00.456,suggest-cwe\n")
 
-        entries = AegisLogger.read()
+        entries = feedback_logger.read()
         assert len(entries) == 1
         assert entries[0]["feature"] == "suggest-impact"
 
@@ -641,3 +641,243 @@ class TestGetCveKpi:
         # Verify scores
         assert data["suggest-impact"]["acceptance_percentage"] == 100.0
         assert data["suggest-cwe"]["acceptance_percentage"] == 0.0
+
+    def test_get_cve_kpi_includes_programmatic_entries(
+        self, feedback_log_setup, programmatic_feedback_log_setup
+    ):
+        """Test KPI endpoint folds programmatic entries into the entries list."""
+        # Create standard feedback
+        with open(feedback_log_setup, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FEEDBACK_SCHEMA.field_names)
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:30:45.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23395",
+                    "email": "test@example.com",
+                    "actual": "IMPORTANT",
+                    "expected": "",
+                    "request_time": "2025-01-15 10:30:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.5.0",
+                }
+            )
+
+        # Create programmatic feedback with acceptance scores
+        with open(
+            programmatic_feedback_log_setup, "w", newline="", encoding="utf-8"
+        ) as f:
+            writer = csv.DictWriter(
+                f, fieldnames=PROGRAMMATIC_FEEDBACK_SCHEMA.field_names
+            )
+            writer.writeheader()
+            # Exact match (score 1.0) -> accepted=True
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:35:00.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23396",
+                    "email": "user@example.com",
+                    "suggested_value": "CRITICAL",
+                    "submitted_value": "CRITICAL",
+                    "acceptance_score": "1.0",
+                    "version": "0.5.0",
+                }
+            )
+            # Another exact match (score 1.0) -> accepted=True
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:40:00.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23397",
+                    "email": "user@example.com",
+                    "suggested_value": "HIGH",
+                    "submitted_value": "HIGH",
+                    "acceptance_score": "1.0",
+                    "version": "0.5.0",
+                }
+            )
+
+        response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
+        assert response.status_code == 200
+        data = response.json()
+        assert "suggest-impact" in data
+        feature_data = data["suggest-impact"]
+
+        # 1 standard + 2 programmatic entries = 3 total
+        assert len(feature_data["entries"]) == 3
+        # All 3 are accepted (1 standard True, 2 programmatic with score 1.0)
+        assert feature_data["acceptance_percentage"] == 100.0
+
+    def test_get_cve_kpi_programmatic_excludes_empty_scores(
+        self, feedback_log_setup, programmatic_feedback_log_setup
+    ):
+        """Test KPI entries only include programmatic entries with non-empty acceptance scores."""
+        # Create standard feedback
+        with open(feedback_log_setup, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FEEDBACK_SCHEMA.field_names)
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:30:45.123",
+                    "feature": "suggest-cwe",
+                    "cve_id": "CVE-2025-23395",
+                    "email": "test@example.com",
+                    "actual": "CWE-79",
+                    "expected": "",
+                    "request_time": "2025-01-15 10:30:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.5.0",
+                }
+            )
+
+        # Create programmatic feedback - mix of scored and unscored
+        with open(
+            programmatic_feedback_log_setup, "w", newline="", encoding="utf-8"
+        ) as f:
+            writer = csv.DictWriter(
+                f, fieldnames=PROGRAMMATIC_FEEDBACK_SCHEMA.field_names
+            )
+            writer.writeheader()
+            # Exact match (score 1.0) -> included
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:35:00.123",
+                    "feature": "suggest-cwe",
+                    "cve_id": "CVE-2025-23396",
+                    "email": "user@example.com",
+                    "suggested_value": "CWE-79",
+                    "submitted_value": "CWE-79",
+                    "acceptance_score": "1.0",
+                    "version": "0.5.0",
+                }
+            )
+            # No match - empty score (should be excluded)
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:40:00.123",
+                    "feature": "suggest-cwe",
+                    "cve_id": "CVE-2025-23397",
+                    "email": "user@example.com",
+                    "suggested_value": "CWE-79",
+                    "submitted_value": "CWE-89",
+                    "acceptance_score": "",  # Empty score - excluded
+                    "version": "0.5.0",
+                }
+            )
+
+        response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-cwe")
+        assert response.status_code == 200
+        data = response.json()
+        feature_data = data["suggest-cwe"]
+
+        # 1 standard + 1 programmatic (empty score excluded) = 2 total
+        assert len(feature_data["entries"]) == 2
+        assert feature_data["acceptance_percentage"] == 100.0
+
+    def test_get_cve_kpi_standard_only_no_programmatic(
+        self, feedback_log_setup, programmatic_feedback_log_setup
+    ):
+        """Test KPI endpoint when no programmatic feedback exists for feature."""
+        # Create standard feedback only
+        with open(feedback_log_setup, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FEEDBACK_SCHEMA.field_names)
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:30:45.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23395",
+                    "email": "test@example.com",
+                    "actual": "IMPORTANT",
+                    "expected": "",
+                    "request_time": "2025-01-15 10:30:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.5.0",
+                }
+            )
+
+        response = client.get("/api/v1/analysis/kpi/cve?feature=suggest-impact")
+        assert response.status_code == 200
+        data = response.json()
+        feature_data = data["suggest-impact"]
+
+        # Only standard feedback entries
+        assert len(feature_data["entries"]) == 1
+        assert feature_data["acceptance_percentage"] == 100.0
+
+    def test_get_cve_kpi_all_combines_entries(
+        self, feedback_log_setup, programmatic_feedback_log_setup
+    ):
+        """Test KPI endpoint with feature='all' combines standard and programmatic entries."""
+        # Create standard feedback
+        with open(feedback_log_setup, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FEEDBACK_SCHEMA.field_names)
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:30:45.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23395",
+                    "email": "test@example.com",
+                    "actual": "IMPORTANT",
+                    "expected": "",
+                    "request_time": "2025-01-15 10:30:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.5.0",
+                }
+            )
+
+        # Create programmatic feedback for multiple features
+        with open(
+            programmatic_feedback_log_setup, "w", newline="", encoding="utf-8"
+        ) as f:
+            writer = csv.DictWriter(
+                f, fieldnames=PROGRAMMATIC_FEEDBACK_SCHEMA.field_names
+            )
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:35:00.123",
+                    "feature": "suggest-impact",
+                    "cve_id": "CVE-2025-23396",
+                    "email": "user@example.com",
+                    "suggested_value": "CRITICAL",
+                    "submitted_value": "CRITICAL",
+                    "acceptance_score": "1.0",
+                    "version": "0.5.0",
+                }
+            )
+            writer.writerow(
+                {
+                    "datetime": "2025-01-15 10:40:00.123",
+                    "feature": "suggest-cwe",
+                    "cve_id": "CVE-2025-23397",
+                    "email": "user@example.com",
+                    "suggested_value": "CWE-79",
+                    "submitted_value": "CWE-79",
+                    "acceptance_score": "1.0",
+                    "version": "0.5.0",
+                }
+            )
+
+        response = client.get("/api/v1/analysis/kpi/cve?feature=all")
+        assert response.status_code == 200
+        data = response.json()
+
+        # Both features should be present
+        assert "suggest-impact" in data
+        assert "suggest-cwe" in data
+
+        # suggest-impact: 1 standard + 1 programmatic = 2 entries
+        assert len(data["suggest-impact"]["entries"]) == 2
+        assert data["suggest-impact"]["acceptance_percentage"] == 100.0
+
+        # suggest-cwe: 0 standard + 1 programmatic = 1 entry
+        assert len(data["suggest-cwe"]["entries"]) == 1
+        assert data["suggest-cwe"]["acceptance_percentage"] == 100.0
