@@ -27,6 +27,10 @@ def setup_logging_for_session():
     level = "DEBUG" if logging.getLogger().isEnabledFor(logging.DEBUG) else "INFO"
     config_logging(level=level)
 
+    # Suppress noisy httpx/httpcore request logs during eval runs only
+    for noisy_logger in ("httpx", "httpx._client", "httpcore"):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
 
 # We need to cache OSIDB responses (and maintain them in git) to make
 # sure that our evaluation is invariant to future changes in OSIDB data
