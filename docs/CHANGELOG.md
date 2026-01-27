@@ -4,10 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.3] - 2026-01-27
+
+### Changed
+- lowered verbosity of the CWE toolset, which does not need to be debugged any more
+
+### Added
+- added `/api/v1/programmatic-feedback` REST API endpoint for automatic feedback collection
+- added evaluation cases based on the feedback from security analysts
 
 ### Fixed
-- Added handling for JSON decoding errors
+- fixed data validation errors with `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` used as LLM
+- fixed compatibility with `pydantic-ai-slim-1.46.0` when Gemini API is used as LLM
+- tweaked the `suggest-statement` LLM prompt based on feedback to improve suggestions
+- added handling for JSON decoding errors
+
+
 ## [0.5.2] - 2026-01-19
 
 ## Fixed
