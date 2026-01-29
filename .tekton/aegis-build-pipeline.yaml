@@ -654,7 +654,7 @@ spec:
           secretName: $(tasks.provision-eaas-space.results.secretRef)
       steps:
       - name: run
-        image: registry.redhat.io/openshift4/ose-cli-rhel9:4.16@sha256:bb4a8bc89ebb9857c528839ff57fcc199b655fae40ef788dc473705a5e2bd1e6
+        image: registry.redhat.io/openshift4/ose-cli-rhel9:v4.20
         volumeMounts:
         - name: eaas-space
           mountPath: /var/run/eaas-space
