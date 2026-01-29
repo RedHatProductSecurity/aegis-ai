@@ -120,7 +120,7 @@ class Feature:
 
                 except (ModelHTTPError, ServerError) as e:
                     code = e.status_code if isinstance(e, ModelHTTPError) else e.code
-                    if agent_default_max_retries <= attempt or code != 503:
+                    if agent_default_max_retries <= attempt or code not in [500, 503]:
                         # propagate other exceptions (or exceeded retry attempts)
                         raise
 
