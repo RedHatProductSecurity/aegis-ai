@@ -8,6 +8,7 @@ from typing import Sequence, Any
 
 from google.genai.errors import ServerError
 from pydantic_ai.exceptions import ModelHTTPError
+from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Dataset
@@ -58,7 +59,12 @@ evals_llm_model_name = os.getenv(
 
 # if AEGIS_EVALS_LLM_HOST is set, use an independent LLM for evals
 evals_llm_host = os.getenv("AEGIS_EVALS_LLM_HOST")
-if evals_llm_host:
+if evals_llm_host == "https://generativelanguage.googleapis.com":
+    evals_llm_model = GoogleModel(model_name=evals_llm_model_name)
+    evals_llm_settings = GoogleModelSettings(
+        google_thinking_config={"include_thoughts": False},
+    )
+elif evals_llm_host:
     # use an independent LLM for evals
     evals_llm_api_key = os.getenv("AEGIS_EVALS_LLM_API_KEY", "")
     evals_llm_model = OpenAIChatModel(
