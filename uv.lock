@@ -3150,17 +3150,17 @@ wheels = [
 
 [[package]]
 name = "protobuf"
-version = "6.33.4"
+version = "6.33.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/53/b8/cda15d9d46d03d4aa3a67cb6bffe05173440ccf86a9541afaf7ac59a1b6b/protobuf-6.33.4.tar.gz", hash = "sha256:dc2e61bca3b10470c1912d166fe0af67bfc20eb55971dcef8dfa48ce14f0ed91", size = 444346, upload-time = "2026-01-12T18:33:40.109Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/25/7c72c307aafc96fa87062aa6291d9f7c94836e43214d43722e86037aac02/protobuf-6.33.5.tar.gz", hash = "sha256:6ddcac2a081f8b7b9642c09406bc6a4290128fce5f471cddd165960bb9119e5c", size = 444465, upload-time = "2026-01-29T21:51:33.494Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/be/24ef9f3095bacdf95b458543334d0c4908ccdaee5130420bf064492c325f/protobuf-6.33.4-cp310-abi3-win32.whl", hash = "sha256:918966612c8232fc6c24c78e1cd89784307f5814ad7506c308ee3cf86662850d", size = 425612, upload-time = "2026-01-12T18:33:29.656Z" },
-    { url = "https://files.pythonhosted.org/packages/31/ad/e5693e1974a28869e7cd244302911955c1cebc0161eb32dfa2b25b6e96f0/protobuf-6.33.4-cp310-abi3-win_amd64.whl", hash = "sha256:8f11ffae31ec67fc2554c2ef891dcb561dae9a2a3ed941f9e134c2db06657dbc", size = 436962, upload-time = "2026-01-12T18:33:31.345Z" },
-    { url = "https://files.pythonhosted.org/packages/66/15/6ee23553b6bfd82670207ead921f4d8ef14c107e5e11443b04caeb5ab5ec/protobuf-6.33.4-cp39-abi3-macosx_10_9_universal2.whl", hash = "sha256:2fe67f6c014c84f655ee06f6f66213f9254b3a8b6bda6cda0ccd4232c73c06f0", size = 427612, upload-time = "2026-01-12T18:33:32.646Z" },
-    { url = "https://files.pythonhosted.org/packages/2b/48/d301907ce6d0db75f959ca74f44b475a9caa8fcba102d098d3c3dd0f2d3f/protobuf-6.33.4-cp39-abi3-manylinux2014_aarch64.whl", hash = "sha256:757c978f82e74d75cba88eddec479df9b99a42b31193313b75e492c06a51764e", size = 324484, upload-time = "2026-01-12T18:33:33.789Z" },
-    { url = "https://files.pythonhosted.org/packages/92/1c/e53078d3f7fe710572ab2dcffd993e1e3b438ae71cfc031b71bae44fcb2d/protobuf-6.33.4-cp39-abi3-manylinux2014_s390x.whl", hash = "sha256:c7c64f259c618f0bef7bee042075e390debbf9682334be2b67408ec7c1c09ee6", size = 339256, upload-time = "2026-01-12T18:33:35.231Z" },
-    { url = "https://files.pythonhosted.org/packages/e8/8e/971c0edd084914f7ee7c23aa70ba89e8903918adca179319ee94403701d5/protobuf-6.33.4-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:3df850c2f8db9934de4cf8f9152f8dc2558f49f298f37f90c517e8e5c84c30e9", size = 323311, upload-time = "2026-01-12T18:33:36.305Z" },
-    { url = "https://files.pythonhosted.org/packages/75/b1/1dc83c2c661b4c62d56cc081706ee33a4fc2835bd90f965baa2663ef7676/protobuf-6.33.4-py3-none-any.whl", hash = "sha256:1fe3730068fcf2e595816a6c34fe66eeedd37d51d0400b72fabc848811fdc1bc", size = 170532, upload-time = "2026-01-12T18:33:39.199Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/79/af92d0a8369732b027e6d6084251dd8e782c685c72da161bd4a2e00fbabb/protobuf-6.33.5-cp310-abi3-win32.whl", hash = "sha256:d71b040839446bac0f4d162e758bea99c8251161dae9d0983a3b88dee345153b", size = 425769, upload-time = "2026-01-29T21:51:21.751Z" },
+    { url = "https://files.pythonhosted.org/packages/55/75/bb9bc917d10e9ee13dee8607eb9ab963b7cf8be607c46e7862c748aa2af7/protobuf-6.33.5-cp310-abi3-win_amd64.whl", hash = "sha256:3093804752167bcab3998bec9f1048baae6e29505adaf1afd14a37bddede533c", size = 437118, upload-time = "2026-01-29T21:51:24.022Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/6b/e48dfc1191bc5b52950246275bf4089773e91cb5ba3592621723cdddca62/protobuf-6.33.5-cp39-abi3-macosx_10_9_universal2.whl", hash = "sha256:a5cb85982d95d906df1e2210e58f8e4f1e3cdc088e52c921a041f9c9a0386de5", size = 427766, upload-time = "2026-01-29T21:51:25.413Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/b1/c79468184310de09d75095ed1314b839eb2f72df71097db9d1404a1b2717/protobuf-6.33.5-cp39-abi3-manylinux2014_aarch64.whl", hash = "sha256:9b71e0281f36f179d00cbcb119cb19dec4d14a81393e5ea220f64b286173e190", size = 324638, upload-time = "2026-01-29T21:51:26.423Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/f5/65d838092fd01c44d16037953fd4c2cc851e783de9b8f02b27ec4ffd906f/protobuf-6.33.5-cp39-abi3-manylinux2014_s390x.whl", hash = "sha256:8afa18e1d6d20af15b417e728e9f60f3aa108ee76f23c3b2c07a2c3b546d3afd", size = 339411, upload-time = "2026-01-29T21:51:27.446Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/53/a9443aa3ca9ba8724fdfa02dd1887c1bcd8e89556b715cfbacca6b63dbec/protobuf-6.33.5-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:cbf16ba3350fb7b889fca858fb215967792dc125b35c7976ca4818bee3521cf0", size = 323465, upload-time = "2026-01-29T21:51:28.925Z" },
+    { url = "https://files.pythonhosted.org/packages/57/bf/2086963c69bdac3d7cff1cc7ff79b8ce5ea0bec6797a017e1be338a46248/protobuf-6.33.5-py3-none-any.whl", hash = "sha256:69915a973dd0f60f31a08b8318b73eab2bd6a392c79184b3612226b0a3f8ec02", size = 170687, upload-time = "2026-01-29T21:51:32.557Z" },
 ]
 
 [[package]]
@@ -3338,7 +3338,7 @@ email = [
 
 [[package]]
 name = "pydantic-ai-slim"
-version = "1.49.0"
+version = "1.50.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "genai-prices" },
@@ -3349,9 +3349,9 @@ dependencies = [
     { name = "pydantic-graph" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fa/63/d30dac3ebff8bdc17fdbd59b38e0f9d5d3cd3dd1b16bafc3d816323577ce/pydantic_ai_slim-1.49.0.tar.gz", hash = "sha256:83e2406f14be2f15e8722bcabe93c9c9296628e0431543a35ca0a6a75aec827c", size = 402318, upload-time = "2026-01-29T18:55:45.433Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/c8/76934c139786706cbe1ee133d3bdce16baa89eb9d4a6cc22755998943360/pydantic_ai_slim-1.50.0.tar.gz", hash = "sha256:489f0bad1ee1c88364101d35582a3417d5ac9a449a5e5786fbc1da6363d86299", size = 403463, upload-time = "2026-01-30T00:02:59.358Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/1b/7af71c6ce23866183e07dc4a23571156444e13ce4197d3fe763300baed02/pydantic_ai_slim-1.49.0-py3-none-any.whl", hash = "sha256:44fed1d7d67361bb7f2e582500409b0e4e11536db6f919ed5b3de9f50bc78faa", size = 526438, upload-time = "2026-01-29T18:55:37.49Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/19/a8526a37aeb5dc35c72d602f81eeb7e6642a0a528964d5710f6801696508/pydantic_ai_slim-1.50.0-py3-none-any.whl", hash = "sha256:e376626cbb1d3b7713c11e0c973224f51ae80ead2dc6cfa514dedd64815f762a", size = 527573, upload-time = "2026-01-30T00:02:51.495Z" },
 ]
 
 [package.optional-dependencies]
@@ -3430,7 +3430,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-evals"
-version = "1.49.0"
+version = "1.50.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -3440,14 +3440,14 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/17/2d496cbc873c8faf00711eaf884d23b76228fe00505540ee8542d34c6f7f/pydantic_evals-1.49.0.tar.gz", hash = "sha256:6bb147d25b07953ee01beffdad9288756fb1923cbe32396839f4c97c31da550e", size = 47190, upload-time = "2026-01-29T18:55:46.629Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/f1/7bf6945325ebc209868949fb47fd7c584e0abeb8f4f6322ec71e8d8540ea/pydantic_evals-1.50.0.tar.gz", hash = "sha256:aa42639c049571bd04e7672adba835ab87436697fdfd9c057c6c61367a57f6fe", size = 47182, upload-time = "2026-01-30T00:03:00.808Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/35/ceaaa0b50dd6975df752d7489dc3532391211b4a6a6b66ebd7f9ca8d4781/pydantic_evals-1.49.0-py3-none-any.whl", hash = "sha256:6e513d5b79da5856dbe624bc5fa878578cf3553b8dc63f27447e48f5b9a59d6e", size = 56378, upload-time = "2026-01-29T18:55:38.999Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/ce/4316f34446fd4f617835306e467b943d23ee86a1da9d72d8efec24f910c1/pydantic_evals-1.50.0-py3-none-any.whl", hash = "sha256:7fdb4066a2213f10ac2fe3f8775e259fb384322ea28df95fa39b279fcf652ae0", size = 56377, upload-time = "2026-01-30T00:02:53.382Z" },
 ]
 
 [[package]]
 name = "pydantic-graph"
-version = "1.49.0"
+version = "1.50.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -3455,9 +3455,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/91/156f8762900de5e9325decf6491ba011e9d2e04773f9b81000763110d0d2/pydantic_graph-1.49.0.tar.gz", hash = "sha256:9e1379ac99c56f6d3cc33d7b3524151b64ec12b8c4b099de811727cb64395912", size = 58461, upload-time = "2026-01-29T18:55:49.258Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/be/b3f18fe31a823f603536dfa055784a5c6836a0286a69a77c41ea51c1f8ce/pydantic_graph-1.50.0.tar.gz", hash = "sha256:e376a1501d521c27588767da8314f049dc837cf401574ab8da51630f87d76ff5", size = 58461, upload-time = "2026-01-30T00:03:01.724Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/d1/2f5497dce7c3950788ae4a5c5b6a7867f104f1bc3582d30d962c437022f0/pydantic_graph-1.49.0-py3-none-any.whl", hash = "sha256:01289209681ab434710aff5bb8e49f7d21d7f9ce6952a78c893584f197da5fb9", size = 72346, upload-time = "2026-01-29T18:55:40.896Z" },
+    { url = "https://files.pythonhosted.org/packages/03/04/f442a706c38922a7bde1e1031ec059783deccfed87d83f81538ab57a46c4/pydantic_graph-1.50.0-py3-none-any.whl", hash = "sha256:0cb3daed6480406290b066a7aa6842fe667c9fd1cce0939dde67856a938e6b49", size = 72344, upload-time = "2026-01-30T00:02:54.62Z" },
 ]
 
 [[package]]
