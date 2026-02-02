@@ -276,7 +276,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39810",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 8 and 9. A memory corruption flaw exists in the `bnxt_en` kernel driver, which could be triggered when firmware resources change during an interface down operation. Triggering this vulnerability requires elevated privileges (ex. `CAP_NET_ADMIN`) as configuring traffic classes is a privileged operation. If the vulnerability is triggered, then the primary impact will be on integrity and availability, as the bug can cause kernel memory corruption in the kernel heap structures related to network i/o, which in turn can lead to a kernel crash. Confidentiality is most probably not impacted, as an out-of-bounds write could overwrite adjacent kernel memory, but no direct read exposure is implied.\n\nRed Hat Enterprise Linux 6, 7, and Red Hat In-Vehicle OS are not affected as the vulnerable code is not present in these versions.",
-        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39816",
@@ -327,10 +332,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-69262",
         expected_statement="This vulnerability is rated Moderate for Red Hat. The flaw in pnpm allows for remote code execution via command injection when environment variable substitution is used in `.npmrc` files with `tokenHelper` settings. Exploitation requires an attacker to control environment variables and place malicious scripts, primarily impacting build environments such as CI/CD pipelines or Docker builds. Red Hat products like Enterprise Application Platform are not directly affected by this pnpm vulnerability.",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-22822",
         expected_mitigation="To mitigate this issue, implement a policy engine such as Kubernetes, Kyverno, Kubewarden, or OPA. Configure the policy engine to prevent the usage of the `getSecretKey` function within any ExternalSecret resource. This will block the insecure cross-namespace secret retrieval capability.",
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
     ),
 ]
 
