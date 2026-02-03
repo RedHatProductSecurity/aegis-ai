@@ -166,21 +166,42 @@ def test_save_programmatic_feedback_validation_error_missing_feature():
 
 def test_save_programmatic_feedback_rejects_acceptance_score_in_payload():
     """
-    Test that sending acceptance_score in payload is ignored (not validated).
-    The backend calculates acceptance_score server-side, so any client-provided
-    value should be disregarded.
+    Test that sending acceptance_score in payload is rejected.
+    The backend calculates acceptance_score server-side, so client-provided
+    values should not be accepted.
     """
     feedback_data = {
         "feature": "suggest-impact",
         "cve_id": "CVE-2025-23395",
         "suggested_value": "CRITICAL",
         "submitted_value": "HIGH",
-        "acceptance_score": 0.85,  # This should be ignored
+        "acceptance_score": 0.85,  # This should be rejected
     }
     response = client.post("/api/v1/programmatic-feedback", json=feedback_data)
 
-    # Request should succeed (extra fields are ignored by Pydantic by default)
-    assert response.status_code == 200
+    # Request should be rejected with 422 Unprocessable Entity
+    assert response.status_code == 422
+    assert "extra_forbidden" in str(response.json())
+
+
+def test_save_programmatic_feedback_rejects_llmjudge_explanation_in_payload():
+    """
+    Test that sending llmjudge_explanation in payload is rejected.
+    The backend calculates llmjudge_explanation server-side via semantic scoring,
+    so client-provided values should not be accepted.
+    """
+    feedback_data = {
+        "feature": "suggest-title",
+        "cve_id": "CVE-2025-23395",
+        "suggested_value": "Buffer overflow vulnerability",
+        "submitted_value": "Memory corruption issue",
+        "llmjudge_explanation": "This should not be allowed",  # This should be rejected
+    }
+    response = client.post("/api/v1/programmatic-feedback", json=feedback_data)
+
+    # Request should be rejected with 422 Unprocessable Entity
+    assert response.status_code == 422
+    assert "extra_forbidden" in str(response.json())
 
 
 def test_save_programmatic_feedback_allows_duplicate_submissions(
@@ -317,15 +338,16 @@ async def test_semantic_scoring_success(programmatic_feedback_log_setup):
                 "suggested_value": "A vulnerability in the system",
                 "submitted_value": "A security flaw in the system",
                 "acceptance_score": "",
+                "llmjudge_explanation": "",
                 "version": "0.5.0",
             }
         )
 
-    # Mock semantic scoring to return a score
+    # Mock semantic scoring to return a tuple of (score, explanation)
     with patch(
         "aegis_ai_web.src.main.calculate_semantic_proximity_score",
         new_callable=AsyncMock,
-        return_value=0.75,
+        return_value=(0.75, "The texts are semantically similar"),
     ):
         # Call process_semantic_scoring directly
         result = await process_semantic_scoring(
@@ -359,11 +381,11 @@ async def test_semantic_scoring_failure_returns_none(programmatic_feedback_log_s
     cve_id = "CVE-2025-12345"
     feature = "suggest-description"
 
-    # Mock semantic scoring to return None (failure)
+    # Mock semantic scoring to return (None, None) (failure)
     with patch(
         "aegis_ai_web.src.main.calculate_semantic_proximity_score",
         new_callable=AsyncMock,
-        return_value=None,
+        return_value=(None, None),
     ):
         result = await process_semantic_scoring(
             feature=feature,
@@ -454,6 +476,7 @@ class TestGetSemanticScoredFeatures:
 
         assert "suggest-cwe" in features
         assert "suggest-impact" in features
+        assert "suggest-cvss" in features  # Alias for suggest-impact
 
     def test_returns_list(self):
         """Test that function returns a list."""
@@ -462,7 +485,7 @@ class TestGetSemanticScoredFeatures:
         features = get_semantic_scored_features()
 
         assert isinstance(features, list)
-        assert len(features) >= 6  # At least the 6 known features
+        assert len(features) >= 7  # At least the 7 known features
 
 
 class TestParseJsonList:
@@ -598,11 +621,15 @@ class TestScoreCvssVectors:
 
 @pytest.mark.asyncio
 class TestScoreWithLlmJudge:
-    """Tests for _score_with_llm_judge function."""
+    """Tests for _score_with_llm_judge function.
+
+    Note: _score_with_llm_judge raises exceptions (TimeoutError, etc.) rather than
+    catching them. Exception handling is done at the calculate_semantic_proximity_score level.
+    """
 
     @patch("aegis_ai_web.src.semantic_scoring.create_llm_judge")
-    async def test_timeout_returns_none(self, mock_create_judge):
-        """Test that timeout returns None instead of raising."""
+    async def test_timeout_raises_timeout_error(self, mock_create_judge):
+        """Test that timeout raises TimeoutError (handled by caller)."""
         from aegis_ai_web.src.semantic_scoring import _score_with_llm_judge
 
         # Mock the judge to take forever
@@ -615,21 +642,20 @@ class TestScoreWithLlmJudge:
         mock_judge.evaluate = slow_evaluate
         mock_create_judge.return_value = mock_judge
 
-        # Set a very short timeout via monkeypatch or use the default
-        # The function should return None on timeout
+        # Set a very short timeout
         import aegis_ai_web.src.semantic_scoring as ss
 
         original_timeout = ss.AEGIS_LLM_TIMEOUT_SECS
         ss.AEGIS_LLM_TIMEOUT_SECS = 1  # Very short timeout (1 second)
         try:
-            result = await _score_with_llm_judge("suggested", "submitted", "rubric")
-            assert result is None
+            with pytest.raises(TimeoutError):
+                await _score_with_llm_judge("suggested", "submitted", "rubric")
         finally:
             ss.AEGIS_LLM_TIMEOUT_SECS = original_timeout
 
     @patch("aegis_ai_web.src.semantic_scoring.create_llm_judge")
-    async def test_exception_returns_none(self, mock_create_judge):
-        """Test that exceptions return None instead of raising."""
+    async def test_exception_propagates(self, mock_create_judge):
+        """Test that exceptions propagate (handled by caller)."""
         from aegis_ai_web.src.semantic_scoring import _score_with_llm_judge
 
         # Mock the judge to raise an exception
@@ -637,21 +663,37 @@ class TestScoreWithLlmJudge:
         mock_judge.evaluate.side_effect = Exception("LLM service error")
         mock_create_judge.return_value = mock_judge
 
-        result = await _score_with_llm_judge("suggested", "submitted", "rubric")
-        assert result is None
+        with pytest.raises(Exception, match="LLM service error"):
+            await _score_with_llm_judge("suggested", "submitted", "rubric")
 
     @patch("aegis_ai_web.src.semantic_scoring.create_llm_judge")
-    async def test_success_returns_score(self, mock_create_judge):
-        """Test that successful scoring returns the score."""
+    async def test_success_returns_score_from_dict(self, mock_create_judge):
+        """Test that successful scoring extracts score from dict result."""
+        from aegis_ai_web.src.semantic_scoring import _score_with_llm_judge
+        from pydantic_evals.evaluators.evaluator import EvaluationReason
+
+        # Mock the judge to return a dict with EvaluationReason (actual LLMJudge behavior)
+        mock_judge = AsyncMock()
+        mock_judge.evaluate.return_value = {
+            "SemanticScoring": EvaluationReason(value=0.85, reason="Good match")
+        }
+        mock_create_judge.return_value = mock_judge
+
+        result = await _score_with_llm_judge("suggested", "submitted", "rubric")
+        assert result == (0.85, "Good match")
+
+    @patch("aegis_ai_web.src.semantic_scoring.create_llm_judge")
+    async def test_success_returns_score_from_float(self, mock_create_judge):
+        """Test that successful scoring handles direct float result."""
         from aegis_ai_web.src.semantic_scoring import _score_with_llm_judge
 
-        # Mock the judge to return a score
+        # Mock the judge to return a direct float (alternative LLMJudge behavior)
         mock_judge = AsyncMock()
         mock_judge.evaluate.return_value = 0.85
         mock_create_judge.return_value = mock_judge
 
         result = await _score_with_llm_judge("suggested", "submitted", "rubric")
-        assert result == 0.85
+        assert result == (0.85, None)
 
 
 @pytest.mark.asyncio
@@ -662,7 +704,7 @@ class TestCalculateSemanticProximityScore:
         """Test that empty suggested value returns None."""
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested="",
             submitted="some value",
             feature="suggest-title",
@@ -673,7 +715,7 @@ class TestCalculateSemanticProximityScore:
         """Test that empty submitted value returns None."""
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested="some value",
             submitted="",
             feature="suggest-title",
@@ -684,7 +726,7 @@ class TestCalculateSemanticProximityScore:
         """Test that unsupported features return None."""
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested="value",
             submitted="value",
             feature="unsupported-feature",
@@ -695,7 +737,7 @@ class TestCalculateSemanticProximityScore:
         """Test CWE scoring with valid JSON."""
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested='["CWE-79"]',
             submitted='["CWE-79"]',
             feature="suggest-cwe",
@@ -706,7 +748,7 @@ class TestCalculateSemanticProximityScore:
         """Test CWE scoring with malformed JSON returns None."""
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested='["CWE-79"]',
             submitted="not-json",
             feature="suggest-cwe",
@@ -718,7 +760,7 @@ class TestCalculateSemanticProximityScore:
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
         # Simple severity strings are not CVSS vectors, should return None
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested="CRITICAL",
             submitted="HIGH",
             feature="suggest-impact",
@@ -729,12 +771,27 @@ class TestCalculateSemanticProximityScore:
         """Test impact scoring with valid CVSS vectors."""
         from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
 
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
             submitted="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
             feature="suggest-impact",
         )
         assert score == 1.0
+
+    async def test_cvss_alias_with_cvss_vectors(self):
+        """Test suggest-cvss (alias for suggest-impact) with CVSS vectors."""
+        from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
+
+        # suggest-cvss should work the same as suggest-impact for CVSS vectors
+        score, explanation = await calculate_semantic_proximity_score(
+            suggested="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            submitted="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:L",
+            feature="suggest-cvss",
+            cve_id="CVE-2020-TEST",
+        )
+        # Different vectors should return a score < 1.0
+        assert score is not None
+        assert 0.0 < score < 1.0
 
 
 class TestRetryUnscoredEntries:
@@ -832,11 +889,12 @@ class TestRetryUnscoredEntries:
                     "suggested_value": "A vulnerability title",
                     "submitted_value": "A security flaw title",
                     "acceptance_score": "",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
 
-        mock_semantic_score.return_value = 0.85
+        mock_semantic_score.return_value = (0.85, "Titles are semantically similar")
 
         entry = {
             "datetime": datetime_str,
@@ -886,11 +944,12 @@ class TestRetryUnscoredEntries:
                     "suggested_value": "suggested",
                     "submitted_value": "submitted",
                     "acceptance_score": "",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
 
-        mock_semantic_score.return_value = 0.85
+        mock_semantic_score.return_value = (0.85, "Similar texts")
 
         entry = {
             "datetime": datetime_str,

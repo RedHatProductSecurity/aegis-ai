@@ -32,6 +32,14 @@ NUM_BY_IMPACT = {
 # fmt: on
 
 
+def score_impact_diff(impact: str, impact_exp: str) -> float:
+    """Compare two impact severity strings and return a score.
+    Valid values: NONE, LOW, MODERATE, IMPORTANT, CRITICAL."""
+    imp = NUM_BY_IMPACT[impact.strip().upper()]
+    imp_exp = NUM_BY_IMPACT[impact_exp.strip().upper()]
+    return 1.0 - abs(imp - imp_exp) / 10.0
+
+
 # TODO: check whether the cvss Python module could anyhow help with this
 def score_cvss3_diff(cvss3: str, cvss3_exp: str) -> tuple[float, str | None]:
     """Compare two CVSS 3.1 vectors and return (score, reason).
@@ -104,11 +112,11 @@ class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
         """return score based on actual and expected impact"""
         assert ctx.expected_output is not None
 
-        # compare actual and expected impact
-        imp = NUM_BY_IMPACT[ctx.output.impact]
-        imp_exp = NUM_BY_IMPACT[ctx.expected_output.impact]
-        score = 1.0 - abs(imp - imp_exp) / 10.0
+        # Handle None values for impact fields
+        actual_impact = ctx.output.impact or ""
+        expected_impact = ctx.expected_output.impact or ""
 
+        score = score_impact_diff(actual_impact, expected_impact)
         return reflect_confidence(ctx, score)
 
 

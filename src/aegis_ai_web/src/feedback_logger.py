@@ -128,6 +128,9 @@ class FeedbackLogger:
         """
         Read and parse feedback log entries from CSV file.
 
+        Normalizes old CSV entries by adding missing fields from the current schema
+        to maintain backward compatibility.
+
         Returns:
             List of Dict entries where all values are strings from CSV.
             Returns empty list if file doesn't exist or has no valid entries.
@@ -145,6 +148,11 @@ class FeedbackLogger:
                     for row in reader:
                         # Validate entry matches schema
                         if self._schema.validate_parsed_log(row):
+                            # Normalize old entries by adding missing fields
+                            for field in self._schema.field_names:
+                                if field not in row:
+                                    row[field] = ""
+
                             # Normalize accept field to lowercase
                             if "accept" in row and row["accept"]:
                                 row["accept"] = row["accept"].lower()
@@ -205,6 +213,10 @@ class FeedbackLogger:
                 for row in reader:
                     # Validate entry matches schema
                     if self._schema.validate_parsed_log(row):
+                        # Normalize old entries by adding missing fields
+                        for field in self._schema.field_names:
+                            if field not in row:
+                                row[field] = ""
                         entries.append(row)
 
                 # Find and update the matching entry
@@ -235,7 +247,12 @@ class FeedbackLogger:
                 writer = csv.DictWriter(csvfile, fieldnames=self._schema.field_names)
                 writer.writeheader()
                 for entry in entries:
-                    writer.writerow(entry)
+                    # Filter entry to only include schema fields to avoid
+                    # "dict contains fields not in fieldnames" error from DictWriter
+                    filtered_entry = {
+                        k: v for k, v in entry.items() if k in self._schema.field_names
+                    }
+                    writer.writerow(filtered_entry)
             finally:
                 fcntl.flock(csvfile.fileno(), fcntl.LOCK_UN)
 

@@ -39,7 +39,6 @@ from .endpoints.kpi import get_cve_kpi, SortOrder
 from .feedback_logger import feedback_logger, programmatic_feedback_logger
 from .semantic_scoring import (
     calculate_semantic_proximity_score,
-    get_semantic_scored_features,
 )
 
 
@@ -565,13 +564,9 @@ async def process_semantic_scoring(
     Returns:
         The semantic score if available, None otherwise
     """
-    semantic_features = get_semantic_scored_features()
-
-    if feature not in semantic_features:
-        return None
 
     try:
-        semantic_score = await calculate_semantic_proximity_score(
+        semantic_score, explanation = await calculate_semantic_proximity_score(
             suggested=suggested,
             submitted=submitted,
             feature=feature,
@@ -580,11 +575,14 @@ async def process_semantic_scoring(
 
         if semantic_score is not None:
             # Use semantic score if available - update the CSV entry
+            updates = {"acceptance_score": str(semantic_score)}
+            if explanation:
+                updates["llmjudge_explanation"] = explanation
             programmatic_feedback_logger.update_entry(
                 datetime_str=entry_datetime,
                 cve_id=cve_id,
                 feature=feature,
-                updates={"acceptance_score": str(semantic_score)},
+                updates=updates,
             )
             logging.debug(
                 f"Using semantic proximity score {semantic_score} for "
@@ -594,9 +592,10 @@ async def process_semantic_scoring(
         else:
             # Semantic scoring failed - entry will remain with empty score
             # and can be retried later via retry_failed_scoring.py
-            logging.debug(
-                f"Semantic scoring failed for feature={feature}, "
-                f"cve_id={cve_id}, entry has empty acceptance_score"
+            logging.warning(
+                f"Semantic scoring returned no score for feature={feature}, "
+                f"cve_id={cve_id}, entry has empty acceptance_score "
+                f"(can be retried via retry_failed_scoring.py)"
             )
             return None
 
@@ -649,6 +648,7 @@ async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
             "suggested_value": suggested,
             "submitted_value": submitted,
             "acceptance_score": acceptance_score_str,
+            "llmjudge_explanation": "",  # Will be populated by semantic scoring if LLMJudge is used
         }
 
         # Write CSV entry first (semantic scoring will update it if successful)

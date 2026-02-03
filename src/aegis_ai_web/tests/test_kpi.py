@@ -683,6 +683,7 @@ class TestGetCveKpi:
                     "suggested_value": "CRITICAL",
                     "submitted_value": "CRITICAL",
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -696,6 +697,7 @@ class TestGetCveKpi:
                     "suggested_value": "HIGH",
                     "submitted_value": "HIGH",
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -709,6 +711,7 @@ class TestGetCveKpi:
                     "suggested_value": "MODERATE",
                     "submitted_value": "LOW",
                     "acceptance_score": "0.4",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -782,6 +785,7 @@ class TestGetCveKpi:
                     "suggested_value": "CWE-79",
                     "submitted_value": "CWE-79",
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -795,6 +799,7 @@ class TestGetCveKpi:
                     "suggested_value": "CWE-79",
                     "submitted_value": "CWE-89",
                     "acceptance_score": "",  # Empty score - excluded
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -880,6 +885,7 @@ class TestGetCveKpi:
                     "suggested_value": "CRITICAL",
                     "submitted_value": "CRITICAL",
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -892,6 +898,7 @@ class TestGetCveKpi:
                     "suggested_value": "CWE-79",
                     "submitted_value": "CWE-79",
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -939,6 +946,7 @@ class TestGetCveKpi:
                     "suggested_value": "CRITICAL",
                     "submitted_value": "HIGH",
                     "acceptance_score": "0.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -952,6 +960,7 @@ class TestGetCveKpi:
                     "suggested_value": "CRITICAL",
                     "submitted_value": "CRITICAL",
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -1041,6 +1050,7 @@ class TestGetCveKpi:
                     "suggested_value": '["CWE-79"]',
                     "submitted_value": '["CWE-79"]',
                     "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -1054,6 +1064,7 @@ class TestGetCveKpi:
                     "suggested_value": '["CWE-79"]',
                     "submitted_value": '["CWE-89"]',
                     "acceptance_score": "0.3",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )
@@ -1123,6 +1134,7 @@ class TestGetCveKpi:
                     "suggested_value": '["CWE-79"]',
                     "submitted_value": '["CWE-89"]',
                     "acceptance_score": "0.2",
+                    "llmjudge_explanation": "",
                     "version": "0.5.0",
                 }
             )

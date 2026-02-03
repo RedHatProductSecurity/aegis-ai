@@ -13,15 +13,12 @@ import logging
 import time
 from typing import Optional
 
-from google.genai.errors import ServerError
-from pydantic_ai.exceptions import ModelHTTPError
-
 from aegis_ai import get_settings
 
 # Reuse evaluators and utilities from evals
 from evals.features.common import create_llm_judge, FIELD_RUBRICS
 from evals.features.cve.test_suggest_cwe import SuggestCweEvaluator
-from evals.features.cve.test_suggest_impact import score_cvss3_diff
+from evals.features.cve.test_suggest_impact import score_cvss3_diff, score_impact_diff
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +33,11 @@ def get_semantic_scored_features() -> list[str]:
     This is the single source of truth for which features can be
     semantically scored.
     """
-    return list(FIELD_RUBRICS.keys()) + ["suggest-cwe", "suggest-impact"]
+    return list(FIELD_RUBRICS.keys()) + [
+        "suggest-cwe",
+        "suggest-cvss",
+        "suggest-impact",
+    ]
 
 
 def _parse_json_list(value: str) -> Optional[list[str]]:
@@ -143,7 +144,7 @@ def _score_cvss_vectors(
 
 async def _score_with_llm_judge(
     suggested: str, submitted: str, rubric: str
-) -> Optional[float]:
+) -> tuple[float, Optional[str]]:
     """
     Score semantic similarity using LLMJudge from evals.
 
@@ -153,7 +154,13 @@ async def _score_with_llm_judge(
         rubric: The scoring rubric
 
     Returns:
-        Score between 0.0 and 1.0, or None if scoring fails
+        Tuple of (score, explanation) where score is between 0.0 and 1.0
+        and explanation is the reasoning provided by LLMJudge
+
+    Raises:
+        asyncio.TimeoutError: If the LLM call times out
+        TypeError: If LLMJudge returns an unexpected result type
+        Exception: Various LLM-related exceptions (HTTP errors, server errors, etc.)
     """
     # Create an LLMJudge using the same configuration as evals
     # include_expected_output=True tells LLMJudge to compare input with expected_output
@@ -164,52 +171,64 @@ async def _score_with_llm_judge(
     )
 
     # Create a context object that matches what LLMJudge expects
-    # LLMJudge expects ctx.input (the actual output) and ctx.expected_output
+    # LLMJudge with include_expected_output=True calls judge_output_expected(ctx.output, ctx.expected_output, ...)
     class SimpleContext:
         """Minimal context wrapper for LLMJudge."""
 
-        def __init__(self, input_val: str, expected_output: str):
-            # For LLMJudge, input is the actual output and expected_output is what we compare against
-            self.input = input_val  # This will be treated as the actual output
-            self.expected_output = expected_output
+        def __init__(self, output: str, expected_output: str):
+            # For LLMJudge, output is the actual output and expected_output is what we compare against
+            self.output = output  # The actual output (suggested value from AI)
+            self.expected_output = expected_output  # What user submitted (ground truth)
 
-    # Note: LLMJudge compares ctx.input (actual) with ctx.expected_output (expected)
-    # In our case: suggested is the actual output, submitted is what user expects
-    ctx = SimpleContext(input_val=suggested, expected_output=submitted)
+    # LLMJudge compares ctx.output (actual) with ctx.expected_output (expected)
+    # In our case: suggested is the actual AI output, submitted is what user expects/ground truth
+    ctx = SimpleContext(output=suggested, expected_output=submitted)
 
-    try:
-        # Use asyncio.wait_for to enforce timeout
-        result = await asyncio.wait_for(
-            judge.evaluate(ctx),
-            timeout=AEGIS_LLM_TIMEOUT_SECS,
-        )
+    # Use asyncio.wait_for to enforce timeout
+    result = await asyncio.wait_for(
+        judge.evaluate(ctx),
+        timeout=AEGIS_LLM_TIMEOUT_SECS,
+    )
 
-        # Extract score from the result
-        # LLMJudge returns different types depending on configuration
-        if isinstance(result, float):
-            return max(0.0, min(1.0, result))
-        elif hasattr(result, "value"):
-            # EvaluationReason or similar
-            score = result.value
-            return (
-                max(0.0, min(1.0, score)) if isinstance(score, (int, float)) else None
+    # Extract score from the result
+    # LLMJudge returns different types depending on configuration:
+    # - With score_name="X": returns dict {"X": EvaluationReason(value=..., reason=...)}
+    # - Without score_name: may return float or EvaluationReason directly
+    if isinstance(result, dict):
+        # Result is a dict with score_name as key, e.g., {"SemanticScoring": EvaluationReason(...)}
+        if not result:
+            raise TypeError("LLMJudge returned empty dict")
+        # Get the first (and typically only) value from the dict
+        eval_result = next(iter(result.values()))
+        if hasattr(eval_result, "value"):
+            score = eval_result.value
+            explanation = getattr(eval_result, "reason", "")
+            if isinstance(score, (int, float)):
+                return (max(0.0, min(1.0, float(score))), explanation)
+            raise TypeError(
+                f"LLMJudge dict result value is not numeric: got {type(score).__name__}"
             )
-        else:
-            logger.warning(f"Unexpected LLMJudge result type: {type(result)}")
-            return None
-
-    except asyncio.TimeoutError:
-        logger.warning(f"LLMJudge timed out after {AEGIS_LLM_TIMEOUT_SECS}s")
-        return None
-    except (ModelHTTPError, ServerError, Exception) as e:
-        error_type = type(e).__name__
-        logger.debug(f"LLMJudge failed: {error_type}: {str(e)}")
-        return None
+        raise TypeError(
+            f"LLMJudge dict value has no 'value' attribute: got {type(eval_result).__name__}"
+        )
+    elif isinstance(result, float):
+        return (max(0.0, min(1.0, result)), None)
+    elif hasattr(result, "value"):
+        # EvaluationReason or similar
+        score = result.value
+        explanation = getattr(result, "reason", None)
+        if isinstance(score, (int, float)):
+            return (max(0.0, min(1.0, float(score))), explanation)
+        raise TypeError(
+            f"LLMJudge result.value is not numeric: got {type(score).__name__}"
+        )
+    else:
+        raise TypeError(f"Unexpected LLMJudge result type: {type(result).__name__}")
 
 
 async def calculate_semantic_proximity_score(
     suggested: str, submitted: str, feature: str, cve_id: Optional[str] = None
-) -> Optional[float]:
+) -> tuple[Optional[float], Optional[str]]:
     """
     Calculate semantic proximity score between suggested and submitted values.
 
@@ -223,14 +242,18 @@ async def calculate_semantic_proximity_score(
         cve_id: Optional CVE ID for logging purposes
 
     Returns:
-        A float between 0.0 and 1.0 representing semantic similarity, or None if scoring fails
+        A tuple of (score, explanation) where:
+        - score is a float between 0.0 and 1.0 representing semantic similarity, or None if scoring fails
+        - explanation is a string describing the reasoning, or None if not available
     """
     if not suggested or not submitted:
-        return None
+        return (None, None)
 
     start_time = time.time()
 
     try:
+        score: Optional[float] = None
+        explanation: Optional[str] = None
         # Handle CWE list scoring
         if feature == "suggest-cwe":
             suggested_list = _parse_json_list(suggested)
@@ -241,12 +264,12 @@ async def calculate_semantic_proximity_score(
                     f"Failed to parse CWE lists as JSON: "
                     f"suggested={suggested[:100]}, submitted={submitted[:100]}"
                 )
-                return None
+                return (None, None)
 
             score = _score_cwe_lists(suggested_list, submitted_list)
 
         # Handle CVSS vector scoring
-        elif feature == "suggest-impact":
+        elif feature == "suggest-cvss":
             # Try to extract CVSS vector from JSON if present
             suggested_vector = suggested
             submitted_vector = submitted
@@ -272,23 +295,53 @@ async def calculate_semantic_proximity_score(
             except (json.JSONDecodeError, TypeError):
                 pass
 
-            score, _ = _score_cvss_vectors(suggested_vector, submitted_vector)
+            score, reason = _score_cvss_vectors(suggested_vector, submitted_vector)
             if score is None:
-                return None
+                logger.warning(
+                    f"CVSS vector scoring returned None: feature={feature}, "
+                    f"cve_id={cve_id or 'N/A'}, reason={reason}, "
+                    f"suggested_vector={suggested_vector[:100]}, "
+                    f"submitted_vector={submitted_vector[:100]}"
+                )
+                return (None, None)
+            explanation = reason
+
+        # Handle impact severity scoring (e.g., CRITICAL, IMPORTANT, MODERATE, LOW, NONE)
+        # or CVSS vectors if they look like CVSS format
+        elif feature == "suggest-impact":
+            # First check if these are CVSS vectors
+            if _is_cvss_vector(suggested) and _is_cvss_vector(submitted):
+                score, reason = _score_cvss_vectors(suggested, submitted)
+                if score is None:
+                    logger.warning(
+                        f"CVSS vector scoring returned None: feature={feature}, "
+                        f"cve_id={cve_id or 'N/A'}, reason={reason}, "
+                        f"suggested={suggested[:100]}, "
+                        f"submitted={submitted[:100]}"
+                    )
+                    return (None, None)
+                explanation = reason
+            else:
+                # Use severity string scoring
+                try:
+                    score = score_impact_diff(suggested, submitted)
+                except KeyError as e:
+                    logger.warning(f"Invalid impact severity value: {e}")
+                    return (None, None)
 
         # Handle text-based features with LLMJudge
         elif feature in FIELD_RUBRICS:
             rubric = FIELD_RUBRICS[feature]
-            score = await _score_with_llm_judge(suggested, submitted, rubric)
-            if score is None:
-                return None
+            score, explanation = await _score_with_llm_judge(
+                suggested, submitted, rubric
+            )
 
         else:
             logger.warning(
                 f"Semantic scoring not supported for feature '{feature}'. "
                 f"Supported features: {get_semantic_scored_features()}"
             )
-            return None
+            return (None, None)
 
         end_time = time.time()
         duration = end_time - start_time
@@ -300,15 +353,16 @@ async def calculate_semantic_proximity_score(
             f"score={score}"
         )
 
-        return score
+        return (score, explanation)
 
     except Exception as e:
         end_time = time.time()
         duration = end_time - start_time
         error_type = type(e).__name__
-        logger.debug(
+        logger.warning(
             f"Semantic scoring failed: feature={feature}, "
             f"cve_id={cve_id or 'N/A'}, duration={duration:.3f}s, "
             f"error={error_type}: {str(e)}"
         )
-        return None
+        logger.debug(f"Semantic scoring error details for {cve_id}", exc_info=True)
+        return (None, None)

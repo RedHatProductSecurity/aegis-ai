@@ -89,7 +89,7 @@ async def retry_entry(entry: Dict[str, str], dry_run: bool = False) -> bool:
     )
 
     try:
-        score = await calculate_semantic_proximity_score(
+        score, explanation = await calculate_semantic_proximity_score(
             suggested=suggested,
             submitted=submitted,
             feature=feature,
@@ -110,8 +110,7 @@ async def retry_entry(entry: Dict[str, str], dry_run: bool = False) -> bool:
         return False
 
     logger.info(
-        f"Semantic scoring succeeded: feature={feature}, "
-        f"cve_id={cve_id}, score={score}"
+        f"Semantic scoring succeeded: feature={feature}, cve_id={cve_id}, score={score}"
     )
 
     if dry_run:
@@ -121,17 +120,21 @@ async def retry_entry(entry: Dict[str, str], dry_run: bool = False) -> bool:
         )
         return True
 
+    updates = {"acceptance_score": str(score)}
+    if explanation:
+        updates["llmjudge_explanation"] = explanation
+
     updated = programmatic_feedback_logger.update_entry(
         datetime_str=datetime_str,
         cve_id=cve_id,
         feature=feature,
-        updates={"acceptance_score": str(score)},
+        updates=updates,
     )
     if updated:
         logger.info(f"Updated CSV entry: feature={feature}, cve_id={cve_id}")
     else:
         logger.warning(
-            f"Could not find CSV entry to update: "
+            f"Could not find CSV entry to update during retry: "
             f"datetime={datetime_str}, cve_id={cve_id}, feature={feature}"
         )
 
