@@ -438,6 +438,12 @@ cases = [
         cve_id="CVE-2025-66448",
         expected_impact="IMPORTANT",
     ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-1200",
+        expected_impact="MODERATE",
+        expected_cvss3_score="6.3",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
+    ),
 ]
 
 # evaluators
