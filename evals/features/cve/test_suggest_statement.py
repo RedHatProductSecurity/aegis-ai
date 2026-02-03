@@ -294,6 +294,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39832",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 9 and 10. The flaw in the `net/mlx5` driver could lead to a kernel lockdep assertion during a synchronous reset unload event, specifically when using the `devlink reload fw_activate` option. This issue affects systems utilizing Mellanox network adapters and performing firmware activation reloads. Triggering this vulnerability requires elevated privileges and primarily impacts availability, as it can lead to kernel warnings or firmware failures.",
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-43529",
