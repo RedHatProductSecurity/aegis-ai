@@ -10,12 +10,13 @@ OSIM-triggered evaluation/scoring.
 import asyncio
 import json
 import logging
-import os
 import time
 from typing import Optional
 
 from google.genai.errors import ServerError
 from pydantic_ai.exceptions import ModelHTTPError
+
+from aegis_ai import get_settings
 
 # Reuse evaluators and utilities from evals
 from evals.features.common import create_llm_judge, FIELD_RUBRICS
@@ -25,7 +26,7 @@ from evals.features.cve.test_suggest_impact import score_cvss3_diff
 logger = logging.getLogger(__name__)
 
 # Timeout for semantic scoring LLM calls (in seconds)
-AEGIS_LLM_TIMEOUT_SECS = int(os.getenv("AEGIS_LLM_TIMEOUT_SECS", "30"))
+AEGIS_LLM_TIMEOUT_SECS = get_settings().default_llm_prompt_timeout
 
 
 def get_semantic_scored_features() -> list[str]:

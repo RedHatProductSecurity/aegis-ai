@@ -53,14 +53,6 @@ class FeedbackLogger:
         self._env_var = env_var
         self._default_filename = default_filename
 
-    def _get_log_path(self) -> Path:
-        """
-        Get the log file path from environment variable or default location.
-
-        Reads env var dynamically to support test fixtures that set it.
-        """
-        return self.get_log_path()
-
     def get_log_path(self) -> Path:
         """
         Get the log file path from environment variable or default location.
@@ -100,7 +92,7 @@ class FeedbackLogger:
         Args:
             feedback_data: Dictionary containing feedback data to write
         """
-        log_path = self._get_log_path()
+        log_path = self.get_log_path()
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Add datetime and version fields if not already present
@@ -140,7 +132,7 @@ class FeedbackLogger:
             List of Dict entries where all values are strings from CSV.
             Returns empty list if file doesn't exist or has no valid entries.
         """
-        log_path = self._get_log_path()
+        log_path = self.get_log_path()
         entries = []
 
         # Open file unconditionally and handle FileNotFoundError to avoid TOCTOU race
