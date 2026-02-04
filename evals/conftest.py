@@ -10,7 +10,7 @@ from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools.osidb import CVE, cve_exclude_fields, OSIDBToolInput
 import aegis_ai.toolsets as ts
 
-from evals.features.common import eval_metrics
+from evals.features.common import eval_metrics, eval_summary
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
@@ -44,12 +44,16 @@ def override_rh_feature_agent():
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
 def pytest_sessionfinish(session, exitstatus):
-    # print evaluation score for each evaluator and average duration for each feature
-    for feat, metrics in eval_metrics.items():
+    # print evaluation summary for each feature
+    for feat, summary in eval_summary.items():
+        logging.info(f"[{feat}] {summary}")
+
+        metrics = eval_metrics[feat]
         if not metrics:
             # the metrics might not be available if all cases failed
             continue
 
+        # print evaluation score for each evaluator and average duration for each feature
         for eval_name, score in metrics.scores.items():
             logging.info(f"[{feat}] {eval_name}: {score:.4f}")
 

@@ -43,6 +43,9 @@ LOW_CONFIDENCE_PENALTY_DIVISOR = 4.0
 # minimal acceptable score returned by an evaluator
 MIN_SCORE_THRESHOLD = 0.1
 
+# evaluation summary for each evaluated feature
+eval_summary: dict[str, str] = {}
+
 # evaluation metrics (dict of ReportCaseAggregate objects)
 eval_metrics = {}
 
@@ -200,6 +203,13 @@ def handle_eval_report(report: EvaluationReport):
     # print the captured string through logger
     report_text = string_io.getvalue()
     logger.info(f"evaluation report for {report.name}:\n{report_text}")
+
+    # record evaluation summary to the global dict
+    num_evaluated = len(report.cases)
+    num_total = num_evaluated + len(report.failures)
+    succ_ratio = 100.0 * num_evaluated / num_total if num_total else 0.0
+    summary = f"evaluated {num_evaluated} cases of {num_total} ({succ_ratio:.0f}%)"
+    eval_summary[report.name] = summary
 
     # record evaluation metrics to the global dict
     eval_metrics[report.name] = report.averages()
