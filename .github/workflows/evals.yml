@@ -1,11 +1,7 @@
 name: Evals
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    # TODO: make sure this runs only for PRs from the upstream repo
-    # (because PRs from forks do not have access to our secrets)
     branches: [ "main" ]
 
 permissions:
