@@ -73,5 +73,5 @@
 | `AEGIS_EVALS_LLM_HOST`      | Eval LLM host              |               |
 | `AEGIS_EVALS_LLM_MODEL`     | Eval LLM model             |               |
 | `AEGIS_EVALS_LLM_API_KEY`   | Eval LLM openapi key       |               |
-| `AEGIS_EVALS_MIN_PASSED`    | Minimum eval to pass       |               |
+| `AEGIS_EVALS_MIN_PASSED`    | How many evals need to succeed to exit successfully | |
 | `OSIDB_CACHE_DIR`           | Eval osidb cache directory | `evals/osidb_cache` |

@@ -63,16 +63,16 @@ def pytest_sessionfinish(session, exitstatus):
         return
 
     min_passed = os.getenv("AEGIS_EVALS_MIN_PASSED")
-    if not min_passed:
-        return
+    if min_passed:
+        # get the actual count of passed tests
+        passed = tr.stats.get("passed")
+        num_passed = 0
+        if passed:
+            excluded = ["setup", "teardown"]
+            num_passed = sum(1 for t in passed if t.when not in excluded)
 
-    # get the actual count of passed tests
-    passed = tr.stats.get("passed")
-    num_passed = 0
-    if passed:
-        excluded = ["setup", "teardown"]
-        num_passed = sum(1 for t in passed if t.when not in excluded)
+        if int(min_passed) <= num_passed:
+            # make pytest exit successfully
+            session.exitstatus = pytest.ExitCode.OK
 
-    if int(min_passed) <= num_passed:
-        # make pytest exit successfully
-        session.exitstatus = pytest.ExitCode.OK
+    logging.info(f"[pytest] exit status: {session.exitstatus}")
