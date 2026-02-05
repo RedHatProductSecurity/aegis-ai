@@ -175,11 +175,13 @@ class AppSettings(BaseSettings):
                 msg = f'HTTP Request: {request.method} {request.url} "sending request"'
                 logger.debug(msg)
 
+            # Use a generous timeout so providers that map HTTP timeouts to
+            # model deadlines (e.g., Gemini) do not end up with a too-short
+            # deadline (below 10s).
+            timeout = max(self.default_llm_prompt_timeout, 10)
+
             self.http_client = httpx.AsyncClient(
-                # Use a generous timeout so providers that map HTTP timeouts to
-                # model deadlines (e.g., Gemini) don't end up with a too-short
-                # deadline (5s). Default aligns with AEGIS_LLM_TIMEOUT_SECS.
-                timeout=httpx.Timeout(self.default_llm_prompt_timeout),
+                timeout=httpx.Timeout(timeout),
                 event_hooks={"request": [_log_request]},
             )
 
