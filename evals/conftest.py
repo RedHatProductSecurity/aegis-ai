@@ -31,6 +31,18 @@ def setup_logging_for_session():
     for noisy_logger in ("httpx", "httpx._client", "httpcore"):
         logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
+    # Suppress ONLY the "[tool call] ... started" logs during eval runs,
+    # keep the "... finished" logs visible for timing.
+    class _SuppressToolStartedFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            try:
+                msg = record.getMessage()
+            except Exception:
+                return True
+            return not (msg.startswith("[tool call] ") and msg.endswith(" started"))
+
+    logging.getLogger("aegis_ai.toolsets").addFilter(_SuppressToolStartedFilter())
+
 
 # We need to cache OSIDB responses (and maintain them in git) to make
 # sure that our evaluation is invariant to future changes in OSIDB data
