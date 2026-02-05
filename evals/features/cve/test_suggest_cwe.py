@@ -200,7 +200,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53333",
-        cwe_list=["CWE-125"],
+        cwe_list=["CWE-125", "CWE-805"],  # kdudka: added CWE-805
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53394",

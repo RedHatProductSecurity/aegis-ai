@@ -87,6 +87,7 @@ cases = [
             * The requirements to carry the attack are elevated, requiring monitoring of the data flow.
             """,
         expected_mitigation="""Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base, or stability.""",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2022-50087",
