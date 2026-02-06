@@ -478,8 +478,35 @@ async def cve_kpi(
     return result
 
 
+def log_email_mismatch(request: Request, email: str) -> None:
+    """
+    When Kerberos auth is enabled, log a warning if the email does not
+    correspond to the authenticated Kerberos user.  The parts before @
+    are matched case-insensitively.  The parts after @ are ignored.
+    """
+    if not kerberos_spn:
+        return
+
+    krb_user = request.scope.get("username")
+    if not krb_user:
+        return
+
+    email_local = email.split("@")[0] if "@" in email else email
+    krb_local = krb_user.split("@")[0] if "@" in krb_user else krb_user
+    if email_local.lower() == krb_local.lower():
+        # successful verification
+        return
+
+    logging.warning(
+        "Feedback email does not correspond to Kerberos user: "
+        "email=%r, kerberos_username=%r",
+        email or "(empty)",
+        krb_user,
+    )
+
+
 @app.post("/api/v1/feedback")
-async def save_feedback(feedback: Feedback):
+async def save_feedback(request: Request, feedback: Feedback):
     """
     Receive feedback and log it to CSV file.
 
@@ -500,6 +527,8 @@ async def save_feedback(feedback: Feedback):
             "accept": accept_str,
             "rejection_comment": feedback.rejection_comment or "",
         }
+
+        log_email_mismatch(request, row_data["email"])
 
         # Write to CSV file (automatic escaping)
         feedback_logger.write(row_data)
@@ -610,7 +639,7 @@ async def process_semantic_scoring(
 
 
 @app.post("/api/v1/programmatic-feedback")
-async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
+async def save_programmatic_feedback(request: Request, feedback: ProgrammaticFeedback):
     """
     Receive programmatic feedback and log it to CSV file.
 
@@ -629,6 +658,8 @@ async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
         email = feedback.email or ""
         suggested = feedback.suggested_value or ""
         submitted = feedback.submitted_value or ""
+
+        log_email_mismatch(request, email)
 
         # Generate datetime once at the start to ensure consistency
         entry_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
