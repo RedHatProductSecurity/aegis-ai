@@ -61,6 +61,17 @@ FLAW_FIELDS = [
 ]
 
 
+def _kwargs_for_log(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of kwargs with datetime values as ISO date strings."""
+    result: dict[str, Any] = {}
+    for k, v in kwargs.items():
+        if isinstance(v, datetime):
+            result[k] = v.isoformat()
+        else:
+            result[k] = v
+    return result
+
+
 class FlawFinder:
     osidb: Session
 
@@ -94,7 +105,7 @@ class FlawFinder:
             kwargs["created_dt_gte"] = state.created_dt
 
         # initiate the OSIDB search
-        logger.info(f"searching CVEs: {kwargs}")
+        logger.info("searching CVEs: %s", _kwargs_for_log(kwargs))
         flaw_iterator = self.osidb.flaws.retrieve_list_iterator(**kwargs)
         cve_ids = [flaw.cve_id for flaw in flaw_iterator]
         if state is None:
