@@ -104,11 +104,27 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData) -> set[str]:
     feature = cve.SuggestImpact(agent)
     output = await exec_feature(feature, flaw_data)
 
+    # look for existing RH CVSS
+    for cvss in flaw_data["cvss_scores"]:
+        if cvss["issuer"] == "RH":
+            cve_id = flaw_data.get("cve_id")
+            logger.warning(f"{cve_id}: refusing to overwrite RH CVSS")
+            return set()
+
     # pick the "impact" field
     changed = update_field(flaw_data, "impact", output)
 
-    # TODO: pick RH CVSS
-
+    # RH CVSS is a subresource in OSIDB (flaws.cvss_scores), not part of flaw update.
+    # Store pending data for the bot to apply via osidb.flaws.cvss_scores create/update.
+    rh_cvss = {
+        "score": output.cvss3_score,
+        "vector": output.cvss3_vector,
+        "cvss_version": "V3",
+        "issuer": "RH",
+        "embargoed": flaw_data["embargoed"],
+    }
+    flaw_data["cvss_scores"] = [rh_cvss]
+    changed.add("cvss_scores")
     return changed
 
 

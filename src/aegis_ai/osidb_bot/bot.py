@@ -12,7 +12,7 @@ from osidb_bindings.session import Session
 import requests
 
 from datetime import datetime
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence, cast
 
 
 FLAW_FIELDS = [
@@ -112,19 +112,36 @@ class FlawUpdater:
         await self.apply_suggestions()
 
         # write flaw data
+        flaw_saved: bool = False
         try:
             flaw_uuid = self.flaw_data["uuid"]
             self.osidb.flaws.update(
                 id=flaw_uuid,
                 form_data=self.flaw_data,
             )
-            logger.info(f"{self.cve}: updated {self.updated_fields}")
+            flaw_saved = True
+
+            if "cvss_scores" in self.updated_fields:
+                # Apply RH CVSS via subresource (flaws.update() does not update cvss_scores)
+                rh_cvss = self.flaw_data["cvss_scores"][0]
+                cast(Any, self.osidb.flaws).cvss_scores.create(
+                    flaw_id=flaw_uuid,
+                    form_data=rh_cvss,
+                )
 
         except requests.exceptions.RequestException as e:
-            self._warn("failed to save changes")
+            if flaw_saved:
+                self._warn("failed to save RH CVSS")
+                self.updated_fields.remove("cvss_scores")
+            else:
+                self._warn(f"failed to save changes: {self.updated_fields}")
+                self.updated_fields.clear()
 
             if e.response is not None:
                 logger.debug(f"{self.cve}: {e.response.text}")
+
+        if self.updated_fields:
+            logger.info(f"{self.cve}: updated {self.updated_fields}")
 
 
 class Bot:
