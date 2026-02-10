@@ -1,5 +1,6 @@
 from aegis_ai import get_settings
 from aegis_ai.osidb_bot.state import BotState, StateFileHandler
+from aegis_ai.osidb_bot.suggest import DEFAULT_SUGGESTION_LIST
 from aegis_ai.osidb_bot.util import FlawData, logger
 from aegis_ai.data_models import CVEID
 
@@ -97,6 +98,8 @@ class FlawUpdater:
 
     async def apply_suggestions(self) -> None:
         assert self.flaw_data
+        for fnc in DEFAULT_SUGGESTION_LIST:
+            self.updated_fields |= await fnc(self.agent, self.flaw_data)
 
         if not self.updated_fields:
             # nothing has changed

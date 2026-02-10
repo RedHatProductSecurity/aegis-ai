@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-from typing import Awaitable
+from abc import ABC, abstractmethod
+from typing import Any, Awaitable
 
 from aegis_ai import get_env_int, get_settings
 from google.genai.errors import ServerError
@@ -73,9 +74,14 @@ async def run_with_heartbeat(runner: Awaitable, prefix: str) -> AgentRunResult:
             pass
 
 
-class Feature:
+class Feature(ABC):
     def __init__(self, agent: Agent):
         self.agent = agent
+
+    @abstractmethod
+    async def exec(self, *args: Any, **kwargs: Any) -> AgentRunResult:
+        """Run the feature. Subclasses define their own parameter signatures."""
+        ...
 
     async def _run(self, call_str, prompt, **kwargs):
         try:
