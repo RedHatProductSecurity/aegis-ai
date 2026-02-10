@@ -10,10 +10,31 @@ import osidb_bindings
 from osidb_bindings.session import Session
 
 import requests
+import textwrap
 
 from datetime import datetime
 from typing import Any, Optional, Sequence, cast
 
+
+ELIGIBLE_FLAWS = {
+    # only flaws coming from collectors
+    "source": (
+        # TODO: extend the sequence
+        "CVEORG",
+    ),
+    # only flaws in the NEW state
+    "classification": ({"workflow": "DEFAULT", "state": "NEW"},),
+    # only flaws where Aegis has not been used yet
+    "aegis_meta": ({},),
+    # only flaws with no affects
+    "affects": ([],),
+    # only flaws with no owner
+    "owner": ("",),
+    # only flaws with no statement
+    "statement": ("",),
+    # only flaws with no mitigation
+    "mitigation": ("",),
+}
 
 FLAW_FIELDS = [
     "aegis_meta",
@@ -53,8 +74,14 @@ class FlawFinder:
 
     @staticmethod
     def validate(flaw_data: FlawData) -> None:
-        # TODO
-        return
+        for field, allowed in ELIGIBLE_FLAWS.items():
+            value = flaw_data[field]
+            if value in allowed:
+                continue
+
+            short_value = textwrap.shorten(str(value), width=64, placeholder=" [...]")
+            msg = f'skipped because {field}="{short_value}", allowed={allowed}'
+            raise RuntimeError(msg)
 
 
 class FlawUpdater:
@@ -107,6 +134,9 @@ class FlawUpdater:
 
     async def do(self) -> None:
         assert self.flaw_data
+
+        # validate eligibility on the fresh flaw data to avoid TOCTOU
+        FlawFinder.validate(self.flaw_data)
 
         # apply suggestions
         await self.apply_suggestions()
