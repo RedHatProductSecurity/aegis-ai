@@ -68,9 +68,40 @@ class FlawFinder:
         self.osidb = osidb
 
     def search(self, state: Optional[BotState] = None) -> Sequence[CVEID]:
-        # TODO
-        breakpoint()
-        return []
+        # infer search predicates from ELIGIBLE_FLAWS
+        kwargs: dict[str, Any] = {
+            "include_fields": ["cve_id"],
+            "order": ["created_dt"],
+            "source_in": [s for s in ELIGIBLE_FLAWS["source"]],
+            "workflow_state_in": [
+                cast(dict[str, str], c)["state"]
+                for c in ELIGIBLE_FLAWS["classification"]
+            ],
+        }
+
+        # emptiness predicates for indexed fields
+        for field, allowed in ELIGIBLE_FLAWS.items():
+            if field in ("affects", "aegis_meta"):
+                # not indexed in OSIDB
+                continue
+
+            if len(allowed) == 1 and not allowed[0]:
+                key = f"{field}_isempty"
+                kwargs[key] = True
+
+        # filter by timestamp if state file is used
+        if state is not None:
+            kwargs["created_dt_gte"] = state.created_dt
+
+        # initiate the OSIDB search
+        logger.info(f"searching CVEs: {kwargs}")
+        flaw_iterator = self.osidb.flaws.retrieve_list_iterator(**kwargs)
+        cve_ids = [flaw.cve_id for flaw in flaw_iterator]
+        if state is None:
+            return cve_ids
+
+        # exclude the last processed CVE when resuming from state
+        return [cve for cve in cve_ids if cve != state.last_cve]
 
     @staticmethod
     def validate(flaw_data: FlawData) -> None:
