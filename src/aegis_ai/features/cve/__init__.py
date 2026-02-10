@@ -36,10 +36,31 @@ class SuggestImpact(Feature):
             cvss3_score_by_vector = cvss.CVSS3(output.cvss3_vector).scores()[0]
         except Exception:
             cvss3_score_by_vector = float("nan")
-
-        if cvss3_score == cvss3_score_by_vector:
+        cvss_score_mismatch = cvss3_score != cvss3_score_by_vector
+        if not cvss_score_mismatch:
             # already consistent
             return
+
+        impact_score_mismatch = (
+            (output.impact == "CRITICAL" and not cvss3_score_by_vector >= 9.0)
+            or (output.impact == "IMPORTANT" and not cvss3_score_by_vector >= 7.0)
+            or (output.impact == "MODERATE" and not cvss3_score_by_vector >= 5.0)
+            or (output.impact == "LOW" and not cvss3_score_by_vector < 5.0)
+        )
+
+        # TODO: remove, probably: we may not necessarily want to lower confidence on every self-correction
+        # if cvss_score_mismatch:
+        #     # adjust confidence score based on the difference, rounded to one decimal place
+        #     difference = abs(cvss3_score - cvss3_score_by_vector)
+        #     delta = round(1.0 - difference / 10.0, 1)
+        #     output.confidence = max(0.0, output.confidence - delta)
+
+        if impact_score_mismatch:
+            # adjust confidence based on mismatch of impact values
+            delta = self.distance_from_expected_impact(
+                output.impact, cvss3_score_by_vector
+            )
+            output.confidence = max(0.0, output.confidence - delta)
 
         logger.warning(
             f"{call_str}: adjusting cvss3_score to match cvss3_vector: {cvss3_score} -> {cvss3_score_by_vector}"
@@ -96,6 +117,47 @@ class SuggestImpact(Feature):
             result.output, call_str
         )  # TODO: extract this to process on SuggestImpactModel data model rather then here.
         return result
+
+    def expected_impact_from_cvss_score(self, cvss3_score: float) -> str:
+        """
+        Return the expected impact based on the CVSS 3.1 score.
+        """
+        if cvss3_score == 0.0:
+            return "NONE"
+        elif cvss3_score >= 0.0 and cvss3_score < 4.0:
+            return "LOW"
+        elif cvss3_score >= 4.0 and cvss3_score < 7.0:
+            return "MODERATE"
+        elif cvss3_score >= 7.0 and cvss3_score < 9.0:
+            return "IMPORTANT"
+        elif cvss3_score >= 9.0:
+            return "CRITICAL"
+        else:
+            return ""
+            # raise ValueError(f"Invalid CVSS 3.1 score: {cvss3_score}")
+
+    def does_impact_match_cvss_score(self, impact: str, cvss3_score: float) -> bool:
+        """
+        "NONE": 0.0 -> 0
+        "LOW": 2.0 -> 0..4
+        "MODERATE": 5.5 -> 4..7
+        "IMPORTANT": 8.0 -> 7..9
+        "CRITICAL" -> 9..10
+        """
+        return self.expected_impact_from_cvss_score(cvss3_score) == impact
+
+    def distance_from_expected_impact(self, impact: str, cvss3_score: float) -> float:
+        """
+        Return the distance from the expected impact based on the CVSS 3.1 score.
+        """
+        impacts = ["NONE", "LOW", "MODERATE", "IMPORTANT", "CRITICAL"]
+        return (
+            abs(
+                impacts.index(impact)
+                - impacts.index(self.expected_impact_from_cvss_score(cvss3_score))
+            )
+            / 4.0
+        )
 
 
 class SuggestCWE(Feature):
