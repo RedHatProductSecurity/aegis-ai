@@ -276,6 +276,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39809",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 9, 10, and Red Hat In-Vehicle OS 1. The flaw, a stack-out-of-bounds in the `intel_quicki2c` kernel module, can lead to a kernel crash due to improper handling of ACPI DSD method lengths. Red Hat Enterprise Linux 6, 7, and 8 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability only affects integrity and availability, as the stack-out-of-bounds overwrite could affect adjacent local variables (even if the overwrite is of one byte) and malformed or affected acpi tables could lead to a kernel crash. There is no reason to assume confidentiality is impacted, as the vulnerability is of a write nature, and not a read.",
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39810",
