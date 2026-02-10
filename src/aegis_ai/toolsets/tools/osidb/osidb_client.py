@@ -1,3 +1,4 @@
+import asyncio
 import os
 import logging
 from typing import AsyncGenerator
@@ -12,19 +13,30 @@ class OSIDBClient:
     """A client for interacting with OSIDB API."""
 
     def __init__(self):
-        try:
-            self._session = osidb_bindings.new_session(
-                osidb_server_uri=OSIDB_SERVER_URI
-            )
-        except Exception as e:
-            logger.info(f"No connection to osidb. {e}")
+        self._session = None
+        self._session_lock = asyncio.Lock()
+
+    async def _get_session(self):
+        async with self._session_lock:
+            if self._session is None:
+                try:
+                    self._session = osidb_bindings.new_session(
+                        osidb_server_uri=OSIDB_SERVER_URI
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to connect OSIDB at {OSIDB_SERVER_URI}: {e.__class__.__name__}"
+                    )
+                    raise
+        return self._session
 
     async def get_flaw_data(self, cve_id: str, include_embargoed: bool):
         """
         Retrieves raw flaw data from OSIDB for a given CVE ID.
         """
         logger.info(f"Retrieving raw flaw data for {cve_id} from OSIDB.")
-        flaw_data = self._session.flaws.retrieve(
+        session = await self._get_session()
+        flaw_data = session.flaws.retrieve(
             id=cve_id,
             include_fields="cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,mitigation,components,comments,comment_zero,affects,references,embargoed",
         )
@@ -40,7 +52,8 @@ class OSIDBClient:
         Retrieves flaws related to a specific component using an async iterator.
         """
         logger.info(f"Listing flaws for component '{component_name}'.")
-        return self._session.flaws.retrieve_list_iterator_async(
+        session = await self._get_session()
+        return session.flaws.retrieve_list_iterator_async(
             affects__ps_component=component_name,
             include_fields="cve_id,title,cve_description,impact,statement,comment_zero,embargoed",
         )
@@ -50,7 +63,8 @@ class OSIDBClient:
         Retrieves count of flaws related to a specific component using an async iterator.
         """
         logger.info(f"Listing flaws for component '{component_name}'.")
-        return self._session.flaws.count(
+        session = await self._get_session()
+        return session.flaws.count(
             affects__ps_component=component_name,
             include_fields="cve_id,title,cve_description,impact,statement,comment_zero,embargoed",
         )
