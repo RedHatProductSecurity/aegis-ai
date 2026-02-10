@@ -11,28 +11,15 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional, TypedDict
 
-from google.genai.types import (
-    HarmCategory,
-    HarmBlockThreshold,
-    SafetySettingDict,
-)
 from platformdirs import user_config_dir
 from functools import lru_cache
 
 from dotenv import load_dotenv
 from pydantic import Field, model_validator
-from pydantic_ai.models import Model
-from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelSettings
-from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_settings import BaseSettings
 
 from _pytest._io import TerminalWriter
 from _pytest.logging import ColoredLevelFormatter
-
-from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSettings
-from pydantic_ai.providers.google import GoogleProvider
-from pydantic_ai.providers.openai import OpenAIProvider
-from pydantic_ai.providers.anthropic import AnthropicProvider
 
 load_dotenv()
 
@@ -204,9 +191,19 @@ class AppSettings(BaseSettings):
             self.model_kwargs["max_tokens"] = self.default_llm_max_tokens
 
         if "api.anthropic.com" in host:
+            from pydantic_ai.models.anthropic import AnthropicModelSettings
+
             self.default_llm_settings = AnthropicModelSettings(**self.model_kwargs)
 
         elif "generativelanguage.googleapis.com" in host:
+            # lazy import of modules to speed up Aegis CLI
+            from pydantic_ai.models.google import GoogleModelSettings
+            from google.genai.types import (
+                HarmCategory,
+                HarmBlockThreshold,
+                SafetySettingDict,
+            )
+
             google_safety_settings: list[SafetySettingDict] = [
                 {
                     "category": HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -232,6 +229,8 @@ class AppSettings(BaseSettings):
             )
         else:
             # Fallback to OpenAI/Local
+            from pydantic_ai.models.openai import OpenAIResponsesModelSettings
+
             self.default_llm_settings = OpenAIResponsesModelSettings(
                 **self.model_kwargs
             )
@@ -242,7 +241,7 @@ class AppSettings(BaseSettings):
         return self
 
     @property
-    def default_llm_model(self) -> Model:
+    def default_llm_model(self):
         """
         Constructs pydantic-ai Model (with no side effects).
         """
@@ -254,6 +253,9 @@ class AppSettings(BaseSettings):
         }
 
         if "api.anthropic.com" in host:
+            from pydantic_ai.models.anthropic import AnthropicModel
+            from pydantic_ai.providers.anthropic import AnthropicProvider
+
             return AnthropicModel(
                 model_name=self.default_llm_model_name,
                 provider=AnthropicProvider(**provider_kwargs),
@@ -261,12 +263,18 @@ class AppSettings(BaseSettings):
 
         elif "generativelanguage.googleapis.com" in host:
             logger.info(f"model_name: {self.default_llm_model_name}")
+            from pydantic_ai.models.google import GoogleModel
+            from pydantic_ai.providers.google import GoogleProvider
+
             return GoogleModel(
                 model_name=self.default_llm_model_name,
                 provider=GoogleProvider(**provider_kwargs),
             )
 
         else:
+            from pydantic_ai.models.openai import OpenAIChatModel
+            from pydantic_ai.providers.openai import OpenAIProvider
+
             return OpenAIChatModel(
                 model_name=self.default_llm_model_name,
                 provider=OpenAIProvider(base_url=f"{host}/v1/", **provider_kwargs),
