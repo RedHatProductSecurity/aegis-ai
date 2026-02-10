@@ -1,9 +1,30 @@
 import fcntl
+import json
 import os
 
 from aegis_ai.osidb_bot.util import logger
 
+from datetime import datetime
 from typing import Never, Optional, Self
+
+from pydantic import BaseModel, ValidationError
+
+from aegis_ai.data_models import CVEID
+
+
+class BotState(BaseModel):
+    """State for the OSIDB bot, aligned with osidb_bindings flaw attributes."""
+
+    # the last processed CVE
+    last_cve: CVEID
+
+    # creation timestamp of the last processed CVE
+    created_dt: datetime
+
+    def __str__(self) -> str:
+        return (
+            f"BotState(last_cve={self.last_cve!r}, created_dt={str(self.created_dt)!r})"
+        )
 
 
 class StateFileHandler:
@@ -50,3 +71,44 @@ class StateFileHandler:
         fcntl.flock(self.state_fd, fcntl.LOCK_UN)
         os.close(self.state_fd)
         self.state_fd = -1
+
+    def read_state(self) -> Optional[BotState]:
+        """Read JSON-encoded BotState from state_fd. Returns None if file is empty."""
+        if not self.state_file:
+            # do nothing
+            return
+
+        # read file contents
+        assert 0 <= self.state_fd
+        with os.fdopen(self.state_fd, "r", closefd=False) as f:
+            f.seek(0)
+            data = f.read()
+        if not data:
+            return None
+
+        # parse JSON
+        try:
+            return BotState.model_validate_json(data)
+        except (ValidationError, json.JSONDecodeError):
+            logger.warning(
+                "Failed to load bot state from %r; treating as no state",
+                self.state_file,
+            )
+            return None
+
+    def write_state(self, state: BotState) -> None:
+        """Write JSON-encoded BotState to state_fd."""
+        if not self.state_file:
+            # do nothing
+            return
+
+        assert 0 <= self.state_fd
+
+        # serialize JSON
+        payload = state.model_dump_json() + "\n"
+        raw = payload.encode("utf-8")
+
+        # write the data at the beginning of the state file
+        os.lseek(self.state_fd, 0, os.SEEK_SET)
+        size: int = os.write(self.state_fd, raw)
+        os.ftruncate(self.state_fd, size)
