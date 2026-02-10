@@ -1,4 +1,4 @@
-from aegis_ai.osidb_bot.util import FlawData
+from aegis_ai.osidb_bot.util import FlawData, logger
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
 
@@ -75,6 +75,45 @@ async def suggest_description(agent: Agent, flaw_data: FlawData) -> set[str]:
     return changed
 
 
+async def suggest_cwe(agent: Agent, flaw_data: FlawData) -> set[str]:
+    if flaw_data["cwe_id"]:
+        # do not override existing CWE ID
+        return set()
+
+    # only for logging
+    cve_id = flaw_data.get("cve_id")
+
+    # request the suggestion from Aegis
+    feature = cve.SuggestCWE(agent)
+    output = await exec_feature(feature, flaw_data)
+    suggested_cwes = output.cwe
+    if not suggested_cwes:
+        logger.warning(f"{cve_id}: CWE suggestion failed")
+        return set()
+
+    # pick the first CWE in the list off suggested CWEs
+    cwe = suggested_cwes[0]
+    if 1 < len(suggested_cwes):
+        logger.info(f"{cve_id}: picked {cwe}, ignoring {suggested_cwes[1:]}")
+
+    return update_field(flaw_data, "cwe_id", value=cwe)
+
+
+async def suggest_impact(agent: Agent, flaw_data: FlawData) -> set[str]:
+    # request the suggestion from Aegis
+    feature = cve.SuggestImpact(agent)
+    output = await exec_feature(feature, flaw_data)
+
+    # pick the "impact" field
+    changed = update_field(flaw_data, "impact", output)
+
+    # TODO: pick RH CVSS
+
+    return changed
+
+
 DEFAULT_SUGGESTION_LIST = [
     suggest_description,
+    suggest_cwe,
+    suggest_impact,
 ]
