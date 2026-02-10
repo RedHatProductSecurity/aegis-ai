@@ -148,8 +148,12 @@ class ProgrammaticFeedback(BaseModel):
     Data structure for programmatic feedback collected when user saves a flaw.
 
     Captures the AI suggested value and the actual submitted value for comparison.
-    The acceptance_score is calculated server-side and should not be sent by clients.
+    The acceptance_score and llmjudge_explanation are calculated server-side
+    and should not be sent by clients.
     """
+
+    # unspecified fields in the payload will result in a ValidationError
+    model_config = {"extra": "forbid"}
 
     feature: str = Field(..., max_length=100)
     cve_id: Optional[CVEID] = Field("", max_length=50)
@@ -180,6 +184,7 @@ class ProgrammaticFeedbackSchema:
                 "suggested_value",  # Value suggested by AI
                 "submitted_value",  # Value actually submitted by user
                 "acceptance_score",  # Score 0-1 or empty
+                "llmjudge_explanation",  # Explanation from LLMJudge for the score
                 "version",  # AEGIS version at time of feedback
             ],
         )
@@ -196,19 +201,40 @@ class ProgrammaticFeedbackSchema:
 
     def validate_parsed_log(self, parsed_data: Optional[Dict[str, str]]) -> bool:
         """
-        Validate that parsed log data contains exactly the schema fields with non-None values.
+        Validate that parsed log data contains required schema fields.
+
+        This validation is lenient to support backward compatibility with old CSV files
+        that may be missing newer fields (like llmjudge_explanation). Missing fields
+        are tolerated and will be filled with empty strings during read operations.
 
         Args:
             parsed_data: Dictionary from parse_log_line()
 
         Returns:
-            True if valid, False otherwise
+            True if valid (contains all required fields), False otherwise
         """
         if parsed_data is None:
             return False
-        return set(parsed_data.keys()) == set(self.FIELDS) and all(
-            v is not None for v in parsed_data.values()
-        )
+
+        # Required fields that must always be present
+        required_fields = {
+            "datetime",
+            "feature",
+            "cve_id",
+            "email",
+            "suggested_value",
+            "submitted_value",
+            "acceptance_score",
+            "version",
+        }
+
+        # Check that all required fields are present (but allow extra fields from new schema)
+        parsed_keys = set(parsed_data.keys())
+        if not required_fields.issubset(parsed_keys):
+            return False
+
+        # All present fields must have non-None values
+        return all(v is not None for v in parsed_data.values())
 
 
 # Singleton instance

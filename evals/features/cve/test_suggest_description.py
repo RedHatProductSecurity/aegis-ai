@@ -12,6 +12,7 @@ from aegis_ai.features.cve import SuggestDescriptionText, SuggestDescriptionMode
 from evals.features.common import (
     common_feature_evals,
     create_llm_judge,
+    FIELD_RUBRICS,
     make_eval_reason,
     run_evaluation,
 )
@@ -21,12 +22,12 @@ from evals.features.common import (
 field_evaluators = {
     "suggested_title": create_llm_judge(
         score_name="TitleEvaluator",
-        rubric="Score how much the actual suggested_title field is semantically equivalent to the expected suggest_title field.  If the key message is the same but the style is different, the score should not be zero.  If the style is different, the score should not be 1.0.",
+        rubric=FIELD_RUBRICS["suggest-title"],
         include_expected_output=True,
     ),
     "suggested_description": create_llm_judge(
         score_name="DescriptionEvaluator",
-        rubric="Score how much the actual suggested_description field is semantically equivalent to the expected suggest_description field.  If the key message is the same but the style is different, the score should not be zero.  If the style is different, the score should not be 1.0.",
+        rubric=FIELD_RUBRICS["suggest-description"],
         include_expected_output=True,
     ),
 }

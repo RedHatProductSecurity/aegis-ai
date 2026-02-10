@@ -30,6 +30,37 @@ from aegis_ai.features.data_models import AegisFeatureModel
 # minimal acceptable length of an explanation (where applicable)
 EXPLANATION_MIN_LEN = 80
 
+# Centralized rubrics for semantic similarity scoring (used by evals and web service)
+# Keys are feature names (e.g., "suggest-title") matching web service feature endpoints
+FIELD_RUBRICS = {
+    "suggest-title": (
+        "Score how much the actual suggested_title field is semantically equivalent "
+        "to the expected suggest_title field.  If the key message is the same but the "
+        "style is different, the score should not be zero.  If the style is different, "
+        "the score should not be 1.0."
+    ),
+    "suggest-description": (
+        "Score how much the actual suggested_description field is semantically equivalent "
+        "to the expected suggest_description field.  If the key message is the same but "
+        "the style is different, the score should not be zero.  If the style is different, "
+        "the score should not be 1.0."
+    ),
+    "suggest-statement": (
+        "Score semantic equivalence between the actual suggested_statement and the expected "
+        "suggested_statement.  Emphasize matching rationale (impact justification in RH context, "
+        "preconditions, scope).  If style differs but the core message overlaps, the score should "
+        "be > 0.0 and < 1.0 depending on overlap.  Only assign 0.0 if the actual is irrelevant "
+        "to the CVE or contradicts the expected meaning.  When partially aligned but missing details, "
+        "prefer a low non-zero score (e.g., 0.12–0.3) rather than 0.0."
+    ),
+    "suggest-mitigation": (
+        "Score how much the actual suggested_mitigation field is semantically equivalent to the "
+        "expected suggested_mitigation field.  If the key message is the same but the style is "
+        "different, the score should not be zero.  If the style is different, the score should "
+        "not be 1.0."
+    ),
+}
+
 # penalize incorrect suggestions with high confidence rate (the difference
 # between the base score and confidence rate is divided by this number and
 # subtracted from the base score)

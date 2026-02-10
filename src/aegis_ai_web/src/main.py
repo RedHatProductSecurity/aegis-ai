@@ -4,6 +4,7 @@ aegis web
 
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -36,6 +37,9 @@ from . import (
 from .data_models import Feedback, ProgrammaticFeedback, FeatureKPI
 from .endpoints.kpi import get_cve_kpi, SortOrder
 from .feedback_logger import feedback_logger, programmatic_feedback_logger
+from .semantic_scoring import (
+    calculate_semantic_proximity_score,
+)
 
 
 def log_exception_safely(e: Exception, context: str) -> None:
@@ -532,6 +536,79 @@ def calculate_acceptance_score(suggested: str, submitted: str) -> float | None:
     return None
 
 
+async def process_semantic_scoring(
+    feature: str,
+    suggested: str,
+    submitted: str,
+    cve_id: str,
+    entry_datetime: str,
+    email: str,
+) -> float | None:
+    """
+    Process semantic scoring for a feature asynchronously.
+
+    This method attempts to calculate semantic proximity score for features that
+    support it. If semantic scoring fails or times out, the entry remains with an
+    empty acceptance_score and can be retried later via retry_failed_scoring.py.
+    This method is designed to be run as a background task and should not block
+    the main feedback submission flow.
+
+    Args:
+        feature: The feature name
+        suggested: The AI-suggested value
+        submitted: The value actually submitted by the user
+        cve_id: The CVE ID
+        entry_datetime: The datetime string for the entry
+        email: The user's email
+
+    Returns:
+        The semantic score if available, None otherwise
+    """
+
+    try:
+        semantic_score, explanation = await calculate_semantic_proximity_score(
+            suggested=suggested,
+            submitted=submitted,
+            feature=feature,
+            cve_id=cve_id,
+        )
+
+        if semantic_score is not None:
+            # Use semantic score if available - update the CSV entry
+            updates = {"acceptance_score": str(semantic_score)}
+            if explanation:
+                updates["llmjudge_explanation"] = explanation
+            programmatic_feedback_logger.update_entry(
+                datetime_str=entry_datetime,
+                cve_id=cve_id,
+                feature=feature,
+                updates=updates,
+            )
+            logging.debug(
+                f"Using semantic proximity score {semantic_score} for "
+                f"feature={feature}, cve_id={cve_id}"
+            )
+            return semantic_score
+        else:
+            # Semantic scoring failed - entry will remain with empty score
+            # and can be retried later via retry_failed_scoring.py
+            logging.warning(
+                f"Semantic scoring returned no score for feature={feature}, "
+                f"cve_id={cve_id}, entry has empty acceptance_score "
+                f"(can be retried via retry_failed_scoring.py)"
+            )
+            return None
+
+    except Exception as e:
+        # Log error but don't fail the feedback submission
+        # Entry will remain with empty score and can be retried later
+        logging.warning(
+            f"Error during semantic scoring for feature={feature}, "
+            f"cve_id={cve_id}: {e.__class__.__name__}: {str(e)}"
+        )
+        return None
+
+
 @app.post("/api/v1/programmatic-feedback")
 async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
     """
@@ -539,8 +616,13 @@ async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
 
     This endpoint captures AI suggestion acceptance data when users save flaws,
     including the suggested value and submitted value. The acceptance score is
-    calculated server-side based on whether the values match.
+    calculated server-side based on whether the values match. For features that
+    support semantic similarity (title, description, statement, mitigation),
+    semantic proximity scoring is attempted. If semantic scoring fails or times out,
+    the entry remains with an empty acceptance_score and can be retried later.
     """
+    from datetime import datetime
+
     try:
         feature = feedback.feature
         cve_id = feedback.cve_id or ""
@@ -548,21 +630,43 @@ async def save_programmatic_feedback(feedback: ProgrammaticFeedback):
         suggested = feedback.suggested_value or ""
         submitted = feedback.submitted_value or ""
 
+        # Generate datetime once at the start to ensure consistency
+        entry_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+        # Calculate exact match score (fallback)
         acceptance_score = calculate_acceptance_score(suggested, submitted)
+
         acceptance_score_str = (
             str(acceptance_score) if acceptance_score is not None else ""
         )
 
         row_data = {
+            "datetime": entry_datetime,  # Use the same datetime for CSV logging
             "feature": feature,
             "cve_id": cve_id,
             "email": email,
             "suggested_value": suggested,
             "submitted_value": submitted,
             "acceptance_score": acceptance_score_str,
+            "llmjudge_explanation": "",  # Will be populated by semantic scoring if LLMJudge is used
         }
 
+        # Write CSV entry first (semantic scoring will update it if successful)
         programmatic_feedback_logger.write(row_data)
+
+        # Start semantic scoring as a background task (non-blocking)
+        # This allows the feedback submission to complete quickly while
+        # semantic scoring runs in the background
+        asyncio.create_task(
+            process_semantic_scoring(
+                feature=feature,
+                suggested=suggested,
+                submitted=submitted,
+                cve_id=cve_id,
+                entry_datetime=entry_datetime,
+                email=email,
+            )
+        )
 
         logging.info(
             f"Programmatic feedback logged: feature={feature}, cve_id={cve_id}"
