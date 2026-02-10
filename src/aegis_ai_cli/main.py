@@ -210,3 +210,29 @@ def component_intelligence(component_name):
     if result:
         console.print(Rule())
         console.print(result.output.model_dump_json(indent=2))
+
+
+@aegis_cli.command()
+@click.option(
+    "--state-file",
+    type=click.Path(),
+    default=None,
+    help="Path to state file.",
+)
+@click.argument("cve_ids", nargs=-1, type=CVEID)
+def osidb_bot(state_file, cve_ids):
+    """
+    OSIDB bot: process CVE IDs (optional) with optional state file.
+    """
+    # lazy import to speed up basic Aegis CLI operations
+    from aegis_ai.osidb_bot import Bot, StateFileHandler, logger
+
+    try:
+        # this prevents multiple processes running in parallel on a single state file
+        # (if state_file is not None)
+        with StateFileHandler(state_file) as sfh:
+            osidb_bot = Bot(sfh, cli_agent)
+            runner = osidb_bot.process(cve_ids)
+            asyncio.run(runner)
+    except RuntimeError as e:
+        logger.error(str(e))
