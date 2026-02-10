@@ -12,11 +12,6 @@ from rich.console import Console
 from rich.rule import Rule
 
 from aegis_ai import check_llm_status, config_logging, get_settings
-from aegis_ai.agents import (
-    rh_feature_agent,
-    public_feature_agent,
-    simple_agent,
-)
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import component, cve
 from aegis_ai.features.data_models import AegisAnswer
@@ -26,8 +21,12 @@ from aegis_ai_cli import print_version, feature_agent
 console = Console()
 
 if "public" in feature_agent:
+    from aegis_ai.agents import public_feature_agent
+
     cli_agent = public_feature_agent
 else:
+    from aegis_ai.agents import rh_feature_agent
+
     cli_agent = rh_feature_agent
 
 
@@ -67,6 +66,8 @@ def search_plain(query):
     """
 
     async def _doit():
+        from aegis_ai.agents import simple_agent
+
         return await simple_agent.run(query, output_type=AegisAnswer)
 
     result = asyncio.run(_doit())

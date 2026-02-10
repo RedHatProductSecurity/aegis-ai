@@ -7,7 +7,6 @@ import os
 import logging
 import time
 
-from pydantic_ai.common_tools.tavily import tavily_search_tool
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.toolsets import FunctionToolset, CombinedToolset
 from pydantic_ai.toolsets.wrapper import WrapperToolset
@@ -15,12 +14,8 @@ from pydantic_ai._run_context import RunContext
 
 from aegis_ai import get_settings
 
-from aegis_ai.toolsets.tools.cwe import cwe_toolset
-from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
 from aegis_ai.toolsets.tools.osidb import osidb_toolset
 from aegis_ai.toolsets.tools.osvdev import osv_dev_cve_tool
-from aegis_ai.toolsets.tools.wikipedia import wikipedia_tool
-from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
 
 logger = logging.getLogger(__name__)
 
@@ -116,15 +111,23 @@ pypi_stdio_server = MCPServerStdio(
 public_toolset_list = []
 
 if get_settings().use_cwe_tool:
+    from aegis_ai.toolsets.tools.cwe import cwe_toolset
+
     public_toolset_list.append(cwe_toolset)
 
 if get_settings().use_linux_cve_tool:
+    from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
+
     public_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
 
 if get_settings().use_cisa_kev_tool:
+    from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
+
     public_toolset_list.append(FunctionToolset(tools=[cisa_kev_tool]))
 
 if get_settings().use_tavily_tool:
+    from pydantic_ai.common_tools.tavily import tavily_search_tool
+
     tavily_tool = tavily_search_tool(get_settings().tavily_api_key)
     public_toolset_list.append(FunctionToolset(tools=[tavily_tool]))
 
@@ -132,6 +135,8 @@ if get_settings().use_github_mcp_tool:
     public_toolset_list.append(github_stdio_server)
 
 if get_settings().use_wikipedia_tool:
+    from aegis_ai.toolsets.tools.wikipedia import wikipedia_tool
+
     public_toolset_list.append(FunctionToolset(tools=[wikipedia_tool]))
 
 if get_settings().use_wikipedia_mcp_tool:
