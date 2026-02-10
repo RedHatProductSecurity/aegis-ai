@@ -4,6 +4,7 @@ from aegis_ai.features import Feature, cve
 
 from pydantic_ai import Agent
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 
@@ -48,7 +49,19 @@ def update_field(
     # write to destination
     flaw_data[dst] = value
 
-    # TODO: update metadata
+    # FIXME: should we use osidb.status().dt instead?
+    timestamp = datetime.now(tz=timezone.utc).isoformat()
+
+    # record Aegis metadata
+    aegis_meta = flaw_data.setdefault("aegis_meta", {})
+    dst_field = aegis_meta.setdefault(dst, [])
+    dst_field.append(
+        {
+            "type": "AI-Bot",
+            "value": value,
+            "timestamp": timestamp,
+        }
+    )
 
     return set([dst])
 
@@ -125,6 +138,10 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData) -> set[str]:
     }
     flaw_data["cvss_scores"] = [rh_cvss]
     changed.add("cvss_scores")
+
+    # record aegis_meta for RH CVSS (in the format used by OSIM)
+    update_field(flaw_data, "_cvss3_vector", value=output.cvss3_vector)
+
     return changed
 
 

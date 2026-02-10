@@ -111,6 +111,10 @@ class FlawUpdater:
         # apply suggestions
         await self.apply_suggestions()
 
+        # mark the flaw as processed by Aegis/osidb-bot
+        aegis_meta = self.flaw_data.setdefault("aegis_meta", {})
+        aegis_meta["processed"] = True
+
         # write flaw data
         flaw_saved: bool = False
         try:
