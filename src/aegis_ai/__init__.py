@@ -146,6 +146,11 @@ class AppSettings(BaseSettings):
     # tavily key
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "   ")
 
+    # OSIDB
+    osidb_server_url: str = os.getenv(
+        "AEGIS_OSIDB_SERVER_URL", "https://localhost:8000"
+    )
+
     # shared kwargs for model settings usage across the codebase
     model_kwargs: Dict[str, Any] = Field(default_factory=dict)
 

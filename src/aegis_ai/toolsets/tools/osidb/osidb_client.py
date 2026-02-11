@@ -1,12 +1,11 @@
 import asyncio
-import os
 import logging
 from typing import AsyncGenerator
 import osidb_bindings
 
-logger = logging.getLogger(__name__)
+from aegis_ai import get_settings
 
-OSIDB_SERVER_URI = os.getenv("AEGIS_OSIDB_SERVER_URL", "https://localhost:8000")
+logger = logging.getLogger(__name__)
 
 
 class OSIDBClient:
@@ -19,13 +18,14 @@ class OSIDBClient:
     async def _get_session(self):
         async with self._session_lock:
             if self._session is None:
+                osidb_server_url = get_settings().osidb_server_url
                 try:
                     self._session = osidb_bindings.new_session(
-                        osidb_server_uri=OSIDB_SERVER_URI
+                        osidb_server_uri=osidb_server_url
                     )
                 except Exception as e:
                     logger.warning(
-                        f"Failed to connect OSIDB at {OSIDB_SERVER_URI}: {e.__class__.__name__}"
+                        f"Failed to connect OSIDB at {osidb_server_url}: {e.__class__.__name__}"
                     )
                     raise
         return self._session
