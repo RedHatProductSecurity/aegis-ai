@@ -5,6 +5,7 @@ from typing import Awaitable
 
 from aegis_ai import get_env_int, get_settings
 from google.genai.errors import ServerError
+from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
 from pydantic_ai.run import AgentRunResult
@@ -30,6 +31,17 @@ PROMPT_RETRY_TEMPERATURE = 0.9
 
 # the period of time to monitor a running prompt
 PROMPT_INFO_PERIOD = 60
+
+
+def id_from_context(context: BaseModel) -> str:
+    """return entity ID for logging purposes based on context"""
+    # Context may be CVE (cve_id) or component (component_name); use first non-None
+    for attr in ("cve_id", "component_name"):
+        context_id = getattr(context, attr, None)
+        if context_id is not None:
+            return context_id
+
+    return f"{type(context).__name__}(...)"
 
 
 async def run_with_heartbeat(runner: Awaitable, prefix: str) -> AgentRunResult:
@@ -92,7 +104,7 @@ class Feature:
         from aegis_ai.agents import agent_default_max_retries
 
         feat_name = self.__class__.__name__
-        call_str = f"{feat_name}({prompt.context.cve_id})"
+        call_str = f"{feat_name}({id_from_context(prompt.context)})"
         logger.info(f"{call_str} = ?")
         async with llm_sem:
             if not await prompt.is_safe():
