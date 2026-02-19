@@ -203,7 +203,7 @@ def component_intelligence(component_name):
     """
 
     async def _doit():
-        feature = component.ComponentIntelligence(public_feature_agent)
+        feature = component.ComponentIntelligence(cli_agent)
         return await feature.exec(component_name)
 
     result = asyncio.run(_doit())
