@@ -55,6 +55,9 @@ nvd_stdio_server = MCPServerStdio(
 # github-mcp: read only query against github.
 # https://hub.docker.com/r/mcp/github-mcp-server
 #
+# Image uses FQIN (docker.io/...) so Podman does not prompt for short-name
+# resolution when there is no TTY (e.g. gunicorn serving the web API).
+#
 # requires
 #   AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=false
 #   GITHUB_PERSONAL_ACCESS_TOKEN=
@@ -69,7 +72,7 @@ github_stdio_server = MCPServerStdio(
         "GITHUB_TOOLSETS",
         "-e",
         "GITHUB_READ_ONLY",
-        "mcp/github-mcp-server",
+        "ghcr.io/github/github-mcp-server",
     ],
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": f"{os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN', '')}",
