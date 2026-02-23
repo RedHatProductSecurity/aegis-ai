@@ -51,7 +51,7 @@ spec:
           cpu: 1
           memory: 3Gi
         limits:
-          memory: 6Gi
+          memory: 8Gi
     - name: postprocess
       computeResources:
         requests:
