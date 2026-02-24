@@ -9,6 +9,7 @@ from pydantic_ai import Agent
 import osidb_bindings
 from osidb_bindings.session import Session
 
+import asyncio
 import requests
 import textwrap
 
@@ -59,6 +60,9 @@ FLAW_FIELDS = [
     "updated_dt",
     "uuid",
 ]
+
+
+max_jobs_sem = asyncio.Semaphore(get_settings().llm_max_jobs)
 
 
 def _kwargs_for_log(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -225,6 +229,7 @@ class Bot:
     agent: Agent
     osidb: Session
     total: int
+    pending: dict[BotState, bool]
 
     @staticmethod
     def _fail(msg):
@@ -234,6 +239,7 @@ class Bot:
         self.sfh = state_file_handler
         self.agent = agent
         self.total = 0
+        self.pending = {}
         try:
             osidb_server = get_settings().osidb_server_url
 
@@ -257,6 +263,7 @@ class Bot:
 
         try:
             flaw_updater = FlawUpdater(self.osidb, self.agent, cve)
+            self.pending[flaw_updater.state()] = True  # mark as pending
             await flaw_updater.do()
 
         except RuntimeError as e:
@@ -264,14 +271,32 @@ class Bot:
             logger.warning(f"{cve}: {str(e)}")
 
         finally:
-            if not flaw_updater:
-                # failed to read flaw data from OSIDB
+            if flaw_updater:
+                self.pending[flaw_updater.state()] = False  # mark as done
+
+            # determine the next state
+            state: Optional[BotState] = None
+            for s in sorted(self.pending.keys(), key=lambda s: s.created_dt):
+                if self.pending[s]:
+                    # this CVE is still being processed
+                    break
+
+                # record the last _done_ CVE
+                state = s
+                del self.pending[state]
+
+            if not state:
+                # the CVE with lowest created_dt is still being processed
                 return
 
             # update state file
-            state: BotState = flaw_updater.state()
             self.sfh.write_state(state)
             logger.info(f"{state}")
+
+    async def process_cve_bounded(self, i: int, cve: CVEID) -> None:
+        async with max_jobs_sem:
+            logger.info(f"[{i}/{self.total}] processing {cve}")
+            await self.process_cve(cve)
 
     async def process(self, cve_ids: Sequence[CVEID] = ()) -> None:
         if not cve_ids:
@@ -283,6 +308,6 @@ class Bot:
             logger.info("nothing to do")
             return
 
-        for i, cve in enumerate(cve_ids, start=1):
-            logger.info(f"[{i}/{self.total}] processing {cve}")
-            await self.process_cve(cve)
+        await asyncio.gather(
+            *[self.process_cve_bounded(*job) for job in enumerate(cve_ids, start=1)]
+        )

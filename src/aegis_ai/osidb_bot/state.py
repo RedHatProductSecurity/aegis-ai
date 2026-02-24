@@ -7,13 +7,16 @@ from aegis_ai.osidb_bot.util import logger
 from datetime import datetime
 from typing import Never, Optional, Self
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from aegis_ai.data_models import CVEID
 
 
 class BotState(BaseModel):
     """State for the OSIDB bot, aligned with osidb_bindings flaw attributes."""
+
+    # make the state hashable so that it can be used as key for a dict
+    model_config = ConfigDict(frozen=True)
 
     # the last processed CVE
     last_cve: CVEID
