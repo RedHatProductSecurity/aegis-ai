@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 llm_prompt_timeout = get_settings().default_llm_prompt_timeout
 
 # Cap concurrent LLM calls across the process
-llm_max_jobs = get_env_int("AEGIS_LLM_MAX_JOBS", 4)
-llm_sem = asyncio.Semaphore(llm_max_jobs)
+llm_sem = asyncio.Semaphore(get_settings().llm_max_jobs)
 
 # The threshold for LLM input tokens to log a warning
 llm_input_tokens_warn_thr = get_env_int("AEGIS_LLM_INPUT_TOKENS_WARN_THR", 65536)
@@ -111,8 +110,9 @@ class Feature(ABC):
 
         feat_name = self.__class__.__name__
         call_str = f"{feat_name}({id_from_context(prompt.context)})"
-        logger.info(f"{call_str} = ?")
+        logger.debug(f"{call_str} acquiring llm_sem lock")
         async with llm_sem:
+            logger.info(f"{call_str} = ?")
             if not await prompt.is_safe():
                 msg = f"{call_str}: Safety agent blocked the prompt: unsafe content detected"
                 logger.warning(msg)

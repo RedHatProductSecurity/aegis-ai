@@ -23,7 +23,7 @@ from pydantic_evals.evaluators.common import OutputConfig
 
 from aegis_ai import get_settings
 from aegis_ai.agents import agent_default_max_retries
-from aegis_ai.features import llm_max_jobs, PROMPT_RETRY_503_DELAY_INIT
+from aegis_ai.features import PROMPT_RETRY_503_DELAY_INIT
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -227,7 +227,7 @@ def handle_eval_report(report: EvaluationReport):
         include_input=True,
         include_expected_output=True,
         include_output=True,
-        include_durations=(llm_max_jobs == 1),
+        include_durations=(get_settings().llm_max_jobs == 1),
         include_reasons=True,
     )
 
@@ -293,7 +293,9 @@ async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) 
     """create a dataset for the given cases/evaluators and evaluate the given task"""
     dataset = Dataset(cases=cases, evaluators=evals)
     debug = logger.isEnabledFor(logging.DEBUG)
-    report = await dataset.evaluate(task, max_concurrency=llm_max_jobs, progress=debug)
+    report = await dataset.evaluate(
+        task, max_concurrency=get_settings().llm_max_jobs, progress=debug
+    )
     handle_eval_report(report)
 
 

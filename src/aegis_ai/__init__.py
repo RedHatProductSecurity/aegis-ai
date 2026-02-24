@@ -123,6 +123,7 @@ class AppSettings(BaseSettings):
     default_llm_top_p: float = get_env_float("AEGIS_LLM_TOP_P", 0.8)
     default_llm_max_tokens: int = get_env_int("AEGIS_LLM_MAX_TOKENS", 0)
     default_llm_prompt_timeout: int = get_env_int("AEGIS_LLM_TIMEOUT_SECS", 300)
+    llm_max_jobs: int = get_env_int("AEGIS_LLM_MAX_JOBS", 4)
 
     # Aegis safety subagent
     safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
