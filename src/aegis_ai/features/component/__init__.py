@@ -6,6 +6,7 @@ from aegis_ai.features.component.data_models import (
     ComponentIntelligenceModel,
     ComponentFeatureInput,
 )
+from aegis_ai.features.data_models import feature_deps
 from aegis_ai.prompt import AegisPrompt
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,10 @@ def _component_intelligence_goals(context: ComponentFeatureInput) -> str:
                 * From the provided vulnerability title and description, identify the affected software component(s). Populate the output 'components' field with the list of component names (e.g. package names, project names). Set 'component_name' to the primary or first-listed component.
                 * For the primary component, provide a brief description (200 words), latest release version, website, repository, popularity and stability ranks (1-10), CVE count, exploit count, recent news, active contributors, security information, further learning links, and which Red Hat products include it.
                 * If multiple components are identified, focus the card on the primary one but list all in 'components'.
+                * When a CVE ID is provided in context, use the OSIDB tool with that CVE ID to retrieve flaw data for this vulnerability (do not look up other CVE IDs from the description unless needed).
+                * If the component is identified as being from the golang ecosystem and part of the standard library, dont use golang as the component name, find a more specific package name.
+                * For golang components not in the standard library, include the namespace in the component, eg github.com/containerd/containerd instead of just containerd.
+                * If the component is identified as being from the python standard library use 'python' as the component name.
             """
 
 
@@ -45,11 +50,13 @@ class ComponentIntelligence(Feature):
         component_name: Optional[str] = None,
         title: Optional[str] = None,
         description: Optional[str] = None,
+        cve_id: Optional[str] = None,
     ):
         context = ComponentFeatureInput(
             component_name=component_name,
             title=title,
             description=description,
+            cve_id=cve_id,
         )
         user_instruction = (
             "Your task is to meticulously examine the provided context and generate a 'card' of information about the software component."
@@ -94,4 +101,11 @@ class ComponentIntelligence(Feature):
             output_schema=ComponentIntelligenceModel.model_json_schema(),
         )
         logger.debug(prompt.to_string())
-        return await self.run_if_safe(prompt, output_type=ComponentIntelligenceModel)
+        # In title+description mode, exclude 'components' from OSIDB tool response so the
+        # model must infer components from the text; in component_name mode, no exclusion.
+        deps = feature_deps(
+            exclude_osidb_fields=["components"] if not context.component_name else []
+        )
+        return await self.run_if_safe(
+            prompt, deps=deps, output_type=ComponentIntelligenceModel
+        )

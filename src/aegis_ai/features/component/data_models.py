@@ -4,6 +4,19 @@ from pydantic import Field, BaseModel, model_validator
 
 from aegis_ai.features.data_models import AegisFeatureModel
 
+# Canonical component names: map common LLM variants to OSIDB/cache-style names.
+COMPONENT_NAME_ALIASES: dict[str, str] = {
+    "linux kernel": "kernel",
+}
+
+
+def _normalize_component_name(name: str) -> str:
+    """Rewrite known aliases to canonical form (e.g. 'Linux kernel' -> 'kernel')."""
+    if not name or not isinstance(name, str):
+        return name
+    key = name.strip().lower()
+    return COMPONENT_NAME_ALIASES.get(key, name.strip())
+
 
 class ComponentFeatureInput(BaseModel):
     """Input for Component Intelligence: either component_name or (title + description)."""
@@ -19,6 +32,10 @@ class ComponentFeatureInput(BaseModel):
     description: Optional[str] = Field(
         default=None,
         description="CVE or vulnerability description for component-suggestion mode.",
+    )
+    cve_id: Optional[str] = Field(
+        default=None,
+        description="Optional CVE ID for this vulnerability (e.g. CVE-2024-3782). When set, the agent should use this ID for OSIDB lookups.",
     )
 
     @model_validator(mode="after")
@@ -51,6 +68,15 @@ class ComponentIntelligenceModel(AegisFeatureModel):
         ...,
         description="List of suggested or related component names.",
     )
+
+    @model_validator(mode="after")
+    def canonicalize_component_names(self) -> "ComponentIntelligenceModel":
+        """Rewrite known aliases to canonical form (e.g. 'Linux kernel' -> 'kernel')."""
+        self.component_name = _normalize_component_name(self.component_name)
+        normalized = [_normalize_component_name(c).lower() for c in self.components]
+        # Dedupe while preserving order (e.g. ["Linux kernel", "kernel"] -> ["kernel"])
+        self.components = list(dict.fromkeys(n for n in normalized if n))
+        return self
 
     component_latest_version: str = Field(
         ...,
