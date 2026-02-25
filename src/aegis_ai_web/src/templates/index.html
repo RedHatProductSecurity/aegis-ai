@@ -22,7 +22,8 @@
       <p>Analysis features:<br/>
           CVE Features: GET /api/v1/analysis/cve?feature={feature_name}&amp;cve_id={cve_id}<br/>
           CVE Features: POST /api/v1/analysis/cve/{feature_name}<br/>
-          Component Features: GET /api/v1/analysis/component?feature={feature_name}&amp;component_name={component_name}<br/>
+          Component Features: GET /api/v1/analysis/component?feature={feature_name}&amp;component_name={component_name} or &amp;title=...&amp;description=...<br/>
+          Component Features: POST /api/v1/analysis/component (body: feature, component_name or title+description)<br/>
           KPI Metrics: GET /api/v1/analysis/kpi/cve?feature={feature_name}&amp;order={asc|desc}<br/>
       </p>
       <hr/>

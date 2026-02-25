@@ -1,10 +1,40 @@
-from pydantic import Field, BaseModel
+from typing import List, Optional
+
+from pydantic import Field, BaseModel, model_validator
 
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
 class ComponentFeatureInput(BaseModel):
-    component_name: str = Field(..., description="component name")
+    """Input for Component Intelligence: either component_name or (title + description)."""
+
+    component_name: Optional[str] = Field(
+        default=None,
+        description="Component name for lookup mode.",
+    )
+    title: Optional[str] = Field(
+        default=None,
+        description="CVE or vulnerability title for component-suggestion mode.",
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="CVE or vulnerability description for component-suggestion mode.",
+    )
+
+    @model_validator(mode="after")
+    def require_component_name_or_title_description(self):
+        has_name = self.component_name is not None and self.component_name.strip() != ""
+        has_title = self.title is not None and self.title.strip() != ""
+        has_desc = self.description is not None and self.description.strip() != ""
+        if has_name and (has_title or has_desc):
+            raise ValueError(
+                "Provide either component_name or (title and description), not both."
+            )
+        if not has_name and not (has_title and has_desc):
+            raise ValueError(
+                "Provide either component_name or both title and description."
+            )
+        return self
 
 
 class ComponentIntelligenceModel(AegisFeatureModel):
@@ -14,7 +44,12 @@ class ComponentIntelligenceModel(AegisFeatureModel):
 
     component_name: str = Field(
         ...,
-        description="Contains component name",
+        description="Primary component name (requested component or first suggested).",
+    )
+
+    components: List[str] = Field(
+        ...,
+        description="List of suggested or related component names.",
     )
 
     component_latest_version: str = Field(

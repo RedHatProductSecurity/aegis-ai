@@ -196,15 +196,38 @@ def cvss_diff(cve_id):
 
 
 @aegis_cli.command()
-@click.argument("component_name", type=str)
-def component_intelligence(component_name):
+@click.argument("component_name", type=str, required=False)
+@click.option(
+    "--title",
+    "-t",
+    help="Vulnerability title (use with --description for component suggestion from CVE text).",
+)
+@click.option(
+    "--description",
+    "-d",
+    help="Vulnerability description (use with --title for component suggestion from CVE text).",
+)
+def component_intelligence(component_name, title, description):
     """
-    Component intelligence.
+    Component intelligence. Pass a component name, or use --title and --description
+    to suggest components from vulnerability text. Output includes a 'components' list.
     """
+    if not component_name and not (title and description):
+        raise click.UsageError(
+            "Provide either COMPONENT_NAME or both --title and --description."
+        )
+    if component_name and (title or description):
+        raise click.UsageError(
+            "Provide either COMPONENT_NAME or (--title and --description), not both."
+        )
 
     async def _doit():
         feature = component.ComponentIntelligence(cli_agent)
-        return await feature.exec(component_name)
+        return await feature.exec(
+            component_name=component_name,
+            title=title,
+            description=description,
+        )
 
     result = asyncio.run(_doit())
     if result:

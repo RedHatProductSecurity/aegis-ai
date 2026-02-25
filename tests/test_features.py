@@ -137,6 +137,9 @@ async def test_component_intelligence_test_model():
     assert isinstance(componentintelligence, component.ComponentIntelligenceModel)
     assert componentintelligence.popularity_score == 1
     assert componentintelligence.confidence == 0.95
+    assert "components" in componentintelligence.model_dump()
+    assert isinstance(componentintelligence.components, list)
+    assert len(componentintelligence.components) >= 1
 
 
 async def test_suggest_impact_with_bad_cve_test_model():

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Dict, Type, Annotated, cast, Any
 
 import yaml
-from fastapi import FastAPI, Request, HTTPException, Form, Query
+from fastapi import FastAPI, Request, HTTPException, Form, Query, Body
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -281,11 +281,36 @@ async def cve_analysis_with_body(
         raise HTTPException(404, detail=f"CVE feature '{feature.value}' not found.")
     FeatureClass = cve_feature_registry[feature.value]
     try:
-        validated_input = cve_data
+        validated_input = dict(cve_data)
     except Exception as e:
         msg = f"Invalid input for CVE feature '{feature}'"
         log_exception_safely(e, msg)
         raise HTTPException(status_code=422, detail=msg)
+
+    # If OSIM did not provide components but we have title and body text, populate via Component Intelligence.
+    # Prefer comment_zero (upstream CVE.org CNA description from collector) over cve_description (can be human-written).
+    existing_components = validated_input.get("components") or []
+    description_text = (
+        validated_input.get("comment_zero") or validated_input.get("cve_description")
+    ) or ""
+    if not existing_components and validated_input.get("title") and description_text:
+        try:
+            ci_instance = component.ComponentIntelligence(agent=llm_agent)
+            ci_result = await ci_instance.exec(
+                title=validated_input["title"],
+                description=description_text,
+            )
+            validated_input = {
+                **validated_input,
+                "components": ci_result.output.components,
+            }
+        except Exception as e:
+            logging.warning(
+                "Component Intelligence failed to suggest components for CVE %s: %s",
+                cve_id,
+                e,
+            )
+
     try:
         feature_instance = FeatureClass(agent=llm_agent)
         result = await feature_instance.exec(cve_id, static_context=validated_input)
@@ -310,29 +335,82 @@ ComponentFeatureName = Enum(
 )
 
 
+def _validate_component_input(
+    component_name: str | None,
+    title: str | None,
+    description: str | None,
+) -> dict:
+    """Validate component analysis input: either component_name or (title and description)."""
+    from aegis_ai.features.component.data_models import ComponentFeatureInput
+
+    try:
+        inp = ComponentFeatureInput(
+            component_name=component_name or None,
+            title=title or None,
+            description=description or None,
+        )
+        return inp.model_dump(exclude_none=True)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid component input: provide either component_name or both title and description. {e!s}",
+        )
+
+
 @app.get(
     f"/api/{AEGIS_REST_API_VERSION}/analysis/component",
     response_class=JSONResponse,
 )
 async def component_analysis(
-    feature: ComponentFeatureName, component_name: str, detail: bool = False
+    feature: ComponentFeatureName,
+    component_name: str | None = Query(default=None),
+    title: str | None = Query(default=None),
+    description: str | None = Query(default=None),
+    detail: bool = False,
 ):
     logging.info(feature)
     if feature not in component_feature_registry:
         raise HTTPException(404, detail=f"Component feature '{feature}' not found.")
 
     FeatureClass = component_feature_registry[feature]
-
-    try:
-        validated_input = component_name
-    except Exception as e:
-        msg = f"Invalid input for Component feature '{feature}'"
-        log_exception_safely(e, msg)
-        raise HTTPException(status_code=422, detail=msg)
+    params = _validate_component_input(component_name, title, description)
 
     try:
         feature_instance = FeatureClass(agent=llm_agent)
-        result = await feature_instance.exec(validated_input)
+        result = await feature_instance.exec(**params)
+        if detail:
+            return result
+        return result.output
+    except Exception as e:
+        log_exception_safely(e, f"Error executing Component feature '{feature}'")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while executing Component feature '{feature}'.",
+        )
+
+
+@app.post(
+    f"/api/{AEGIS_REST_API_VERSION}/analysis/component",
+    response_class=JSONResponse,
+)
+async def component_analysis_post(
+    feature: ComponentFeatureName,
+    body: dict = Body(..., embed=False),
+    detail: bool = False,
+):
+    """Component analysis with JSON body (supports long title/description)."""
+    if feature not in component_feature_registry:
+        raise HTTPException(404, detail=f"Component feature '{feature}' not found.")
+
+    FeatureClass = component_feature_registry[feature]
+    component_name = body.get("component_name")
+    title = body.get("title")
+    description = body.get("description") or body.get("cve_description")
+    params = _validate_component_input(component_name, title, description)
+
+    try:
+        feature_instance = FeatureClass(agent=llm_agent)
+        result = await feature_instance.exec(**params)
         if detail:
             return result
         return result.output

@@ -35,10 +35,12 @@ PROMPT_INFO_PERIOD = 60
 
 def id_from_context(context: BaseModel) -> str:
     """return entity ID for logging purposes based on context"""
-    # Context may be CVE (cve_id) or component (component_name); use first non-None
-    for attr in ("cve_id", "component_name"):
+    # Context may be CVE (cve_id), component (component_name), or title (ComponentFeatureInput with title+description)
+    for attr in ("cve_id", "component_name", "title"):
         context_id = getattr(context, attr, None)
-        if context_id is not None:
+        if context_id is not None and (
+            not isinstance(context_id, str) or context_id.strip()
+        ):
             return context_id
 
     return f"{type(context).__name__}(...)"

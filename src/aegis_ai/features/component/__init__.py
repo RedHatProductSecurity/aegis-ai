@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from aegis_ai.features import Feature
 from aegis_ai.features.component.data_models import (
@@ -10,13 +11,9 @@ from aegis_ai.prompt import AegisPrompt
 logger = logging.getLogger(__name__)
 
 
-class ComponentIntelligence(Feature):
-    """Based on supplied component name and rh context generate a component 'card' of information."""
-
-    async def exec(self, component_name):
-        prompt = AegisPrompt(
-            user_instruction="Your task is to meticulously examine the provided context (eg. component name or purl) and generate a 'card' of information about the software component.",
-            goals="""
+def _component_intelligence_goals(context: ComponentFeatureInput) -> str:
+    if context.component_name:
+        return """
                 * Given a software component, identified by full or partial package name with (or without version) or more specific pURL, provide a brief description of the software component (200 words).
                 * Identify the latest release version of the software component by consulting git repos, release notes or software package management systems.
                 * Find the software component primary website
@@ -27,14 +24,45 @@ class ComponentIntelligence(Feature):
                 * Find and present recent news related to the component (in the past year).
                 * List the most active contributors (with affiliations) to the software component in a bulleted format. Use sites like GitStats to assess the most active contributors.
                 * Identify the repository location of the component.
-                * List other (most popular) software components which include this software component as a dependency.
+                * List other (most popular) software components which include this software component as a dependency. Populate the output 'components' field with the requested component name.
                 * Provide topical, critical security information related to the software component.
                 * Include a few links to tutorials, readme and docs
-                * Identify and enumerate which Red Hat products include the software component            
-            """,
+                * Identify and enumerate which Red Hat products include the software component
+            """
+    else:
+        return """
+                * From the provided vulnerability title and description, identify the affected software component(s). Populate the output 'components' field with the list of component names (e.g. package names, project names). Set 'component_name' to the primary or first-listed component.
+                * For the primary component, provide a brief description (200 words), latest release version, website, repository, popularity and stability ranks (1-10), CVE count, exploit count, recent news, active contributors, security information, further learning links, and which Red Hat products include it.
+                * If multiple components are identified, focus the card on the primary one but list all in 'components'.
+            """
+
+
+class ComponentIntelligence(Feature):
+    """Based on component name or (title + description) generate a component 'card' and list of components."""
+
+    async def exec(
+        self,
+        component_name: Optional[str] = None,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+    ):
+        context = ComponentFeatureInput(
+            component_name=component_name,
+            title=title,
+            description=description,
+        )
+        user_instruction = (
+            "Your task is to meticulously examine the provided context and generate a 'card' of information about the software component."
+            if context.component_name
+            else "Your task is to identify the affected software component(s) from the provided vulnerability title and description, then generate a 'card' of information about the primary component."
+        )
+        prompt = AegisPrompt(
+            user_instruction=user_instruction,
+            goals=_component_intelligence_goals(context),
             rules="""
                 1.  Information Gathering:
                     * When provided with a package name and version or pURL, initiate a search for relevant software component information. This includes looking in wikipedia or other software package management sites.
+                    * When provided with title and description, extract affected component names (packages, libraries, projects) and list them in the output 'components' field; set component_name to the primary one.
                     * Check as many sources as possible to confirm latest software component release version ... most likely this will be in the year 2025 - do not show version if you are not confident it is latest.
                     * describe the component, programming language, primary architecture and features, latest version number
                     * Prioritize up-to-date sources for news and security vulnerabilities.
@@ -48,6 +76,7 @@ class ComponentIntelligence(Feature):
                     * Investigate and report on any outstanding security issues of any listed dependencies. Provide web links if appropriate.
                     * when analyzing hackerone reports should be careful to classify based on response to the report from creator of software - a hackerone report that was closed without assigning a severity should be ignored.
                 2.  Output Formatting:
+                    * Always populate the 'components' output field: when given a component name, include that name plus any related components; when given title and description, list the identified affected component names.
                     * first line should include component name and latest version in bold with release date (ex. component name (v1.0 released on 01.01.2025)  )
                     * second line should include popularity and stability rank (ex. popularity: 1, stability: 1)
                     * third line should just include software component website
@@ -61,7 +90,7 @@ class ComponentIntelligence(Feature):
                     * For dependencies, clearly label their security information separately.
                     * Further learning section should include links to tutorials and docs
             """,
-            context=ComponentFeatureInput(component_name=component_name),
+            context=context,
             output_schema=ComponentIntelligenceModel.model_json_schema(),
         )
         logger.debug(prompt.to_string())
