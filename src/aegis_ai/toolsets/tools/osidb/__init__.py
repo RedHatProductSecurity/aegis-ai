@@ -229,7 +229,10 @@ async def component_flaw_tool(ctx: RunContext, component_name: str) -> Any:
         count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
     logger.debug(component_name)
-    return await client.list_component_flaws(component_name)
+    flaws = []
+    async for flaw in client.list_component_flaws(component_name):
+        flaws.append(flaw)
+    return flaws
 
 
 toolset = FunctionToolset(
