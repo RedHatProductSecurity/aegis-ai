@@ -58,6 +58,9 @@ nvd_stdio_server = MCPServerStdio(
 # requires
 #   AEGIS_USE_GITHUB_MCP_TOOL_CONTEXT=false
 #   GITHUB_PERSONAL_ACCESS_TOKEN=
+#
+# Use FQIN (ghcr.io/github/github-mcp-server) to avoid Podman short-name
+# resolution prompt when running without a TTY (e.g. web server, CI).
 github_stdio_server = MCPServerStdio(
     "podman",
     args=[
@@ -69,7 +72,7 @@ github_stdio_server = MCPServerStdio(
         "GITHUB_TOOLSETS",
         "-e",
         "GITHUB_READ_ONLY",
-        "mcp/github-mcp-server",
+        "ghcr.io/github/github-mcp-server",
     ],
     env={
         "GITHUB_PERSONAL_ACCESS_TOKEN": f"{os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN', '')}",
