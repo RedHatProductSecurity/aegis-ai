@@ -46,15 +46,29 @@ class OSIDBClient:
                     raise
         return self._session
 
-    async def get_flaw_data(self, cve_id: str, include_embargoed: bool):
+    # Fields needed for evals cache (excludes affects to reduce payload size)
+    _EVALS_INCLUDE_FIELDS = "cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,mitigation,components,comments,comment_zero,references,embargoed"
+    _FULL_INCLUDE_FIELDS = _EVALS_INCLUDE_FIELDS + ",affects"
+
+    async def get_flaw_data(
+        self, cve_id: str, include_embargoed: bool, include_affects: bool = True
+    ):
         """
         Retrieves raw flaw data from OSIDB for a given CVE ID.
+
+        When include_affects is False, the affects field is omitted from the API request
+        to reduce payload size (affects arrays can be very large). Use for evals cache.
         """
         logger.info(f"Retrieving raw flaw data for {cve_id} from OSIDB.")
         session = await self._get_session()
+        fields = (
+            self._EVALS_INCLUDE_FIELDS
+            if not include_affects
+            else self._FULL_INCLUDE_FIELDS
+        )
         flaw_data = session.flaws.retrieve(
             id=cve_id,
-            include_fields="cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,mitigation,components,comments,comment_zero,affects,references,embargoed",
+            include_fields=fields,
         )
 
         if not include_embargoed and flaw_data.embargoed:

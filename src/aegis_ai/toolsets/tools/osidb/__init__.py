@@ -1,5 +1,6 @@
 import logging
-
+import os
+from pathlib import Path
 from typing import List, Any, Optional
 
 from pydantic import Field
@@ -112,7 +113,9 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
 
     try:
         # Retrieval of embargoed flaws is disabled by default, to enable set env var `AEGIS_OSIDB_RETRIEVE_EMBARGOED`
-        flaw = await client.get_flaw_data(validated_cve_id, OSIDB_RETRIEVE_EMBARGOED)
+        flaw = await client.get_flaw_data(
+            validated_cve_id, OSIDB_RETRIEVE_EMBARGOED, include_affects=True
+        )
 
         # This logic is about default constraining LLM access to embargo information ... for additional programmatic safety, user acl always
         # dictates if a user has access or not.
@@ -181,6 +184,82 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
         raise ValueError(f"Could not retrieve {cve_id} {e}")
 
 
+async def cve_retrieve_for_evals(cve_id: CVEID) -> CVE:
+    """Retrieve CVE from OSIDB for evals cache. Omits affects to reduce payload size."""
+    logger.info(f"retrieving {cve_id} from osidb (evals cache)")
+    validated_cve_id = cveid_validator.validate_python(cve_id)
+
+    try:
+        flaw = await client.get_flaw_data(
+            validated_cve_id, OSIDB_RETRIEVE_EMBARGOED, include_affects=False
+        )
+
+        if not OSIDB_RETRIEVE_EMBARGOED and flaw.embargoed:
+            logger.info(
+                f"retrieved {validated_cve_id} from osidb but it is under embargo and AEGIS_OSIDB_RETRIEVE_EMBARGOED is set 'false'."
+            )
+            raise ValueError(f"Could not retrieve {cve_id}")
+
+        logger.info(f"{validated_cve_id}:{flaw.title}")
+        comments = ""
+        for i, comment in enumerate(flaw.comments):
+            if i >= 15:  # FIXME: remove limit of 15 comments
+                break
+            if not comment.is_private:
+                comments += str(comment.text) + " "
+        # affects omitted from API request; use empty list
+        references = []
+        for reference in flaw.references:
+            if hasattr(reference, "url") and reference.url:
+                references.append({"url": reference.url})
+
+        cvss_scores = [
+            {"issuer": score.issuer, "vector": score.vector}
+            for score in flaw.cvss_scores
+        ]
+
+        return CVE(
+            cve_id=flaw.cve_id,
+            title=flaw.title,
+            cwe_id=flaw.cwe_id,
+            impact=flaw.impact,
+            comment_zero=flaw.comment_zero,
+            comments=f"{comments}",
+            statement=flaw.statement,
+            mitigation=flaw.mitigation,
+            description=flaw.cve_description,
+            components=flaw.components,
+            references=references,
+            affects=[],  # omitted for evals cache
+            cvss_scores=cvss_scores,
+        )
+    except Exception as e:
+        logger.error(
+            f"We encountered an error during OSIDB retrieval of {validated_cve_id}: {e}"
+        )
+        raise ValueError(f"Could not retrieve {cve_id} {e}") from e
+
+
+def _is_ci() -> bool:
+    return os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true"
+
+
+async def _get_cve(cve_id: CVEID) -> CVE:
+    """Return CVE data: from OSIDB_CACHE_DIR if set, otherwise from live OSIDB. In CI, cache miss raises."""
+    cache_dir = os.getenv("OSIDB_CACHE_DIR")
+    if cache_dir:
+        path = Path(cache_dir) / f"{cve_id}.json"
+        try:
+            return CVE.model_validate_json(path.read_text())
+        except OSError:
+            if _is_ci():
+                raise FileNotFoundError(
+                    f"CVE {cve_id} not in osidb_cache; evals in CI require cache files to be committed. "
+                    f"Add {path} (e.g. by running evals locally with OSIDB access)."
+                ) from None
+    return await cve_retrieve(cve_id)
+
+
 @Tool
 async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """
@@ -194,10 +273,11 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
     logger.debug(input.cve_id)
-    cve = await cve_retrieve(input.cve_id)
+    cve = await _get_cve(input.cve_id)
 
-    # exclude CVE fields according to feature_deps
-    return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
+    # exclude CVE fields according to feature_deps; callers that don't pass deps (e.g. ComponentIntelligence) get no exclusions
+    exclude = ctx.deps.exclude_osidb_fields if ctx.deps is not None else []
+    return cve_exclude_fields(cve, exclude)
 
 
 @Tool

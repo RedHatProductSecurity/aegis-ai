@@ -1,5 +1,12 @@
 import logging
 import os
+
+# Set before any aegis_ai import so the main package's flaw_tool uses cache in evals/CI
+os.environ.setdefault(
+    "OSIDB_CACHE_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "osidb_cache"),
+)
+
 import pytest
 
 from pydantic_ai.tools import RunContext, Tool
@@ -18,7 +25,11 @@ from evals.utils.osidb_cache import osidb_cache_retrieve
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
     cve = await osidb_cache_retrieve(input.cve_id)
-    return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
+    # Features that don't pass deps (e.g. ComponentIntelligence) leave ctx.deps None
+    exclude = (
+        getattr(ctx.deps, "exclude_osidb_fields", []) if ctx.deps is not None else []
+    )
+    return cve_exclude_fields(cve, exclude)
 
 
 # enable logging to see progress
@@ -44,14 +55,16 @@ def setup_logging_for_session():
     logging.getLogger("aegis_ai.toolsets").addFilter(_SuppressToolStartedFilter())
 
 
-# We need to cache OSIDB responses (and maintain them in git) to make
-# sure that our evaluation is invariant to future changes in OSIDB data
-@pytest.fixture(scope="session", autouse=True)
-def override_rh_feature_agent():
-    # Replace the first inner FunctionToolset with one that contains our wrapper
+# We also replace the toolset so the agent only has our cache-only osidb_tool
+# (no component_count_tool / component_flaw_tool that would still hit live OSIDB).
+# Apply at import time so the agent sees the cache-only toolset.
+def _override_rh_feature_agent_osidb():
     wrapped = ts.redhat_cve_toolset.wrapped
     if isinstance(wrapped, CombinedToolset):
         wrapped.toolsets[0] = FunctionToolset(tools=[osidb_tool])  # type:ignore
+
+
+_override_rh_feature_agent_osidb()
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
@@ -70,7 +83,8 @@ def pytest_sessionfinish(session, exitstatus):
             logging.info(f"[{feat}] {eval_name}: {score:.4f}")
 
         evaluator_duration = metrics.total_duration - metrics.task_duration
-        logging.info(f"[{feat}] assertions ratio: {metrics.assertions * 100:.1f}%")
+        if metrics.assertions is not None:
+            logging.info(f"[{feat}] assertions ratio: {metrics.assertions * 100:.1f}%")
         logging.info(f"[{feat}] average case duration: {metrics.task_duration:.2f}s")
         logging.info(f"[{feat}] average evaluator duration: {evaluator_duration:.2f}s")
 

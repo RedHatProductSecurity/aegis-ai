@@ -13,6 +13,7 @@ from pydantic_ai.models.openai import OpenAIChatModel, OpenAIResponsesModelSetti
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Dataset
 from pydantic_evals.dataset import EvaluationReport
+from pydantic_evals.reporting import RenderValueConfig
 from pydantic_evals.evaluators import (
     EvaluationReason,
     Evaluator,
@@ -214,11 +215,29 @@ def is_evaluator_known_to_fail(ecase, eval_name):
     )
 
 
+def _format_component_intel_output(val: Any) -> str:
+    """Format ComponentIntelligenceModel for display: show components array, or component_name."""
+    if val is None:
+        return ""
+    if hasattr(val, "components") and val.components is not None:
+        return str(val.components)
+    if hasattr(val, "component_name") and val.component_name:
+        return str(val.component_name)
+    return str(val)
+
+
 def handle_eval_report(report: EvaluationReport):
     """print evaluation summary and trigger assertion failure in case any assertion failed"""
     # capture the report as a string
     string_io = io.StringIO()
     console = Console(file=string_io, force_terminal=True)
+
+    # Truncate component intelligence output to components array (or component_name) for readability
+    output_config: RenderValueConfig | None = None
+    if report.name == "component_intelligence_from_title_description":
+        output_config = RenderValueConfig(
+            value_formatter=_format_component_intel_output
+        )
 
     # Only include durations when llm_max_jobs == 1 to avoid misleading timing information
     # in parallel job scenarios, where durations may not be representative.
@@ -229,6 +248,7 @@ def handle_eval_report(report: EvaluationReport):
         include_output=True,
         include_durations=(llm_max_jobs == 1),
         include_reasons=True,
+        output_config=output_config,
     )
 
     # print the captured string through logger
@@ -289,11 +309,22 @@ def handle_eval_report(report: EvaluationReport):
     assert not failures, f"Unsatisfied assertion(s):\n{failures}"
 
 
-async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) -> None:
-    """create a dataset for the given cases/evaluators and evaluate the given task"""
+async def run_evaluation(
+    cases: Sequence[Any],
+    evals: Sequence[Any],
+    task: Any,
+    *,
+    max_concurrency: int | None = None,
+) -> None:
+    """Create a dataset for the given cases/evaluators and evaluate the given task.
+
+    Use max_concurrency=1 to avoid asyncio/anyio cancel-scope errors when the task
+    (or its tools, e.g. MCP) enter and exit cancel scopes in a single task only.
+    """
     dataset = Dataset(cases=cases, evaluators=evals)
     debug = logger.isEnabledFor(logging.DEBUG)
-    report = await dataset.evaluate(task, max_concurrency=llm_max_jobs, progress=debug)
+    concurrency = max_concurrency if max_concurrency is not None else llm_max_jobs
+    report = await dataset.evaluate(task, max_concurrency=concurrency, progress=debug)
     handle_eval_report(report)
 
 
