@@ -41,7 +41,7 @@ class SuggestImpact(Feature):
             # already consistent
             return
 
-        logger.warning(
+        logger.info(
             f"{call_str}: adjusting cvss3_score to match cvss3_vector: {cvss3_score} -> {cvss3_score_by_vector}"
         )
         output.cvss3_score = f"{cvss3_score_by_vector}"
