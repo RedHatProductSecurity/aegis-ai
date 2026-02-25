@@ -31,6 +31,8 @@ ELIGIBLE_FLAWS = {
     "affects": ([],),
     # only flaws with no owner
     "owner": ("",),
+    # only flaws with empty description
+    "cve_description": ("",),
     # only flaws with no statement
     "statement": ("",),
     # only flaws with no mitigation
