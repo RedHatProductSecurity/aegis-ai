@@ -92,6 +92,8 @@ class FlawFinder:
                 cast(dict[str, str], c)["state"]
                 for c in ELIGIBLE_FLAWS["classification"]
             ],
+            # use a large page size to minimize round trips when only fetching IDs
+            "limit": 1000,
         }
 
         # emptiness predicates for indexed fields
