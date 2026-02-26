@@ -4,7 +4,7 @@ from aegis_ai.features import Feature, cve
 
 from pydantic_ai import Agent
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Optional
 
 
@@ -21,6 +21,7 @@ async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
 
 def update_field(
     flaw_data: FlawData,
+    timestamp: datetime,
     dst: str,
     output: Any = None,
     src: Optional[str] = None,
@@ -49,9 +50,6 @@ def update_field(
     # write to destination
     flaw_data[dst] = value
 
-    # FIXME: should we use osidb.status().dt instead?
-    timestamp = datetime.now(tz=timezone.utc).isoformat()
-
     # record Aegis metadata
     aegis_meta = flaw_data.setdefault("aegis_meta", {})
     dst_field = aegis_meta.setdefault(dst, [])
@@ -59,26 +57,28 @@ def update_field(
         {
             "type": "AI-Bot",
             "value": value,
-            "timestamp": timestamp,
+            "timestamp": timestamp.isoformat(),
         }
     )
 
     return set([dst])
 
 
-async def suggest_description(agent: Agent, flaw_data: FlawData) -> set[str]:
+async def suggest_description(
+    agent: Agent, flaw_data: FlawData, ts: datetime
+) -> set[str]:
     # request the suggestion from Aegis
     feature = cve.SuggestDescriptionText(agent)
     output = await exec_feature(feature, flaw_data)
 
     # pick the relevant fields
-    changed = update_field(flaw_data, "title", output, src="suggested_title")
+    changed = update_field(flaw_data, ts, "title", output, src="suggested_title")
     changed |= update_field(
-        flaw_data, "cve_description", output, src="suggested_description"
+        flaw_data, ts, "cve_description", output, src="suggested_description"
     )
 
     # TODO: drop this when https://issues.redhat.com/browse/AEGIS-367 is resolved
-    changed |= update_field(flaw_data, "components", output, only_if_missing=True)
+    changed |= update_field(flaw_data, ts, "components", output, only_if_missing=True)
     if not flaw_data.get("components"):
         # If the "components" field is still missing, we would not be able to
         # update the flaw in OSIDB later on.  Terminate the sugestions now with
@@ -88,7 +88,7 @@ async def suggest_description(agent: Agent, flaw_data: FlawData) -> set[str]:
     return changed
 
 
-async def suggest_cwe(agent: Agent, flaw_data: FlawData) -> set[str]:
+async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
     if flaw_data["cwe_id"]:
         # do not override existing CWE ID
         return set()
@@ -109,10 +109,10 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData) -> set[str]:
     if 1 < len(suggested_cwes):
         logger.info(f"{cve_id}: picked {cwe}, ignoring {suggested_cwes[1:]}")
 
-    return update_field(flaw_data, "cwe_id", value=cwe)
+    return update_field(flaw_data, ts, "cwe_id", value=cwe)
 
 
-async def suggest_impact(agent: Agent, flaw_data: FlawData) -> set[str]:
+async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
     # request the suggestion from Aegis
     feature = cve.SuggestImpact(agent)
     output = await exec_feature(feature, flaw_data)
@@ -125,7 +125,7 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData) -> set[str]:
             return set()
 
     # pick the "impact" field
-    changed = update_field(flaw_data, "impact", output)
+    changed = update_field(flaw_data, ts, "impact", output)
 
     # RH CVSS is a subresource in OSIDB (flaws.cvss_scores), not part of flaw update.
     # Store pending data for the bot to apply via osidb.flaws.cvss_scores create/update.
@@ -140,7 +140,7 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData) -> set[str]:
     changed.add("cvss_scores")
 
     # record aegis_meta for RH CVSS (in the format used by OSIM)
-    update_field(flaw_data, "_cvss3_vector", value=output.cvss3_vector)
+    update_field(flaw_data, ts, "_cvss3_vector", value=output.cvss3_vector)
 
     return changed
 

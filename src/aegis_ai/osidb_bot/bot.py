@@ -7,13 +7,14 @@ from aegis_ai.data_models import CVEID
 from pydantic_ai import Agent
 
 import osidb_bindings
+from osidb_bindings.bindings.python_client.types import Unset
 from osidb_bindings.session import Session
 
 import asyncio
 import requests
 import textwrap
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional, Sequence, cast
 
 
@@ -175,8 +176,21 @@ class FlawUpdater:
 
     async def apply_suggestions(self) -> None:
         assert self.flaw_data
+
+        # query current server time once (before requesting suggestions)
+        timestamp: Optional[datetime] = None
+        try:
+            timestamp = self.osidb.status().dt
+        except Exception:
+            pass
+        if timestamp is None or isinstance(timestamp, Unset):
+            # use local time for timestamp if server time was not provided
+            self._warn("failed to get OSIDB server time, using local time instead")
+            timestamp = datetime.now(tz=timezone.utc)
+
+        # requests suggestions sequentially one by one
         for fnc in DEFAULT_SUGGESTION_LIST:
-            self.updated_fields |= await fnc(self.agent, self.flaw_data)
+            self.updated_fields |= await fnc(self.agent, self.flaw_data, timestamp)
 
         if not self.updated_fields:
             # nothing has changed
