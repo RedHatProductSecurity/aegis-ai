@@ -57,9 +57,9 @@ class GSSAPIDelegationMiddleware:
             await resp(scope, receive, send)
             return
 
-        # Accept the client's security context. Delegation is controlled by the
-        # client (e.g. curl --negotiate with kinit -f); when the client
-        # delegates, ctx.delegated_creds will be set for OSIDB pass-through.
+        # Accept the client's security context. Delegation is initiated by the
+        # client (e.g. curl --negotiate with kinit -f and GSS_C_DELEG_FLAG);
+        # when the client delegates, ctx.delegated_creds will be set for OSIDB.
         ctx = SecurityContext(creds=self.creds)
         gssresp = ctx.step(token)
 
