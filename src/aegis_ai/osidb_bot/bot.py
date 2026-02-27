@@ -303,12 +303,10 @@ class Bot:
                 state = s
                 del self.pending[state]
 
-            if not state:
-                # the CVE with lowest created_dt is still being processed
-                return
-
-            # update state file
-            self.sfh.write_state(state)
+            # do not update state file if the CVE with lowest created_dt is still being processed
+            if state:
+                # update state file
+                self.sfh.write_state(state)
 
     async def process_cve_bounded(self, i: int, cve: CVEID) -> None:
         async with max_jobs_sem:
