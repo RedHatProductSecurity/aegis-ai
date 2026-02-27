@@ -45,6 +45,16 @@ class StateFileHandler:
         logger.debug(f"{msg}: {str(e)}")
         raise RuntimeError(f"{msg}: {self.state_file} ({e.__class__.__name__})")
 
+    def _sf_prefix(self) -> str:
+        """state file prefix for logging of state read/writes"""
+        assert 0 <= self.state_fd
+        fd_link = f"/proc/{os.getpid()}/fd/{self.state_fd}"
+        try:
+            target = os.readlink(fd_link)
+            return f"{fd_link} -> {target}"
+        except OSError:
+            return fd_link
+
     def __enter__(self) -> Self:
         if not self.state_file:
             # do nothing
@@ -91,7 +101,9 @@ class StateFileHandler:
 
         # parse JSON
         try:
-            return BotState.model_validate_json(data)
+            state = BotState.model_validate_json(data)
+            logger.info(f"{self._sf_prefix()}: read {state}")
+            return state
         except (ValidationError, json.JSONDecodeError):
             logger.warning(
                 "Failed to load bot state from %r; treating as no state",
@@ -115,3 +127,6 @@ class StateFileHandler:
         os.lseek(self.state_fd, 0, os.SEEK_SET)
         size: int = os.write(self.state_fd, raw)
         os.ftruncate(self.state_fd, size)
+
+        # log a successfully written state file
+        logger.info(f"{self._sf_prefix()}: written {state}")

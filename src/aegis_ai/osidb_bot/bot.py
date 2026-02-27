@@ -309,7 +309,6 @@ class Bot:
 
             # update state file
             self.sfh.write_state(state)
-            logger.info(f"{state}")
 
     async def process_cve_bounded(self, i: int, cve: CVEID) -> None:
         async with max_jobs_sem:
