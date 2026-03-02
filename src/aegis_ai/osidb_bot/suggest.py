@@ -64,6 +64,19 @@ def update_field(
     return set([dst])
 
 
+async def suggest_components(
+    agent: Agent, flaw_data: FlawData, ts: datetime
+) -> set[str]:
+    if flaw_data.get("components"):
+        # the "components" field is already initialized, skip this!
+        return set()
+
+    # request the suggestion from Aegis
+    feature = cve.SuggestAffectedComponents(agent)
+    output = await exec_feature(feature, flaw_data)
+    return update_field(flaw_data, ts, "components", output)
+
+
 async def suggest_description(
     agent: Agent, flaw_data: FlawData, ts: datetime
 ) -> set[str]:
@@ -76,14 +89,6 @@ async def suggest_description(
     changed |= update_field(
         flaw_data, ts, "cve_description", output, src="suggested_description"
     )
-
-    # TODO: drop this when https://issues.redhat.com/browse/AEGIS-367 is resolved
-    changed |= update_field(flaw_data, ts, "components", output, only_if_missing=True)
-    if not flaw_data.get("components"):
-        # If the "components" field is still missing, we would not be able to
-        # update the flaw in OSIDB later on.  Terminate the sugestions now with
-        # a user-friendly warning message.
-        raise RuntimeError("failed to determine components, giving up")
 
     return changed
 
@@ -146,6 +151,7 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
 
 
 DEFAULT_SUGGESTION_LIST = [
+    suggest_components,
     suggest_description,
     suggest_cwe,
     suggest_impact,
