@@ -67,6 +67,8 @@ class Feature:
 
     async def _run(self, call_str, prompt, **kwargs):
         try:
+            if prompt.static_context:
+                logger.debug(f"{call_str}: static_context keys: {list(prompt.static_context.keys())}")
             runner = self.agent.run(prompt.to_string(), **kwargs)
             return await run_with_heartbeat(runner, prefix=call_str)
 
