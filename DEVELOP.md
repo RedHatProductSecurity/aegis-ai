@@ -5,6 +5,10 @@ This document outlines the core principles, architecture, and development practi
 [Review adrs](docs/adrs)
 -----
 
+## Pull Requests
+
+Developers should squash fix-up commits before requesting a review.  Fix-up commits are commits that fix mistakes (or incorporate review comments) in the commits under review.  Otherwise, we prefer commits to be smaller and focused on one thing at a time.  In particular, we strictly separate commits doing refactoring and coding style changes in preexisting code from commits that actually change the behavior of Aegis.  This makes pull requests easier to review and the resulting git history more `git bisect` friendly.
+
 ## Architecture
 
 Aegis uses Large Language Models (LLMs) to perform advanced security analysis and operations. Its architecture is built on four key principles:
