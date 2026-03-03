@@ -7,6 +7,16 @@ from aegis_ai import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Single source of truth for OSIDB field selection
+_FLAW_RETRIEVE_FIELDS = (
+    "cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,"
+    "mitigation,components,comments,comment_zero,affects,references,embargoed"
+)
+_FLAW_LIST_FIELDS = (
+    "cve_id,title,cve_description,impact,statement,comment_zero,embargoed"
+)
+_FLAW_COUNT_FIELDS = "cve_id"
+
 
 class OSIDBClient:
     """A client for interacting with OSIDB API."""
@@ -38,7 +48,7 @@ class OSIDBClient:
         session = await self._get_session()
         flaw_data = session.flaws.retrieve(
             id=cve_id,
-            include_fields="cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,mitigation,components,comments,comment_zero,affects,references,embargoed",
+            include_fields=_FLAW_RETRIEVE_FIELDS,
         )
 
         if not include_embargoed and flaw_data.embargoed:
@@ -55,7 +65,7 @@ class OSIDBClient:
         session = await self._get_session()
         return session.flaws.retrieve_list_iterator_async(
             affects__ps_component=component_name,
-            include_fields="cve_id,title,cve_description,impact,statement,comment_zero,embargoed",
+            include_fields=_FLAW_LIST_FIELDS,
         )
 
     async def count_component_flaws(self, component_name: str) -> AsyncGenerator:
@@ -66,5 +76,5 @@ class OSIDBClient:
         session = await self._get_session()
         return session.flaws.count(
             affects__ps_component=component_name,
-            include_fields="cve_id,title,cve_description,impact,statement,comment_zero,embargoed",
+            include_fields=_FLAW_LIST_FIELDS,
         )
