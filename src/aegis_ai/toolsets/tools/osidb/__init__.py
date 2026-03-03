@@ -216,22 +216,31 @@ async def component_count_tool(ctx: RunContext, component_name: str) -> Any:
     return await client.count_component_flaws(component_name)
 
 
+# Maximum flaws to return from component_flaw_tool to avoid unbounded memory use.
+_COMPONENT_FLAW_LIMIT = 100
+
+
 @Tool
-async def component_flaw_tool(ctx: RunContext, component_name: str) -> Any:
+async def component_flaw_tool(
+    ctx: RunContext, component_name: str, limit: int = _COMPONENT_FLAW_LIMIT
+) -> Any:
     """
     Searches OSIDB by component_name returning CVE flaws related to given component.
 
     Args:
         ctx: The RunContext provided by the Pydantic-AI agent, containing dependencies.
         component_name: An object containing component_name (ex. curl).
+        limit: Maximum number of flaws to return (default 100). Prevents unbounded memory use for large components.
 
     Returns:
-        count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
+        A list of flaw-like objects (cve_id, title, description, etc.) up to `limit` items.
     """
     logger.debug(component_name)
     flaws = []
     async for flaw in client.list_component_flaws(component_name):
         flaws.append(flaw)
+        if len(flaws) >= limit:
+            break
     return flaws
 
 
