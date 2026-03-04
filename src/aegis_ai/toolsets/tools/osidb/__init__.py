@@ -1,6 +1,6 @@
 import logging
-
-from typing import List, Any, Optional
+import re
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field
 
@@ -88,7 +88,55 @@ class CVE(BaseToolOutput):
     )
 
 
-def cve_exclude_fields(cve: CVE, exclude_fields: List[str]):
+def _cve_from_static_context(cve_id: CVEID, ctx: Dict[str, Any]) -> CVE:
+    """Build a CVE from static_context (OSIM-style dict). Maps cve_description -> description."""
+    desc = ctx.get("cve_description") or ctx.get("description") or ""
+    return CVE(
+        cve_id=cve_id,
+        title=ctx.get("title") or "",
+        cwe_id=ctx.get("cwe_id") or "",
+        impact=ctx.get("impact") or "",
+        comment_zero=ctx.get("comment_zero") or "",
+        comments=ctx.get("comments") or "",
+        statement=ctx.get("statement") or "",
+        mitigation=ctx.get("mitigation") or "",
+        description=desc,
+        components=ctx.get("components") or [],
+        references=ctx.get("references") or [],
+        affects=ctx.get("affects") or [],
+        cvss_scores=ctx.get("cvss_scores") or [],
+    )
+
+
+def _strip_component_prefix_from_title(title: str) -> str | None:
+    """Strip a leading 'Component: ' from title when building eval input with
+    components excluded (SuggestAffectedComponents eval fairness).
+
+    Only strips when the title matches a clear anchored pattern: starts with
+    'Token: ' where Token is a simple identifier (alphanumeric, hyphen, underscore).
+    Avoids false positives like 'Use-after-free in the Audio/Video: Playback' or
+    'Use-after-free in the DOM: Window' where the colon is mid-sentence.
+
+    Returns the stripped title if the pattern matches, else None (no change).
+    """
+    if not title or ":" not in title:
+        return None
+    # Anchored pattern: ^Token: Rest where Token has no spaces/slashes/colons
+    match = re.match(r"^([a-zA-Z0-9_-]+):\s+(.+)$", title.strip())
+    if not match:
+        return None
+    rest = match.group(2).strip()
+    if not rest or len(match.group(1)) > 50:
+        return None
+    return rest
+
+
+def cve_exclude_fields(
+    cve: CVE,
+    exclude_fields: List[str],
+    *,
+    strip_component_prefix_for_osidb_cache: bool = False,
+):
     """return a CVE object with data removed in fields specified by exclude_fields"""
     # "cve_description" is used in OSIM, "description" is used in OSIDB
     fields_to_exclude = set(
@@ -100,6 +148,17 @@ def cve_exclude_fields(cve: CVE, exclude_fields: List[str]):
     if "rh_cvss_score" in fields_to_exclude:
         # exclude RH-provided CVSS
         cve.cvss_scores = [cvss for cvss in cve.cvss_scores if cvss["issuer"] != "RH"]
+
+    # When building eval input from osidb_cache with components excluded (SuggestAffectedComponents
+    # eval fairness), strip the leading "Component: " from title so the model infers from description.
+    if (
+        strip_component_prefix_for_osidb_cache
+        and "components" in fields_to_exclude
+        and cve.title
+    ):
+        stripped = _strip_component_prefix_from_title(cve.title)
+        if stripped is not None:
+            cve = cve.model_copy(update={"title": stripped})
 
     # finally remove all fields listed in fields_to_exclude
     filtered_dump = cve.model_dump(exclude=fields_to_exclude)
@@ -194,7 +253,14 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
         CVE: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
     logger.debug(input.cve_id)
-    cve = await cve_retrieve(input.cve_id)
+
+    # Use static_context when provided (avoids OSIDB API call when data is already available)
+    static_ctx = getattr(ctx.deps, "static_context", None)
+    if static_ctx and isinstance(static_ctx, dict):
+        cve = _cve_from_static_context(input.cve_id, static_ctx)
+        logger.info(f"Using static context for {input.cve_id} (skipping OSIDB)")
+    else:
+        cve = await cve_retrieve(input.cve_id)
 
     # exclude CVE fields according to feature_deps
     return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
