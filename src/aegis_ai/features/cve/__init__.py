@@ -313,7 +313,7 @@ def _has_sufficient_static_context(static_context: Any) -> bool:
         or static_context.get("cve_description")
         or ""
     )
-    return bool(static_context.get("title") and desc)
+    return bool(desc)
 
 
 class SuggestAffectedComponents(Feature):

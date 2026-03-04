@@ -122,11 +122,11 @@ def _strip_component_prefix_from_title(title: str) -> str | None:
     if not title or ":" not in title:
         return None
     # Anchored pattern: ^Token: Rest where Token has no spaces/slashes/colons
-    match = re.match(r"^([a-zA-Z0-9_-]+):\s+(.+)$", title.strip())
-    if not match:
+    m = re.match(r"^([a-zA-Z0-9_-]+):\s+(.+)$", title.strip())
+    if not m:
         return None
-    rest = match.group(2).strip()
-    if not rest or len(match.group(1)) > 50:
+    rest = m.group(2).strip()
+    if not rest or len(m.group(1)) > 50:
         return None
     return rest
 

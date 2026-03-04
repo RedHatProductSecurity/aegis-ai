@@ -18,7 +18,11 @@ from evals.utils.osidb_cache import osidb_cache_retrieve
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
     cve = await osidb_cache_retrieve(input.cve_id)
-    return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
+    return cve_exclude_fields(
+        cve,
+        ctx.deps.exclude_osidb_fields,
+        strip_component_prefix_for_osidb_cache=True,
+    )
 
 
 # enable logging to see progress
