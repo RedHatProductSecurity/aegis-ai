@@ -42,6 +42,7 @@ See the [OpenAPI Specification](openapi.yml) for detailed API documentation incl
 
 ### Additional Resources
 
+- **[Kerberos Delegation](kerberos-delegation.md)** - Pass-through auth to OSIDB via browser or Python; delegation requirements, Firefox/Chrome config, and curl limitations
 - **[Configuration Reference](env-vars.md)** - Complete environment variable reference
 - **[Changelog](CHANGELOG.md)** - Version history
 - **[Architecture Decision Records](adrs/)** - Design decisions
@@ -53,8 +54,9 @@ See the [OpenAPI Specification](openapi.yml) for detailed API documentation incl
 ```
 docs/
 ├── USER_GUIDE.md          # Main user and admin documentation
-├── TRANSPARENCY.md         # AI transparency, training, and agent architecture
-├── env-vars.md             # Configuration reference
+├── TRANSPARENCY.md        # AI transparency, training, and agent architecture
+├── kerberos-delegation.md # Kerberos delegation for OSIDB pass-through auth
+├── env-vars.md            # Configuration reference
 ├── CHANGELOG.md            # Version history
 ├── otel.md                 # OpenTelemetry guide
 ├── openapi.yml             # API specification (feature details)

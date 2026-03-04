@@ -220,7 +220,7 @@ The complexity primarily comes from:
 | PyPI MCP | `AEGIS_USE_PYPI_MCP_CONTEXT=false` | `uv` installed |
 | NVD MCP | `AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT=false` | `NVD_API_KEY`, `uv` installed |
 | Tavily | `AEGIS_USE_TAVILY_TOOL_CONTEXT=false` | `TAVILY_API_KEY` |
-| OSIDB (embargoed) | `AEGIS_OSIDB_RETRIEVE_EMBARGOED=false` | Kerberos auth, network access |
+| OSIDB (embargoed) | `AEGIS_OSIDB_RETRIEVE_EMBARGOED=false` | Kerberos auth, network access (see [OSIDB Kerberos Authentication](#osidb-kerberos-authentication)) |
 
 **Security-First Defaults:**
 
@@ -305,9 +305,11 @@ export OPENAI_API_KEY="your-api-key"
 
 #### OSIDB Integration
 
+See [OSIDB Kerberos Authentication](#osidb-kerberos-authentication) below for all auth options. Basic setup:
+
 ```bash
 export AEGIS_OSIDB_SERVER_URL="https://osidb.example.com"
-kinit user@REALM  # Kerberos authentication
+kinit user@REALM  # For CLI, programmatic, or process-level fallback
 ```
 
 #### Web API Authentication
@@ -316,6 +318,30 @@ kinit user@REALM  # Kerberos authentication
 export AEGIS_WEB_SPN="HTTP/aegis.example.com@REALM"
 export KRB5_KTNAME="/etc/krb5.keytab"
 ```
+
+#### OSIDB Kerberos Authentication
+
+Aegis connects to OSIDB using Kerberos. The auth method depends on the entry point:
+
+| Entry Point | Auth Method | Requirements |
+|-------------|-------------|--------------|
+| Web API (with delegation) | Delegated credentials (user identity) | Client delegates; see [Kerberos Delegation](kerberos-delegation.md) |
+| Web API (fallback) | Process-level (service account) | `AEGIS_WEB_SPN`, `KRB5_KTNAME` |
+| CLI | Process-level only | `kinit`, `AEGIS_OSIDB_SERVER_URL`, `AEGIS_CLI_FEATURE_AGENT=redhat` |
+| Programmatic (Python agents) | Process-level only | Same as CLI |
+| osidb_bot, evals, ML scripts | Process-level only | `kinit` or keytab, `AEGIS_OSIDB_SERVER_URL` |
+
+**Delegated credentials (Web API only):** When a client authenticates to the web API with Kerberos and delegates credentials, Aegis uses those credentials to call OSIDB on behalf of the user. Requires browser or Python client with `HTTPSPNEGOAuth(delegate=True)`. See [Kerberos Delegation](kerberos-delegation.md) for client setup (Firefox, Chrome, Python, curl limitations).
+
+**Process-level auth:** Used by CLI, programmatic usage, and as Web API fallback when no delegation. Uses `osidb_bindings` with the process Kerberos credentials (keytab via `KRB5_KTNAME` or default credential cache from `kinit`).
+
+**Environment variables:**
+
+| Variable | Purpose |
+|----------|---------|
+| `AEGIS_WEB_SPN` | Enables Kerberos web auth (and delegation when supported) |
+| `KRB5_KTNAME` | Keytab for server-side Kerberos (web auth, process-level OSIDB) |
+| `AEGIS_OSIDB_SERVER_URL` | OSIDB base URL |
 
 ### Monitoring and Logging
 

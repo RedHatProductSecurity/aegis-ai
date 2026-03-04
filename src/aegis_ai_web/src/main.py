@@ -10,7 +10,7 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Type, Annotated, cast, Any
+from typing import Dict, Optional, Type, Annotated, cast, Any
 
 import yaml
 from fastapi import FastAPI, Request, HTTPException, Form, Query
@@ -97,27 +97,36 @@ async def unicode_decode_exception_handler(request: Request, exc: UnicodeDecodeE
 # unless it is received over HTTPS)
 app.add_middleware(cast(Any, HSTSHeaderMiddleware))
 
-# optionally enable Kerberos authentication
+# optionally enable Kerberos authentication with credential delegation for OSIDB pass-through
 kerberos_spn = os.getenv("AEGIS_WEB_SPN")
 if kerberos_spn:
-    # do not depend on `fastapi-gssapi` unless it is actually needed
-    from fastapi_gssapi import GSSAPIMiddleware
     from starlette.responses import Response
 
-    class CustomGSSAPIMiddleware(GSSAPIMiddleware):
-        """middleware to add GSSAPI authentication for all paths except /healthz"""
+    from aegis_ai.request_context import set_request_scope
+    from .gssapi_delegation import GSSAPIDelegationMiddleware
+
+    class CustomGSSAPIDelegationMiddleware(GSSAPIDelegationMiddleware):
+        """GSSAPI + delegation, skipping /healthz."""
 
         async def __call__(self, scope, receive, send):
             if scope["type"] == "http" and scope["path"] == "/healthz":
-                # skip authentication and return HTTP 204 with no content
                 resp = Response(status_code=204)
                 return await resp(scope, receive, send)
-
-            # route any other traffic to GSSAPIMiddleware
             return await super().__call__(scope, receive, send)
 
-    # add middleware for GSSAPI authentication to the app
-    app.add_middleware(cast(Any, CustomGSSAPIMiddleware), spn=kerberos_spn)
+    # Request-scope middleware: set scope in contextvar so OSIDB client can use delegated creds (inner = runs after GSSAPI)
+    class RequestScopeMiddleware(BaseHTTPMiddleware):
+        """Set current request scope in contextvar for OSIDB credential pass-through; clear after request."""
+
+        async def dispatch(self, request: Request, call_next):
+            set_request_scope(cast(Optional[Dict[str, Any]], request.scope))
+            try:
+                return await call_next(request)
+            finally:
+                set_request_scope(None)
+
+    app.add_middleware(cast(Any, RequestScopeMiddleware))
+    app.add_middleware(cast(Any, CustomGSSAPIDelegationMiddleware), spn=kerberos_spn)
 
 # middleware enabling CORS
 cors_target_regex = os.getenv("AEGIS_CORS_TARGET_REGEX", "http(s)?://localhost(:5173)?")

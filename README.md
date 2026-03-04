@@ -169,7 +169,7 @@ OSIDB server url for Aegis with:
 export AEGIS_OSIDB_SERVER_URL="https://localhost:8080"
 ```
 
-Uses kerberos built in auth with `osidb-bindings`.
+Uses Kerberos built-in auth with `osidb-bindings`. For web API pass-through to OSIDB, see [Kerberos Delegation](docs/kerberos-delegation.md).
 
 
 ---
