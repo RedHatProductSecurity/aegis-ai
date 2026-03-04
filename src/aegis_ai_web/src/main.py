@@ -231,6 +231,7 @@ cve_feature_registry: Dict[str, Type] = {
     "suggest-cwe": cve.SuggestCWE,
     "suggest-description": cve.SuggestDescriptionText,
     "suggest-statement": cve.SuggestStatementText,
+    "suggest-affected-components": cve.SuggestAffectedComponents,
     "identify-pii": cve.IdentifyPII,
     "cvss-diff-explainer": cve.CVSSDiffExplainer,
 }
@@ -290,11 +291,39 @@ async def cve_analysis_with_body(
         raise HTTPException(404, detail=f"CVE feature '{feature.value}' not found.")
     FeatureClass = cve_feature_registry[feature.value]
     try:
-        validated_input = cve_data
+        validated_input = dict(cve_data)
     except Exception as e:
         msg = f"Invalid input for CVE feature '{feature}'"
         log_exception_safely(e, msg)
         raise HTTPException(status_code=422, detail=msg)
+
+    # When OSIM did not provide components but we have title and body text,
+    # populate via SuggestAffectedComponents. Skip when suggest-affected-components
+    # is the requested feature (would run twice otherwise).
+    existing_components = validated_input.get("components") or []
+    description_text = (
+        validated_input.get("comment_zero") or validated_input.get("cve_description")
+    ) or ""
+    if (
+        feature.value != "suggest-affected-components"
+        and not existing_components
+        and validated_input.get("title")
+        and description_text
+    ):
+        try:
+            sac_instance = cve.SuggestAffectedComponents(agent=llm_agent)
+            sac_result = await sac_instance.exec(cve_id, static_context=validated_input)
+            validated_input = {
+                **validated_input,
+                "components": sac_result.output.components,
+            }
+        except Exception as e:
+            logging.warning(
+                "SuggestAffectedComponents failed for CVE %s: %s",
+                cve_id,
+                e,
+            )
+
     try:
         feature_instance = FeatureClass(agent=llm_agent)
         result = await feature_instance.exec(cve_id, static_context=validated_input)
