@@ -20,6 +20,8 @@ from pydantic_evals.evaluators import (
     LLMJudge,
 )
 from pydantic_evals.evaluators.common import OutputConfig
+from pydantic_evals.reporting import RenderNumberConfig, RenderValueConfig
+from pydantic_evals.reporting.render_numbers import default_render_number
 
 from aegis_ai import get_settings
 from aegis_ai.agents import agent_default_max_retries
@@ -207,6 +209,33 @@ def eval_name_from_result(result):
         return result.source.arguments["score"]["evaluation_name"]
 
 
+def _format_suggest_affected_components_output(val: Any) -> str:
+    """Format suggest_affected_components output for display: show components only."""
+    if val is None:
+        return ""
+    if hasattr(val, "components") and val.components is not None:
+        return str(val.components)
+    return str(val)
+
+
+def _score_with_threshold_indicator(value: float | int) -> str:
+    """Format score with pass/fail indicator based on MIN_SCORE_THRESHOLD."""
+    formatted = default_render_number(value)
+    indicator = "[green]✔[/]" if value >= MIN_SCORE_THRESHOLD else "[red]✗[/]"
+    return f"{formatted} {indicator}"
+
+
+def _build_score_configs(report: EvaluationReport) -> dict[str, RenderNumberConfig]:
+    """Build score_configs so scores display pass/fail indicator in the table."""
+    score_names: set[str] = set()
+    for case in report.cases:
+        score_names.update(case.scores.keys())
+    return {
+        name: RenderNumberConfig(value_formatter=_score_with_threshold_indicator)
+        for name in score_names
+    }
+
+
 def is_evaluator_known_to_fail(ecase, eval_name):
     """return True if the eval_name evaluator is known to fail for the ecase evaluation case"""
     return ecase.metadata and eval_name in ecase.metadata.get(
@@ -220,6 +249,16 @@ def handle_eval_report(report: EvaluationReport):
     string_io = io.StringIO()
     console = Console(file=string_io, force_terminal=True)
 
+    # Truncate output to components only for suggest_affected_components (easier to review)
+    output_config: RenderValueConfig | None = None
+    if report.name == "suggest_affected_components":
+        output_config = RenderValueConfig(
+            value_formatter=_format_suggest_affected_components_output
+        )
+
+    # Score configs: show pass/fail indicator (✔/✗) based on MIN_SCORE_THRESHOLD
+    score_configs = _build_score_configs(report)
+
     # Only include durations when llm_max_jobs == 1 to avoid misleading timing information
     # in parallel job scenarios, where durations may not be representative.
     report.print(
@@ -229,6 +268,8 @@ def handle_eval_report(report: EvaluationReport):
         include_output=True,
         include_durations=(get_settings().llm_max_jobs == 1),
         include_reasons=True,
+        output_config=output_config,
+        score_configs=score_configs,
     )
 
     # print the captured string through logger
@@ -289,13 +330,35 @@ def handle_eval_report(report: EvaluationReport):
     assert not failures, f"Unsatisfied assertion(s):\n{failures}"
 
 
-async def run_evaluation(cases: Sequence[Any], evals: Sequence[Any], task: Any) -> None:
-    """create a dataset for the given cases/evaluators and evaluate the given task"""
+async def run_evaluation(
+    cases: Sequence[Any],
+    evals: Sequence[Any],
+    task: Any,
+    *,
+    max_concurrency: int | None = None,
+    agent=None,
+) -> None:
+    """Create a dataset for the given cases/evaluators and evaluate the given task.
+
+    Pass agent to enable parallel execution: wrapping in ``async with agent`` ensures
+    MCP connections are entered/exited in the same task, avoiding anyio cancel-scope
+    errors. max_concurrency overrides the default (llm_max_jobs) when provided.
+    """
     dataset = Dataset(cases=cases, evaluators=evals)
     debug = logger.isEnabledFor(logging.DEBUG)
-    report = await dataset.evaluate(
-        task, max_concurrency=get_settings().llm_max_jobs, progress=debug
+    concurrency = (
+        max_concurrency if max_concurrency is not None else get_settings().llm_max_jobs
     )
+
+    async def _evaluate():
+        return await dataset.evaluate(task, max_concurrency=concurrency, progress=debug)
+
+    if agent is not None:
+        async with agent:
+            report = await _evaluate()
+    else:
+        report = await _evaluate()
+
     handle_eval_report(report)
 
 

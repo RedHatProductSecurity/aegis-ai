@@ -75,4 +75,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_identify_pii():
     """identify_pii evaluation entry point"""
-    await run_evaluation(cases, evals, identify_pii)
+    await run_evaluation(cases, evals, identify_pii, agent=rh_feature_agent)
