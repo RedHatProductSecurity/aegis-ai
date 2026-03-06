@@ -7,8 +7,10 @@ import os
 import logging
 import time
 
+from typing import Any
+
 from pydantic_ai.mcp import MCPServerStdio
-from pydantic_ai.toolsets import FunctionToolset, CombinedToolset
+from pydantic_ai.toolsets import AbstractToolset, FunctionToolset, CombinedToolset
 from pydantic_ai.toolsets.wrapper import WrapperToolset
 from pydantic_ai._run_context import RunContext
 
@@ -160,7 +162,7 @@ redhat_cve_toolset = CombinedToolset(redhat_cve_toolset_list)
 
 
 # Toolset containing generic tooling for CVE
-public_cve_toolset_list: list[FunctionToolset[None] | MCPServerStdio] = [
+public_cve_toolset_list: list[AbstractToolset[Any]] = [
     FunctionToolset(tools=[osv_dev_cve_tool]),
 ]
 
