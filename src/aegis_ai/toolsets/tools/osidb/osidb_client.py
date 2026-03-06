@@ -54,12 +54,17 @@ class OSIDBClient:
         if not ctx or not getattr(ctx, "delegated_creds", None):
             return None
         from aegis_ai.toolsets.tools.osidb.osidb_delegation import (
+            _prepare_delegated_creds_for_thread,
             get_osidb_token_for_delegated_cred,
         )
 
+        delegated_creds = ctx.delegated_creds
+        ccache_name = _prepare_delegated_creds_for_thread(delegated_creds)
+        creds_arg = ccache_name if ccache_name is not None else delegated_creds
+
         token = await asyncio.to_thread(
             get_osidb_token_for_delegated_cred,
-            ctx.delegated_creds,
+            creds_arg,
             get_settings().osidb_server_url,
         )
         if token:
