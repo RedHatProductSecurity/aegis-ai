@@ -160,7 +160,7 @@ redhat_cve_toolset = CombinedToolset(redhat_cve_toolset_list)
 
 
 # Toolset containing generic tooling for CVE
-public_cve_toolset_list = [
+public_cve_toolset_list: list[FunctionToolset[None] | MCPServerStdio] = [
     FunctionToolset(tools=[osv_dev_cve_tool]),
 ]
 
