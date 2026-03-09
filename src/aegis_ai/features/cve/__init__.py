@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 class SuggestImpact(Feature):
     """Based on current CVE information and context assert an aggregated impact."""
 
-    def post_process(self, output, call_str):
+    @staticmethod
+    def post_process_cvss(output, call_str):
         # read the suggested cvss3_score
         try:
             cvss3_score = float(output.cvss3_score)
@@ -45,6 +46,44 @@ class SuggestImpact(Feature):
             f"{call_str}: adjusting cvss3_score to match cvss3_vector: {cvss3_score} -> {cvss3_score_by_vector}"
         )
         output.cvss3_score = f"{cvss3_score_by_vector}"
+
+    @staticmethod
+    def post_process_impact(output, call_str):
+        # read the suggested cvss3_score (possibly already updated by post_process_cvss)
+        try:
+            cvss3_score = float(output.cvss3_score)
+        except ValueError:
+            cvss3_score = float("nan")
+
+        # check which impact corresponds to cvss3_score
+        if 9.0 < cvss3_score:
+            impact_by_cvss3 = "CRITICAL"
+        elif 7.0 < cvss3_score:
+            impact_by_cvss3 = "IMPORTANT"
+        elif 4.0 < cvss3_score:
+            impact_by_cvss3 = "MODERATE"
+        elif 0.0 < cvss3_score:
+            impact_by_cvss3 = "LOW"
+        elif 0.0 == cvss3_score:
+            impact_by_cvss3 = "NONE"
+        else:
+            logger.warning(f"{call_str}: invalid cvss3_score: {cvss3_score}")
+            return
+
+        # compare with the suggested impact
+        impact = output.impact
+        if impact == impact_by_cvss3:
+            return
+
+        logger.info(
+            f"{call_str}: adjusting impact to match cvss3_score: {impact} -> {impact_by_cvss3}"
+        )
+        output.impact = impact_by_cvss3
+
+    @staticmethod
+    def post_process(output, call_str):
+        SuggestImpact.post_process_cvss(output, call_str)
+        SuggestImpact.post_process_impact(output, call_str)
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["impact", "rh_cvss_score"])
@@ -92,9 +131,7 @@ class SuggestImpact(Feature):
             prompt, deps=deps, output_type=SuggestImpactModel
         )
         call_str = f"{self.__class__.__name__}({cve_id})"
-        self.post_process(
-            result.output, call_str
-        )  # TODO: extract this to process on SuggestImpactModel data model rather then here.
+        SuggestImpact.post_process(result.output, call_str)
         return result
 
 
