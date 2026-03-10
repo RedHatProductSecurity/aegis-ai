@@ -260,4 +260,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_suggest_description():
     """suggest_description evaluation entry point"""
-    await run_evaluation(cases, evals, suggest_description)
+    await run_evaluation(cases, evals, suggest_description, agent=rh_feature_agent)

@@ -52,6 +52,7 @@ For each Aegis feature, the average score and average assertion success rate is 
 | `EXPLANATION_MIN_LEN` | [common.py](features/common.py) | minimal acceptable length of an explanation (where applicable) | 80 |
 | `MIN_SCORE_THRESHOLD` | [common.py](features/common.py) | minimal acceptable score returned by an evaluator | 0.1 |
 | `LOW_CONFIDENCE_PENALTY_DIVISOR` | [common.py](features/common.py) | penalize models providing correct results but low confidence (the difference between score and confidence is divided by this number and subtracted from the final score) | 4.0 |
+| `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_*` | suggest-affected-components eval | see [env-vars.md](../docs/env-vars.md#eval-settings) | |
 
 
 ## Common evaluators
@@ -82,3 +83,4 @@ These evaluators are used for **all** Aegis features:
 | `SuggestCweEvaluator` | [test_suggest_cwe.py](features/cve/test_suggest_cwe.py) | &check; | | compare the provided list of CWEs with the expected one while taking length of the list and confidence into account |
 | `SuggestImpactEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | &check; | | compare the provided impact and CVSS3 score with the expected values while taking the confidence into account |
 | custom `LLMJudge` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | &check; | "explanation does not mention which Red Hat products are affected" |
+| `ComponentsOverlapEvaluator` | [test_suggest_affected_components.py](features/cve/test_suggest_affected_components.py) | &check; | | Jaccard + primary-component match between suggested and expected components (from osidb_cache) |

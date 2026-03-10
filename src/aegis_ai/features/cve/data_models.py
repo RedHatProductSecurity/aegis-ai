@@ -22,6 +22,29 @@ class CVEDataCriticOutput(AegisFeatureModel):
     )
 
 
+class SuggestAffectedComponentsModel(AegisFeatureModel):
+    """Model for suggested affected components inferred from CVE data."""
+
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    components: List[str] = Field(
+        ...,
+        description="Suggested affected component names.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Rationale for component suggestions.",
+    )
+
+    def printable_outcome(self) -> str:
+        """Override the logging hook to print the resulting suggestion."""
+        return str(self.components)
+
+
 class SuggestImpactModel(AegisFeatureModel):
     """
     Represents a model-generated suggestion for the CVSS 3.1 score and related impact

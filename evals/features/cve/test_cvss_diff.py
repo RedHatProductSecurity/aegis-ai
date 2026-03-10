@@ -80,4 +80,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_cvss_diff():
     """cvss_diff evaluation entry point"""
-    await run_evaluation(cases, evals, cvss_diff)
+    await run_evaluation(cases, evals, cvss_diff, agent=rh_feature_agent)

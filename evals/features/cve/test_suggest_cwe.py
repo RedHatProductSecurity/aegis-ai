@@ -685,4 +685,4 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 async def test_eval_suggest_cwe():
     """suggest_cwe evaluation entry point"""
-    await run_evaluation(cases, evals, suggest_cwe)
+    await run_evaluation(cases, evals, suggest_cwe, agent=rh_feature_agent)

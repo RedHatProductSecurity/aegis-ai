@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass, field
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
@@ -21,6 +21,9 @@ class feature_deps:
     exclude_osidb_fields: List[str] = field(
         default_factory=list,
     )
+    # When set, the OSIDB flaw_tool uses this instead of calling OSIDB API.
+    # Used when static_context already contains sufficient CVE data (e.g. from web API).
+    static_context: Optional[Any] = field(default=None)
 
 
 class FeatureQueryInput(BaseModel):

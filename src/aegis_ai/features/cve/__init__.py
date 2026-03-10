@@ -7,6 +7,7 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
     CVSSDiffExplainerModel,
+    SuggestAffectedComponentsModel,
     SuggestImpactModel,
     SuggestCWEModel,
     PIIReportModel,
@@ -337,6 +338,57 @@ class SuggestStatementText(Feature):
         )
         return await self.run_if_safe(
             prompt, deps=deps, output_type=SuggestStatementModel
+        )
+
+
+def _has_sufficient_static_context(static_context: Any) -> bool:
+    """True when static_context has enough data to infer components without OSIDB."""
+    if not static_context or not isinstance(static_context, dict):
+        return False
+    desc = (
+        static_context.get("comment_zero")
+        or static_context.get("cve_description")
+        or ""
+    )
+    return bool(desc)
+
+
+class SuggestAffectedComponents(Feature):
+    """Infer affected components from CVE data using all available OSIDB fields."""
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        use_static = _has_sufficient_static_context(static_context)
+        deps = feature_deps(
+            exclude_osidb_fields=["components"],
+            static_context=static_context if use_static else None,
+        )
+        prompt = AegisPrompt(
+            user_instruction="From the provided CVE data (title, description, statement, references, affects, comments, etc.), identify the affected software component(s). "
+            "Use the OSIDB tool to retrieve flaw data when cve_id is provided; when full context is already provided, the tool returns that data. Leverage all available fields to infer components.",
+            goals="""
+                - From all available CVE/OSIDB data (title, comment_zero, description, statement, mitigation, comments, references, affects, cvss_scores, cwe_id, impact), identify the affected software component(s).
+                - List component names (package names) in the output 'components' field.
+                - Where a Package URL (PURL) is identified use the name part of the PURL. For maven or golang types include the namespace in the component name but no PURL protocol or type.
+                - If the component is from the Python standard library, use 'python' as the component name.
+                - If the component is from the Go ecosystem and not in the standard library, include the namespace (e.g. github.com/containerd/containerd).
+                - If the component is from the Go standard library, use a specific package name and return it first in the components array in addition to the component 'golang'.
+                - Provide a concise explanation of the rationale.
+            """,
+            rules="""
+                - Use the osidb_tool with the provided cve_id to retrieve CVE flaw data.
+                - Leverage title, description (or comment_zero), statement, references, affects, comments, and any other fields to infer affected components.
+                - Use github mcp tool to resolve vulnerability reference URLs if present (e.g. to confirm repo/component names).
+                - Follow GitHub/golang-style naming: use full import paths for Go packages outside stdlib.
+                - Output format: components (list of strings), explanation (string), confidence (0.00–1.00).
+            """,
+            context=CVEFeatureInput(cve_id=cve_id),
+            static_context=remove_keys(
+                static_context, keys_to_remove=deps.exclude_osidb_fields
+            ),
+            output_schema=SuggestAffectedComponentsModel.model_json_schema(),
+        )
+        return await self.run_if_safe(
+            prompt, deps=deps, output_type=SuggestAffectedComponentsModel
         )
 
 

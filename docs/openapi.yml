@@ -130,7 +130,7 @@ paths:
           type: string
           description: 'Feature name to filter entries by. Valid values include: ''suggest-impact'',
             ''suggest-cwe'', ''suggest-description'', ''suggest-statement'', ''identify-pii'',
-            ''cvss-diff-explainer'', or ''all'' to get KPIs for all features.'
+            ''cvss-diff-explainer'', ''suggest-affected-components'', or ''all'' to get KPIs for all features.'
           examples:
           - suggest-impact
           - suggest-cwe
@@ -139,7 +139,7 @@ paths:
           title: Feature
         description: 'Feature name to filter entries by. Valid values include: ''suggest-impact'',
           ''suggest-cwe'', ''suggest-description'', ''suggest-statement'', ''identify-pii'',
-          ''cvss-diff-explainer'', or ''all'' to get KPIs for all features.'
+          ''cvss-diff-explainer'', ''suggest-affected-components'', or ''all'' to get KPIs for all features.'
       - name: order
         in: query
         required: false
@@ -410,4 +410,5 @@ components:
       - suggest-statement
       - identify-pii
       - cvss-diff-explainer
+      - suggest-affected-components
       title: ComponentFeatureName

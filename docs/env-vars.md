@@ -74,4 +74,7 @@
 | `AEGIS_EVALS_LLM_MODEL`     | Eval LLM model             |               |
 | `AEGIS_EVALS_LLM_API_KEY`   | Eval LLM openapi key       |               |
 | `AEGIS_EVALS_MIN_PASSED`    | How many evals need to succeed to exit successfully | |
+| `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_SAMPLE` | suggest-affected-components eval: randomly sample N CVEs (reduces API usage) | (all qualifying) |
+| `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_SAMPLE_SEED` | suggest-affected-components eval: random seed for sampling (reproducible runs) | 42 |
+| `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_CVE_IDS` | suggest-affected-components eval: comma-separated CVE IDs to restrict cases to | (all qualifying in cache) |
 | `OSIDB_CACHE_DIR`           | Eval osidb cache directory | `evals/osidb_cache` |
