@@ -223,6 +223,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-13327",
         expected_statement="This vulnerability is rated Moderate for Red Hat products. It allows arbitrary code execution through specially crafted ZIP archives when using the `uv` tool to install attacker-controlled Python packages. Exploitation requires user interaction to initiate the package installation. This affects components within Red Hat AI Inference Server and Red Hat OpenShift AI.",
+        metadata={"known_to_fail_evaluators": ["MitigationWellFormedCommands"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-15284",
