@@ -1,6 +1,7 @@
 from aegis_ai.osidb_bot.util import FlawData, logger
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
+from aegis_ai.features.data_models import AegisAnswer
 
 from pydantic_ai import Agent
 
@@ -23,7 +24,7 @@ def update_field(
     flaw_data: FlawData,
     timestamp: datetime,
     dst: str,
-    output: Any = None,
+    output: AegisAnswer,
     src: Optional[str] = None,
     value: Optional[str] = None,
     only_if_missing: bool = False,
@@ -57,6 +58,7 @@ def update_field(
         {
             "type": "AI-Bot",
             "value": value,
+            "explanation": output.explanation,
             "timestamp": timestamp.isoformat(),
         }
     )
@@ -114,7 +116,7 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
     if 1 < len(suggested_cwes):
         logger.info(f"{cve_id}: picked {cwe}, ignoring {suggested_cwes[1:]}")
 
-    return update_field(flaw_data, ts, "cwe_id", value=cwe)
+    return update_field(flaw_data, ts, "cwe_id", output, value=cwe)
 
 
 async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
@@ -145,7 +147,7 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     changed.add("cvss_scores")
 
     # record aegis_meta for RH CVSS (in the format used by OSIM)
-    update_field(flaw_data, ts, "_cvss3_vector", value=output.cvss3_vector)
+    update_field(flaw_data, ts, "_cvss3_vector", output, value=output.cvss3_vector)
 
     return changed
 
