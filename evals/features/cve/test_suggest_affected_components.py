@@ -268,8 +268,6 @@ evals = [
     ComponentsOverlapEvaluator(),
 ]
 
-pytestmark = pytest.mark.asyncio(loop_scope="session")
-
 
 @pytest.fixture(scope="session")
 def suggest_affected_components_cases(request):
@@ -295,6 +293,7 @@ def suggest_affected_components_cases(request):
     )
 
 
+@pytest.mark.asyncio(loop_scope="session")
 async def test_eval_suggest_affected_components(suggest_affected_components_cases):
     """Suggest affected components evaluation entry point."""
     if not suggest_affected_components_cases:
@@ -302,9 +301,29 @@ async def test_eval_suggest_affected_components(suggest_affected_components_case
             "No qualifying cases in osidb_cache (need title, description, components). "
             "Set OSIDB_CACHE_DIR if needed."
         )
-    await run_evaluation(
+    report = await run_evaluation(
         suggest_affected_components_cases,
         evals,
         suggest_affected_components,
         agent=rh_feature_agent,
     )
+    # When ComponentsOverlapEvaluator fails, assert the reason includes both
+    # expected and suggested components (per Sourcery review feedback).
+    for ecase in report.cases:
+        expected = ecase.expected_output or []
+        suggested = getattr(ecase.output, "components", None) or []
+        for result in ecase.scores.values():
+            if (
+                result.reason
+                and "got " in result.reason
+                and "expected " in result.reason
+            ):
+                for comp in expected:
+                    assert comp in result.reason, (
+                        f"Expected component '{comp}' in evaluation reason: {result.reason!r}"
+                    )
+                for comp in suggested:
+                    assert comp in result.reason, (
+                        f"Suggested component '{comp}' in evaluation reason: {result.reason!r}"
+                    )
+                break

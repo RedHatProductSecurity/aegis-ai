@@ -337,12 +337,14 @@ async def run_evaluation(
     *,
     max_concurrency: int | None = None,
     agent=None,
-) -> None:
+) -> EvaluationReport:
     """Create a dataset for the given cases/evaluators and evaluate the given task.
 
     Pass agent to enable parallel execution: wrapping in ``async with agent`` ensures
     MCP connections are entered/exited in the same task, avoiding anyio cancel-scope
     errors. max_concurrency overrides the default (llm_max_jobs) when provided.
+
+    Returns the EvaluationReport for tests that need to assert on evaluation results.
     """
     dataset = Dataset(cases=cases, evaluators=evals)
     debug = logger.isEnabledFor(logging.DEBUG)
@@ -360,6 +362,7 @@ async def run_evaluation(
         report = await _evaluate()
 
     handle_eval_report(report)
+    return report
 
 
 class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):
