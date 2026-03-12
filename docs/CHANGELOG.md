@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-13
+
+### Changed
+- Aegis CLI is now much faster in case no time-consuming task is actually triggered
+- evaluation suite log is now less verbose to avoid log truncation by CI providers
+
+### Added
+- introduced the `suggest-affected-components` feature in Aegis CLI and REST API, covered by evals
+- added support for delegation of Kerberos credentials from REST API to AI-initiated OSIDB tool calls
+- introduced the `osidb-bot` command to save suggestions directly to OSIDB without any user interaction
+- added logging of e-mails that do not match the authenticated Kerberos user on the feedback endpoints
+- asynchronous scoring of semantic proximity based on `LLMJudge` on the `programmatic-feedback` endpoint
+- implemented LLM prompt retry on `ModelHTTPError: status_code: 500` to eliminate intermittent failures
+
+### Fixed
+- aligned `impact` with `cvss3_score` in case LLM suggested a contradicting `impact` value
+- Aegis does not transitively depend on `python-diskcache-5.6.3`, which was vulnerable, any more
+- the `component-intelligence` Aegis feature now works again
+- improved handling of timeouts on Gemini API to make it work with lower `AEGIS_LLM_TIMEOUT_SECS`
+- improved evaluation suite log to ease debugging of CI failures
+- improved initialization of `LLMJudge` to support additional evaluation configurations
+- adapted evaluation suite to work reliably with the latest version of Gemini API
+
+
 ## [0.5.3] - 2026-01-27
 
 ### Changed
