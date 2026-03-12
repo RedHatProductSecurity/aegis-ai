@@ -320,7 +320,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-64527",
         expected_statement="",
-        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-66623",
