@@ -164,6 +164,9 @@ class FlawUpdater:
         except requests.exceptions.RequestException:
             raise RuntimeError("unable to read flaw data from OSIDB")
 
+    def _info(self, msg: str) -> None:
+        logger.info(f"{self.cve}: {msg}")
+
     def _warn(self, msg: str) -> None:
         logger.warning(f"{self.cve}: {msg}")
 
@@ -227,19 +230,28 @@ class FlawUpdater:
                     form_data=rh_cvss,
                 )
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
+            msg_suffix = f"({e.__class__.__name__})"
             if flaw_saved:
-                self._warn("failed to save RH CVSS")
+                self._warn(f"failed to save RH CVSS {msg_suffix}")
                 self.updated_fields.remove("cvss_scores")
             else:
-                self._warn(f"failed to save changes: {self.updated_fields}")
+                self._warn(
+                    f"failed to save changes: {self.updated_fields} {msg_suffix}"
+                )
                 self.updated_fields.clear()
 
-            if e.response is not None:
-                logger.debug(f"{self.cve}: {e.response.text}")
+            if isinstance(e, requests.exceptions.RequestException):
+                # log OSIDB response if available
+                response = getattr(e, "response", None)
+                if response is not None:
+                    self._info(f"OSIDB response: {response.text}")
+
+            # log full exception in debug mode only
+            logger.debug(f"{self.cve}: {str(e)}")
 
         if self.updated_fields:
-            logger.info(f"{self.cve}: updated {self.updated_fields}")
+            self._info(f"updated {self.updated_fields}")
 
 
 class Bot:
