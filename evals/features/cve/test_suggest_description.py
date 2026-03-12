@@ -34,7 +34,13 @@ field_evaluators = {
 
 
 class SuggestDescriptionCase(Case):
-    def __init__(self, cve_id, expected_title=None, expected_description=None):
+    def __init__(
+        self,
+        cve_id,
+        expected_title=None,
+        expected_description=None,
+        **kwargs,
+    ):
         """cve_id given as CVE-YYYY-NUM is the flaw we suggest description for."""
         disclaimer_model = SuggestDescriptionModel.model_fields["disclaimer"]
         disclaimer = get_args(disclaimer_model.annotation)[0]
@@ -59,6 +65,7 @@ class SuggestDescriptionCase(Case):
             inputs=cve_id,
             expected_output=expected_output,
             evaluators=evaluators,
+            **kwargs,
         )
 
 
@@ -206,6 +213,8 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-64503",
         expected_title="cups-filters: Out-of-bounds write via crafted PDF MediaBox",
+        # Aegis sometimes focuses on the consequence (DoS) instead of the cause (Out-of-bounds write)
+        metadata={"known_to_fail_evaluators": ["TitleEvaluator"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-64524",

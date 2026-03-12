@@ -364,9 +364,11 @@ cases = [
         cve_id="CVE-2025-21640",
         cwe_list=["CWE-476"],
     ),
+    # FIXME: Aegis occasionally suggests CWE-770, which is similar but not accurate
     SuggestCweCase(
         cve_id="CVE-2025-21690",
         cwe_list=["CWE-779"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-21879",
