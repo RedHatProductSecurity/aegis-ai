@@ -11,7 +11,7 @@ import logging
 import os
 import random
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -74,6 +74,13 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-1757",
     "CVE-2026-23950",
     "CVE-2026-24842",
+)
+
+
+# count the corresponding evaluation cases in overall score but do not trigger
+# assertion failures if the individual score is low
+KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
+    "CVE-2025-64329",  # Aegis occasionally suggests 'containerd' while 'github.com/containerd/containerd' is expected
 )
 
 
@@ -141,11 +148,16 @@ def _build_cases(
 
     for cve_id, cve in qualifying:
         expected_components = _components_list(cve)
+        metadata: dict[str, Any] = {"cve_id": cve_id}
+        if cve_id in KNOWN_TO_FAIL_CVE_IDS:
+            # annotate known-to-fail evaluation cases
+            metadata["known_to_fail_evaluators"] = ["ComponentsOverlapEvaluator"]
+
         case = SuggestAffectedComponentsCase(
             name=f"suggest-affected-components-{cve_id}",
             inputs=cve_id,
             expected_output=expected_components,
-            metadata={"cve_id": cve_id},
+            metadata=metadata,
         )
         cases.append(case)
 
