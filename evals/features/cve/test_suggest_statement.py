@@ -264,7 +264,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39791",
         expected_statement="This vulnerability is rated Moderate for Red Hat, as it can lead to a kernel deadlock or file system data corruption (xfs or btrfs) when using dm-crypt with zoned targets. This flaw primarily targets Integrity and Availability as incorrect sector reporting during zone append operations can lead to corrupt filesystem metadata as well as I/O hangs or system stalls.",
-        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39795",
