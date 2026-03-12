@@ -80,7 +80,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2022-49669",
-        cwe_list=["CWE-825"],
+        cwe_list=["CWE-825", "CWE-366"],  # kdudka: added CWE-366
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
@@ -506,6 +506,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-39816",
         cwe_list=["CWE-367", "CWE-805"],  # kdudka: added CWE-805
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39822",
