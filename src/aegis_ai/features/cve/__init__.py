@@ -66,7 +66,7 @@ class SuggestImpact(Feature):
         elif 0.0 < cvss3_score:
             impact_by_cvss3 = "LOW"
         elif 0.0 == cvss3_score:
-            impact_by_cvss3 = "NONE"
+            impact_by_cvss3 = ""
         else:
             logger.warning(f"{call_str}: invalid cvss3_score: {cvss3_score}")
             return
