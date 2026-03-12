@@ -304,10 +304,6 @@ cases = [
         expected_mitigation="To mitigate this issue, avoid processing untrusted web content. Additionally, disabling the JavaScript JIT compiler can reduce the attack surface. For applications using WebKitGTK, set the environment variable `JavaScriptCoreUseJIT=0` before launching the application. This may impact performance for JavaScript-heavy web content.",
     ),
     SuggestStatementCase(
-        cve_id="CVE-2025-59088",
-        expected_statement="I didn't have an expected value, but I expected that the suggested statement would include supporting information that I might have missed. But the result seems to just rephrase the flaw description and was off on the impact. The flaw impact was rated Important, while the suggestion rated it a critical.",
-    ),
-    SuggestStatementCase(
         cve_id="CVE-2025-64503",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux because a specially crafted PDF file, when processed by the `cups-filters` `pdftoraster` tool, can lead to an out-of-bounds write, potentially causing a denial of service. This affects Red Hat Enterprise Linux 7, 8, 9, and 10.",
     ),
