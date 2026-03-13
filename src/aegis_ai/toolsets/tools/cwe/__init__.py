@@ -10,7 +10,7 @@ import re
 
 from math import log
 from pathlib import Path
-from typing import List, Optional, Dict, Tuple, no_type_check
+from typing import Dict, List, Optional, Tuple, Union, no_type_check
 from zipfile import ZipFile
 
 import aiofiles
@@ -358,12 +358,12 @@ class CWEManager:
 
 
 # these are aiofiles helper funcs
-async def read_json_async(path: Path) -> Dict | List:
+async def read_json_async(path: Path) -> Union[Dict, List]:
     async with aiofiles.open(path, "r", encoding="utf-8") as f:
         return json.loads(await f.read())
 
 
-async def write_json_async(path: Path, data: Dict | List):
+async def write_json_async(path: Path, data: Union[Dict, List]):
     async with aiofiles.open(path, "w", encoding="utf-8") as f:
         await f.write(json.dumps(data, indent=2))
 
