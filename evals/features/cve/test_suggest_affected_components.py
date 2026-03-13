@@ -16,7 +16,7 @@ from typing import cast
 import pytest
 
 from pydantic_evals import Case
-from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
@@ -184,7 +184,7 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
 
     def evaluate(
         self, ctx: EvaluatorContext[str, SuggestAffectedComponentsModel]
-    ) -> float:
+    ) -> EvaluationReason:
         expected = cast(list[str], ctx.expected_output or [])
         suggested = getattr(ctx.output, "components", None) or []
         exp_set = _normalized_component_sets(expected)
@@ -193,11 +193,13 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         # Empty expected (edge case: insufficient data to infer): full score if
         # model also returns empty (correctly refrains from guessing), else 0.
         if not exp_set:
-            return 1.0 if not got_set else 0.0
+            score = 1.0 if not got_set else 0.0
+            reason = None if score == 1.0 else f"got {suggested}, expected {expected}"
+            return EvaluationReason(value=score, reason=reason)
 
         # Identical match: full score
         if exp_set == got_set:
-            return reflect_confidence(ctx, 1.0)
+            return EvaluationReason(value=reflect_confidence(ctx, 1.0), reason=None)
 
         # Partial overlap: use exact set intersection for Jaccard so we
         # differentiate identical vs partial (e.g. got ['python'] when
@@ -213,7 +215,9 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         )
 
         score = 0.5 * jaccard + 0.5 * primary_bonus
-        return reflect_confidence(ctx, score)
+        reason = f"got {suggested}, expected {expected}"
+        score = reflect_confidence(ctx, score)
+        return EvaluationReason(value=score, reason=reason)
 
 
 class TestStripComponentPrefixFromTitle:
@@ -264,8 +268,6 @@ evals = [
     ComponentsOverlapEvaluator(),
 ]
 
-pytestmark = pytest.mark.asyncio(loop_scope="session")
-
 
 @pytest.fixture(scope="session")
 def suggest_affected_components_cases(request):
@@ -291,6 +293,7 @@ def suggest_affected_components_cases(request):
     )
 
 
+@pytest.mark.asyncio(loop_scope="session")
 async def test_eval_suggest_affected_components(suggest_affected_components_cases):
     """Suggest affected components evaluation entry point."""
     if not suggest_affected_components_cases:
@@ -298,9 +301,29 @@ async def test_eval_suggest_affected_components(suggest_affected_components_case
             "No qualifying cases in osidb_cache (need title, description, components). "
             "Set OSIDB_CACHE_DIR if needed."
         )
-    await run_evaluation(
+    report = await run_evaluation(
         suggest_affected_components_cases,
         evals,
         suggest_affected_components,
         agent=rh_feature_agent,
     )
+    # When ComponentsOverlapEvaluator fails, assert the reason includes both
+    # expected and suggested components (per Sourcery review feedback).
+    for ecase in report.cases:
+        expected = ecase.expected_output or []
+        suggested = getattr(ecase.output, "components", None) or []
+        for result in ecase.scores.values():
+            if (
+                result.reason
+                and "got " in result.reason
+                and "expected " in result.reason
+            ):
+                for comp in expected:
+                    assert comp in result.reason, (
+                        f"Expected component '{comp}' in evaluation reason: {result.reason!r}"
+                    )
+                for comp in suggested:
+                    assert comp in result.reason, (
+                        f"Suggested component '{comp}' in evaluation reason: {result.reason!r}"
+                    )
+                break
