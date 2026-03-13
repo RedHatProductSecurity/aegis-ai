@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 90
     env:
       # make the tables in pydantic-eval reports readable
-      COLUMNS: 200
+      COLUMNS: 512
 
       # enable colorized text when output is redirected
       PYTEST_ADDOPTS: --color=yes
