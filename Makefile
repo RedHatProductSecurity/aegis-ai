@@ -23,7 +23,7 @@ lint:
 format:
 	uvx ruff format
 
-check-type: install-ml-deps
+check-type: fetch-deps
 	uvx ty check --exclude src/aegis_ai_ml
     
 check: format lint check-type
@@ -48,6 +48,8 @@ test:
 test-web:
 	uv run pytest src/aegis_ai_web/tests
 
+fetch-deps:
+	uv sync --frozen
 
 upgrade-deps:
 	uv sync --upgrade
