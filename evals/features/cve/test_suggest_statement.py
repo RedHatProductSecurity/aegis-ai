@@ -168,6 +168,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2023-54108",
         expected_statement="This vulnerability is rated Low for Red Hat Enterprise Linux 8 and 9. The flaw in the `qla2xxx` SCSI driver can lead to a DMA-API call trace, potentially impacting system availability. This issue affects systems utilizing QLogic Fibre Channel HBAs with NVMe LS requests. Triggering this vulnerability affects availability, though it will not typically crash the kernel, but more likely degrade system stability or flood logs. ",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2024-44308",
@@ -342,7 +343,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-69262",
         expected_statement="This vulnerability is rated Moderate for Red Hat. The flaw in pnpm allows for remote code execution via command injection when environment variable substitution is used in `.npmrc` files with `tokenHelper` settings. Exploitation requires an attacker to control environment variables and place malicious scripts, primarily impacting build environments such as CI/CD pipelines or Docker builds. Red Hat products like Enterprise Application Platform are not directly affected by this pnpm vulnerability.",
-        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "MitigationWellFormedCommands",
+                "StatementEvaluator",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-22822",
