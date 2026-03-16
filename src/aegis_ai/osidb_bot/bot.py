@@ -245,7 +245,9 @@ class FlawUpdater:
                 # log OSIDB response if available
                 response = getattr(e, "response", None)
                 if response is not None:
-                    self._info(f"OSIDB response: {response.text}")
+                    fl = response.text.partition("\n")[0]
+                    truncated = textwrap.shorten(fl, width=256, placeholder=" [...]")
+                    self._info(f"OSIDB response: {truncated}")
 
             # log full exception in debug mode only
             logger.debug(f"{self.cve}: {str(e)}")
