@@ -24,8 +24,11 @@ ELIGIBLE_FLAWS = {
         # TODO: extend the sequence
         "CVEORG",
     ),
-    # only flaws in the NEW state
-    "classification": ({"workflow": "DEFAULT", "state": "NEW"},),
+    # only flaws in the NEW/empty state
+    "classification": (
+        {"workflow": "DEFAULT", "state": "NEW"},
+        {"workflow": "DEFAULT", "state": ""},
+    ),
     # only flaws where Aegis has not been used yet
     "aegis_meta": ({},),
     # only flaws with no affects
