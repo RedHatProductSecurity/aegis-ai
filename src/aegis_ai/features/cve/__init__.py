@@ -287,7 +287,7 @@ class SuggestStatementText(Feature):
             ### STATEMENT (suggested_statement)
             - Focus on impact and RH relevance (deployment model, defaults, hardening).
             - Start with a concise severity-and-why sentence tailored for Red Hat that is consistent with the provided 'impact' field if available:
-              - If 'impact' is present in context, reuse that label verbatim (LOW/MODERATE/IMPORTANT/CRITICAL) and do not contradict it.
+              - If 'impact' is present in context, reuse that label but in Title Case (Low/Moderate/Important/Critical) and do not contradict it.
               - If 'impact' is not present, avoid assigning an explicit severity label; describe impact qualitatively instead.
             - Explain briefly why impact applies (e.g., feature disabled by default, needs uncommon configuration, requires physical access, short-lived CLI use).
             - Explicitly note scope and applicability:
