@@ -277,13 +277,6 @@ class Bot:
         self.pending = {}
         try:
             osidb_server = get_settings().osidb_server_url
-
-            # TODO: drop this when https://issues.redhat.com/browse/AEGIS-354 is resolved
-            if "osidb.prodsec.redhat.com" in osidb_server:
-                Bot._fail(
-                    f"this feature is experimental, refusing to connect {osidb_server}"
-                )
-
             self.osidb = osidb_bindings.new_session(osidb_server_uri=osidb_server)
 
         except requests.exceptions.ConnectionError as e:
