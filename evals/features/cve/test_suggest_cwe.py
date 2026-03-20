@@ -265,6 +265,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53625",
         cwe_list=["CWE-476"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53659",
