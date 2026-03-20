@@ -244,6 +244,9 @@ def osidb_bot(state_file, cve_ids):
     # lazy import to speed up basic Aegis CLI operations
     from aegis_ai.osidb_bot import Bot, StateFileHandler, logger
 
+    # avoid logging tracebacks when GSSAPI auth fails
+    logging.getLogger("requests_gssapi").setLevel(logging.CRITICAL)
+
     try:
         # this prevents multiple processes running in parallel on a single state file
         # (if state_file is not None)
