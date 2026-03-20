@@ -266,10 +266,6 @@ class Bot:
     total: int
     pending: dict[BotState, bool]
 
-    @staticmethod
-    def _fail(msg):
-        raise RuntimeError(f"[osidb-bot] {msg}")
-
     def __init__(self, state_file_handler: StateFileHandler, agent: Agent):
         self.sfh = state_file_handler
         self.agent = agent
@@ -279,8 +275,11 @@ class Bot:
             osidb_server = get_settings().osidb_server_url
             self.osidb = osidb_bindings.new_session(osidb_server_uri=osidb_server)
 
-        except requests.exceptions.ConnectionError as e:
-            Bot._fail(f"failed to establish OSIDB session: {e}")
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.HTTPError,
+        ) as e:
+            raise RuntimeError(f"failed to establish OSIDB session: {e}")
 
     def search_cve_ids(self) -> Sequence[CVEID]:
         finder = FlawFinder(self.osidb)
