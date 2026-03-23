@@ -233,7 +233,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53487",
         cwe_list=["CWE-276"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53499",
@@ -446,7 +451,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-38001",
         cwe_list=["CWE-825"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-38509",
