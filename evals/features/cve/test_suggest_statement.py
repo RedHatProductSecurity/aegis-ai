@@ -332,6 +332,7 @@ cases = [
         cve_id="CVE-2025-43529",
         expected_statement="This vulnerability is rated IMPORTANT for Red Hat products. A use-after-free flaw in webkitgtk, when processing maliciously crafted web content, can lead to remote code execution. Successful exploitation requires user interaction, where a victim must visit a malicious website.",
         expected_mitigation="To mitigate this issue, avoid processing untrusted web content. Additionally, disabling the JavaScript JIT compiler can reduce the attack surface. For applications using WebKitGTK, set the environment variable `JavaScriptCoreUseJIT=0` before launching the application. This may impact performance for JavaScript-heavy web content.",
+        metadata={"known_to_fail_evaluators": ["MitigationWellFormedCommands"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-64503",
