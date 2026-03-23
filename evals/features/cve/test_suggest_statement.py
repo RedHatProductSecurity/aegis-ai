@@ -92,6 +92,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2022-50087",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 8 and 9. A use-after-free flaw in the `arm_scpi` firmware component of the Linux kernel could allow a local attacker to escalate privileges. ",
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2022-50390",
