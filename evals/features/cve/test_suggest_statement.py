@@ -145,6 +145,7 @@ cases = [
         KCS[1] document for verifying the fix in RHCOS.
 
         [1] https://access.redhat.com/solutions/7071748""",
+        metadata={"known_to_fail_evaluators": ["MitigationWellFormedCommands"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2023-53176",
@@ -154,6 +155,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2023-53188",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux. A race condition in the Open vSwitch kernel module can lead to a denial of service, causing a CPU to become stuck in an infinite loop. Exploitation requires a specific setup involving Open vSwitch, veth pairs, and concurrent deletion of network namespaces while traffic is active; these actions require elevated privileges such as `CAP_NET_ADMIN`. Attack complexity is similarly high, since triggering this vulnerability requires a specific timing window, sustained parallel traffic, and a namespace teardown. The only meaningful impact from successfully causing the vulnerability is to availability. No data leakage, memory disclosure, or information exposure is involved, and there is no evidence of memory corruption. ",
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2023-53205",
