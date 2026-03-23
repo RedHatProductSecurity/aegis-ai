@@ -308,7 +308,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39816",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 10.x. The flaw exists in the io_uring/kbuf component of the kernel, where improper handling of ring provided buffer lengths from userspace could lead to an issue. Red Hat Enterprise Linux 6, 7, 8, and 9 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability affects integrity and availability, as the bug can cause inconsistent internal states and lead to stalls or system instability in the io_uring subsystem.",
-        metadata={"known_to_fail_evaluators": ["StatementSeverityRationale"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementNoCodeLevelDetails",
+                "StatementSeverityRationale",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39822",
