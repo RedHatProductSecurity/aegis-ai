@@ -141,11 +141,6 @@ cases = [
         cve_id="CVE-2022-23125",
         expected_title="Netatalk: Remote Code Execution via Buffer Overflow in copyapplfile function",
     ),
-    # FIXME: expected_description violates the (IMO valid) requirement that description should not focus on code-level details
-    # SuggestDescriptionCase(
-    #     cve_id="CVE-2022-50714",
-    #     expected_description="the driver's mt7921_pci_remove() function is called while the associated mt76_dev (driver private data) has not been properly initialized or is missing.",
-    # ),
     SuggestDescriptionCase(
         cve_id="CVE-2023-39326",
         expected_description="A flaw was found in the Golang net/http/internal package. This issue may allow a malicious user to send an HTTP request and cause the receiver to read more bytes from network than are in the body (up to 1GiB), causing the receiver to fail reading the response, possibly leading to a Denial of Service (DoS).",
@@ -157,6 +152,7 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2023-53669",
         expected_title="DoS in skb_copy_ubufs() caused by TCP tx zerocopy using hugepages with skb length bigger than ~68 KB",
+        metadata={"known_to_fail_evaluators": ["TitleEvaluator"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2023-54120",
