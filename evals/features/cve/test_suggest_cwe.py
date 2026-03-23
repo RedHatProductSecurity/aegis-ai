@@ -667,7 +667,12 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-57803",
-        cwe_list=["CWE-787", "CWE-131"],
+        cwe_list=[
+            "CWE-787",
+            "CWE-131",
+            "CWE-190",
+            "CWE-805",
+        ],  # kdudka: added CWE-190 and CWE-805
     ),
     SuggestCweCase(
         cve_id="CVE-2025-58446",
