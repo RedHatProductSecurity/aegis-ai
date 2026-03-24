@@ -42,8 +42,6 @@ class SuggestStatementCase(Case):
         expected_output = SuggestStatementModel(
             cve_id=cve_id,
             title="",
-            impact="",
-            components=[],
             description="",
             explanation="",
             suggested_statement=expected_statement,

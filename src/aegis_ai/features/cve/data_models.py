@@ -63,16 +63,6 @@ class SuggestImpactModel(AegisFeatureModel):
         description="CVE title",
     )
 
-    components: List = Field(
-        ...,
-        description="List of potentially affected components",
-    )
-
-    affected_products: List = Field(
-        ...,
-        description="List of Red Hat potentially affected supported products",
-    )
-
     explanation: str = Field(
         ...,
         description="Explain rationale behind suggested CVSS 3.1 score and impact rating.",
@@ -131,16 +121,6 @@ class PIIReportModel(AegisFeatureModel):
     cve_id: CVEID = Field(
         ...,  # Make it required
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
-    )
-
-    title: str = Field(
-        ...,
-        description="Contains CVE title",
-    )
-
-    components: List = Field(
-        ...,
-        description="List of affected components",
     )
 
     explanation: str = Field(
@@ -202,16 +182,6 @@ class SuggestStatementModel(AegisFeatureModel):
         description="CVE title",
     )
 
-    impact: Literal["", "LOW", "MODERATE", "IMPORTANT", "CRITICAL"] = Field(
-        ...,
-        description="CVE impact",
-    )
-
-    components: List = Field(
-        ...,
-        description="List of affected components",
-    )
-
     description: str = Field(
         ...,
         description="CVE description",
@@ -241,11 +211,6 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
     cve_id: CVEID = Field(
         ...,  # Make it required
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
-    )
-
-    title: str = Field(
-        ...,
-        description="Contains CVE title",
     )
 
     redhat_cvss3_score: str = Field(
@@ -322,16 +287,6 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
         - Urgent security review
         - Comprehensive system vulnerability assessment
         """,
-    )
-
-    components: List = Field(
-        ...,
-        description="List of affected components",
-    )
-
-    affected_products: List = Field(
-        ...,
-        description="List of Red Hat potentially affected supported products",
     )
 
     statement: str = Field(..., description="redhat cve statement.")

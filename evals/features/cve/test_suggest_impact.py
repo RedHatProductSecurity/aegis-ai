@@ -194,8 +194,6 @@ class SuggestImpactCase(Case):
         expected_output = SuggestImpactModel(
             cve_id=cve_id,
             title="",
-            components=[],
-            affected_products=[],
             explanation="",
             impact=expected_impact,
             cvss3_score=str(expected_cvss3_score),
