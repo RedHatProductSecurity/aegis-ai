@@ -106,16 +106,6 @@ class SuggestCWEModel(AegisFeatureModel):
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
-    title: str = Field(
-        ...,
-        description="Contains CVE title",
-    )
-
-    components: List = Field(
-        ...,
-        description="List of affected components",
-    )
-
     explanation: str = Field(
         ...,
         description="""
