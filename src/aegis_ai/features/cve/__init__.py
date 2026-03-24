@@ -108,9 +108,12 @@ class SuggestImpact(Feature):
                     - AV: N if reachable over network from off-host; A if same subnet/Bluetooth/802.11 link-limited; L if requires local account/session/CLI/local IPC; P if requires physical access.
                     - AC: H if requires uncommon configuration, precise timing/race, multiple conditions, or lengthy preparation; else L.
                     - PR: N if no prior auth; L if basic/local user privileges are enough; H if admin/root/high-privileges are required to trigger.
+                    - Linux capabilities: Treat required CAP_SYS_ADMIN, CAP_NET_ADMIN, CAP_NET_RAW, CAP_SYS_MODULE, and similar admin-class capabilities as strong evidence for PR:H when the vulnerable operation cannot be triggered without them.
+                    - Kernel attack surface: Mounting filesystems (mount(2)), loading filesystem or network driver modules, configuring interfaces or traffic classes, or privileged ioctls usually implies PR:H unless the advisory clearly shows exploitation by an unprivileged user without those capabilities (e.g. unprivileged user namespaces with a specific exposed entry point).
                     - UI: R if victim must click/open/provide content; else N.
-                    - S: C if exploitation crosses a trust boundary (e.g., container escape, VM escape, kernel boundary affecting other contexts); else U.
-                    - CIA: Set each based on consequences described: use A for availability-only DoS; use C/I when data disclosure/modification or code execution with escalated privileges is plausible.
+                    - S: C only when exploitation changes scope between security authorities (e.g. container/guest escape to host, crossing VM or user-namespace boundary per CVSS definition). Do not choose S:C merely because the kernel is involved or because other processes exist on the system; many local kernel bugs remain S:U.
+                    - CIA: Set each based on realistic consequences: use A for availability-only DoS; use C/I when plausible user-visible confidentiality or integrity impact exists. For internal kernel object lifetime/corruption with no direct user data read/write, prefer C:N/I:N or low scores unless a credible path to disclosure or controlled modification of user data is described.
+                    - Linux networking internals (tc, qdisc, net_sched, classifiers, queue discipline): flaws confined to internal queue/scheduling/state or buffer accounting for traffic shaping usually do not read or forge application payload data. Prefer C:N and I:N unless the advisory describes a concrete cross-boundary or user-data effect (e.g. leaking packet contents or socket buffers to userspace, forging another user's traffic, container-to-host data leak). Do not set C:H or I:H from generic "memory corruption" or "undefined behavior" alone; if you output C:H or I:H, the explanation must spell out that user-data impact path in one sentence.
                 - Consider Red Hat hardening defaults (SELinux enforcing, least privilege) only to inform AC and S, not AV.
                 - Retrieve and summarize additional context from vulnerability references:
                     - Use github mcp and web search tools to resolve reference URLs.
@@ -118,6 +121,9 @@ class SuggestImpact(Feature):
                     - If cisa_kev_tool is available, check for known exploits.
                 - Confidence:
                     - Calibrate confidence to the fraction of base metrics you are ≥80% sure about (e.g., 0.75 if 6/8 are certain).
+                - Explanation must match the vector (mandatory):
+                    - Do not write that exploitation requires admin capabilities, mount privileges, or privileged syscalls and output PR:L; use PR:H when those are required to trigger the flaw.
+                    - If you revise the narrative and it implies stricter privileges than your draft vector, update PR in the vector before finalizing.
                 - Output
                     - Provide the vector and score first, then impact, then a concise explanation with metric-by-metric rationale.
                     - Keep explanations concise.
@@ -227,7 +233,7 @@ class SuggestDescriptionText(Feature):
                 - Provide a concise description and a short title.
                 - Include confidence and quality scores.
                 - The description should be 2–5 sentences and easy to read.
-                - The title should briefly summarize the core impact and trigger in one line.
+                - The title should briefly summarize the core issue in one line; keep headline-level detail only (do not mirror the full description).
             """,
             rules="""
                 'description': one short paragraph.
@@ -239,6 +245,7 @@ class SuggestDescriptionText(Feature):
                 - If a term or acronym is needed, briefly define it and expand the acronym in parentheses on first use.
                 - Do not include product/version lists, package names, or mitigation/update guidance.
                 - Avoid generic CIA boilerplate; name the concrete impact (e.g., data disclosure, code execution, denial of service).
+                - When upstream or reference text in the CVE is well written, prefer clarity and professional advisory tone over adding redundant phrasing.
                 - Ambiguity and uncertainty:
                   - Do NOT invent a specific component, function, trigger, CWE, or impact if the source data and references do not clearly support it.
                   - If a single component or trigger cannot be reliably identified, use neutral wording (e.g., "in the affected component") and describe the mechanism at a high level.
@@ -246,7 +253,8 @@ class SuggestDescriptionText(Feature):
                   - Only include a CWE category or precise impact (e.g., "arbitrary code execution", "privilege escalation") when it is well-supported; otherwise, use a generic but accurate type (e.g., "input validation vulnerability", "memory corruption vulnerability") or simply "vulnerability".
                 'title': <= 20 words, summarize the description; include product/component and vulnerability type or consequence.
                 - Style: "<Component>: <primary consequence> via <trigger/cause>" when applicable.
-                - The title may include a specific function or primitive if it is the salient trigger; avoid extraneous implementation details.
+                - Prefer one primary consequence in the title (the worst plausible or the one the advisory emphasizes). Avoid stacking multiple unrelated impact types (e.g. several "and" clauses for different CIA outcomes); use one umbrella phrase in the title and put nuance in the description.
+                - The title may include a specific function or primitive if it is the salient trigger; avoid extraneous implementation details and avoid stuffing multiple impact dimensions into the title—those belong in the description.
                 - If the trigger is unclear, omit the "via <trigger/cause>" clause. If the component is unclear, name the project/product or keep a consequence-first title without fabricating specifics.
                 - Strictly exclude versions: never include any version numbers or ranges (e.g., "5.0.0", "v2", "2.x", "9.x and earlier") in the title.
                 - Keep it focused and professional.
@@ -289,14 +297,18 @@ class SuggestStatementText(Feature):
             - Start with a concise severity-and-why sentence tailored for Red Hat that is consistent with the provided 'impact' field if available:
               - If 'impact' is present in context, reuse that label but in Title Case (Low/Moderate/Important/Critical) and do not contradict it.
               - If 'impact' is not present, avoid assigning an explicit severity label; describe impact qualitatively instead.
+            - Add value beyond the CVE description and public comments: explain *why* that severity label fits the risk (e.g., why Important rather than Moderate), not a restatement of comment #0 alone.
+            - When you include an explicit severity label (Low/Moderate/Important/Critical), add at least one short clause that justifies that band (e.g. local-only vs remote, prerequisites, blast radius, or why not the next lower severity)—not only a description of the bug mechanics.
+            - Differentiate from the CVE description: lead with Red Hat deployment context (defaults, exposure on typical installs) where possible; do not reuse the same sentence structure or chain of nouns as cve_description (reorder ideas and change phrasing so the statement is not a light paraphrase).
             - Explain briefly why impact applies (e.g., feature disabled by default, needs uncommon configuration, requires physical access, short-lived CLI use).
-            - Explicitly note scope and applicability:
-              - Call out affected/unaffected Red Hat product versions when the rationale depends on defaults (e.g., feature disabled by default on RHEL 8/9).
-              - If the vulnerability requires a feature that is disabled by default on common RH releases, state those releases are not affected and why.
+            - Applicability without duplicating the advisory "Affects" list:
+              - Do not paste product/version matrices; readers can see those elsewhere. At most one short clause when defaults or preconditions are essential (e.g., "disabled by default on RHEL 8 and 9").
+              - If the vulnerability requires a feature that is disabled by default on common RH releases, say so briefly; avoid enumerating every unaffected release unless a single contrast is needed.
               - If exploit requires physical access or specialized hardware, highlight that requirement; mention if virtualized/emulated devices could still enable exploitation.
-            - When applicable, note preconditions and what is not affected (e.g., versions, roles, disabled-by-default features).
+            - When applicable, note preconditions and what is not affected (e.g., roles, disabled-by-default features) without turning the statement into a component version manifest.
             - Must NOT:
               - Duplicate the CVE description verbatim or copy any sentence or 7+ consecutive words from it; paraphrase and focus on RH-specific context.
+              - Lead with or emphasize upstream component version strings (e.g., "Foo 1.2.3"); severity narrative comes first.
               - Include code-level details or command examples.
               - Mention mitigation steps or software updates/patching.
             - Style: 2–4 concise sentences, < 1000 characters total.
