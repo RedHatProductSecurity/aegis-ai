@@ -39,18 +39,22 @@ FIELD_RUBRICS = {
         "Score how much the actual suggested_title field is semantically equivalent "
         "to the expected suggest_title field.  If the key message is the same but the "
         "style is different, the score should not be zero.  If the style is different, "
-        "the score should not be 1.0."
+        "the score should not be 1.0.  Penalize titles that are overly long or that try "
+        "to pack every impact dimension into the headline instead of summarizing the core issue."
     ),
     "suggest-description": (
         "Score how much the actual suggested_description field is semantically equivalent "
         "to the expected suggest_description field.  If the key message is the same but "
         "the style is different, the score should not be zero.  If the style is different, "
-        "the score should not be 1.0."
+        "the score should not be 1.0.  Penalize vague or padded prose when the expected text "
+        "is precise; reward clear advisory-style wording comparable to a well-written upstream summary."
     ),
     "suggest-statement": (
         "Score semantic equivalence between the actual suggested_statement and the expected "
         "suggested_statement.  Emphasize matching rationale (impact justification in RH context, "
-        "preconditions, scope).  If style differs but the core message overlaps, the score should "
+        "preconditions, scope).  The statement should add value beyond restating the CVE "
+        "description and should not merely duplicate product/version lists that belong in Affects. "
+        "If style differs but the core message overlaps, the score should "
         "be > 0.0 and < 1.0 depending on overlap.  Only assign 0.0 if the actual is irrelevant "
         "to the CVE or contradicts the expected meaning.  When partially aligned but missing details, "
         "prefer a low non-zero score (e.g., 0.12–0.3) rather than 0.0."

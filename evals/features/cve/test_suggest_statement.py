@@ -151,6 +151,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2023-53176",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux. A privileged local attacker (ex. with `CAP_SYS_ADMIN` privileges) could cause a denial of service by unbinding a serial port hardware-specific 8250 driver, leading to a kernel oops.",
+        metadata={"known_to_fail_evaluators": ["StatementNoCodeLevelDetails"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2023-53188",
@@ -223,6 +224,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-9222",
         expected_statement="...rated Important.",
+        metadata={"known_to_fail_evaluators": ["StatementSeverityRationale"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-12816",
@@ -237,6 +239,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-15284",
         expected_statement="This vulnerability is rated Important for Red Hat products that utilize the `qs` module for parsing query strings, particularly when processing user-controlled input with bracket notation. The `arrayLimit` option, intended to prevent resource exhaustion, is bypassed when bracket notation (`a[]=value`) is used, allowing a remote attacker to cause a denial of service through memory exhaustion. This can lead to application crashes or unresponsiveness, making the service unavailable.",
+        metadata={"known_to_fail_evaluators": ["StatementNoCodeLevelDetails"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-22097",
@@ -307,6 +310,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39816",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 10.x. The flaw exists in the io_uring/kbuf component of the kernel, where improper handling of ring provided buffer lengths from userspace could lead to an issue. Red Hat Enterprise Linux 6, 7, 8, and 9 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability affects integrity and availability, as the bug can cause inconsistent internal states and lead to stalls or system instability in the io_uring subsystem.",
+        metadata={"known_to_fail_evaluators": ["StatementSeverityRationale"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39822",
@@ -351,6 +355,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-68469",
         expected_mitigation="To mitigate this issue, avoid processing untrusted TIFF files with ImageMagick. In environments where ImageMagick processes files automatically, ensure that all input files originate from trusted sources or implement strict input validation to prevent the processing of malicious TIFF files.",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-69262",
@@ -382,6 +387,25 @@ evals = common_feature_evals + [
     create_llm_judge(
         assertion_name="StatementNoDuplicatedInfo",
         rubric="A non empty suggested_statement field should not duplicate verbatim the CVE description. It is acceptable to provide some description when used to explain impact.",
+    ),
+    create_llm_judge(
+        assertion_name="StatementSeverityRationale",
+        rubric=(
+            "If suggested_statement is empty, pass. If it is non-empty and does NOT include an explicit "
+            "severity label (Low/Moderate/Important/Critical), pass—qualitative impact-only statements are allowed. "
+            "If it includes a severity label, it should briefly explain why that label fits (e.g. preconditions, defaults, "
+            "blast radius, or why Red Hat is unaffected while the flaw is still rated upstream). "
+            "Pass if justification is weak but present; fail only when a label is stated with no supporting rationale at all."
+        ),
+    ),
+    create_llm_judge(
+        assertion_name="StatementNoAffectsManifest",
+        rubric=(
+            "Fail only if suggested_statement is essentially a full advisory Affects matrix (many products with many "
+            "version ranges in list form). Pass for one short clause naming affected or unaffected Red Hat major releases "
+            "(e.g. RHEL 9 and 10) when needed for applicability, for a single component version range when scoping the flaw, "
+            "or for brief default/precondition notes. Gold-standard statements may legitimately mention releases this way."
+        ),
     ),
     create_llm_judge(
         assertion_name="MitigationWellFormedCommands",

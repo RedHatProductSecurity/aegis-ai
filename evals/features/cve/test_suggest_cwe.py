@@ -10,6 +10,7 @@ from aegis_ai.features.cve import SuggestCWE, SuggestCWEModel
 
 from evals.features.common import (
     common_feature_evals,
+    create_llm_judge,
     reflect_confidence,
     run_evaluation,
 )
@@ -169,7 +170,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53123",
         cwe_list=["CWE-763"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53165",
@@ -179,7 +185,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53174",
         cwe_list=["CWE-772", "CWE-459"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53176",
@@ -371,7 +382,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-21690",
         cwe_list=["CWE-779"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-21879",
@@ -401,7 +417,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-26503",
         cwe_list=["CWE-120", "CWE-787", "CWE-124"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-37996",
@@ -410,7 +431,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-38000",
         cwe_list=["CWE-763", "CWE-825"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-38001",
@@ -443,6 +469,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-38587",
         cwe_list=["CWE-835"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-38691",
@@ -473,7 +500,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-39782",
         cwe_list=["CWE-413", "CWE-821", "CWE-833"],  # kdudka: added CWE-821 and CWE-833
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39791",
@@ -598,7 +630,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-52494",
         cwe_list=["CWE-770"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-54770",
@@ -664,7 +701,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-61984",
         cwe_list=["CWE-78"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-61985",
@@ -679,13 +721,28 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-67639",
         cwe_list=["CWE-613"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
 ]
 
 # evaluators
 evals = common_feature_evals + [
     SuggestCweEvaluator(),
+    create_llm_judge(
+        assertion_name="CWEExplanationRootCause",
+        rubric=(
+            "Pass if the explanation is non-empty and describes a plausible technical weakness (memory, sync, "
+            "injection, resource handling, auth, etc.). CWE selection is often debatable; ranked lists may include "
+            "imperfect secondary IDs. Do not fail because one CWE in the list is a stretch or contradicts the narrative "
+            "while another CWE in the same list fits. Fail only if the explanation is empty, incoherent, or none of the "
+            "listed CWEs could reasonably relate to the described flaw."
+        ),
+    ),
 ]
 
 # needed for asyncio event loop

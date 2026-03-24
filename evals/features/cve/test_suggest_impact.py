@@ -380,10 +380,12 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2025-39809",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:H",  # Since Integrity can in theory be affeceted if the stack memory corruption overwrite adjacent local variables. Sure, the overwrite is small, one byte, but could still technically cause problems depending what it overwrites.
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-39810",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:H/A:H",  # C:N bc OOBW could overwrite adjacent k memory, but no direct exposure implied. AC:H bc exploitation requires hw-dependent firmware behavior, TC configuration, and precise timing around ifdown and fw resource renegotiation. PR:H bc you need `CAP_NET_ADMIN` privileges to be able to configure traffic classes (tc)
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-39816",
@@ -460,6 +462,17 @@ evals = common_feature_evals + [
     create_llm_judge(
         assertion_name="NoAffectsInExplanation",
         rubric="The 'explanation' output field does not list affected Red Hat products.  Red Hat is not a product.",
+    ),
+    create_llm_judge(
+        assertion_name="CVSSKernelScopeAndPrivileges",
+        rubric=(
+            "For Linux kernel or low-level CVEs, the explanation must justify PR, S, C, and I "
+            "in a way consistent with the vector: use PR:H when admin-class capabilities "
+            "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
+            "unless the described effect crosses a security boundary (e.g. container escape to host); "
+            "do not set C:H/I:H for purely internal kernel state issues without a plausible "
+            "user-data impact path. Fail if the rationale clearly contradicts these rules."
+        ),
     ),
 ]
 

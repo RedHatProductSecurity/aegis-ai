@@ -257,6 +257,15 @@ evals = common_feature_evals + [
         assertion_name="TitleSummarizesDescription",
         rubric="suggested_title briefly summarizes what is described in suggested_description",
     ),
+    create_llm_judge(
+        assertion_name="TitleHeadlineLevel",
+        rubric=(
+            "suggested_title stays at headline level: one line. Fail only if the title reads like "
+            "a paragraph, lists three or more distinct impact dimensions, or includes mitigation steps. "
+            "Pass if the title briefly names one primary consequence, or a short compound of two related "
+            "consequences (e.g. 'X and Y') in a single headline phrase."
+        ),
+    ),
 ]
 
 # needed for asyncio event loop
