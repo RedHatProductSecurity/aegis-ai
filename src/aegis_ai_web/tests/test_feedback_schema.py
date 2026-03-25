@@ -6,7 +6,7 @@ Run with: pytest src/aegis_ai_web/tests/test_feedback_schema.py -v
 """
 
 import dataclasses
-from typing import Dict, cast
+from typing import Any, Dict, cast
 
 import pytest
 
@@ -260,7 +260,7 @@ class TestSchemaIntegration:
 
         # Schema is frozen, so this should raise FrozenInstanceError (a subclass of AttributeError)
         with pytest.raises(dataclasses.FrozenInstanceError):
-            FEEDBACK_SCHEMA.FIELDS = ["new", "fields"]  # type: ignore[misc]
+            cast(Any, FEEDBACK_SCHEMA).FIELDS = ["new", "fields"]
 
         # Verify fields unchanged
         assert FEEDBACK_SCHEMA.field_names == original_fields
