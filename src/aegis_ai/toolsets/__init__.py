@@ -10,9 +10,14 @@ import time
 from typing import Any
 
 from pydantic_ai.mcp import MCPServerStdio
-from pydantic_ai.toolsets import AbstractToolset, FunctionToolset, CombinedToolset
+from pydantic_ai.toolsets import (
+    AbstractToolset,
+    CombinedToolset,
+    FunctionToolset,
+    ToolsetTool,
+)
 from pydantic_ai.toolsets.wrapper import WrapperToolset
-from pydantic_ai._run_context import RunContext
+from pydantic_ai._run_context import AgentDepsT, RunContext
 
 from aegis_ai import get_settings
 
@@ -22,8 +27,14 @@ from aegis_ai.toolsets.tools.osvdev import osv_dev_cve_tool
 logger = logging.getLogger(__name__)
 
 
-class LoggingToolset(WrapperToolset):
-    async def call_tool(self, name: str, tool_args: dict, ctx: RunContext, tool):
+class LoggingToolset(WrapperToolset[AgentDepsT]):
+    async def call_tool(
+        self,
+        name: str,
+        tool_args: dict[str, Any],
+        ctx: RunContext[AgentDepsT],
+        tool: ToolsetTool[AgentDepsT],
+    ) -> Any:
         # log tool call entry
         args = str(tool_args) if tool_args else ""
         prefix = f"[tool call] {name}({args})"

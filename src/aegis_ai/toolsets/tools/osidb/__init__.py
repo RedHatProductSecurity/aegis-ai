@@ -267,7 +267,9 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
 
 
 @Tool
-async def component_count_tool(ctx: RunContext, component_name: str) -> Any:
+async def component_count_tool(
+    ctx: RunContext[feature_deps], component_name: str
+) -> Any:
     """
     Searches OSIDB by component_name returning count of CVE flaws related to given component.
 
@@ -288,7 +290,9 @@ _COMPONENT_FLAW_LIMIT = 100
 
 @Tool
 async def component_flaw_tool(
-    ctx: RunContext, component_name: str, limit: int = _COMPONENT_FLAW_LIMIT
+    ctx: RunContext[feature_deps],
+    component_name: str,
+    limit: int = _COMPONENT_FLAW_LIMIT,
 ) -> Any:
     """
     Searches OSIDB by component_name returning CVE flaws related to given component.
@@ -310,7 +314,7 @@ async def component_flaw_tool(
     return flaws
 
 
-toolset = FunctionToolset(
+toolset = FunctionToolset[feature_deps](
     tools=[flaw_tool, component_count_tool, component_flaw_tool],
 )
 
