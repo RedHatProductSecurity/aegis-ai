@@ -7,6 +7,7 @@ import httpx
 import logging
 import os
 import sys
+import warnings
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional, TypedDict
@@ -20,6 +21,14 @@ from pydantic_settings import BaseSettings
 
 from _pytest._io import TerminalWriter
 from _pytest.logging import ColoredLevelFormatter
+
+# google-genai uses typing._UnionGenericAlias (deprecated in 3.14, removal 3.17); filter before any google.genai import
+warnings.filterwarnings(
+    "ignore",
+    message=r".*'_UnionGenericAlias' is deprecated.*",
+    category=DeprecationWarning,
+    module=r"google\.genai\.types",
+)
 
 load_dotenv()
 
