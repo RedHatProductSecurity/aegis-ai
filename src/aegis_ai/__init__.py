@@ -153,6 +153,9 @@ class AppSettings(BaseSettings):
     use_nvd_dev_tool: bool = get_env_flag("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", False)
     use_cisa_kev_tool: bool = get_env_flag("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", False)
 
+    # kernel-specific ML classifier
+    use_kernel_classifier: bool = get_env_flag("AEGIS_USE_KERNEL_CLASSIFIER", False)
+
     # tavily key
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "   ")
 

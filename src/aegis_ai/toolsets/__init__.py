@@ -136,6 +136,11 @@ if get_settings().use_linux_cve_tool:
 
     public_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
 
+if get_settings().use_kernel_classifier:
+    from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_tool
+
+    public_toolset_list.append(FunctionToolset(tools=[kernel_impact_tool]))
+
 if get_settings().use_cisa_kev_tool:
     from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
 

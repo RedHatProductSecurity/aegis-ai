@@ -314,7 +314,7 @@ async def component_flaw_tool(
     return flaws
 
 
-toolset = FunctionToolset[feature_deps](
+toolset: FunctionToolset[feature_deps] = FunctionToolset(
     tools=[flaw_tool, component_count_tool, component_flaw_tool],
 )
 

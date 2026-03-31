@@ -87,7 +87,15 @@ class SuggestImpact(Feature):
         SuggestImpact.post_process_impact(output, call_str)
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=["impact", "rh_cvss_score"])
+        use_static = (
+            static_context
+            and isinstance(static_context, dict)
+            and static_context.get("cvss_scores") is not None
+        )
+        deps = feature_deps(
+            exclude_osidb_fields=["impact", "rh_cvss_score"],
+            static_context=static_context if use_static else None,
+        )
         prompt = AegisPrompt(
             user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore any pre-labeled impact/CVSS and decide independently.",
             goals="""
@@ -118,6 +126,7 @@ class SuggestImpact(Feature):
                 - Retrieve and summarize additional context from vulnerability references:
                     - Use github mcp and web search tools to resolve reference URLs.
                     - Always use kernel_cve tool if the component is the Linux kernel.
+                    - If kernel_impact_tool is available and the component is the Linux kernel, call it to obtain patch-level analysis (active feature flags and severity class probabilities). Treat the returned signals as informative context — do not copy the severity probabilities as your impact; instead weigh them alongside your own CVSS metric reasoning.
                     - If cisa_kev_tool is available, check for known exploits.
                 - Confidence:
                     - Calibrate confidence to the fraction of base metrics you are ≥80% sure about (e.g., 0.75 if 6/8 are certain).
@@ -134,11 +143,13 @@ class SuggestImpact(Feature):
             ),
             output_schema=SuggestImpactModel.model_json_schema(),
         )
+
         result = await self.run_if_safe(
             prompt, deps=deps, output_type=SuggestImpactModel
         )
         call_str = f"{self.__class__.__name__}({cve_id})"
         SuggestImpact.post_process(result.output, call_str)
+
         return result
 
 
