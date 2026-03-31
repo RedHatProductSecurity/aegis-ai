@@ -350,7 +350,11 @@ async def run_evaluation(
 
     Returns the EvaluationReport for tests that need to assert on evaluation results.
     """
-    dataset = Dataset(cases=cases, evaluators=evals)
+    dataset = Dataset(
+        name=task.__name__,
+        cases=cases,
+        evaluators=evals,
+    )
     debug = logger.isEnabledFor(logging.DEBUG)
     concurrency = (
         max_concurrency if max_concurrency is not None else get_settings().llm_max_jobs
