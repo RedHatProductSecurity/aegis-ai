@@ -1,0 +1,44 @@
+CVE ,Expected,Expected CVSS,NN+LLM Result,NN Flags,XgBoost result,XgBoost flags,AEGIS Impact,AEGIS CVSS
+CVE-2025-38590,Important,7.5,Important,REMOTE UAF NETWORK SKB KERNEL_PANIC_PLUS_UAF HARDWARE KPANIC PACKET,Important,remote danger uaf networking skb kernel_panic_plus_uaf hardware kernel_panic packet,MODERATE,5.9
+CVE-2024-53104,Important,7.3,Important,WRITE OOB USB SIMPLEFIX HARDWARE LINUS KPANIC,Important,outofbounds usb hardware linus kernel_panic,IMPORTANT,8.7
+CVE-2023-53186,Important,7,Important,REMOTE DANGER RACE UAF SKB HARDWARE LINUS CVEOUTDATED KPANIC,Low,remote danger race uaf skb hardware linus cveoutdated kpanic,MODERATE,5.3
+CVE-2026-23074,Important,7,Important,REMOTE DANGER UAF NETWORK LINUS QDISC KPANIC PACKET,Low,remote danger uaf networking linus qdisc kernel_panic packet,IMPORTANT,7.8
+CVE-2025-68305,Important,7.4,Important,REMOTE READ DANGER RACE UAF NETWORK SYZBOT KPANIC,Moderate,read remote danger race uaf networking syzbot kernel_panic,IMPORTANT,7.5
+CVE-2025-39718,Moderate,7.3,Moderate,VIRT SIMPLEFIX SKB HARDWARE LINUS PACKET,Moderate,virt skb hardware linus packet,MODERATE,6.5
+CVE-2025-40248,Important,7,Important,NULLPTR RACE UAF SKB LINUS KPANIC,Low,danger nullptr race uaf skb linus kernel_panic,IMPORTANT,8.8
+CVE-2022-50865,Important,7.5,Important,REMOTE SIMPLEFIX NETWORK CVEOUTDATED KPANIC PACKET,Moderate,remote networking cveoutdated kernel_panic packet,IMPORTANT,7.5
+CVE-2025-39905,Moderate,6.5,Moderate,LOCK DEADLOCK DANGER INIT NETWORK,Low,lock danger deadlock networking linus kernel_panic,MODERATE,4.1
+CVE-2023-53669,Moderate,5.8,Moderate 7.0,REMOTE LEAK SKB CVEOUTDATED KPANIC MEMORY,Moderate,remote danger leak skb linus kernel_panic memory,MODERATE,4.7
+CVE-2025-38352,Important,7.8,Important,DANGER RACE HARDWARE LINUS KPANIC,Moderate 7.0,danger race hardware linus kernel_panic,MODERATE,7.0
+CVE-2025-39682,Moderate,7,Moderate 7.0,REMOTE DANGER SKB LINUS KPANIC,Low,remote skb,IMPORTANT,8.2
+CVE-2025-38718,Moderate,7.5,Important,READ KASAN NETWORK SKB LINUS SYZBOT KPANIC PACKET,Low,kasan read networking skb syzbot,IMPORTANT,7.5
+CVE-2026-23097,Moderate,7.1,Moderate 7.0,READ DEADLOCK DANGER RACE UAF SYZBOT KPANIC MEMORY,Moderate,read danger deadlock race uaf syzbot kernel_panic memory,MODERATE,5.5
+CVE-2026-23032,Low,4.4,Low,LEAK HARDWARE,Low,init race leak hardware linus,MODERATE,4.4
+CVE-2025-71182,Low,5.1,Moderate 7.0,DANGER RACE HARDWARE LINUS SYZBOT KPANIC,Moderate,danger race hardware linus syzbot kernel_panic,MODERATE,5.5
+CVE-2026-23003,Moderate,6.1,Moderate,REMOTE READ KASAN NETWORK HARDWARE LINUS IPV6 SYZBOT,Low,kasan read remote networking skb hardware linus ipv6 syzbot,MODERATE,5.5
+CVE-2026-22998,Moderate,6.4,Important,REMOTE OOB DANGER NULLPTR NVME NETWORK LINUS KPANIC,Important,remote danger nullptr outofbounds nvme networking improve linus kernel_panic,IMPORTANT,7.5
+CVE-2026-23011,Moderate,6.6,Moderate 7.0,REMOTE KASAN NETWORK SKB KERNEL_PANIC_PLUS_UAF HARDWARE LINUS IPV6 SYZBOT KPANIC,Low,kasan remote danger race networking skb hardware linus syzbot,MODERATE,4.4
+CVE-2025-40248,Important,7,Important,NULLPTR RACE UAF SKB LINUS KPANIC,Moderate 7.0,danger nullptr race uaf skb linus kernel_panic,IMPORTANT,8.8
+CVE-2025-38089,Important,7.1,Important,REMOTE DANGER NETWORK KERNEL_PANIC_PLUS_UAF KPANIC PACKET,Important,remote danger networking kernel_panic,IMPORTANT,8.2
+CVE-2025-38052,Important,7.8,Important,READ INIT TIPC UAF SYZBOT KPANIC,Moderate,read init race uaf skb hardware tipc linus syzbot,MODERATE,7.0
+CVE-2025-37803,Important,7,Moderate 7.0,DANGER KPANIC MEMORY,Moderate 7.0,hardware kernel_panic memory,MODERATE,5.5
+"Results (where accuracy means good results, because higher is Ok, and exact match means where result was as expected from the beginning):",,,,,,,,
+NN+LLM accuracy (23/24x100) = 96%,,,,,,,,
+NN+LLM exact match (19/24x100) = 79%,,,,,,,,
+XgBoost accuracy (12/24x100) = 50%,,,,,,,,
+XgBoost exact match (9/24x100) = 37.5%,;;;;;;;;;;;;;;;;,,,,,,,
+"- The new similar test/comparison with the focus on Lowest CVEs (first check 10 random Lows from backlog (means pending in queue Kernel CVEs in OSIM), then 10 Mods with CVSS<5.5, and so on):",,,,,,,,
+CVE-2023-54247,Low,4.4,Low,BPF HARDWARE LINUS CVEOUTDATED SYZBOT,Moderate 7.0,danger bpf race hardware syzbot kernel_panic,LOW,4.0
+CVE-2022-50836,Low,3.3,Low,LEAK CVEOUTDATED,Low,leak,LOW,3.3
+CVE-2023-54181,Low,5.3,Low,BPF LEAK LINUS CVEOUTDATED PACKET,Low,bpf leak skb improve,LOW,2.3
+CVE-2023-54209,Low,4.4,Low,LEAK HARDWARE DEBUGFS CVEOUTDATED,Low,init race leak hardware linus,LOW,3.3
+CVE-2023-54311,Moderate,6.2,Moderate,DEADLOCK DANGER DISK LINUS CVEOUTDATED SYZBOT,Moderate 7.0,danger disk init deadlock syzbot kernel_panic,MODERATE,5.5
+CVE-2022-50851,Moderate,6.6,Moderate,DANGER HARDWARE LINUS CVEOUTDATED TEST KPANIC,Moderate 7.0,danger race hardware test kernel_panic memory,MODERATE,6.5
+CVE-2025-68742,Low,5.8,Low,BPF HARDWARE,Low,bpf race skb hardware,MODERATE,4.1
+CVE-2023-54045,Moderate,5.8,Moderate,KASAN DEADLOCK HARDWARE DEBUGFS CVEOUTDATED KPANIC,Low,kasan deadlock race hardware,MODERATE,4.1
+CVE-2023-54222,Low,5.1,Low,OOB DANGER CVEOUTDATED,Moderate 7.0,outofbounds kernel_panic,MODERATE,6.1
+CVE-2022-50873,Important,6.2,Moderate,OOB DANGER DISK VIRT KERNEL_PANIC_PLUS_UAF HARDWARE CVEOUTDATED KPANIC,Moderate,danger disk outofbounds virt race hardware kernel_panic,MODERATE,4.4
+CVE-2023-54213,Moderate <= 5.5,4.3,Moderate,OOB DANGER USB KERNEL_PANIC_PLUS_UAF HARDWARE LINUS CVEOUTDATED SYZBOT LOWERED_FROM_HIGH_BASED_ON_GUESSCVSS  DECREASED_TO_MODERATE_REGULAR_FROM_MODERATE7_BASED_ON_GUESSCVSS,Low,danger init outofbounds usb race hardware linus syzbot kernel_panic,MODERATE,4.3
+CVE-2023-54081,Moderate,6.2,Moderate,LEAK UAF LINUS CVEOUTDATED,Important,leak uaf,MODERATE,6.5
+CVE-2022-50768,Moderate <= 5.5,5.5,Moderate,DANGER HARDWARE CVEOUTDATED,Low,danger init outofbounds race hardware kernel_panic,MODERATE,4.4
+CVE-2023-54258,Important,5.8,Moderate,DANGER DISK RACE SERVERTOCLIENT CVEOUTDATED KPANIC INCREASED_TO_HIGH_BASED_ON_GUESSCVSS,Low,remote disk race improve servertoclientfail,MODERATE,4.1
