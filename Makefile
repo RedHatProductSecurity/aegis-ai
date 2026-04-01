@@ -65,6 +65,24 @@ publish-dist:
 
 
 ############################################################################
+# kernel classifier
+############################################################################
+KERNEL_CLF_DIR = src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier
+
+retrain-kernel:
+	cd $(KERNEL_CLF_DIR) && uv run python cve_data_scraper.py
+	cd $(KERNEL_CLF_DIR) && uv run python cve_feature_extraction.py
+	cd $(KERNEL_CLF_DIR) && uv run python fetch_cvss_cwe.py
+	cd $(KERNEL_CLF_DIR) && uv run python split_datasets_for_train_test.py
+	cd $(KERNEL_CLF_DIR) && uv run python cve_smote_balancer.py
+	cd $(KERNEL_CLF_DIR) && uv run python xgboost_train.py
+	cd $(KERNEL_CLF_DIR) && uv run python test_cve_model.py
+
+test-kernel:
+	cd $(KERNEL_CLF_DIR) && uv run python test_cve_model.py
+
+
+############################################################################
 # container
 ############################################################################
 build-container: Containerfile
