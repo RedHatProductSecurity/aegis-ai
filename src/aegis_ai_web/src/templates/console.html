@@ -1,39 +1,41 @@
-<html lang="en" class="layout-pf layout-pf-fixed-with-footer">
+<!doctype html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       .highlight { background-color:#FFFF00; }
-      /* Add some margin to the top of the right column for better spacing */
       .right-column { margin-top: 35px; }
+      body { min-height: 100vh; display: flex; flex-direction: column; }
+      main { flex: 1 0 auto; }
+      .app-footer { flex-shrink: 0; }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/4.0.0-rc.1/css/patternfly.min.css" integrity="sha384-w93mNn3exOGKokXXtOJ4to54RqQjfJnA3LtX7GLeZweAJ+1fy83CglzsEdB9sRhq" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/patternfly/4.0.0-rc.1/css/patternfly-additions.min.css" integrity="sha384-vMVHK5/I4lTibgeicJh67p9z9daCJmoeaRCcPpYbk6ZAcR8UEIQseTr8bC1BN5+m" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.8/css/bootstrap.min.css" integrity="sha512-2bBQCjcnw658Lho4nlXJcc6WkV/UxpE/sAokbXPxQNGqmNdQrWqtw26Ns9kFF/yG792pKR1Sx8/Y1Lf1XN4GKA==" crossorigin="anonymous">
     <title>Aegis AI</title>
 </head>
-<body style="background-color: whitesmoke">
-<nav class="navbar navbar-default navbar-pf" role="navigation">
-    <div style="margin: 3px 0 5px 20px;">
-        <a title="Product Security Agent" href="/"
-           style="font-size: 18px; text-decoration: none; color: white">
-            <b>Aegis AI - Console</b>
+<body class="bg-light">
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" title="Product Security Agent" href="/">
+            Aegis AI - Console
         </a>
     </div>
 </nav>
-<div class="container-fluid">
+<main class="container-fluid py-3">
     <div class="container">
         <div class="row">
             <div class="col-md-6">
                 <h1>Console</h1>
-                <div class="form-group">
-                    <label for="agent">agent:</label>
-                    <select id="agent" name="agent" class="form-control">
+                <div class="mb-3">
+                    <label for="agent" class="form-label">agent:</label>
+                    <select id="agent" name="agent" class="form-select">
                         <option>redhat</option>
                         <option>public</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="feature">feature:</label>
-                    <select id="feature" name="feature" class="form-control">
+                <div class="mb-3">
+                    <label for="feature" class="form-label">feature:</label>
+                    <select id="feature" name="feature" class="form-select">
                         <option></option>
                         <option>suggest-impact</option>
                         <option>suggest-cwe</option>
@@ -45,19 +47,19 @@
                 </div>
                 <hr/>
                 <form action="/console" method="post">
-                    <div class="form-group">
-                        <label for="user_instruction">User instruction:</label>
+                    <div class="mb-3">
+                        <label for="user_instruction" class="form-label">User instruction:</label>
                         <textarea id="user_instruction" name="user_instruction" rows="8" class="form-control" placeholder="Type your LLM prompt here...">{{ user_instruction }}</textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="goals">Goals:</label>
+                    <div class="mb-3">
+                        <label for="goals" class="form-label">Goals:</label>
                         <textarea id="goals" name="goals" rows="5" class="form-control" placeholder="Type your goals here...">{{ goals }}</textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="rules">Rules:</label>
+                    <div class="mb-3">
+                        <label for="rules" class="form-label">Rules:</label>
                         <textarea id="rules" name="rules" rows="5" class="form-control" placeholder="Type your rules here...">{{ rules }}</textarea>
                     </div>
-                    <div class="text-right">
+                    <div class="text-end">
                         <button type="submit" class="btn btn-primary">Generate Answer</button>
                     </div>
                 </form>
@@ -68,34 +70,34 @@
                 <div class="response-section">
                     <div class="row">
                         <div class="col-md-4">
-                            <label for="confidence">confidence:</label>
+                            <label for="confidence" class="form-label">confidence:</label>
                             <input id="confidence" value="{{ confidence }}" class="form-control" readonly/>
                         </div>
                     </div>
                     <br/>
-                    <div class="form-group">
-                        <label for="tools_used">tools used:</label>
+                    <div class="mb-3">
+                        <label for="tools_used" class="form-label">tools used:</label>
                         <input id="tools_used" value="{{ tools_used }}" class="form-control" readonly/>
                     </div>
 
-                    <div class="form-group">
-                        <label for="explanation">explanation:</label>
+                    <div class="mb-3">
+                        <label for="explanation" class="form-label">explanation:</label>
                         <textarea id="explanation" rows="10" class="form-control" expanded>{{ explanation }}</textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="answer">answer:</label>
+                    <div class="mb-3">
+                        <label for="answer" class="form-label">answer:</label>
                         <textarea id="answer" rows="10" class="form-control" expanded>{{ answer }}</textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="raw_output">debug:</label>
+                    <div class="mb-3">
+                        <label for="raw_output" class="form-label">debug:</label>
                         <textarea id="raw_output" rows="10" class="form-control" expanded>{{ raw_output }}</textarea>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-<div class="container-fluid footer-pf">
+</main>
+<footer class="app-footer container-fluid border-top py-3 bg-white">
     <div class="text-center" style="font-size:120%; padding-bottom: 5px">
         Copyright © 2025 Red Hat, Inc. All rights reserved.
         |
@@ -106,9 +108,7 @@
             Report Issue/Enhancement
         </a>
     </div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/patternfly/3.59.5/js/patternfly.min.js" integrity="sha384-3eAK2Q6H2vfFZqS7Wx3RCTBf4rj/1Dfs6OlP0iDq5wkkZyoMas2r2WZpuKp53aVQ" crossorigin="anonymous"></script>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.8/js/bootstrap.bundle.min.js" integrity="sha512-HvOjJrdwNpDbkGJIG2ZNqDlVqMo77qbs4Me4cah0HoDrfhrbA+8SBlZn1KrvAQw7cILLPFJvdwIgphzQmMm+Pw==" crossorigin="anonymous"></script>
 </body>
 </html>
