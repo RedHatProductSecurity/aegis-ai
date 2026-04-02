@@ -674,6 +674,10 @@ spec:
                     secretKeyRef:
                       name: gemini-key
                       key: token
+                - name: AEGIS_USE_KERNEL_CLASSIFIER
+                  value: "true"
+                - name: AEGIS_USE_LINUX_CVE_TOOL_CONTEXT
+                  value: "true"
               resources:
                 requests:
                   memory: "2Gi"

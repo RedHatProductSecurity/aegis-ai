@@ -46,6 +46,7 @@ jobs:
 
       # kernel classifier
       AEGIS_USE_KERNEL_CLASSIFIER: ${{ vars.AEGIS_USE_KERNEL_CLASSIFIER }}
+      AEGIS_USE_LINUX_CVE_TOOL_CONTEXT: ${{ vars.AEGIS_USE_LINUX_CVE_TOOL_CONTEXT }}
 
       # will be uploaded to GitHub as an artifact
       AEGIS_LOG_FILE: "/tmp/aegis-evals.log"
