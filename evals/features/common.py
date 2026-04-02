@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -227,6 +228,8 @@ def _format_suggest_affected_components_output(val: Any) -> str:
 
 def _score_with_threshold_indicator(value: float | int) -> str:
     """Format score with pass/fail indicator based on MIN_SCORE_THRESHOLD."""
+    if isinstance(value, float) and math.isnan(value):
+        return "NaN [red]✗[/]"
     formatted = default_render_number(value)
     indicator = "[green]✔[/]" if value >= MIN_SCORE_THRESHOLD else "[red]✗[/]"
     return f"{formatted} {indicator}"
