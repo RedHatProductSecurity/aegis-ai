@@ -128,6 +128,14 @@ class SuggestImpact(Feature):
                     - Always use kernel_cve tool if the component is the Linux kernel.
                     - If kernel_impact_tool is available and the component is the Linux kernel, call it to obtain patch-level analysis (active feature flags and severity class probabilities). Treat the returned signals as informative context — do not copy the severity probabilities as your impact; instead weigh them alongside your own CVSS metric reasoning.
                     - If cisa_kev_tool is available, check for known exploits.
+                - Kernel severity escalation (Red Hat policy context):
+                    - Red Hat rates certain kernel vulnerability classes as IMPORTANT even when a pure CVSS computation falls in the 4.0-7.0 range, because kernel crashes and memory corruption in production have outsized enterprise impact (unplanned reboots, SLA violations, potential for escalation).
+                    - When kernel_impact_tool returns severity_probabilities with IMPORTANT >= 0.6, or active_features include memory corruption signals (uaf, kernel_panic, kernel_panic_plus_uaf, danger) combined with network/infrastructure exposure (remote, networking, skb, packet), seriously consider rating IMPORTANT even if your initial CVSS vector computes to 4.0-7.0.
+                    - Specific escalation patterns:
+                        - UAF, double-free, or use-after-free in any network-reachable path: lean IMPORTANT.
+                        - Kernel crash (panic/oops) reachable from network traffic without privileges: lean IMPORTANT.
+                        - Memory corruption where NIST/CISA vectors show C:H/I:H/A:H even if the RH vector is narrower: explain the divergence and lean toward the more severe rating.
+                    - When escalating, adjust your CVSS vector to reflect the higher impact (e.g. raise C or I from N/L to H if memory corruption enables plausible data disclosure or code execution) rather than outputting an inconsistent score/impact pair, since post-processing will align impact to the score.
                 - Confidence:
                     - Calibrate confidence to the fraction of base metrics you are ≥80% sure about (e.g., 0.75 if 6/8 are certain).
                 - Explanation must match the vector (mandatory):
