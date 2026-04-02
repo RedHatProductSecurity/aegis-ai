@@ -182,7 +182,7 @@ class SuggestImpact(Feature):
                         - UAF, double-free, or use-after-free in any network-reachable path: lean IMPORTANT.
                         - Kernel crash (panic/oops) reachable from network traffic without privileges: lean IMPORTANT.
                         - Memory corruption where NIST/CISA vectors show C:H/I:H/A:H even if the RH vector is narrower: explain the divergence and lean toward the more severe rating.
-                    - When escalating, adjust your CVSS vector to reflect the higher impact (e.g. raise C or I from N/L to H if memory corruption enables plausible data disclosure or code execution) rather than outputting an inconsistent score/impact pair, since post-processing will align impact to the score.
+                    - When escalation signals are present, keep your CVSS vector metrics technically accurate — do not inflate C or I beyond what the bug technically enables just to raise the numeric score. Impact escalation above the CVSS-derived band is handled automatically by post-processing policy when the classifier warrants it. If you believe C:H or I:H is genuinely justified, the explanation must spell out the concrete user-data impact path.
                 - Confidence:
                     - Calibrate confidence to the fraction of base metrics you are ≥80% sure about (e.g., 0.75 if 6/8 are certain).
                 - Explanation must match the vector (mandatory):
