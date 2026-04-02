@@ -32,7 +32,7 @@ from aegis_ai.kernel_classifier.cascade import SEVERITY_LABELS, apply_cascade
 
 logger = logging.getLogger(__name__)
 
-KERNEL_COMPONENTS = {"kernel", "kernel-rt"}
+KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel"}
 
 CVSS_ISSUER_PRIORITY = ["NIST", "RH", "CVEORG", "OSV", "CISA"]
 

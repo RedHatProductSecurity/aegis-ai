@@ -172,7 +172,7 @@ class SuggestImpact(Feature):
                     - If cisa_kev_tool is available, check for known exploits.
                 - Kernel severity escalation (Red Hat policy context):
                     - Red Hat rates certain kernel vulnerability classes as IMPORTANT even when a pure CVSS computation falls in the 4.0-7.0 range, because kernel crashes and memory corruption in production have outsized enterprise impact (unplanned reboots, SLA violations, potential for escalation).
-                    - When kernel_impact_tool returns severity_probabilities with IMPORTANT >= 0.6, or active_features include memory corruption signals (uaf, kernel_panic, kernel_panic_plus_uaf, danger) combined with network/infrastructure exposure (remote, networking, skb, packet), seriously consider rating IMPORTANT even if your initial CVSS vector computes to 4.0-7.0.
+                    - When kernel_impact_tool returns severity_probabilities with IMPORTANT >= 0.6, or active_features include memory corruption signals (uaf, kernel_panic, kernel_panic_plus_uaf, danger) combined with network/infrastructure exposure (remote, networking, skb, packet, servertoclientfail), seriously consider rating IMPORTANT even if your initial CVSS vector computes to 4.0-7.0.
                     - Specific escalation patterns:
                         - UAF, double-free, or use-after-free in any network-reachable path: lean IMPORTANT.
                         - Kernel crash (panic/oops) reachable from network traffic without privileges: lean IMPORTANT.
