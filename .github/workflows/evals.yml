@@ -44,6 +44,9 @@ jobs:
       # (if unset, all of them need to succeed)
       AEGIS_EVALS_MIN_PASSED: ${{ vars.AEGIS_EVALS_MIN_PASSED }}
 
+      # kernel classifier
+      AEGIS_USE_KERNEL_CLASSIFIER: ${{ vars.AEGIS_USE_KERNEL_CLASSIFIER }}
+
       # will be uploaded to GitHub as an artifact
       AEGIS_LOG_FILE: "/tmp/aegis-evals.log"
 

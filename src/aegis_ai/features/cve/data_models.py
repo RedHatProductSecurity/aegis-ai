@@ -1,6 +1,6 @@
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, PrivateAttr
 
 from aegis_ai.data_models import CVEID, CVSS3Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
@@ -80,6 +80,9 @@ class SuggestImpactModel(AegisFeatureModel):
     cvss3_vector: Optional[CVSS3Vector] = Field(
         description="Suggested Red Hat CVSS3.1 vector",
     )
+
+    _classifier_diagnostics: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    _escalation_floor_applied: bool = PrivateAttr(default=False)
 
     def printable_outcome(self) -> str:
         """override the logging hook to print the resulting suggestion"""

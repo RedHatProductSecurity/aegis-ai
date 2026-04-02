@@ -43,13 +43,23 @@ COPY --chown=aegis . /opt/app-root
 # install uv, install local dependencies and initialize version string
 RUN set -o pipefail \
     && pip3 install --no-cache-dir gssapi uv \
-    && uv sync --no-cache --frozen \
+    && uv sync --no-cache --frozen --extra classifier_deps \
     && printf '\n[tool.hatch.version.raw-options]\nfallback_version = "%s"\n' \
         "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
     | tee -a pyproject.toml
 
-# remove git repo (and files maintained in it) after the version string is initialized
-RUN rm -fr .git docs src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier
+# remove git repo, docs, and classifier training artifacts (keep models + feature extraction)
+RUN rm -fr .git docs \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/data \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/test-results \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/*_train*.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/cve_data_scraper.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/cve_predictor.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/cve_smote_balancer.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/cvss_cwe_features.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/fetch_cvss_cwe.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/split_datasets_for_train_test.py \
+    src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/test_cve_model.py
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root

@@ -1,7 +1,10 @@
 import asyncio
 import io
+import json
 import logging
 import os
+from datetime import datetime, timezone
+from pathlib import Path
 
 from rich.console import Console
 from typing import Sequence, Any
@@ -379,6 +382,92 @@ class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):
             any("osidb_tool" in tool for tool in ctx.output.tools_used),
             "osidb_tool was not used by the agent",
         )
+
+
+def export_eval_results(
+    report: EvaluationReport,
+    output_path: Path,
+    *,
+    classifier_diagnostics: dict[str, dict | None] | None = None,
+) -> Path:
+    """Write structured per-case eval results to a JSON file for post-hoc analysis.
+
+    Args:
+        report: the evaluation report from pydantic_evals
+        output_path: where to write the JSON file
+        classifier_diagnostics: optional dict mapping CVE ID -> classifier result dict
+
+    Returns:
+        the path written to
+    """
+    classifier_diagnostics = classifier_diagnostics or {}
+    cases_out: list[dict[str, Any]] = []
+
+    for ecase in report.cases:
+        output = ecase.output
+        expected = ecase.expected_output
+
+        case_data: dict[str, Any] = {
+            "cve_id": ecase.inputs,
+            "expected_impact": getattr(expected, "impact", None) if expected else None,
+            "predicted_impact": getattr(output, "impact", None),
+            "predicted_cvss3_score": getattr(output, "cvss3_score", None),
+            "predicted_cvss3_vector": getattr(output, "cvss3_vector", None),
+            "confidence": getattr(output, "confidence", None),
+            "explanation": getattr(output, "explanation", None),
+        }
+
+        diag = classifier_diagnostics.get(ecase.inputs)
+        if diag is None and hasattr(output, "_classifier_diagnostics"):
+            diag = output._classifier_diagnostics
+        escalation = getattr(output, "_escalation_floor_applied", False)
+
+        case_data["classifier"] = None
+        if diag:
+            case_data["classifier"] = {
+                "impact": diag.get("impact"),
+                "confidence": diag.get("confidence"),
+                "probabilities": diag.get("probabilities"),
+                "active_features": diag.get("active_features"),
+                "cvss_score": diag.get("cvss_score"),
+                "cvss_vector": diag.get("cvss_vector"),
+                "patches_analyzed": diag.get("patches_analyzed"),
+                "escalation_floor_applied": escalation,
+            }
+
+        evaluators: dict[str, Any] = {}
+        for name, result in ecase.assertions.items():
+            evaluators[name] = {
+                "passed": result.value,
+                "reason": result.reason,
+            }
+        for name, result in ecase.scores.items():
+            evaluators[name] = {"score": result.value}
+        case_data["evaluators"] = evaluators
+
+        cases_out.append(case_data)
+
+    for failure in report.failures:
+        cases_out.append(
+            {
+                "cve_id": failure.inputs,
+                "error": failure.error_message,
+            }
+        )
+
+    payload = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "name": report.name,
+        "total_cases": len(report.cases) + len(report.failures),
+        "evaluated": len(report.cases),
+        "failed_to_run": len(report.failures),
+        "cases": cases_out,
+    }
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, default=str) + "\n")
+    logger.info("Eval results exported to %s", output_path)
+    return output_path
 
 
 common_feature_evals = [

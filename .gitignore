@@ -172,3 +172,6 @@ Makefile
 notes.org
 tmp/
 
+# Eval result exports (generated per-run, not committed)
+evals/**/kernel_eval_results.json
+

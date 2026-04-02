@@ -101,6 +101,8 @@ class SuggestImpact(Feature):
                 f"{output.impact} -> {impact_floor}"
             )
             output.impact = impact_floor
+            if hasattr(output, "_escalation_floor_applied"):
+                output._escalation_floor_applied = True
 
     @staticmethod
     def post_process(output, call_str, impact_floor=None):
@@ -205,6 +207,8 @@ class SuggestImpact(Feature):
             deps.classifier_result.get("impact") if deps.classifier_result else None
         )
         SuggestImpact.post_process(result.output, call_str, impact_floor=impact_floor)
+
+        result.output._classifier_diagnostics = classifier_result
 
         return result
 

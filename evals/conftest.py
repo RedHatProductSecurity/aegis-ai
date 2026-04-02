@@ -25,6 +25,26 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
     )
 
 
+@pytest.fixture(scope="session")
+def _monkeypatch_session():
+    mp = pytest.MonkeyPatch()
+    yield mp
+    mp.undo()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _patch_cve_retrieve(_monkeypatch_session):
+    """Route ALL cve_retrieve calls through the OSIDB cache during evals.
+
+    The agent toolset swap (override_rh_feature_agent) only intercepts LLM
+    tool calls.  Code that calls cve_retrieve directly — e.g. the kernel
+    classifier's _fetch_osidb_cvss — would still hit live OSIDB without this.
+    """
+    import aegis_ai.toolsets.tools.osidb as osidb_mod
+
+    _monkeypatch_session.setattr(osidb_mod, "cve_retrieve", osidb_cache_retrieve)
+
+
 # enable logging to see progress
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging_for_session():
