@@ -115,23 +115,26 @@ class SuggestImpact(Feature):
             and static_context.get("cvss_scores") is not None
         )
 
-        # Pre-run kernel classifier when the component is known to be kernel.
-        # The result is stored on deps so tools can return it as a cache hit
-        # and post-processing can use the impact as an escalation floor.
+        # Pre-run kernel classifier so the result is available as a tool
+        # cache hit and as the escalation floor in post-processing.
+        # When static_context is present, run only for known kernel components.
+        # When absent (e.g. eval harness), run speculatively — the classifier
+        # returns None harmlessly for non-kernel CVEs (no commit hashes).
         classifier_result = None
-        if (
-            get_settings().use_kernel_classifier
-            and static_context
-            and isinstance(static_context, dict)
-            and is_kernel_component(static_context.get("components", []))
-        ):
-            from aegis_ai.toolsets.tools.kernel_classifier import (
-                kernel_impact_classify,
+        if get_settings().use_kernel_classifier:
+            known_kernel = (
+                static_context
+                and isinstance(static_context, dict)
+                and is_kernel_component(static_context.get("components", []))
             )
+            if known_kernel or not static_context:
+                from aegis_ai.toolsets.tools.kernel_classifier import (
+                    kernel_impact_classify,
+                )
 
-            classifier_result = await kernel_impact_classify(
-                cve_id, static_context=static_context
-            )
+                classifier_result = await kernel_impact_classify(
+                    cve_id, static_context=static_context
+                )
 
         deps = feature_deps(
             exclude_osidb_fields=["impact", "rh_cvss_score"],
