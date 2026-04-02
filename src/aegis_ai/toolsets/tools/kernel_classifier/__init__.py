@@ -137,6 +137,16 @@ async def kernel_impact_classify(
     )
 
 
+def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolResponse:
+    """Build a tool response from a classifier result dict."""
+    return KernelImpactToolResponse(
+        cve_id=cve_id,
+        active_features=result.get("active_features", []),
+        severity_probabilities=result.get("probabilities", {}),
+        patches_analyzed=result.get("patches_analyzed", 0),
+    )
+
+
 @Tool
 async def kernel_impact_tool(
     ctx: RunContext, input: KernelImpactToolInput
@@ -144,6 +154,12 @@ async def kernel_impact_tool(
     """Analyse fix patches for a Linux kernel CVE and return security-relevant
     signals: which patch feature flags fired and the model's per-class severity
     probabilities.  Use this when the CVE component is the Linux kernel."""
+
+    # Fast path: return pre-computed result stored on deps by SuggestImpact.exec
+    cached = getattr(ctx.deps, "classifier_result", None)
+    if cached:
+        logger.info("Returning pre-computed classifier result for %s", input.cve_id)
+        return _response_from_result(input.cve_id, cached)
 
     logger.info("Analysing kernel patch features for %s...", input.cve_id)
     static_context = getattr(ctx.deps, "static_context", None)
@@ -156,9 +172,4 @@ async def kernel_impact_tool(
             error_message="Kernel classifier could not produce a result for this CVE.",
         )
 
-    return KernelImpactToolResponse(
-        cve_id=input.cve_id,
-        active_features=result.get("active_features", []),
-        severity_probabilities=result.get("probabilities", {}),
-        patches_analyzed=result.get("patches_analyzed", 0),
-    )
+    return _response_from_result(input.cve_id, result)

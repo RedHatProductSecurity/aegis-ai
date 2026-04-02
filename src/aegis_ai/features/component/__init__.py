@@ -65,4 +65,4 @@ class ComponentIntelligence(Feature):
             output_schema=ComponentIntelligenceModel.model_json_schema(),
         )
         logger.debug(prompt.to_string())
-        return await self.run_if_safe(prompt, output_type=ComponentIntelligenceModel)
+        return await self.guarded_run(prompt, output_type=ComponentIntelligenceModel)

@@ -100,10 +100,11 @@ class Feature(ABC):
             logger.debug(f"{call_str} raised an exception: {e}")
             raise
 
-    async def run_if_safe(self, prompt, **kwargs):
-        """
-        Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
-        Returns the model output on success, otherwise None.
+    async def guarded_run(self, prompt, **kwargs):
+        """Execute the agent with safety, concurrency, retry, and timeout guards.
+
+        Raises RuntimeError if the prompt fails the safety check or the
+        agent cannot produce a result after retries.
         """
         # lazy import to avoid circular deps
         from aegis_ai.agents import agent_default_max_retries

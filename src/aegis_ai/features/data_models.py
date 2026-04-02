@@ -24,6 +24,10 @@ class feature_deps:
     # When set, the OSIDB flaw_tool uses this instead of calling OSIDB API.
     # Used when static_context already contains sufficient CVE data (e.g. from web API).
     static_context: Optional[Any] = field(default=None)
+    # Pre-computed classifier result (e.g. from kernel_impact_classify).
+    # Set before the agent run and read-only during execution.  Used by
+    # tools (fast-path cache) and post-processing (escalation floor).
+    classifier_result: Optional[dict] = field(default=None)
 
 
 class FeatureQueryInput(BaseModel):

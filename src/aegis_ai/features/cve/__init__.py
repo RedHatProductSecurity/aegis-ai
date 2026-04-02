@@ -2,7 +2,7 @@ import cvss
 import logging
 from typing import Any
 
-from aegis_ai import remove_keys
+from aegis_ai import get_settings, remove_keys
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
@@ -16,6 +16,7 @@ from aegis_ai.features.cve.data_models import (
 )
 from aegis_ai.features.cve.data_models import CVEFeatureInput
 from aegis_ai.features.data_models import feature_deps
+from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
 
@@ -81,10 +82,31 @@ class SuggestImpact(Feature):
         )
         output.impact = impact_by_cvss3
 
+    SEVERITY_ORDER = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "NONE": 4}
+
     @staticmethod
-    def post_process(output, call_str):
+    def apply_escalation_floor(output, call_str, impact_floor=None):
+        """Ensure impact is not below the policy-mandated escalation floor.
+
+        Called after post_process_impact.  If a classifier or other signal
+        has established a minimum severity, this step enforces it.
+        """
+        if not impact_floor:
+            return
+        current = SuggestImpact.SEVERITY_ORDER.get(output.impact, 99)
+        floor = SuggestImpact.SEVERITY_ORDER.get(impact_floor, 99)
+        if floor < current:
+            logger.info(
+                f"{call_str}: escalation floor overrides impact: "
+                f"{output.impact} -> {impact_floor}"
+            )
+            output.impact = impact_floor
+
+    @staticmethod
+    def post_process(output, call_str, impact_floor=None):
         SuggestImpact.post_process_cvss(output, call_str)
         SuggestImpact.post_process_impact(output, call_str)
+        SuggestImpact.apply_escalation_floor(output, call_str, impact_floor)
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = (
@@ -92,9 +114,29 @@ class SuggestImpact(Feature):
             and isinstance(static_context, dict)
             and static_context.get("cvss_scores") is not None
         )
+
+        # Pre-run kernel classifier when the component is known to be kernel.
+        # The result is stored on deps so tools can return it as a cache hit
+        # and post-processing can use the impact as an escalation floor.
+        classifier_result = None
+        if (
+            get_settings().use_kernel_classifier
+            and static_context
+            and isinstance(static_context, dict)
+            and is_kernel_component(static_context.get("components", []))
+        ):
+            from aegis_ai.toolsets.tools.kernel_classifier import (
+                kernel_impact_classify,
+            )
+
+            classifier_result = await kernel_impact_classify(
+                cve_id, static_context=static_context
+            )
+
         deps = feature_deps(
             exclude_osidb_fields=["impact", "rh_cvss_score"],
             static_context=static_context if use_static else None,
+            classifier_result=classifier_result,
         )
         prompt = AegisPrompt(
             user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore any pre-labeled impact/CVSS and decide independently.",
@@ -152,11 +194,14 @@ class SuggestImpact(Feature):
             output_schema=SuggestImpactModel.model_json_schema(),
         )
 
-        result = await self.run_if_safe(
+        result = await self.guarded_run(
             prompt, deps=deps, output_type=SuggestImpactModel
         )
         call_str = f"{self.__class__.__name__}({cve_id})"
-        SuggestImpact.post_process(result.output, call_str)
+        impact_floor = (
+            deps.classifier_result.get("impact") if deps.classifier_result else None
+        )
+        SuggestImpact.post_process(result.output, call_str, impact_floor=impact_floor)
 
         return result
 
@@ -195,7 +240,7 @@ class SuggestCWE(Feature):
             ),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
-        result = await self.run_if_safe(prompt, deps=deps, output_type=SuggestCWEModel)
+        result = await self.guarded_run(prompt, deps=deps, output_type=SuggestCWEModel)
         # Post-process: filter out any disallowed CWE IDs (guardrail in case LLM misses rules)
         await cwe_manager.initialize()
         allowed_cwe_ids = set(cwe_manager.get_allowed_cwe_ids())
@@ -238,7 +283,7 @@ class IdentifyPII(Feature):
             static_context=static_context,
             output_schema=PIIReportModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, deps=deps, output_type=PIIReportModel)
+        return await self.guarded_run(prompt, deps=deps, output_type=PIIReportModel)
 
 
 class SuggestDescriptionText(Feature):
@@ -286,7 +331,7 @@ class SuggestDescriptionText(Feature):
             ),
             output_schema=SuggestDescriptionModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=SuggestDescriptionModel
         )
 
@@ -367,7 +412,7 @@ class SuggestStatementText(Feature):
             ),
             output_schema=SuggestStatementModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=SuggestStatementModel
         )
 
@@ -418,7 +463,7 @@ class SuggestAffectedComponents(Feature):
             ),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=SuggestAffectedComponentsModel
         )
 
@@ -443,6 +488,6 @@ class CVSSDiffExplainer(Feature):
             static_context=static_context,
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=CVSSDiffExplainerModel
         )
