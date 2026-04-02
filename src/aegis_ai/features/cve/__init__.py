@@ -57,11 +57,11 @@ class SuggestImpact(Feature):
             cvss3_score = float("nan")
 
         # check which impact corresponds to cvss3_score
-        if 9.0 < cvss3_score:
+        if 9.0 <= cvss3_score:
             impact_by_cvss3 = "CRITICAL"
-        elif 7.0 < cvss3_score:
+        elif 7.0 <= cvss3_score:
             impact_by_cvss3 = "IMPORTANT"
-        elif 4.0 < cvss3_score:
+        elif 4.0 <= cvss3_score:
             impact_by_cvss3 = "MODERATE"
         elif 0.0 < cvss3_score:
             impact_by_cvss3 = "LOW"
