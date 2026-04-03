@@ -167,7 +167,18 @@ async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_eval_suggest_impact_kernel_cves():
+async def test_eval_suggest_impact_kernel_cves(request):
     """suggest_impact evaluation on al-kernel-cves.csv CVEs"""
     report = await run_evaluation(cases, evals, suggest_impact, agent=rh_feature_agent)
     export_eval_results(report, RESULTS_PATH)
+
+    if request.config.getoption("--audit"):
+        from evals.features.cve.audit_kernel_eval import audit, print_report
+
+        audit_path = RESULTS_PATH.with_name("kernel_eval_audit.json")
+        audit_report = audit(RESULTS_PATH)
+        print_report(audit_report)
+        import json
+
+        with open(audit_path, "w", encoding="utf-8") as f:
+            json.dump(audit_report, f, indent=2)

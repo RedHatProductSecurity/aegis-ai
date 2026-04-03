@@ -16,3 +16,9 @@ def pytest_addoption(parser):
         default=None,
         help="Suggest-affected-components eval: randomly sample N cases (default: use all).",
     )
+    parser.addoption(
+        "--audit",
+        action="store_true",
+        default=False,
+        help="Run post-eval audit after kernel eval and write kernel_eval_audit.json.",
+    )
