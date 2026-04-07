@@ -65,6 +65,18 @@ publish-dist:
 
 
 ############################################################################
+# kernel classifier
+############################################################################
+KERNEL_CLF_DIR = src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier
+
+retrain-kernel:
+	$(MAKE) -C $(KERNEL_CLF_DIR) retrain
+
+test-kernel:
+	$(MAKE) -C $(KERNEL_CLF_DIR) test
+
+
+############################################################################
 # container
 ############################################################################
 build-container: Containerfile
