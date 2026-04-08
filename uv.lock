@@ -302,7 +302,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "0.89.0"
+version = "0.91.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -314,9 +314,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/60/af/862e216dd6c5e9bc02fb374eeaaa19017c51b90ddfa5692668a3811947bd/anthropic-0.89.0.tar.gz", hash = "sha256:f3d75b8ccef4b35f3702639519e461eba437d4bcdfabb69378c65a02ab7bda66", size = 596758, upload-time = "2026-04-03T18:57:01.348Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/b5/f39ae52ce035490217203581b9bfca8ca853c3a497961d0e5a2f091d0233/anthropic-0.91.0.tar.gz", hash = "sha256:a6afd894d55c26504e3d33909fb3f174d0db7d63369bfe9bb387da3e2806076a", size = 599272, upload-time = "2026-04-07T18:41:17.202Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/ba/9f973f22abb512d5d17428a76e4ecbc8d49b9dd1b5a1152576d48c24dc1d/anthropic-0.89.0-py3-none-any.whl", hash = "sha256:c6d23854af798f2471ca3bc653cca394d392cc272fe803d3da9d63575b8445f0", size = 478847, upload-time = "2026-04-03T18:56:59.54Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/1e/7f06da237fde2d7f760a1b61a554c0e780dffe1d264e5aacd0287a7a142b/anthropic-0.91.0-py3-none-any.whl", hash = "sha256:b8672878642774198aa6272f40eb526b9ca11c2a72d4a935d867d445c7371f68", size = 481829, upload-time = "2026-04-07T18:41:15.326Z" },
 ]
 
 [[package]]
@@ -1433,7 +1433,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "1.9.0"
+version = "1.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -1446,9 +1446,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/88/bb/62c7aa86f63a05e2f9b96642fdef9b94526a23979820b09f5455deff4983/huggingface_hub-1.9.0.tar.gz", hash = "sha256:0ea5be7a56135c91797cae6ad726e38eaeb6eb4b77cefff5c9d38ba0ecf874f7", size = 750326, upload-time = "2026-04-03T08:35:55.888Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/40/68d9b286b125d9318ae95c8f8b206e8672e7244b0eea61ebb4a88037638c/huggingface_hub-1.9.1.tar.gz", hash = "sha256:442af372207cc24dcb089caf507fcd7dbc1217c11d6059a06f6b90afe64e8bd2", size = 750355, upload-time = "2026-04-07T13:47:59.167Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/37/0d15d16150e1829f3e90962c99f28257f6de9e526a680b4c6f5acdb54fd2/huggingface_hub-1.9.0-py3-none-any.whl", hash = "sha256:2999328c058d39fd19ab748dd09bd4da2fbaa4f4c1ddea823eab103051e14a1f", size = 637355, upload-time = "2026-04-03T08:35:53.897Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/af/10a89c54937dccf6c10792770f362d96dd67aedfde108e6e1fd7a0836789/huggingface_hub-1.9.1-py3-none-any.whl", hash = "sha256:8dae771b969b318203727a6c6c5209d25e661f6f0dd010fc09cc4a12cf81c657", size = 637356, upload-time = "2026-04-07T13:47:57.239Z" },
 ]
 
 [[package]]
@@ -3524,7 +3524,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "9.0.2"
+version = "9.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -3533,9 +3533,9 @@ dependencies = [
     { name = "pluggy" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/db/7ef3487e0fb0049ddb5ce41d3a49c235bf9ad299b6a25d5780a89f19230f/pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11", size = 1568901, upload-time = "2025-12-06T21:30:51.014Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/0d/549bd94f1a0a402dc8cf64563a117c0f3765662e2e668477624baeec44d5/pytest-9.0.3.tar.gz", hash = "sha256:b86ada508af81d19edeb213c681b1d48246c1a91d304c6c81a427674c17eb91c", size = 1572165, upload-time = "2026-04-07T17:16:18.027Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/ab/b3226f0bd7cdcf710fbede2b3548584366da3b19b5021e74f5bde2a8fa3f/pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b", size = 374801, upload-time = "2025-12-06T21:30:49.154Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/24/a372aaf5c9b7208e7112038812994107bc65a84cd00e0354a88c2c77a617/pytest-9.0.3-py3-none-any.whl", hash = "sha256:2c5efc453d45394fdd706ade797c0a81091eccd1d6e4bccfcd476e2b8e0ab5d9", size = 375249, upload-time = "2026-04-07T17:16:16.13Z" },
 ]
 
 [[package]]
@@ -4559,11 +4559,11 @@ wheels = [
 
 [[package]]
 name = "uncalled-for"
-version = "0.3.0"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b3/98/2acd616882f04f57199ca1eaf818542e7e6f09f0df2ad6d53889cf46d3d1/uncalled_for-0.3.0.tar.gz", hash = "sha256:3a2fffa03ccf92d2442084358a001ab06b4ca90aedcd93cc2f33e5b12054851b", size = 52873, upload-time = "2026-04-06T20:53:06.714Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/68/35c1d87e608940badbcfeb630347aa0509897284684f61fab6423d02b253/uncalled_for-0.3.1.tar.gz", hash = "sha256:5e412ac6708f04b56bef5867b5dcf6690ebce4eb7316058d9c50787492bb4bca", size = 49693, upload-time = "2026-04-07T13:05:06.462Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/c9/a1868434ffbe896e02c6fe4718d1bb34140a0269632c923c8e6e34ba2a44/uncalled_for-0.3.0-py3-none-any.whl", hash = "sha256:d39d98c64e740e0c0c2ead9c92e7a64e1aef0a407df5ac88318931d023ccb512", size = 13411, upload-time = "2026-04-06T20:53:05.569Z" },
+    { url = "https://files.pythonhosted.org/packages/11/e1/7ec67882ad8fc9f86384bef6421fa252c9cbe5744f8df6ce77afc9eca1f5/uncalled_for-0.3.1-py3-none-any.whl", hash = "sha256:074cdc92da8356278f93d0ded6f2a66dd883dbecaf9bc89437646ee2289cc200", size = 11361, upload-time = "2026-04-07T13:05:05.341Z" },
 ]
 
 [[package]]
