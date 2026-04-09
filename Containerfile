@@ -48,8 +48,8 @@ RUN set -o pipefail \
         "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
     | tee -a pyproject.toml
 
-# remove git repo (and files maintained in it) after the version string is initialized
-RUN rm -fr .git docs src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier
+# remove git repo, docs, and bulky classifier training artifacts
+RUN rm -fr .git docs src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/{data,test-results}
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root
