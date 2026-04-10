@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   run-evals:
+    if: "${{ !contains(github.event.pull_request.body || '', 'CI: skip-pr-evals') }}"
     name: Run evaluation suite
     runs-on: ubuntu-latest
     timeout-minutes: 90

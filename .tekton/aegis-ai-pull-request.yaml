@@ -28,6 +28,14 @@ spec:
     value: 5d
   - name: dockerfile
     value: Containerfile
+  - name: evals-skip-github-owner
+    value: '{{ repo_owner }}'
+  - name: evals-skip-github-repo
+    value: '{{ repo_name }}'
+  - name: evals-skip-pull-request-number
+    value: '{{ pull_request_number }}'
+  - name: evals-skip-keyword
+    value: "CI: skip-pr-evals"
   pipelineRef:
     # include the shared pipeline definition from aegis-build-pipeline.yaml
     resolver: git

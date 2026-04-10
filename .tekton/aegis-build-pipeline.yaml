@@ -75,6 +75,22 @@ spec:
     default: 'false'
     description: Enable cache proxy configuration
     type: string
+  - name: evals-skip-keyword
+    default: ""
+    description: Substring that skips evals when found in the PR body (GitHub API). Empty disables; set on PR runs only.
+    type: string
+  - name: evals-skip-github-owner
+    default: ""
+    description: PaC template repo_owner (PR runs).
+    type: string
+  - name: evals-skip-github-repo
+    default: ""
+    description: PaC template repo_name (PR runs).
+    type: string
+  - name: evals-skip-pull-request-number
+    default: ""
+    description: PaC template pull_request_number (PR runs).
+    type: string
   results:
   - description: ""
     name: IMAGE_URL
@@ -102,6 +118,102 @@ spec:
       - name: kind
         value: task
       resolver: bundles
+  - name: evals-skip-decision
+    runAfter:
+    - init
+    workspaces:
+    - name: basic-auth
+      workspace: git-auth
+    params:
+    - name: evals-skip-keyword
+      value: $(params.evals-skip-keyword)
+    - name: evals-skip-github-owner
+      value: $(params.evals-skip-github-owner)
+    - name: evals-skip-github-repo
+      value: $(params.evals-skip-github-repo)
+    - name: evals-skip-pull-request-number
+      value: $(params.evals-skip-pull-request-number)
+    taskSpec:
+      description: Match evals-skip-keyword against the PR body from the GitHub API (owner/repo/PR from PaC; token from git-auth).
+      workspaces:
+      - name: basic-auth
+        optional: true
+      params:
+      - name: evals-skip-keyword
+        type: string
+      - name: evals-skip-github-owner
+        type: string
+      - name: evals-skip-github-repo
+        type: string
+      - name: evals-skip-pull-request-number
+        type: string
+      results:
+      - description: 'true if EaaS provisioning and run-evals should be skipped'
+        name: skip-evals
+        type: string
+      steps:
+      - name: decide
+        image: registry.access.redhat.com/ubi9/ubi:latest
+        env:
+        - name: EVALS_SKIP_KEYWORD
+          value: $(params.evals-skip-keyword)
+        - name: EVALS_SKIP_GITHUB_OWNER
+          value: $(params.evals-skip-github-owner)
+        - name: EVALS_SKIP_GITHUB_REPO
+          value: $(params.evals-skip-github-repo)
+        - name: EVALS_SKIP_PR_NUMBER
+          value: $(params.evals-skip-pull-request-number)
+        - name: GIT_AUTH_DIR
+          value: $(workspaces.basic-auth.path)
+        script: |
+          #!/bin/bash -v
+          set -euo pipefail
+          if [ -z "${EVALS_SKIP_KEYWORD:-}" ]; then
+            echo -n false > $(results.skip-evals.path)
+            exit 0
+          fi
+          SEARCH=""
+          if [ -n "${EVALS_SKIP_GITHUB_OWNER:-}" ] && [ -n "${EVALS_SKIP_GITHUB_REPO:-}" ] && [ -n "${EVALS_SKIP_PR_NUMBER:-}" ]; then
+            TOKEN=""
+            if [ -n "${GIT_AUTH_DIR:-}" ] && [ -f "${GIT_AUTH_DIR}/.git-credentials" ]; then
+              while IFS= read -r line || [ -n "$line" ]; do
+                [[ "$line" == *github.com* ]] || continue
+                if [[ "$line" =~ https://[^:]+:([^@]+)@ ]]; then
+                  TOKEN="${BASH_REMATCH[1]}"
+                  break
+                fi
+              done < "${GIT_AUTH_DIR}/.git-credentials"
+            fi
+            URL="https://api.github.com/repos/${EVALS_SKIP_GITHUB_OWNER}/${EVALS_SKIP_GITHUB_REPO}/pulls/${EVALS_SKIP_PR_NUMBER}"
+            TMP="$(mktemp)"
+            CURL=(curl -sS -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
+            [ -z "$TOKEN" ] || CURL+=(-H "Authorization: Bearer ${TOKEN}")
+            set +e
+            HTTP_CODE=$("${CURL[@]}" -o "$TMP" -w '%{http_code}' "$URL")
+            RC=$?
+            set -e
+            if [ "$RC" != 0 ] || [ "$HTTP_CODE" != "200" ]; then
+              if [ -n "$TOKEN" ] && [ "$HTTP_CODE" = "401" ]; then
+                set +e
+                HTTP_CODE=$(curl -sS -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+                  -H "Authorization: token ${TOKEN}" -o "$TMP" -w '%{http_code}' "$URL")
+                set -e
+              fi
+            fi
+            if [ "$HTTP_CODE" = "200" ]; then
+              SEARCH=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('body') or '')" "$TMP" 2>/dev/null) || SEARCH=""
+            fi
+            rm -f "$TMP"
+          fi
+          if [ -z "$SEARCH" ]; then
+            echo -n false > $(results.skip-evals.path)
+            exit 0
+          fi
+          if printf '%s' "$SEARCH" | grep -Fq -- "$EVALS_SKIP_KEYWORD"; then
+            echo -n true > $(results.skip-evals.path)
+          else
+            echo -n false > $(results.skip-evals.path)
+          fi
   - name: clone-repository
     params:
     - name: url
@@ -514,7 +626,18 @@ spec:
       values:
       - "false"
   - name: provision-eaas-space
-      # provision an ephemeral namespace where we can deploy the newly built container image
+    # provision an ephemeral namespace where we can deploy the newly built container image
+    runAfter:
+    - evals-skip-decision
+    when:
+    - input: $(params.skip-checks)
+      operator: in
+      values:
+      - "false"
+    - input: $(tasks.evals-skip-decision.results.skip-evals)
+      operator: in
+      values:
+      - "false"
     taskRef:
       resolver: git
       params:
@@ -538,6 +661,10 @@ spec:
     - provision-eaas-space
     when:
     - input: $(params.skip-checks)
+      operator: in
+      values:
+      - "false"
+    - input: $(tasks.evals-skip-decision.results.skip-evals)
       operator: in
       values:
       - "false"
