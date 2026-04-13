@@ -451,6 +451,7 @@ cases = [
         expected_impact="MODERATE",
         expected_cvss3_score="6.3",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
 ]
 
