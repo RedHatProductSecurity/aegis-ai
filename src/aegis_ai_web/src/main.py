@@ -14,6 +14,8 @@ from typing import Dict, Optional, Type, Annotated, cast, Any
 
 import yaml
 from fastapi import FastAPI, Request, HTTPException, Form, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -89,6 +91,37 @@ async def unicode_decode_exception_handler(request: Request, exc: UnicodeDecodeE
     return JSONResponse(
         status_code=400,
         content={"detail": "Invalid UTF-8 encoding in request body"},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(
+    request: Request, exc: RequestValidationError
+):
+    """
+    Log Pydantic/request validation failures and return the standard FastAPI 422 body.
+
+    WARNING logs include error type, location, and message only. Request payload
+    excerpts (Pydantic's ``input`` field) are logged at DEBUG only.
+    """
+    errors = jsonable_encoder(exc.errors())
+    summary_errors = [{k: v for k, v in err.items() if k != "input"} for err in errors]
+    logging.warning(
+        "Request validation failed: %s %s — %s",
+        request.method,
+        request.url.path,
+        json.dumps(summary_errors),
+    )
+    logging.debug(
+        "Request validation failed (full detail, includes body excerpts): %s %s — %s",
+        request.method,
+        request.url.path,
+        json.dumps(errors),
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"detail": errors},
+        media_type="application/json",
     )
 
 

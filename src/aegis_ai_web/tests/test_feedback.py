@@ -86,6 +86,27 @@ def test_save_feedback_validation_error_missing_field():
     response = client.post("/api/v1/feedback", json=feedback_data)
 
     assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, list) and len(detail) >= 1
+    assert any("feature" in err.get("loc", []) for err in detail)
+
+
+def test_save_feedback_validation_error_missing_cve_id_includes_detail():
+    """Missing cve_id returns 422 with a JSON body describing the error."""
+    feedback_data = {
+        "feature": "suggest-cwe",
+        "email": "joey@redhat.com",
+        "accept": True,
+    }
+    response = client.post("/api/v1/feedback", json=feedback_data)
+
+    assert response.status_code == 422
+    body = response.json()
+    assert "detail" in body
+    assert any(
+        err.get("type") == "missing" and "cve_id" in (err.get("loc") or [])
+        for err in body["detail"]
+    )
 
 
 def test_save_feedback_validation_error_bad_accept():
