@@ -236,7 +236,7 @@ cve_feature_registry: Dict[str, Type] = {
     "cvss-diff-explainer": cve.CVSSDiffExplainer,
 }
 CVEFeatureName = Enum(
-    "ComponentFeatureName",
+    "CVEFeatureName",
     {name: name for name in cve_feature_registry.keys()},
     type=str,
 )
