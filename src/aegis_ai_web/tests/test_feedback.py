@@ -150,6 +150,7 @@ async def test_submit_feedback_after_suggest_impact_analysis(feedback_log_setup)
     feedback_data = {
         "feature": "suggest-impact",
         "cve_id": cve_id,
+        "email": "user@example.com",
         "actual": actual_impact,
         "expected": expected_impact,
         "accept": False,
@@ -202,6 +203,7 @@ def test_save_feedback_exception_handling(feedback_log_setup, monkeypatch):
     feedback_data = {
         "feature": "suggest-impact",
         "cve_id": "CVE-2025-12345",
+        "email": "user@example.com",
         "accept": True,
     }
     response = client.post("/api/v1/feedback", json=feedback_data)

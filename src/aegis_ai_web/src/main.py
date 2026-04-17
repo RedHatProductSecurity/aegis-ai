@@ -555,8 +555,8 @@ async def save_feedback(request: Request, feedback: Feedback):
         accept_str = str(feedback.accept).lower()
         row_data = {
             "feature": feedback.feature,
-            "cve_id": feedback.cve_id or "",
-            "email": feedback.email or "",
+            "cve_id": feedback.cve_id,
+            "email": feedback.email,
             "actual": feedback.actual or "",
             "expected": feedback.expected or "",
             "request_time": feedback.request_time or "",
@@ -690,8 +690,8 @@ async def save_programmatic_feedback(request: Request, feedback: ProgrammaticFee
 
     try:
         feature = feedback.feature
-        cve_id = feedback.cve_id or ""
-        email = feedback.email or ""
+        cve_id = feedback.cve_id
+        email = feedback.email
         suggested = feedback.suggested_value or ""
         submitted = feedback.submitted_value or ""
 

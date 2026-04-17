@@ -21,9 +21,9 @@ class Feedback(BaseModel):
     CSV escaping is handled automatically by the csv library during logging.
     """
 
-    feature: str = Field(..., max_length=100)
-    cve_id: Optional[CVEID] = Field("", max_length=50)
-    email: Optional[str] = Field("", max_length=100)
+    feature: str = Field(..., min_length=1, max_length=100)
+    cve_id: CVEID = Field(...)
+    email: str = Field(..., min_length=1, max_length=100)
     request_time: Optional[str] = Field("", max_length=50)
     actual: Optional[str] = Field("", max_length=5000)  # Increased for longer values
     expected: Optional[str] = Field("", max_length=5000)  # Increased for longer values
@@ -152,9 +152,9 @@ class ProgrammaticFeedback(BaseModel):
     # unspecified fields in the payload will result in a ValidationError
     model_config = {"extra": "forbid"}
 
-    feature: str = Field(..., max_length=100)
-    cve_id: Optional[CVEID] = Field("", max_length=50)
-    email: Optional[str] = Field("", max_length=100)
+    feature: str = Field(..., min_length=1, max_length=100)
+    cve_id: CVEID = Field(...)
+    email: str = Field(..., min_length=1, max_length=100)
     suggested_value: Optional[str] = Field("", max_length=5000)
     submitted_value: Optional[str] = Field("", max_length=5000)
 

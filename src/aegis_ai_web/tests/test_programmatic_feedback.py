@@ -58,6 +58,7 @@ def test_save_programmatic_feedback_exact_match(programmatic_feedback_log_setup)
     feedback_data = {
         "feature": "suggest-impact",
         "cve_id": "CVE-2025-23395",
+        "email": "user@example.com",
         "suggested_value": "CRITICAL",
         "submitted_value": "CRITICAL",
     }
@@ -127,6 +128,7 @@ def test_save_programmatic_feedback_empty_submitted_value(
     feedback_data = {
         "feature": "suggest-cwe",
         "cve_id": "CVE-2025-12345",
+        "email": "user@example.com",
         "suggested_value": "CWE-79",
         "submitted_value": "",
     }
@@ -437,6 +439,7 @@ def test_non_semantic_feature_uses_exact_match(programmatic_feedback_log_setup):
     feedback_data = {
         "feature": "suggest-impact",
         "cve_id": "CVE-2025-23395",
+        "email": "user@example.com",
         "suggested_value": "CRITICAL",
         "submitted_value": "HIGH",
     }
