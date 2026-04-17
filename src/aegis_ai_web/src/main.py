@@ -423,15 +423,8 @@ async def component_analysis(
     FeatureClass = component_feature_registry[feature_name]
 
     try:
-        validated_input = component_name
-    except Exception as e:
-        msg = f"Invalid input for Component feature '{feature_name}'"
-        log_exception_safely(e, msg)
-        raise HTTPException(status_code=422, detail=msg)
-
-    try:
         feature_instance = FeatureClass(agent=llm_agent)
-        result = await feature_instance.exec(validated_input)
+        result = await feature_instance.exec(component_name)
         if detail:
             return result
         return result.output
