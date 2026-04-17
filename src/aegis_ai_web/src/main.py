@@ -435,6 +435,15 @@ async def component_analysis(
         if detail:
             return result
         return result.output
+    except OSIDBFlawNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flaw data found in OSIDB for {e.cve_id}.",
+        )
+    except OSIDBUnauthorizedError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except OSIDBAuthError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         log_exception_safely(e, f"Error executing Component feature '{feature_name}'")
         raise HTTPException(

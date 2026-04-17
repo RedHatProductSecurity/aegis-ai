@@ -3,6 +3,7 @@ import yaml
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
+from aegis_ai.features import component as component_features
 from aegis_ai.features import cve as cve_features
 from aegis_ai.features.component.data_models import ComponentIntelligenceModel
 from aegis_ai.features.cve.data_models import SuggestAffectedComponentsModel
@@ -58,6 +59,26 @@ def test_cve_analysis_osidb_flaw_not_found_returns_404():
     detail = response.json()["detail"]
     assert "CVE-2025-59536" in detail
     assert "OSIDB" in detail
+
+
+def test_component_analysis_osidb_unauthorized_returns_401():
+    """Component analysis maps OSIDBUnauthorizedError to HTTP 401 like CVE analysis."""
+    with patch.object(
+        component_features.ComponentIntelligence,
+        "exec",
+        new_callable=AsyncMock,
+        side_effect=OSIDBUnauthorizedError(),
+    ):
+        response = client.get(
+            "/api/v1/analysis/component",
+            params={
+                "feature": "component-intelligence",
+                "component_name": "foo",
+            },
+        )
+    assert response.status_code == 401
+    detail = response.json()["detail"]
+    assert "401" in detail or "OSIDB" in detail
 
 
 def test_read_root():
