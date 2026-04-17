@@ -112,6 +112,33 @@ class LivenessProbeLogFilter(logging.Filter):
         return args[1:] != ("GET", "/healthz", "1.1", 204)
 
 
+class SuppressThirdPartyTracebackFilter(logging.Filter):
+    """
+    Remove exception tracebacks from selected third-party loggers (Kerberos/GSSAPI)
+    when not at DEBUG level. Those libraries log ERROR with exc_info=True, which
+    floods operator logs during expected missing-credential scenarios.
+    """
+
+    _LOGGER_PREFIXES = ("requests_gssapi", "gssapi")
+
+    def __init__(self, show_tracebacks: bool) -> None:
+        super().__init__()
+        self._show_tracebacks = show_tracebacks
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if self._show_tracebacks or not record.exc_info:
+            return True
+        name = record.name
+        if any(
+            name == prefix or name.startswith(prefix + ".")
+            for prefix in self._LOGGER_PREFIXES
+        ):
+            record.exc_info = None
+            record.exc_text = None
+            record.stack_info = None
+        return True
+
+
 class _ProviderKwargs(TypedDict):
     """named args of AI Providers"""
 
@@ -349,6 +376,9 @@ def config_logging(level="INFO"):
 
             # Avoid using basename only in log messages (especially __init__.py is ambiguous)
             handler.addFilter(RelativePathFilter())
+            handler.addFilter(
+                SuppressThirdPartyTracebackFilter(show_tracebacks=(level == "DEBUG"))
+            )
 
             # Suppress liveness probe access logs on uvicorn.access
             if logger_name == "uvicorn.access":
