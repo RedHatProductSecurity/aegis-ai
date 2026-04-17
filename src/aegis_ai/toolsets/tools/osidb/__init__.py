@@ -14,7 +14,10 @@ from aegis_ai import get_env_flag
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import BaseToolOutput, BaseToolInput
-from aegis_ai.toolsets.tools.osidb.osidb_client import OSIDBClient
+from aegis_ai.toolsets.tools.osidb.osidb_client import (
+    OSIDBClient,
+    OSIDBFlawNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +236,8 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
             affects=affects,
             cvss_scores=cvss_scores,
         )
+    except OSIDBFlawNotFoundError:
+        raise
     except Exception as e:
         logger.error(
             f"We encountered an error during OSIDB retrieval of {validated_cve_id}: {e}"

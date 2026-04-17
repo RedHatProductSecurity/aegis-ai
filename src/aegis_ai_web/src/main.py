@@ -28,6 +28,10 @@ from aegis_ai import config_logging, get_settings
 from aegis_ai.agents import public_feature_agent, rh_feature_agent
 
 from aegis_ai.data_models import CVEID, cveid_validator
+from aegis_ai.toolsets.tools.osidb.osidb_client import (
+    OSIDBAuthError,
+    OSIDBFlawNotFoundError,
+)
 from aegis_ai.features import cve, component
 from aegis_ai.features.data_models import AegisAnswer
 
@@ -280,15 +284,16 @@ CVEFeatureName = Enum(
     response_class=JSONResponse,
 )
 async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = False):
-    if feature not in cve_feature_registry:
-        raise HTTPException(404, detail=f"CVE feature '{feature}' not found.")
+    feature_name = feature.value
+    if feature_name not in cve_feature_registry:
+        raise HTTPException(404, detail=f"CVE feature '{feature_name}' not found.")
 
-    FeatureClass = cve_feature_registry[feature]
+    FeatureClass = cve_feature_registry[feature_name]
 
     try:
         validated_input = cveid_validator.validate_python(cve_id)
     except Exception as e:
-        msg = f"Invalid input for CVE feature '{feature}'"
+        msg = f"Invalid input for CVE feature '{feature_name}'"
         log_exception_safely(e, msg)
         raise HTTPException(status_code=422, detail=msg)
 
@@ -298,11 +303,18 @@ async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = Fa
         if detail:
             return result
         return result.output
+    except OSIDBFlawNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flaw data found in OSIDB for {e.cve_id}.",
+        )
+    except OSIDBAuthError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        log_exception_safely(e, f"Error executing CVE feature '{feature}'")
+        log_exception_safely(e, f"Error executing CVE feature '{feature_name}'")
         raise HTTPException(
             status_code=500,
-            detail=f"An internal error occurred while executing CVE feature '{feature}'.",
+            detail=f"An internal error occurred while executing CVE feature '{feature_name}'.",
         )
 
 
@@ -320,13 +332,14 @@ async def cve_analysis_with_body(
         log_exception_safely(e, "Missing required field: 'cve_id'")
         raise HTTPException(status_code=400, detail="Missing required field: 'cve_id'")
 
-    if feature.value not in cve_feature_registry:
-        raise HTTPException(404, detail=f"CVE feature '{feature.value}' not found.")
-    FeatureClass = cve_feature_registry[feature.value]
+    feature_name = feature.value
+    if feature_name not in cve_feature_registry:
+        raise HTTPException(404, detail=f"CVE feature '{feature_name}' not found.")
+    FeatureClass = cve_feature_registry[feature_name]
     try:
         validated_input = dict(cve_data)
     except Exception as e:
-        msg = f"Invalid input for CVE feature '{feature}'"
+        msg = f"Invalid input for CVE feature '{feature_name}'"
         log_exception_safely(e, msg)
         raise HTTPException(status_code=422, detail=msg)
 
@@ -338,7 +351,7 @@ async def cve_analysis_with_body(
         validated_input.get("comment_zero") or validated_input.get("cve_description")
     ) or ""
     if (
-        feature.value != "suggest-affected-components"
+        feature_name != "suggest-affected-components"
         and not existing_components
         and validated_input.get("title")
         and description_text
@@ -363,11 +376,18 @@ async def cve_analysis_with_body(
         if detail:
             return result
         return result.output
+    except OSIDBFlawNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flaw data found in OSIDB for {e.cve_id}.",
+        )
+    except OSIDBAuthError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        log_exception_safely(e, f"Error executing CVE feature '{feature}'")
+        log_exception_safely(e, f"Error executing CVE feature '{feature_name}'")
         raise HTTPException(
             status_code=500,
-            detail=f"An internal error occurred while executing CVE feature '{feature}'.",
+            detail=f"An internal error occurred while executing CVE feature '{feature_name}'.",
         )
 
 
@@ -388,16 +408,19 @@ ComponentFeatureName = Enum(
 async def component_analysis(
     feature: ComponentFeatureName, component_name: str, detail: bool = False
 ):
-    logging.info(feature)
-    if feature not in component_feature_registry:
-        raise HTTPException(404, detail=f"Component feature '{feature}' not found.")
+    feature_name = feature.value
+    logging.info(feature_name)
+    if feature_name not in component_feature_registry:
+        raise HTTPException(
+            404, detail=f"Component feature '{feature_name}' not found."
+        )
 
-    FeatureClass = component_feature_registry[feature]
+    FeatureClass = component_feature_registry[feature_name]
 
     try:
         validated_input = component_name
     except Exception as e:
-        msg = f"Invalid input for Component feature '{feature}'"
+        msg = f"Invalid input for Component feature '{feature_name}'"
         log_exception_safely(e, msg)
         raise HTTPException(status_code=422, detail=msg)
 
@@ -408,10 +431,10 @@ async def component_analysis(
             return result
         return result.output
     except Exception as e:
-        log_exception_safely(e, f"Error executing Component feature '{feature}'")
+        log_exception_safely(e, f"Error executing Component feature '{feature_name}'")
         raise HTTPException(
             status_code=500,
-            detail=f"An internal error occurred while executing Component feature '{feature}'.",
+            detail=f"An internal error occurred while executing Component feature '{feature_name}'.",
         )
 
 
