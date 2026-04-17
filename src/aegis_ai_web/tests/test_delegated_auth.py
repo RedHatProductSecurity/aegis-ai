@@ -18,7 +18,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from aegis_ai.request_context import get_request_scope, set_request_scope
 from aegis_ai.toolsets.tools.osidb import osidb_client
-from aegis_ai.toolsets.tools.osidb.osidb_client import OSIDBAuthError
+from aegis_ai.toolsets.tools.osidb.osidb_client import (
+    OSIDBAuthError,
+    OSIDBUnauthorizedError,
+)
 
 # Must match OSIDBClient._OSIDB_DELEGATED_TOKEN_KEY (scope key for cached JWT)
 _OSIDB_DELEGATED_TOKEN_KEY = "_osidb_delegated_token"
@@ -141,6 +144,30 @@ class TestOSIDBClientDelegatedTokenPath:
 
         assert result.cve_id == "CVE-2024-5678"
         mock_session.flaws.retrieve.assert_called_once()
+
+    async def test_new_session_401_raises_osidb_unauthorized(self):
+        """
+        When new_session fails with HTTP 401 (e.g. OSIDB /auth/token), propagate
+        OSIDBUnauthorizedError so the API can return 401 instead of a wrapped 500.
+        """
+        from requests import HTTPError
+
+        set_request_scope(None)
+        resp = MagicMock()
+        resp.status_code = 401
+        err = HTTPError(
+            "401 Client Error: Unauthorized for url: https://osidb.example/auth/token"
+        )
+        err.response = resp
+
+        client = osidb_client.OSIDBClient()
+        with patch.object(
+            osidb_client.osidb_bindings,
+            "new_session",
+            side_effect=err,
+        ):
+            with pytest.raises(OSIDBUnauthorizedError):
+                await client.get_flaw_data("CVE-2026-4404", include_embargoed=False)
 
     async def test_list_component_flaws_uses_token_when_scope_has_token(self):
         """When scope has token, list_component_flaws uses Bearer token for list API."""

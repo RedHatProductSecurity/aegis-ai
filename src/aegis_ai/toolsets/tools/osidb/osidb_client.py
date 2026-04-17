@@ -43,6 +43,30 @@ class OSIDBFlawNotFoundError(Exception):
         super().__init__(f"No flaw in OSIDB for {cve_id}")
 
 
+class OSIDBUnauthorizedError(Exception):
+    """Raised when OSIDB rejects authentication or authorization (HTTP 401)."""
+
+    def __init__(self, message: str | None = None) -> None:
+        self.message = message or (
+            "OSIDB authentication failed (HTTP 401). "
+            "Check Kerberos credentials, delegation, and OSIDB access."
+        )
+        super().__init__(self.message)
+
+
+def _is_osidb_unauthorized(exc: BaseException) -> bool:
+    """Return True if *exc* indicates OSIDB returned 401."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 401
+    resp = getattr(exc, "response", None)
+    if resp is not None:
+        code = getattr(resp, "status_code", None)
+        if code == 401:
+            return True
+    text = str(exc).lower()
+    return "401" in text and ("unauthorized" in text or "client error" in text)
+
+
 def _is_osidb_flaw_not_found(exc: BaseException) -> bool:
     """Return True if *exc* indicates OSIDB returned 404 for a flaw lookup."""
     if isinstance(exc, httpx.HTTPStatusError):
@@ -114,6 +138,8 @@ class OSIDBClient:
                     logger.warning(
                         f"Failed to connect OSIDB at {osidb_server_url}: {e.__class__.__name__}"
                     )
+                    if _is_osidb_unauthorized(e):
+                        raise OSIDBUnauthorizedError() from e
                     raise
         return (self._session, None)
 
@@ -148,6 +174,11 @@ class OSIDBClient:
                 except httpx.HTTPStatusError as e:
                     if e.response.status_code == 404:
                         raise OSIDBFlawNotFoundError(cve_id) from e
+                    if e.response.status_code == 401:
+                        raise OSIDBUnauthorizedError(
+                            "OSIDB returned HTTP 401 Unauthorized. "
+                            "Verify Kerberos credentials, delegation, and OSIDB access."
+                        ) from e
                     raise
                 data = resp.json()
             from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_retrieve_response_200 import (
@@ -163,6 +194,8 @@ class OSIDBClient:
                     include_fields=_FLAW_RETRIEVE_FIELDS,
                 )
             except Exception as e:
+                if _is_osidb_unauthorized(e):
+                    raise OSIDBUnauthorizedError() from e
                 if _is_osidb_flaw_not_found(e):
                     raise OSIDBFlawNotFoundError(cve_id) from e
                 raise
@@ -177,9 +210,14 @@ class OSIDBClient:
         """Return the process-level bindings session (used when delegated token path doesn't apply)."""
         async with self._session_lock:
             if self._session is None:
-                self._session = osidb_bindings.new_session(
-                    osidb_server_uri=get_settings().osidb_server_url
-                )
+                try:
+                    self._session = osidb_bindings.new_session(
+                        osidb_server_uri=get_settings().osidb_server_url
+                    )
+                except Exception as e:
+                    if _is_osidb_unauthorized(e):
+                        raise OSIDBUnauthorizedError() from e
+                    raise
         return self._session
 
     async def _list_component_flaws_with_token(

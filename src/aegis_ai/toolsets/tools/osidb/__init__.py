@@ -17,6 +17,7 @@ from aegis_ai.toolsets.tools import BaseToolOutput, BaseToolInput
 from aegis_ai.toolsets.tools.osidb.osidb_client import (
     OSIDBClient,
     OSIDBFlawNotFoundError,
+    OSIDBUnauthorizedError,
 )
 
 logger = logging.getLogger(__name__)
@@ -237,6 +238,8 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
             cvss_scores=cvss_scores,
         )
     except OSIDBFlawNotFoundError:
+        raise
+    except OSIDBUnauthorizedError:
         raise
     except Exception as e:
         logger.error(

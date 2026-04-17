@@ -6,11 +6,35 @@ from fastapi.testclient import TestClient
 from aegis_ai.features import cve as cve_features
 from aegis_ai.features.component.data_models import ComponentIntelligenceModel
 from aegis_ai.features.cve.data_models import SuggestAffectedComponentsModel
-from aegis_ai.toolsets.tools.osidb.osidb_client import OSIDBFlawNotFoundError
+from aegis_ai.toolsets.tools.osidb.osidb_client import (
+    OSIDBFlawNotFoundError,
+    OSIDBUnauthorizedError,
+)
 from aegis_ai_web.src.main import app
 
 # Create a TestClient instance based on your FastAPI app
 client = TestClient(app)
+
+
+def test_cve_analysis_osidb_unauthorized_returns_401():
+    """
+    OSIDB HTTP 401 (e.g. /auth/token or flaw API) maps to API 401, not 500.
+    """
+    with patch.object(
+        cve_features.SuggestCWE,
+        "exec",
+        new_callable=AsyncMock,
+        side_effect=OSIDBUnauthorizedError(),
+    ):
+        response = client.get(
+            "/api/v1/analysis/cve",
+            params={
+                "feature": "suggest-cwe",
+                "cve_id": "CVE-2026-4404",
+            },
+        )
+    assert response.status_code == 401
+    assert "401" in response.json()["detail"] or "OSIDB" in response.json()["detail"]
 
 
 def test_cve_analysis_osidb_flaw_not_found_returns_404():

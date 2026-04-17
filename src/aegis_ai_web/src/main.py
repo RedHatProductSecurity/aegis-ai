@@ -31,6 +31,7 @@ from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.toolsets.tools.osidb.osidb_client import (
     OSIDBAuthError,
     OSIDBFlawNotFoundError,
+    OSIDBUnauthorizedError,
 )
 from aegis_ai.features import cve, component
 from aegis_ai.features.data_models import AegisAnswer
@@ -308,6 +309,8 @@ async def cve_analysis(feature: CVEFeatureName, cve_id: CVEID, detail: bool = Fa
             status_code=404,
             detail=f"No flaw data found in OSIDB for {e.cve_id}.",
         )
+    except OSIDBUnauthorizedError as e:
+        raise HTTPException(status_code=401, detail=str(e))
     except OSIDBAuthError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
@@ -381,6 +384,8 @@ async def cve_analysis_with_body(
             status_code=404,
             detail=f"No flaw data found in OSIDB for {e.cve_id}.",
         )
+    except OSIDBUnauthorizedError as e:
+        raise HTTPException(status_code=401, detail=str(e))
     except OSIDBAuthError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
