@@ -244,6 +244,7 @@ class SuggestDescriptionText(Feature):
                 - Use plain English; avoid deep implementation jargon. If a function or symbol name is central to exploitation, you may mention a single example and explain it briefly.
                 - If a term or acronym is needed, briefly define it and expand the acronym in parentheses on first use.
                 - Do not include product/version lists, package names, or mitigation/update guidance.
+                - Do not mention exploit availability or public disclosure status (e.g., "The exploit has been publicly disclosed").
                 - Avoid generic CIA boilerplate; name the concrete impact (e.g., data disclosure, code execution, denial of service).
                 - When upstream or reference text in the CVE is well written, prefer clarity and professional advisory tone over adding redundant phrasing.
                 - Ambiguity and uncertainty:

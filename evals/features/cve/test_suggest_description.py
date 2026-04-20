@@ -254,6 +254,10 @@ evals = common_feature_evals + [
         rubric="suggested_title and suggested_description do not contain versions of affected components, except in acronyms explanation and in acronyms themselves.  Do not confuse API endpoint versions with component versions.",
     ),
     create_llm_judge(
+        assertion_name="NoExploitDisclosure",
+        rubric="suggested_description does not mention exploit availability or public disclosure status (e.g., 'The exploit has been publicly disclosed', 'A public exploit exists'). The description should focus on the vulnerability itself, not on whether exploits are available.",
+    ),
+    create_llm_judge(
         assertion_name="TitleSummarizesDescription",
         rubric="suggested_title briefly summarizes what is described in suggested_description",
     ),
