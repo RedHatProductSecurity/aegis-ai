@@ -188,6 +188,7 @@ cases = [
             To mitigate this vulnerability, consider removing these packages. Note that some of these packages are required by GNOME, removing them will also remove GNOME and other packages, breaking functionality. However, the server can still be used via the terminal interface.
             Additionally, WebKitGTK3 is not required by any package. Therefore, it can be removed without consequences or break of functionality.
             """,
+        metadata={"known_to_fail_evaluators": ["MitigationWellFormedCommands"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2024-53197",
