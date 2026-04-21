@@ -61,6 +61,7 @@ KEYWORD_BOOSTS: List[Tuple[re.Pattern[str], str, float]] = [
     (re.compile(r"\brace (condition)?\b"), "CWE-366", 0.2),
     # CWE-825: Expired/Dangling Pointer Dereference
     (re.compile(r"\b(dangling|stale|expired) pointer\b"), "CWE-825", 0.25),
+    (re.compile(r"\b(assert\w*|abort)\b.*\b(fail|reach|trigger|hit)\b|\breachable assert"), "CWE-617", 0.2),
     # CWE-459: Incomplete Cleanup (temp files, leftover artifacts)
     (re.compile(r"\b(incomplete|missing) cleanup\b|\bnot (deleted|removed)\b|\btemporary file\b|\bleft in (/tmp|tmp|temp)\b"), "CWE-459", 0.25),
     # CWE-772: Missing Release of Resource after Effective Lifetime (resource leak)
