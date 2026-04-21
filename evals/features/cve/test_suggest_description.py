@@ -174,6 +174,7 @@ cases = [
         cve_id="CVE-2025-23395",
         expected_title="Local Root Exploit via `logfile_reopen()`",
         expected_description="A flaw was found in Screen. When running with setuid-root privileged, the  logfile_reopen() function does not drop privileges while operating on a user-supplied path. This vulnerability allows an unprivileged user to create files in arbitrary locations with root ownership.",
+        metadata={"known_to_fail_evaluators": ["NoVersionInfo"]},
     ),
     # FIXME: `suggest-description` should not talk about `Denial of Service`
     # SuggestDescriptionCase(
