@@ -1,5 +1,5 @@
 {
-    "data_quality": "GOOD",
+    "data_quality": 0.8,
     "confidence": 0.9,
     "tools_used": [
         "osidb_flaw_tool"

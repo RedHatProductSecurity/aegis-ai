@@ -46,6 +46,7 @@ class SuggestStatementCase(Case):
             explanation="",
             suggested_statement=expected_statement,
             suggested_mitigation=expected_mitigation,
+            data_quality=1.0,
             confidence=1.0,
             tools_used=[],
             disclaimer=disclaimer,

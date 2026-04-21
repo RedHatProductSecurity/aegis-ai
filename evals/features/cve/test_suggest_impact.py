@@ -228,6 +228,7 @@ class SuggestImpactCase(Case):
             impact=expected_impact,
             cvss3_score=str(expected_cvss3_score),
             cvss3_vector=expected_cvss3_vector,
+            data_quality=1.0,
             confidence=1.0,
             tools_used=[],
             disclaimer=disclaimer,

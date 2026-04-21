@@ -1,5 +1,6 @@
 {
     "confidence": 1.0,
+    "data_quality": 1.0,
     "tools_used": [
         "osidb_tool"
     ],

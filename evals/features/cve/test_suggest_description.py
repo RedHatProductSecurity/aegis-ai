@@ -50,6 +50,7 @@ class SuggestDescriptionCase(Case):
             explanation="",
             suggested_title=(expected_title or ""),
             suggested_description=(expected_description or ""),
+            data_quality=1.0,
             confidence=1.0,
             tools_used=[],
             disclaimer=disclaimer,
