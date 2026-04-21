@@ -336,6 +336,10 @@ cases = [
         metadata={"known_to_fail_evaluators": ["MitigationWellFormedCommands"]},
     ),
     SuggestStatementCase(
+        cve_id="CVE-2025-53020",
+        expected_mitigation="The attack surface can be reduced by disabling HTTP/2 support in Apache.\nFollow the guidance in Red Hat KCS article to:\n- Remove h2 and h2c from the Protocols directive\n- Disable mod_http2 and mod_proxy_http2 modules (if not required)\n\nhttps://access.redhat.com/node/7056356",
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2025-64503",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux because a specially crafted PDF file, when processed by the `cups-filters` `pdftoraster` tool, can lead to an out-of-bounds write, potentially causing a denial of service. This affects Red Hat Enterprise Linux 7, 8, 9, and 10.",
     ),
@@ -377,9 +381,56 @@ cases = [
         },
     ),
     SuggestStatementCase(
+        cve_id="CVE-2026-3497",
+        expected_mitigation="To mitigate this issue, disable GSSAPI key exchange in the OpenSSH server configuration. This prevents the server from processing GSSAPI messages, eliminating the vulnerability's attack surface.\n\nEdit `/etc/ssh/sshd_config` and add or modify the line:\n```\nGSSAPIKeyExchange no\n```\n\nAfter saving the changes, restart the `sshd` service for the mitigation to take effect. This action will prevent users from authenticating via GSSAPI.\n\n```\n# systemctl restart sshd\n```",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-4271",
+        expected_mitigation="Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-5483",
+        expected_statement="A flaw in the `odh-dashboard` component of Red Hat OpenShift AI allows for the disclosure of Kubernetes Service Account tokens through a NodeJS endpoint. This vulnerability could enable an attacker to gain unauthorized access to Kubernetes resources within the OpenShift AI environment.",
+        expected_mitigation="If applying the update is not immediately possible, the vulnerability can be mitigated by disabling or removing the NIM (NVIDIA Inference Microservice) integration from the Red Hat OpenShift AI (RHOAI) environment.",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
+    ),
+    SuggestStatementCase(
         cve_id="CVE-2026-22822",
         expected_mitigation="To mitigate this issue, implement a policy engine such as Kubernetes, Kyverno, Kubewarden, or OPA. Configure the policy engine to prevent the usage of the `getSecretKey` function within any ExternalSecret resource. This will block the insecure cross-namespace secret retrieval capability.",
         metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-24450",
+        expected_statement="This flaw in the LibRaw library consists in an integer overflow in the `uncompressed_fp_dng_load_raw` function, a successfully performed attack may lead to a heap buffer overflow and potentially arbitrary code execution or denial of service. The vulnerability stems from the usage of a 32-bit arithmetic to calculate the pixel buffers when decoding the raw image file, which may end up overflowing when processing user controlled images as input.\n\nThis vulnerability is not exploitable when the application consuming LibRaw is using the default memory limit (`max_raw_memory_mb` parameter) to unpack the RAW image. To be considered vulnerable the application should be setting the limit to around or greater then 16GB.\n\nRed Hat Product Security has rated this vulnerability as having a Moderate impact, despite the possibility of arbitrary code execution due to the heap-based buffer overflow, as the user needs to be tricked to process a maliciously crafted image or LibRaw needs to be exposed to the network and accept untrusted data as input. Additionally the default `max_raw_memory_mb` value set with LibRaw is not enough to trigger the vulnerability.",
+        metadata={"known_to_fail_evaluators": ["StatementNoCodeLevelDetails"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-27820",
+        expected_statement="A buffer overflow vulnerability exists in the Zlib::GzipReader component of the Ruby zlib interface. This flaw, caused by insufficient memory capacity during data manipulation, could lead to memory corruption and system instability. This vulnerability is considered of a Moderate severity this happens because the high complexity to exploit, additionally the attacker may have not full control over the data is being corrupted or exfiltrated.",
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-27962",
+        expected_statement="This critical vulnerability in Authlib's JWS implementation allows unauthenticated attackers to forge JWTs by embedding their own cryptographic key in the token header. Impact is high to confidentiality and integrity as attackers can bypass authentication.\n\nRed Hat Quay is not affected, as it imports authlib solely as a JWK parsing utility and performs all JWT signature verification through PyJWT, so the vulnerable jws.deserialize_compact() code path is never called.\n\nRed Hat OpenShift AI is not affected, since authlib is only present as a transitive dependency in the dev dependency group and is not included in production image builds, so the vulnerable code is not present in the shipped product.\n\nRed Hat Satellite is not affected, as authlib is only present as a dependency of fastmcp. In Satellite, fastmcp only invokes authlib using jwt.decode() which isn't able to reach the vulnerability condition even with key=none.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-31402",
+        expected_statement="This Important flaw in the Linux kernel's NFSv4.0 server (nfsd) allows a heap overflow. In this flaw a local attacker can trigger this by orchestrating two NFSv4.0 clients to create a conflicting lock with an oversized owner string.",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-35091",
+        expected_statement="This vulnerability has a Moderate impact on Red Hat products. A flaw in Corosync's membership commit token sanity check, when running in the default totemudp/totemudpu mode, allows a remote unauthenticated attacker to send a crafted UDP packet. This can lead to an out-of-bounds read, resulting in a denial of service and potential limited memory content disclosure. This issue affects Corosync only when configured to use the legacy totemudp or totemudpu transport modes with unencrypted communication.\n\nThese modes are not the default in modern Corosync versions. The default transport is knet, which supports encryption and is the standard configuration in RHEL.",
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-40175",
+        expected_statement='Critical impact: The Axios library, a promise-based HTTP client, is susceptible to a prototype pollution vulnerability. This flaw, when combined with specific "Gadget" attack chains in third-party dependencies, can lead to remote code execution.',
+    ),
+    SuggestStatementCase(
+        cve_id="CVE-2026-40227",
+        expected_mitigation="This issue can be mitigated by changing the permission of the varsock file located at:\n~~~\n/run/systemd/io.systemd.Manager\n~~~\nto be accessible only by trusted or privileged users.",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
 ]
 

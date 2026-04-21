@@ -75,6 +75,11 @@ async def suggest_cwe(cve_id: CVEID) -> SuggestCWEModel:
 # TODO: gradually remove known_to_fail_evaluators annotations where possible
 cases = [
     SuggestCweCase(
+        cve_id="CVE-2019-25544",
+        cwe_list=["CWE-1284"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
         cve_id="CVE-2022-48701",
         cwe_list=["CWE-125", "CWE-20"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
@@ -270,11 +275,6 @@ cases = [
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
-        cve_id="CVE-2023-53843",
-        cwe_list=["CWE-1284", "CWE-1285", "CWE-681"],  # kdudka: added CWE-1285
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
-    ),
-    SuggestCweCase(
         cve_id="CVE-2023-53555",
         cwe_list=["CWE-824"],
     ),
@@ -300,6 +300,11 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53764",
         cwe_list=["CWE-414", "CWE-413"],  # kdudka: added CWE-413
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2023-53843",
+        cwe_list=["CWE-1284", "CWE-1285", "CWE-681"],  # kdudka: added CWE-1285
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2023-54201",
@@ -690,6 +695,16 @@ cases = [
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
+        cve_id="CVE-2025-59031",
+        cwe_list=["CWE-611", "CWE-22"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2025-59032",
+        cwe_list=["CWE-229"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
         cve_id="CVE-2025-59303",
         cwe_list=["CWE-497", "CWE-807"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
@@ -752,6 +767,118 @@ cases = [
                 "CWEExplanationRootCause",
             ]
         },
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2025-69196",
+        cwe_list=["CWE-1220"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-3608",
+        cwe_list=["CWE-617"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-3644",
+        cwe_list=["CWE-791"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-25780",
+        cwe_list=["CWE-770"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-26740",
+        cwe_list=["CWE-131", "CWE-787", "CWE-805"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-26939",
+        cwe_list=["CWE-1220", "CWE-862", "CWE-266"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-27651",
+        cwe_list=["CWE-476"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-27784",
+        cwe_list=["CWE-190", "CWE-131", "CWE-805", "CWE-787", "CWE-120", "CWE-125"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-27859",
+        cwe_list=["CWE-770"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-28500",
+        cwe_list=["CWE-829"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-29063",
+        cwe_list=["CWE-915"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-31966",
+        cwe_list=["CWE-125"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-31969",
+        cwe_list=["CWE-787"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-31970",
+        cwe_list=["CWE-190"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-31971",
+        cwe_list=["CWE-131"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-31973",
+        cwe_list=["CWE-476"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-32636",
+        cwe_list=["CWE-787"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-33001",
+        cwe_list=["CWE-22", "CWE-59"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-33002",
+        cwe_list=["CWE-346"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-33551",
+        cwe_list=["CWE-266"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-33995",
+        cwe_list=["CWE-1341", "CWE-415"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-34785",
+        cwe_list=["CWE-552", "CWE-73", "CWE-22"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-35535",
+        cwe_list=["CWE-272", "CWE-273"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-35536",
+        cwe_list=["CWE-88", "CWE-140", "CWE-93"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-35540",
+        cwe_list=["CWE-918"],
+    ),
+    SuggestCweCase(
+        cve_id="CVE-2026-40223",
+        cwe_list=["CWE-617"],
     ),
 ]
 

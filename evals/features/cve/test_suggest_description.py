@@ -118,18 +118,6 @@ async def suggest_description(cve_id: CVEID) -> SuggestDescriptionModel:
 # test cases
 cases = [
     SuggestDescriptionCase(
-        # not vetted by a PSIRT analyst
-        cve_id="CVE-2025-5399",
-        expected_title="WebSocket endless loop",
-        expected_description="A flaw was found in libcurl. This vulnerability allows a denial of service via a crafted WebSocket packet from a malicious server.",
-    ),
-    SuggestDescriptionCase(
-        # not vetted by a PSIRT analyst
-        cve_id="CVE-2025-23395",
-        expected_title="Local Root Exploit via `logfile_reopen()`",
-        expected_description="A flaw was found in Screen. When running with setuid-root privileged, the  logfile_reopen() function does not drop privileges while operating on a user-supplied path. This vulnerability allows an unprivileged user to create files in arbitrary locations with root ownership.",
-    ),
-    SuggestDescriptionCase(
         cve_id="CVE-2002-1001",
         expected_title="tokio-tar:  parses PAX extended headers incorrectly, allows file smuggling",
     ),
@@ -159,6 +147,12 @@ cases = [
         expected_description="A flaw was identified in the Bluetooth HIDP (Human Interface Device Protocol) implementation of the Linux kernel where a race condition in the hidp_session_thread handling can lead to a use-after-free vulnerability. Under certain timing conditions, the session object may be freed while a timer callback is still active, resulting in dereferencing freed memory and potential kernel panic or local escalation of privileges. The underlying cause is the use of hidp_del_timer without ensuring that the timer has fully stopped, which allows concurrent access to freed session resources",
     ),
     SuggestDescriptionCase(
+        # not vetted by a PSIRT analyst
+        cve_id="CVE-2025-5399",
+        expected_title="WebSocket endless loop",
+        expected_description="A flaw was found in libcurl. This vulnerability allows a denial of service via a crafted WebSocket packet from a malicious server.",
+    ),
+    SuggestDescriptionCase(
         cve_id="CVE-2025-12816",
         expected_title="node-forge: Interpretation conflict vulnerability allows bypassing cryptographic verifications",
         expected_description="A flaw was found in node-forge. This vulnerability allows unauthenticated attackers to bypass downstream cryptographic verifications and security decisions via crafting ASN.1 (Abstract Syntax Notation One) structures to desynchronize schema validations, yielding a semantic divergence.",
@@ -174,6 +168,12 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-13609",
         expected_description="A vulnerability has been identified in keylime where an attacker can exploit this flaw by registering a new agent using a different Trusted Platform Module (TPM) device but claiming an existing agent's unique identifier (UUID). This action overwrites the legitimate agent's identity, enabling the attacker to impersonate the compromised agent and potentially bypass security controls.",
+    ),
+    SuggestDescriptionCase(
+        # not vetted by a PSIRT analyst
+        cve_id="CVE-2025-23395",
+        expected_title="Local Root Exploit via `logfile_reopen()`",
+        expected_description="A flaw was found in Screen. When running with setuid-root privileged, the  logfile_reopen() function does not drop privileges while operating on a user-supplied path. This vulnerability allows an unprivileged user to create files in arbitrary locations with root ownership.",
     ),
     # FIXME: `suggest-description` should not talk about `Denial of Service`
     # SuggestDescriptionCase(
@@ -235,6 +235,30 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-91735",
         expected_description="A flaw was found in /driver/xyz.c in xyg sub component in the Linux kernel. This vulnerability allows a buffer overflow due to xyz leading to abc.",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2026-31898",
+        expected_title="jsPDF: Arbitrary code execution via unsanitized input in createAnnotation method",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2026-31966",
+        expected_title="htslib: Information disclosure and denial of service due to insufficient CRAM feature data validation",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2026-31967",
+        expected_title="HTSlib: Information disclosure and Denial of Service via unvalidated CRAM mate reference ID",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2026-32636",
+        expected_title="ImageMagick: Denial of Service via out-of-bounds write in NewXMLTree method",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2026-33001",
+        expected_title="Jenkins: Arbitrary file write and potential code execution through crafted archives",
+    ),
+    SuggestDescriptionCase(
+        cve_id="CVE-2026-33002",
+        expected_title="Jenkins: Origin validation bypass via DNS rebinding in CLI WebSocket endpoint",
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2099-99999",

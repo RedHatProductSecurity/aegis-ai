@@ -303,13 +303,13 @@ cases = [
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:H",
     ),
     SuggestImpactCase(
+        cve_id="CVE-2023-54201",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2024-53232",
         expected_impact="MODERATE",
         expected_cvss3_score=4.4,
-    ),
-    SuggestImpactCase(
-        cve_id="CVE-2023-54201",
-        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-5399",
@@ -452,6 +452,42 @@ cases = [
         expected_cvss3_score="6.3",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:L",
         metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-21727",
+        expected_impact="LOW",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-23361",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-23376",
+        expected_impact="LOW",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-28387",
+        expected_impact="LOW",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-28388",
+        expected_impact="LOW",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-34073",
+        expected_impact="LOW",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-35386",
+        expected_impact="LOW",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:N",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-35537",
+        expected_impact="LOW",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
+        metadata={"known_to_fail_evaluators": ["ImpactEvaluator"]},
     ),
 ]
 
