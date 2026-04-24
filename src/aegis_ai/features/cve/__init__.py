@@ -372,7 +372,7 @@ class SuggestAffectedComponents(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
         deps = feature_deps(
-            exclude_osidb_fields=["components"],
+            exclude_osidb_fields=["affects", "components"],
             static_context=static_context if use_static else None,
         )
         prompt = AegisPrompt(
