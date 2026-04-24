@@ -43,6 +43,7 @@ SAMPLE_SEED = int(
 # Excludes CVEs with cpython as expected (model tends to suggest 'python' instead).
 # Excludes CVE-2025-23083 (nodejs): model often returns 'Node.js', causing flaky evals.
 DEFAULT_CVE_IDS: tuple[str, ...] = (
+    "CVE-2006-10002",
     "CVE-2025-3416",
     "CVE-2025-5991",
     "CVE-2025-6052",
@@ -66,6 +67,8 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-62718",
     "CVE-2025-64329",
     "CVE-2025-65637",
+    "CVE-2025-66442",
+    "CVE-2026-0396",
     "CVE-2026-0900",
     "CVE-2026-0988",
     "CVE-2026-0989",
@@ -73,6 +76,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-0992",
     "CVE-2026-1484",
     "CVE-2026-1485",
+    "CVE-2026-1502",
     "CVE-2026-1757",
     "CVE-2026-2319",
     "CVE-2026-2320",
@@ -82,6 +86,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-4447",
     "CVE-2026-4449",
     "CVE-2026-4452",
+    "CVE-2026-4455",
     "CVE-2026-5290",
     "CVE-2026-5291",
     "CVE-2026-5868",
@@ -93,9 +98,33 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-6316",
     "CVE-2026-7335",
     "CVE-2026-7347",
+    "CVE-2026-21998",
+    "CVE-2026-22004",
     "CVE-2026-22815",
+    "CVE-2026-23272",
+    "CVE-2026-23275",
+    "CVE-2026-23666",
     "CVE-2026-23950",
     "CVE-2026-24842",
+    "CVE-2026-26962",
+    "CVE-2026-27140",
+    "CVE-2026-27447",
+    "CVE-2026-28684",
+    "CVE-2026-32178",
+    "CVE-2026-32285",
+    "CVE-2026-32289",
+    "CVE-2026-32748",
+    "CVE-2026-32935",
+    "CVE-2026-33056",
+    "CVE-2026-33256",
+    "CVE-2026-33414",
+    "CVE-2026-33416",
+    "CVE-2026-33891",
+    "CVE-2026-34073",
+    "CVE-2026-35339",
+    "CVE-2026-35342",
+    "CVE-2026-35537",
+    "CVE-2026-40200",
 )
 
 
@@ -103,6 +132,11 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 # assertion failures if the individual score is low
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-64329",  # Aegis occasionally suggests 'containerd' while 'github.com/containerd/containerd' is expected
+    "CVE-2025-6052",  # got ['glib2'], expected ['glib']
+    "CVE-2026-22815",  # got ['python-aiohttp'], expected ['aiohttp']
+    "CVE-2026-26962",  # got ['rubygem-rack'], expected ['rack']
+    "CVE-2026-34073",  # got ['cryptography'], expected ['python-cryptography']
+    "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
 )
 
 

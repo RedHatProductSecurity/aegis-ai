@@ -765,7 +765,7 @@ class SuggestAffectedComponents(Feature):
                 - If the component is from the Python standard library, use 'python' as the component name.
                 - If the component is from the Go ecosystem and not in the standard library, include the namespace (e.g. github.com/containerd/containerd).
                 - If the component is from the Go standard library, use a specific package name and return it first in the components array in addition to the component 'golang'.
-                - For vulnerabilities in Google Chrome, Chromium, or any Chromium sub-component (V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing, etc.), use 'chromium-browser' as the single component name.
+                - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet'.
                 - Provide a concise explanation of the rationale.
             """,
             rules="""
