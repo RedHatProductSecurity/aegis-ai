@@ -220,8 +220,9 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         union = len(exp_set | got_set)
         jaccard = inter / union if union else 0.0
 
+        precision = inter / len(got_set) if got_set else 0.0
         primary_bonus = (
-            1.0
+            precision
             if (expected and exp_set and expected[0].lower().strip() in got_set)
             else 0.0
         )
