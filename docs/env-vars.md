@@ -53,6 +53,13 @@
 | `TAVILY_API_KEY`                       | Tavily API key                        |                          |
 
 
+# Kernel classifier settings
+| Environment Variable             | Description                                                          | Default Value                |
+|----------------------------------|----------------------------------------------------------------------|------------------------------|
+| `AEGIS_KERNEL_CLASSIFIER_DIR`    | Path to the classifier directory containing `models/` and `cve_feature_extraction.py` | co-located `aegis_ai_ml` source tree |                   |
+| `AEGIS_DISABLE_HTML_FEATURES`   | Disable HTML feature supplement during training (ablation testing) | `false`                  |
+
+
 # Instrumenting/logging settings
 | Environment Variable               | Description                                  | Default Value |
 |------------------------------------|----------------------------------------------|---------------|

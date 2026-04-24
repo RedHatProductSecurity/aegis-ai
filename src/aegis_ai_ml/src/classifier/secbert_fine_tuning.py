@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
-import pickle
 import torch
 from torch.utils.data import Dataset
 from transformers import (
@@ -414,9 +413,10 @@ class SecBERTClassifier:
             self.trainer.save_model()
             self.tokenizer.save_pretrained(output_dir)
 
-            # Save label encoder
-            with open(os.path.join(output_dir, "label_encoder.pkl"), "wb") as f:
-                pickle.dump(self.label_encoder, f)
+            # Save label encoder as JSON (avoid pickle serialization)
+            le_path = os.path.join(output_dir, "label_encoder.json")
+            with open(le_path, "w") as f:
+                json.dump({"classes": self.label_encoder.classes_.tolist()}, f)
 
             print(f"Training completed! Model saved to {output_dir}")
             return train_result
@@ -485,8 +485,9 @@ class SecBERTClassifier:
         self.trainer.save_model()
         self.tokenizer.save_pretrained(output_dir)
 
-        with open(os.path.join(output_dir, "label_encoder.pkl"), "wb") as f:
-            pickle.dump(self.label_encoder, f)
+        le_path = os.path.join(output_dir, "label_encoder.json")
+        with open(le_path, "w") as f:
+            json.dump({"classes": self.label_encoder.classes_.tolist()}, f)
 
         print(f"Fallback training completed! Model saved to {output_dir}")
         return train_result
