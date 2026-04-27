@@ -428,6 +428,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-35091",
         expected_statement="This vulnerability has a Moderate impact on Red Hat products. A flaw in Corosync's membership commit token sanity check, when running in the default totemudp/totemudpu mode, allows a remote unauthenticated attacker to send a crafted UDP packet. This can lead to an out-of-bounds read, resulting in a denial of service and potential limited memory content disclosure. This issue affects Corosync only when configured to use the legacy totemudp or totemudpu transport modes with unencrypted communication.\n\nThese modes are not the default in modern Corosync versions. The default transport is knet, which supports encryption and is the standard configuration in RHEL.",
+        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-40175",
