@@ -73,6 +73,9 @@ async def run_with_heartbeat(runner: Awaitable, prefix: str) -> AgentRunResult:
             pass
 
 
+_MAX_OUTPUT_ENFORCEMENT_RETRIES = 3
+
+
 class Feature(ABC):
     def __init__(self, agent: Agent):
         self.agent = agent
@@ -82,9 +85,21 @@ class Feature(ABC):
         """Run the feature. Subclasses define their own parameter signatures."""
         ...
 
+    def _check_output(self, result: AgentRunResult, deps: Any) -> str | None:
+        """Validate the run result; return a retry prompt or None if acceptable.
+
+        Override in subclasses to enforce feature-specific constraints.
+        When a non-None string is returned, ``guarded_run`` will re-invoke
+        the agent with the full conversation history plus this string as a
+        new user turn, replicating the ModelRetry behaviour of output
+        validators without requiring one on the shared agent.
+        """
+        return None
+
     async def _run(self, call_str, prompt, **kwargs):
         try:
-            runner = self.agent.run(prompt.to_string(), **kwargs)
+            prompt_text = prompt.to_string() if hasattr(prompt, "to_string") else prompt
+            runner = self.agent.run(prompt_text, **kwargs)
             return await run_with_heartbeat(runner, prefix=call_str)
 
         except asyncio.TimeoutError:
@@ -100,10 +115,11 @@ class Feature(ABC):
             logger.debug(f"{call_str} raised an exception: {e}")
             raise
 
-    async def run_if_safe(self, prompt, **kwargs):
-        """
-        Execute `self.agent.run(...)` only if the provided prompt passes `prompt.is_safe()`.
-        Returns the model output on success, otherwise None.
+    async def guarded_run(self, prompt, **kwargs):
+        """Execute the agent with safety, concurrency, retry, and timeout guards.
+
+        Raises RuntimeError if the prompt fails the safety check or the
+        agent cannot produce a result after retries.
         """
         # lazy import to avoid circular deps
         from aegis_ai.agents import agent_default_max_retries
@@ -170,6 +186,30 @@ class Feature(ABC):
 
                 # wait before the next attempt
                 await asyncio.sleep(delay)
+
+        # Output enforcement: let subclasses reject the result and ask
+        # the LLM to retry with the full conversation context.  This
+        # replaces the agent-level output_validator pattern which is
+        # incompatible with per-run output_type in pydantic-ai >=1.66.
+        for enforcement_attempt in range(_MAX_OUTPUT_ENFORCEMENT_RETRIES):
+            retry_msg = self._check_output(result, kwargs.get("deps"))
+            if retry_msg is None:
+                break
+            logger.warning(
+                "%s: output enforcement retry %d/%d: %s",
+                call_str,
+                enforcement_attempt + 1,
+                _MAX_OUTPUT_ENFORCEMENT_RETRIES,
+                retry_msg,
+            )
+            retry_kwargs = {k: v for k, v in kwargs.items() if k != "message_history"}
+            retry_kwargs["message_history"] = result.all_messages()
+            result = await self._run(
+                call_str,
+                retry_msg,
+                model_settings=model_settings,
+                **retry_kwargs,
+            )
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens

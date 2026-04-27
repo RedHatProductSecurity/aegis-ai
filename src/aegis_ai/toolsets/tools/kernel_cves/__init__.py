@@ -143,29 +143,45 @@ class KernelVulnsRepo:
                     )
 
 
-def _extract_commit_hashes(text: str) -> Set[str]:
-    """Extracts unique kernel commit hashes from a block of text."""
-    if not text:
-        return set()
-    # Simplified regex to find 40-character hex strings, which is robust enough
-    commit_pattern = re.compile(r"\b([0-9a-fA-F]{40})\b")
-    return set(commit_pattern.findall(text))
+_STABLE_URL_RE = re.compile(r"https://git\.kernel\.org/stable/c/([0-9a-fA-F]{40})")
 
 
 def _parse_mbox_content(content: str) -> Dict[str, Set[str]]:
-    """Parses mbox content to extract commit hashes and affected files."""
-    commit_hashes = _extract_commit_hashes(content)
-    # Regex to find file paths in diffs
+    """Parses mbox content to extract fix commit hashes and affected files.
+
+    Only extracts hashes from ``git.kernel.org/stable/c/`` URLs (the
+    Mitigation section), avoiding introduction commits and version-range
+    metadata that also appear in the mbox body.
+    """
+    commit_hashes = set(_STABLE_URL_RE.findall(content))
     affected_files = set(re.findall(r"diff --git a/([^\s]+)", content))
     return {"commits": commit_hashes, "files": affected_files}
 
 
 def _parse_json_content(data: Dict[str, Any]) -> Dict[str, Set[str]]:
-    """Recursively searches a JSON object for text to extract commit hashes."""
-    text_blob = " ".join(
-        str(v) for v in data.values() if isinstance(v, (str, list, dict))
-    )
-    return {"commits": _extract_commit_hashes(text_blob)}
+    """Extract fix commit hashes from CVE 5.0 JSON ``references`` array.
+
+    The ``versions`` array contains both introduction and fix commits;
+    ``references`` contains only fix commit URLs.  Falls back to URL
+    scanning of the full document if no references are found.
+    """
+    commits: Set[str] = set()
+    try:
+        refs = data["containers"]["cna"]["references"]
+        for ref in refs:
+            m = _STABLE_URL_RE.search(ref.get("url", ""))
+            if m:
+                commits.add(m.group(1))
+    except (KeyError, TypeError):
+        pass
+
+    if not commits:
+        text_blob = " ".join(
+            str(v) for v in data.values() if isinstance(v, (str, list, dict))
+        )
+        commits = set(_STABLE_URL_RE.findall(text_blob))
+
+    return {"commits": commits}
 
 
 def _find_and_parse_cve_files(repo_path: Path, cve_id: str) -> Optional[CVEMetadata]:

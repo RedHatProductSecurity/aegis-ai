@@ -24,6 +24,18 @@ class feature_deps:
     # When set, the OSIDB flaw_tool uses this instead of calling OSIDB API.
     # Used when static_context already contains sufficient CVE data (e.g. from web API).
     static_context: Optional[Any] = field(default=None)
+    # Set by SuggestImpact.exec (pre-run) or flaw_tool (at runtime) when OSIDB
+    # data indicates a kernel component.  Read by _check_output to enforce
+    # kernel_impact_tool usage.
+    is_kernel_cve: bool = field(default=False)
+    # Set by kernel_impact_tool when it is invoked, regardless of whether the
+    # classifier produced a result.  _check_output uses this to distinguish
+    # "tool not called" from "tool called but no data available".
+    kernel_tool_called: bool = field(default=False)
+    # Pre-computed classifier result (e.g. from kernel_impact_classify).
+    # Set before the agent run and read-only during execution.  Used by
+    # tools (fast-path cache) and post-processing (escalation floor).
+    classifier_result: Optional[dict] = field(default=None)
 
 
 class FeatureQueryInput(BaseModel):

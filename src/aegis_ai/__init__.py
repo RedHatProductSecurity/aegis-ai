@@ -180,6 +180,12 @@ class AppSettings(BaseSettings):
     use_nvd_dev_tool: bool = get_env_flag("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", False)
     use_cisa_kev_tool: bool = get_env_flag("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", False)
 
+    # Enables the kernel-specific XGBoost impact classifier for Linux kernel CVEs.
+    # When true, kernel CVEs are routed through the patch-feature pipeline before
+    # the LLM reasoning step.  Requires AEGIS_KERNEL_CLASSIFIER_DIR or the
+    # co-located aegis_ai_ml source tree to be present.
+    use_kernel_classifier: bool = get_env_flag("AEGIS_USE_KERNEL_CLASSIFIER", False)
+
     # tavily key
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "   ")
 

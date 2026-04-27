@@ -60,6 +60,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+classifier-deps = [
+    { name = "scikit-learn" },
+    { name = "xgboost" },
+]
 ml-deps = [
     { name = "accelerate" },
     { name = "datasets" },
@@ -136,6 +140,7 @@ requires-dist = [
     { name = "pygithub", specifier = ">=2.7.0" },
     { name = "requests-gssapi", specifier = ">=1.4.0" },
     { name = "rich", specifier = ">=14.0.0" },
+    { name = "scikit-learn", marker = "extra == 'classifier-deps'", specifier = ">=1.1.0" },
     { name = "scikit-learn", marker = "extra == 'ml-deps'", specifier = ">=1.1.0" },
     { name = "seaborn", marker = "extra == 'ml-deps'", specifier = ">=0.13.2" },
     { name = "torch", marker = "extra == 'ml-deps'", specifier = ">=1.9.0" },
@@ -145,9 +150,10 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
     { name = "wikipedia", specifier = ">=1.4.0" },
     { name = "wikipedia-mcp", specifier = ">=1.5.8" },
+    { name = "xgboost", marker = "extra == 'classifier-deps'", specifier = ">=1.7.0" },
     { name = "xgboost", marker = "extra == 'ml-deps'", specifier = ">=1.7.0" },
 ]
-provides-extras = ["ml-deps"]
+provides-extras = ["classifier-deps", "ml-deps"]
 
 [package.metadata.requires-dev]
 dev = [
