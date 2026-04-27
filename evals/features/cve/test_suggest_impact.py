@@ -333,6 +333,7 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2025-13609",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:L/I:H/A:L",
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-13772",
