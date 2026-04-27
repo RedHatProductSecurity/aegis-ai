@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-04-27
+
+### Changed
+- improved kernel CVE classifier training pipeline with better feature extraction
+- retrained kernel classifier with 83 additional IMPORTANT CVEs and expanded test set
+- penalize long lists in the output of `suggest-affected-components` evals
+- exclude `affects` from the input of `suggest-affected-components`
+
+### Added
+- added kernel impact classifier runtime module
+- added evaluation cases and annotations based on feedback from security analysts
+- CI can skip evals when the PR description contains `CI: skip-pr-evals`
+
+### Fixed
+- improved LLM prompt templates based on feedback
+- do not suggest fields unrelated to a specific feature
+- do not suggest `title` and `components` in `suggest-cwe`
+- do not mention exploit availability in suggestions
+- added a hint for CWE-617 to CWE tool
+- improved error handling in `component-intelligence` API endpoint
+- improved handling of OSIDB auth and lookup failures
+- improved handling of validation errors in feedback API endpoints
+- made certain fields required in feedback API endpoints
+- avoid logging of GSSAPI tracebacks in non-debug mode
+
+
 ## [0.6.2] - 2026-03-23
 
 ### Added
