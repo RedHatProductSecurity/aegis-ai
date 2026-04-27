@@ -62,6 +62,10 @@ source = "vcs"
 [tool.hatch.build.hooks.vcs]
 version-file = "src/aegis_ai/_version.py"
 
+[tool.ty.analysis]
+# xgboost is optional (`classifier_deps`); CI/default installs omit it
+allowed-unresolved-imports = ["xgboost.**"]
+
 [tool.logfire]
 ignore_no_config = true
 

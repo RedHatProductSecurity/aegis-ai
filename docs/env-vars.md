@@ -56,8 +56,9 @@
 # Kernel classifier settings
 | Environment Variable             | Description                                                          | Default Value                |
 |----------------------------------|----------------------------------------------------------------------|------------------------------|
-| `AEGIS_KERNEL_CLASSIFIER_DIR`    | Path to the classifier directory containing `models/` and `cve_feature_extraction.py` | co-located `aegis_ai_ml` source tree |                   |
-| `AEGIS_DISABLE_HTML_FEATURES`   | Disable HTML feature supplement during training (ablation testing) | `false`                  |
+| `AEGIS_KERNEL_CLASSIFIER_DIR`    | Path to the classifier directory containing `models/` and `cve_feature_extraction.py` | co-located `aegis_ai_ml` source tree |
+| `AEGIS_USE_KERNEL_CLASSIFIER`    | Enable kernel-specific CVE impact classifier                         | `false`                      |
+| `AEGIS_DISABLE_HTML_FEATURES`   | Set to `1` to disable HTML feature supplement during training (ablation testing) | `0` (enabled)            |
 
 
 # Instrumenting/logging settings
