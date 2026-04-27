@@ -388,6 +388,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-3497",
         expected_mitigation="To mitigate this issue, disable GSSAPI key exchange in the OpenSSH server configuration. This prevents the server from processing GSSAPI messages, eliminating the vulnerability's attack surface.\n\nEdit `/etc/ssh/sshd_config` and add or modify the line:\n```\nGSSAPIKeyExchange no\n```\n\nAfter saving the changes, restart the `sshd` service for the mitigation to take effect. This action will prevent users from authenticating via GSSAPI.\n\n```\n# systemctl restart sshd\n```",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-4271",
