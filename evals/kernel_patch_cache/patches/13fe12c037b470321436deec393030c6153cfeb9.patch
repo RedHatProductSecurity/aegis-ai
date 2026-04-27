@@ -1,0 +1,36 @@
+From 13fe12c037b470321436deec393030c6153cfeb9 Mon Sep 17 00:00:00 2001
+From: Xiaogang Chen <xiaogang.chen@amd.com>
+Date: Fri, 21 Mar 2025 11:41:26 -0500
+Subject: udmabuf: fix a buf size overflow issue during udmabuf creation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+[ Upstream commit 021ba7f1babd029e714d13a6bf2571b08af96d0f ]
+
+by casting size_limit_mb to u64  when calculate pglimit.
+
+Signed-off-by: Xiaogang Chen<Xiaogang.Chen@amd.com>
+Link: https://patchwork.freedesktop.org/patch/msgid/20250321164126.329638-1-xiaogang.chen@amd.com
+Signed-off-by: Christian König <christian.koenig@amd.com>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+---
+ drivers/dma-buf/udmabuf.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/dma-buf/udmabuf.c b/drivers/dma-buf/udmabuf.c
+index 14b79458ac7f4..597a92438afc1 100644
+--- a/drivers/dma-buf/udmabuf.c
++++ b/drivers/dma-buf/udmabuf.c
+@@ -177,7 +177,7 @@ static long udmabuf_create(struct miscdevice *device,
+ 	if (!ubuf)
+ 		return -ENOMEM;
+ 
+-	pglimit = (size_limit_mb * 1024 * 1024) >> PAGE_SHIFT;
++	pglimit = ((u64)size_limit_mb * 1024 * 1024) >> PAGE_SHIFT;
+ 	for (i = 0; i < head->count; i++) {
+ 		if (!IS_ALIGNED(list[i].offset, PAGE_SIZE))
+ 			goto err;
+-- 
+cgit 1.3-korg
+

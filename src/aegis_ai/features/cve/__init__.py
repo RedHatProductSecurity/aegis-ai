@@ -668,16 +668,6 @@ class SuggestCWE(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["cwe_id"])
 
-        is_kernel = False
-        if get_settings().use_linux_cve_tool:
-            components = []
-            if isinstance(static_context, dict):
-                components = static_context.get("components") or []
-            if not components:
-                cve_data = await osidb_tool.cve_retrieve(cve_id)
-                components = cve_data.components
-            is_kernel = any(str(c).lower() == "kernel" for c in components)
-
         prompt = AegisPrompt(
             user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause of software weakness. Ignore any pre-labeled CWE.",
             goals="""
@@ -709,12 +699,6 @@ class SuggestCWE(Feature):
         )
 
         run_kwargs: dict = dict(deps=deps, output_type=SuggestCWEModel)
-        if is_kernel:
-            from pydantic_ai.toolsets import FunctionToolset
-            from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
-
-            run_kwargs["toolsets"] = [FunctionToolset(tools=[kernel_cve_tool])]
-
         result = await self.guarded_run(prompt, **run_kwargs)
         # Post-process: filter out any disallowed CWE IDs (guardrail in case LLM misses rules)
         await cwe_manager.initialize()

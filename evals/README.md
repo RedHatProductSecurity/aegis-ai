@@ -15,6 +15,51 @@ From the repository root:
 | `make eval-debug` | Same as `eval`, but `AEGIS_LLM_MAX_JOBS=1`, DEBUG log level, and CLI logging enabled (easier single-threaded debugging) |
 | `make eval-in-parallel` | `uv run pytest -vv -n auto evals` (pytest-xdist) |
 
+### Kernel eval ground truth
+
+The kernel suggest-impact eval (`test_suggest_impact_kernel_cves.py`) compares AEGIS predictions against OSIDB ground truth stored in `eval-kernel-cves.csv`. This CSV is a **generated artifact** — do not edit it by hand.
+
+**Files** (all under `evals/features/cve/`):
+
+| File | Role |
+| ---- | ---- |
+| `kernel_eval_cves.txt` | Canonical list of CVE IDs for the eval set. One per line, `#` comments allowed. **Edit this file** to add or remove CVEs. |
+| `generate_kernel_eval_csv.py` | Pipeline that reads the text file, queries OSIDB for each CVE's impact and CVSS score, and writes `eval-kernel-cves.csv`. Requires a Kerberos ticket (`kinit`). |
+| `eval-kernel-cves.csv` | Generated 3-column CSV (`CVE`, `OSIDB Impact`, `OSIDB CVSS`) consumed by the eval test. Committed to the repo so evals are reproducible without OSIDB access. |
+
+**Caches** (populated by `make populate-kernel-caches` or `make prepare-kernel-eval`):
+
+| Directory | Role | Populate script |
+| --------- | ---- | --------------- |
+| `evals/osidb_cache/` | OSIDB CVE data (auto-populated on first eval miss) | `evals/utils/osidb_cache.py` |
+| `evals/kernel_cve_context_cache/` | Kernel CVE metadata + commit hashes from linux-vulns repo | `evals/utils/populate_kernel_cve_cache.py` |
+| `evals/kernel_patch_cache/` | Raw git patches (`patches/`) and commit HTML pages (`html/`) | `evals/utils/populate_kernel_cve_cache.py` (phase 2) |
+
+All three caches are checked into the repo so evals run without network access (except for the LLM API).
+
+**Regenerating ground truth and caches when you add a new kernel CVE:**
+
+```bash
+# Full pipeline: generate CSV from OSIDB, populate kernel CVE context cache,
+# and populate patch/HTML cache.  Run this after editing kernel_eval_cves.txt.
+make prepare-kernel-eval
+```
+
+Individual steps (if needed):
+
+```bash
+make generate-kernel-eval       # regenerate eval-kernel-cves.csv from OSIDB (requires kinit)
+make populate-kernel-caches     # populate kernel CVE context + patch/HTML caches
+```
+
+A session-scoped conftest fixture will **fail** if the CSV is missing and **warn** if it is older than the text file.
+
+To process an ad-hoc set of CVEs without modifying the canonical list:
+
+```bash
+uv run python evals/features/cve/generate_kernel_eval_csv.py --cves CVE-2025-12345 CVE-2026-67890
+```
+
 Optional **independent LLM for evaluators** (LLM judges and scoring judges), while Aegis still uses your normal app settings:
 
 ```bash
