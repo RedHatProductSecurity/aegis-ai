@@ -75,6 +75,44 @@ app: FastAPI = FastAPI(
 )
 
 
+def _enrich_openapi_schema() -> None:
+    """Add security scheme, default responses, and 429 to the generated OpenAPI spec."""
+    schema = app.openapi()
+    schema["security"] = [{"ApiKeyAuth": []}]
+    schema.setdefault("components", {})["securitySchemes"] = {
+        "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "X-API-Key"}
+    }
+    error_schema = {
+        "type": "object",
+        "properties": {"detail": {"type": "string", "title": "Detail"}},
+        "required": ["detail"],
+        "title": "ErrorResponse",
+    }
+    schema["components"].setdefault("schemas", {})["ErrorResponse"] = error_schema
+    error_ref = {
+        "description": "Unexpected error",
+        "content": {
+            "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+            }
+        },
+    }
+    rate_limit_ref = {
+        "description": "Too Many Requests",
+        "content": {
+            "application/json": {
+                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+            }
+        },
+    }
+    for path_data in schema.get("paths", {}).values():
+        for operation in path_data.values():
+            if isinstance(operation, dict) and "responses" in operation:
+                operation["responses"].setdefault("429", rate_limit_ref)
+                operation["responses"].setdefault("default", error_ref)
+    app.openapi_schema = schema
+
+
 @app.exception_handler(json.JSONDecodeError)
 async def json_decode_exception_handler(request: Request, exc: json.JSONDecodeError):
     """Handle JSON decode errors from invalid request bodies."""
@@ -819,3 +857,6 @@ async def save_programmatic_feedback(request: Request, feedback: ProgrammaticFee
             status_code=500,
             detail="An internal error occurred while processing programmatic feedback.",
         )
+
+
+_enrich_openapi_schema()
