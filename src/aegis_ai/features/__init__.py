@@ -32,6 +32,9 @@ PROMPT_RETRY_TEMPERATURE = 0.9
 # the period of time to monitor a running prompt
 PROMPT_INFO_PERIOD = 60
 
+# Max times guarded_run re-invokes the LLM when _check_output returns a retry prompt (output enforcement).
+_MAX_OUTPUT_ENFORCEMENT_RETRIES = 3
+
 
 def id_from_context(context: BaseModel) -> str:
     """return entity ID for logging purposes based on context"""
@@ -71,9 +74,6 @@ async def run_with_heartbeat(runner: Awaitable, prefix: str) -> AgentRunResult:
             await warn_task
         except asyncio.CancelledError:
             pass
-
-
-_MAX_OUTPUT_ENFORCEMENT_RETRIES = 3
 
 
 class Feature(ABC):

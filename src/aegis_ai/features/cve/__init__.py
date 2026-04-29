@@ -58,18 +58,9 @@ class SuggestImpact(Feature):
         except ValueError:
             cvss3_score = float("nan")
 
-        # check which impact corresponds to cvss3_score
-        if 9.0 < cvss3_score:
-            impact_by_cvss3 = "CRITICAL"
-        elif 7.0 < cvss3_score:
-            impact_by_cvss3 = "IMPORTANT"
-        elif 4.0 < cvss3_score:
-            impact_by_cvss3 = "MODERATE"
-        elif 0.0 < cvss3_score:
-            impact_by_cvss3 = "LOW"
-        elif 0.0 == cvss3_score:
-            impact_by_cvss3 = ""
-        else:
+        # check which impact corresponds to cvss3_score (same bands as _score_to_band)
+        impact_by_cvss3 = SuggestImpact._score_to_band(cvss3_score)
+        if impact_by_cvss3 is None:
             logger.warning(f"{call_str}: invalid cvss3_score: {cvss3_score}")
             return
 
@@ -108,7 +99,7 @@ class SuggestImpact(Feature):
         )
         output.impact = impact_by_cvss3
 
-    SEVERITY_ORDER = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "NONE": 4}
+    SEVERITY_ORDER = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "": 4}
 
     _CONTAINED_SUBSYSTEM_FLAGS = {"bpf", "nvme", "debugfs", "notincludedcomponent"}
     _MEMORY_CORRUPTION_FLAGS = {
@@ -208,16 +199,17 @@ class SuggestImpact(Feature):
     @staticmethod
     def _score_to_band(score: float) -> str | None:
         """Map a CVSS v3.1 base score to the Red Hat impact band."""
-        if score >= 9.0:
+        if score > 9.0:
             return "CRITICAL"
-        if score >= 7.0:
+        # This allows for MODERATE to be set to 7.0, but often these may be IMPORTANT.
+        if score > 7.0:
             return "IMPORTANT"
         if score >= 4.0:
             return "MODERATE"
         if score > 0.0:
             return "LOW"
         if score == 0.0:
-            return "NONE"
+            return ""
         return None
 
     @staticmethod

@@ -27,7 +27,7 @@ import json
 import sys
 from pathlib import Path
 
-SEVERITY_RANK = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "NONE": 4}
+from aegis_ai.features.cve import SuggestImpact
 
 ESCALATION_FEATURES = {
     "uaf",
@@ -44,20 +44,10 @@ ESCALATION_FEATURES = {
 DEFAULT_RESULTS = Path(__file__).resolve().parent / "kernel_eval_results.json"
 
 
-def cvss_band(score: float) -> str:
-    if score >= 9.0:
-        return "CRITICAL"
-    if score >= 7.0:
-        return "IMPORTANT"
-    if score >= 4.0:
-        return "MODERATE"
-    if score > 0.0:
-        return "LOW"
-    return "NONE"
-
-
 def rank(label: str) -> int:
-    return SEVERITY_RANK.get(label.upper(), 4)
+    return SuggestImpact.SEVERITY_ORDER.get(
+        label.upper(), len(SuggestImpact.SEVERITY_ORDER)
+    )
 
 
 def direction(predicted: str, expected: str) -> str:
@@ -109,7 +99,7 @@ def audit(results_path: Path) -> dict:
         clf_cvss_vector = classifier.get("cvss_vector", "")
         floor_applied = classifier.get("escalation_floor_applied", False)
 
-        llm_band = cvss_band(cvss_score)
+        llm_band = SuggestImpact._score_to_band(cvss_score) or ""
 
         d = direction(predicted, expected)
         if d == "match":
