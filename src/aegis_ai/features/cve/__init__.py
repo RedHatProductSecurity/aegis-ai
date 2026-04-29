@@ -517,9 +517,9 @@ class SuggestImpact(Feature):
         If the LLM's stated impact matches its CVSS band, keep it.  If
         they disagree, trust the CVSS band (quantitative > qualitative).
 
-        Both paths apply guardrails G2 (memory corruption floor) and G3
-        (network + corruption floor) when applicable feature flags are
-        present.
+        The kernel path additionally applies specific guardrails
+        (G2–G5) based on classifier-provided feature flags (memory
+        corruption, network exposure, contained subsystems, etc.).
 
         Returns a trace string explaining the decision.
         """

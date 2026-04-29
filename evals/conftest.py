@@ -37,6 +37,10 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
     )
 
 
+# pytest's built-in monkeypatch fixture is function-scoped, so session-scoped
+# fixtures cannot depend on it.  We need a session-wide MonkeyPatch because the
+# cache patches below (_patch_cve_retrieve, _patch_kernel_cve_lookup, etc.) must
+# survive the entire eval run, not just a single test function.
 @pytest.fixture(scope="session")
 def _monkeypatch_session():
     mp = pytest.MonkeyPatch()
@@ -110,6 +114,8 @@ def setup_logging_for_session():
                 return True
             return not msg.startswith("[tool call] ")
 
+    # Skip suppression of logged tool during evals if user explicitly enables
+    #  verbose logging via env var
     if not os.getenv("AEGIS_LOGGING_EVALS_VERBOSE"):
         logging.getLogger("aegis_ai.toolsets").addFilter(_SuppressToolCallFilter())
 

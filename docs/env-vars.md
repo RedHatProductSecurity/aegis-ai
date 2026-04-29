@@ -58,7 +58,7 @@
 |----------------------------------|----------------------------------------------------------------------|------------------------------|
 | `AEGIS_KERNEL_CLASSIFIER_DIR`    | Path to the classifier directory containing `models/` and `cve_feature_extraction.py` | co-located `aegis_ai_ml` source tree |
 | `AEGIS_USE_KERNEL_CLASSIFIER`    | Enable kernel-specific CVE impact classifier                         | `false`                      |
-| `AEGIS_DISABLE_HTML_FEATURES`   | Set to `1` to disable HTML feature supplement during training (ablation testing) | `0` (enabled)            |
+| `AEGIS_DISABLE_HTML_FEATURES`   | Set to `true` to disable HTML feature supplement during training (ablation testing) | `false` (enabled)            |
 
 
 # Instrumenting/logging settings
@@ -85,4 +85,5 @@
 | `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_SAMPLE` | suggest-affected-components eval: randomly sample N CVEs (reduces API usage) | (all qualifying) |
 | `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_SAMPLE_SEED` | suggest-affected-components eval: random seed for sampling (reproducible runs) | 42 |
 | `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_CVE_IDS` | suggest-affected-components eval: comma-separated CVE IDs to restrict cases to | (all qualifying in cache) |
+| `AEGIS_LOGGING_EVALS_VERBOSE` | Show tool-call logs during evals (normally suppressed) | `false` |
 | `OSIDB_CACHE_DIR`           | Eval osidb cache directory | `evals/osidb_cache` |

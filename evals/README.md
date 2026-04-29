@@ -15,6 +15,20 @@ From the repository root:
 | `make eval-debug` | Same as `eval`, but `AEGIS_LLM_MAX_JOBS=1`, DEBUG log level, and CLI logging enabled (easier single-threaded debugging) |
 | `make eval-in-parallel` | `uv run pytest -vv -n auto evals` (pytest-xdist) |
 
+To process an ad-hoc set of CVEs without modifying the canonical list (`eval-kernel-cves.csv`):
+
+```bash
+uv run python evals/features/cve/generate_kernel_eval_csv.py --cves CVE-2025-12345 CVE-2026-67890
+```
+
+Optional **independent LLM for evaluators** (LLM judges and scoring judges), while Aegis still uses your normal app settings:
+
+```bash
+export AEGIS_EVALS_LLM_HOST="https://…"
+export AEGIS_EVALS_LLM_MODEL="…"
+export AEGIS_EVALS_LLM_API_KEY="…"
+```
+
 ### Kernel eval ground truth
 
 The kernel suggest-impact eval (`test_suggest_impact_kernel_cves.py`) compares AEGIS predictions against OSIDB ground truth stored in `eval-kernel-cves.csv`. This CSV is a **generated artifact** — do not edit it by hand.
@@ -54,19 +68,7 @@ make populate-kernel-caches     # populate kernel CVE context + patch/HTML cache
 
 A session-scoped conftest fixture will **fail** if the CSV is missing and **warn** if it is older than the text file.
 
-To process an ad-hoc set of CVEs without modifying the canonical list:
-
-```bash
-uv run python evals/features/cve/generate_kernel_eval_csv.py --cves CVE-2025-12345 CVE-2026-67890
-```
-
-Optional **independent LLM for evaluators** (LLM judges and scoring judges), while Aegis still uses your normal app settings:
-
-```bash
-export AEGIS_EVALS_LLM_HOST="https://…"
-export AEGIS_EVALS_LLM_MODEL="…"
-export AEGIS_EVALS_LLM_API_KEY="…"
-```
+### Configuration Notes
 
 If `AEGIS_EVALS_LLM_HOST` is `https://generativelanguage.googleapis.com`, the suite configures a **Google** eval model; otherwise it uses an **OpenAI-compatible** client against `{AEGIS_EVALS_LLM_HOST}/v1/`. If these variables are unset, evaluators reuse `default_llm_model` / `default_llm_settings` from app settings (`evals/features/common.py`).
 
@@ -146,5 +148,6 @@ Used by all CVE feature evals that import `common_feature_evals`:
 | `LLMJudge` (`NoAffectsInExplanation`) | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | ✓ | Explanation does not list affected Red Hat products as a product list. |
 | `LLMJudge` (`CVSSKernelScopeAndPrivileges`) | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | ✓ | For kernel-style issues, explanation should justify PR/S/C/I consistently with the vector. |
 | `ComponentsOverlapEvaluator` | [test_suggest_affected_components.py](features/cve/test_suggest_affected_components.py) | ✓ | | Jaccard-style overlap plus primary-component bonus on normalized names; uses `reflect_confidence`. Cases are built from `osidb_cache` (default CVE list in file unless `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_CVE_IDS` is set). Optional `--sample N` or `AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_SAMPLE`. |
+| `UnderestimationEvaluator` | [test_suggest_impact_kernel_cves.py](features/cve/test_suggest_impact_kernel_cves.py) | | ✓ | Kernel CVE-specific assertion: fails if predicted impact severity is lower than OSIDB ground truth. Underestimation (high-risk vulns shipped without urgency) is a critical failure per the asymmetric error policy; overestimation only triggers extra review. |
 
 **Per-case evaluators:** Some case types only attach evaluators for expected fields that are set: `SuggestImpactCase` (`ImpactEvaluator`, `CVSSScoreEvaluator`, `CVSSVectorEvaluator`), `SuggestStatementCase` (`StatementEvaluator`, `MitigationEvaluator`), and `SuggestDescriptionCase` (`TitleEvaluator`, `DescriptionEvaluator`). Other evaluators in those tests still run on every case.
