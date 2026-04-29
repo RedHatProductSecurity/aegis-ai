@@ -205,6 +205,58 @@ class TestH8:
         assert out.impact == "MODERATE"
 
 
+class TestH9:
+    """H9: annotation — unblock kpanic, set decreased when CVSS <= 4.5"""
+
+    def test_fires(self):
+        """H9 fires when severity is MODERATE and CVSS <= 4.5.
+        Use a non-local vector so H8 (which requires AV:L) doesn't
+        fire first and steal the MOD severity."""
+        out = _output(impact="MODERATE", cvss_score="4.5", cvss_vector=_VEC_BASE)
+        trace = SuggestImpact.reconcile_severity(out, "t", _clf(impact="MODERATE"))
+        assert "H9:decreased_set" in trace
+
+
+class TestH10:
+    """H10: annotation — unblock kpanic for local/low-impact vectors"""
+
+    def test_fires(self):
+        """H10 requires local + low-CIA, same conditions H8 checks.
+        Add kernel_panic to block H8 (which checks kernel_panic);
+        H10 does not check kernel_panic so it fires."""
+        vec = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:H"
+        out = _output(impact="MODERATE", cvss_score="5.0", cvss_vector=vec)
+        trace = SuggestImpact.reconcile_severity(
+            out, "t", _clf(impact="MODERATE", features=["kernel_panic"])
+        )
+        assert "H10:decreased_set" in trace
+
+
+class TestH8KernelPanic:
+    """H8 blocked by kernel_panic active feature"""
+
+    def test_blocked_by_kernel_panic(self):
+        vec = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:H"
+        out = _output(impact="MODERATE", cvss_score="3.95", cvss_vector=vec)
+        trace = SuggestImpact.reconcile_severity(
+            out, "t", _clf(impact="MODERATE", features=["kernel_panic"])
+        )
+        assert "H8" not in trace
+
+
+class TestH5FromModerate:
+    """H5 covers MOD starting severity, but H2 fires first at >= 8.5."""
+
+    def test_moderate_escalated_via_h2_not_h5(self):
+        """MODERATE + CVSS 9.0: H2 (>= 8.5) fires before H5 (> 8.5),
+        so H2 handles the escalation. Verify the outcome is correct
+        and H2 is the rule that fired."""
+        out = _output(impact="MODERATE", cvss_score="9.0", cvss_vector=_VEC_BASE)
+        trace = SuggestImpact.reconcile_severity(out, "t", _clf(impact="MODERATE"))
+        assert out.impact == "IMPORTANT"
+        assert "H2" in trace
+
+
 class TestH11:
     """H11: IMPORTANT -> MODERATE when PR:H and CVSS < 8.0"""
 

@@ -213,42 +213,28 @@ class SuggestImpact(Feature):
         return None
 
     @staticmethod
-    def _reconcile_kernel(output, call_str, classifier_result: dict) -> str:
-        """Threshold-based reconciliation for kernel CVEs (al-kernel port).
+    def _apply_threshold_rules(
+        severity: int,
+        llm_cvss: float,
+        llm_vector: dict,
+        active_features: set[str],
+        has_contained: bool,
+    ) -> tuple[int, list[str], bool]:
+        """Apply al-kernel threshold rules H1–H11.
 
-        The classifier's cascade-adjusted prediction is the starting
-        severity.  The LLM's own CVSS score drives bidirectional
-        adjustments through deterministic threshold rules (H1–H11).
-        Classifier confidence is logged but does not affect the outcome.
+        Returns (severity, rules_applied, h1_fired).
 
         Rule reference: see al-kernel-spec.md Phase 4 for daemon
         originals.  Rules H12–H14 are deferred (require CWE extraction
         and manual-check signal not yet in SuggestImpactModel).
         """
-        from aegis_ai.kernel_classifier.cascade import parse_cvss_vector
+        import math
 
         SEV = SuggestImpact.SEVERITY_ORDER
-        LABELS = {v: k for k, v in SEV.items()}
         IMP, MOD, LOW = SEV["IMPORTANT"], SEV["MODERATE"], SEV["LOW"]
 
-        try:
-            llm_cvss = float(output.cvss3_score)
-        except (ValueError, TypeError):
-            llm_cvss = float("nan")
-
-        llm_vector = parse_cvss_vector(output.cvss3_vector or "")
-
-        clf_impact = classifier_result.get("impact")
-        clf_confidence = classifier_result.get("confidence", 0.0) or 0.0
-        clf_cvss_score = classifier_result.get("cvss_score", 0.0) or 0.0
-        active_features: set[str] = set(classifier_result.get("active_features", []))
-
-        severity = SEV[clf_impact] if clf_impact and clf_impact in SEV else MOD
-        start_label = LABELS.get(severity, clf_impact)
-
-        has_contained = bool(active_features & SuggestImpact._CONTAINED_SUBSYSTEM_FLAGS)
-        has_corruption = bool(active_features & SuggestImpact._MEMORY_CORRUPTION_FLAGS)
-        has_network = bool(active_features & SuggestImpact._NETWORK_EXPOSURE_FLAGS)
+        if math.isnan(llm_cvss):
+            return severity, ["no_llm_cvss"], False
 
         cia_hhh = (
             llm_vector.get("C") == "H"
@@ -258,125 +244,135 @@ class SuggestImpact(Feature):
         av_local = llm_vector.get("AV") == "L"
         pr_h_only = llm_vector.get("PR") == "H"
 
-        import math
+        rules_applied: list[str] = []
+        kpanic_marked = False
+        decreased = False  # noqa: F841 — gates H14 (deferred, not yet ported)
+        h1_fired = False
 
-        if math.isnan(llm_cvss):
-            rules_applied: list[str] = ["no_llm_cvss"]
-        else:
-            rules_applied = []
-            kpanic_marked = False
-            decreased = False  # noqa: F841 — gates H14 (deferred, not yet ported)
+        # H1: IMPORTANT -> MODERATE when LLM CVSS < 6.5
+        if severity == IMP and llm_cvss < 6.5:
+            severity = MOD
+            h1_fired = True
+            rules_applied.append("H1:IMP->MOD(cvss<6.5)")
 
-            h1_fired = False
+        # H2: MODERATE -> IMPORTANT when LLM CVSS very high
+        if severity == MOD and (
+            llm_cvss >= 8.5 or (llm_cvss >= 7.5 and cia_hhh and not has_contained)
+        ):
+            severity = IMP
+            rules_applied.append("H2:MOD->IMP(cvss>=8.5|7.5+HHH)")
 
-            # H1: IMPORTANT -> MODERATE when LLM CVSS < 6.5
-            if severity == IMP and llm_cvss < 6.5:
-                severity = MOD
-                h1_fired = True
-                rules_applied.append("H1:IMP->MOD(cvss<6.5)")
+        # H3: annotation — mark kpanic for moderate-range CVSS (blocks H7)
+        if severity == MOD and (
+            llm_cvss >= 7.5
+            or (llm_cvss >= 6.5 and cia_hhh and not kpanic_marked and not has_contained)
+        ):
+            kpanic_marked = True
+            rules_applied.append("H3:kpanic_set")
 
-            # H2: MODERATE -> IMPORTANT when LLM CVSS very high
-            if severity == MOD and (
-                llm_cvss >= 8.5 or (llm_cvss >= 7.5 and cia_hhh and not has_contained)
-            ):
-                severity = IMP
-                rules_applied.append("H2:MOD->IMP(cvss>=8.5|7.5+HHH)")
+        # H4: annotation — block H7 for moderate-range CVSS without
+        # local NULL-ptr pattern (approximates daemon CWE-476 gating)
+        is_local_nullptr = "nullptr" in active_features and llm_vector.get(
+            "AV"
+        ) not in ("N", "A")
+        if (
+            severity == MOD
+            and llm_cvss >= 6.0
+            and not kpanic_marked
+            and not is_local_nullptr
+        ):
+            kpanic_marked = True
+            rules_applied.append("H4:kpanic_set")
 
-            # H3: annotation — mark kpanic for moderate-range CVSS (blocks H7)
-            if severity == MOD and (
-                llm_cvss >= 7.5
-                or (
-                    llm_cvss >= 6.5
-                    and cia_hhh
-                    and not kpanic_marked
-                    and not has_contained
-                )
-            ):
-                kpanic_marked = True
-                rules_applied.append("H3:kpanic_set")
+        # H5: LOW or MODERATE -> IMPORTANT when LLM CVSS > 8.5
+        if severity in (MOD, LOW) and llm_cvss > 8.5:
+            severity = IMP
+            rules_applied.append("H5:LOW/MOD->IMP(cvss>8.5)")
 
-            # H4: annotation — block H7 for moderate-range CVSS without
-            # local NULL-ptr pattern (approximates daemon CWE-476 gating)
-            is_local_nullptr = "nullptr" in active_features and llm_vector.get(
-                "AV"
-            ) not in ("N", "A")
-            if (
-                severity == MOD
-                and llm_cvss >= 6.0
-                and not kpanic_marked
-                and not is_local_nullptr
-            ):
-                kpanic_marked = True
-                rules_applied.append("H4:kpanic_set")
+        # H6: LOW -> MODERATE when LLM CVSS indicates meaningful severity
+        if severity == LOW and (
+            (llm_cvss >= 6.7 or (llm_cvss >= 5.5 and cia_hhh)) and not has_contained
+        ):
+            severity = MOD
+            rules_applied.append("H6:LOW->MOD(cvss>=6.7|5.5+HHH)")
 
-            # H5: LOW or MODERATE -> IMPORTANT when LLM CVSS > 8.5
-            if severity in (MOD, LOW) and llm_cvss > 8.5:
-                severity = IMP
-                rules_applied.append("H5:LOW/MOD->IMP(cvss>8.5)")
+        # H7: MODERATE -> LOW when LLM CVSS very low, no kernel_panic,
+        # and kpanic not marked by H3/H4
+        if (
+            severity == MOD
+            and llm_cvss <= 3.9
+            and "kernel_panic" not in active_features
+            and not kpanic_marked
+        ):
+            severity = LOW
+            rules_applied.append("H7:MOD->LOW(cvss<=3.9)")
 
-            # H6: LOW -> MODERATE when LLM CVSS indicates meaningful severity
-            if severity == LOW and (
-                (llm_cvss >= 6.7 or (llm_cvss >= 5.5 and cia_hhh)) and not has_contained
-            ):
-                severity = MOD
-                rules_applied.append("H6:LOW->MOD(cvss>=6.7|5.5+HHH)")
-
-            # H7: MODERATE -> LOW when LLM CVSS very low, no kernel_panic,
-            # and kpanic not marked by H3/H4
-            if (
-                severity == MOD
-                and llm_cvss <= 3.9
-                and "kernel_panic" not in active_features
-                and not kpanic_marked
-            ):
-                severity = LOW
-                rules_applied.append("H7:MOD->LOW(cvss<=3.9)")
-
-            # H8: MODERATE -> LOW for local/low-impact vectors (blocked by KPANIC)
-            if (
-                severity == MOD
-                and llm_cvss < 5.5
-                and av_local
-                and not cia_hhh
-                and "kernel_panic" not in active_features
-                and not kpanic_marked
-            ):
-                c_val = llm_vector.get("C", "")
-                i_val = llm_vector.get("I", "")
-                a_val = llm_vector.get("A", "")
-                if c_val in ("L", "N") and i_val in ("L", "N") and a_val in ("H", "L"):
-                    severity = LOW
-                    rules_applied.append("H8:MOD->LOW(cvss<5.5+local+low)")
-
-            # H9: annotation — unblock H7 path, block H14 (future) for low CVSS
-            if severity == MOD and llm_cvss <= 4.5:
-                kpanic_marked = False
-                decreased = True  # noqa: F841
-                rules_applied.append("H9:decreased_set")
-
-            # H10: annotation — same for local/low-impact vectors
+        # H8: MODERATE -> LOW for local/low-impact vectors (blocked by KPANIC)
+        if (
+            severity == MOD
+            and llm_cvss < 5.5
+            and av_local
+            and not cia_hhh
+            and "kernel_panic" not in active_features
+            and not kpanic_marked
+        ):
             c_val = llm_vector.get("C", "")
             i_val = llm_vector.get("I", "")
             a_val = llm_vector.get("A", "")
-            if (
-                severity == MOD
-                and llm_cvss <= 5.5
-                and av_local
-                and c_val in ("L", "N")
-                and i_val in ("L", "N")
-                and a_val in ("H", "L")
-                and not cia_hhh
-            ):
-                kpanic_marked = False
-                decreased = True  # noqa: F841
-                rules_applied.append("H10:decreased_set")
+            if c_val in ("L", "N") and i_val in ("L", "N") and a_val in ("H", "L"):
+                severity = LOW
+                rules_applied.append("H8:MOD->LOW(cvss<5.5+local+low)")
 
-            # H11: IMPORTANT -> MODERATE when PR:H with moderate CVSS
-            if severity == IMP and llm_cvss < 8.0 and pr_h_only:
-                severity = MOD
-                rules_applied.append("H11:IMP->MOD(cvss<8.0+PR:H)")
+        # H9: annotation — unblock H7 path, block H14 (future) for low CVSS
+        if severity == MOD and llm_cvss <= 4.5:
+            kpanic_marked = False  # noqa: F841
+            decreased = True  # noqa: F841
+            rules_applied.append("H9:decreased_set")
 
-        # --- Guardrails (applied after threshold rules) ---
+        # H10: annotation — same for local/low-impact vectors
+        c_val = llm_vector.get("C", "")
+        i_val = llm_vector.get("I", "")
+        a_val = llm_vector.get("A", "")
+        if (
+            severity == MOD
+            and llm_cvss <= 5.5
+            and av_local
+            and c_val in ("L", "N")
+            and i_val in ("L", "N")
+            and a_val in ("H", "L")
+            and not cia_hhh
+        ):
+            kpanic_marked = False  # noqa: F841
+            decreased = True  # noqa: F841
+            rules_applied.append("H10:decreased_set")
+
+        # H11: IMPORTANT -> MODERATE when PR:H with moderate CVSS
+        if severity == IMP and llm_cvss < 8.0 and pr_h_only:
+            severity = MOD
+            rules_applied.append("H11:IMP->MOD(cvss<8.0+PR:H)")
+
+        return severity, rules_applied, h1_fired
+
+    @staticmethod
+    def _apply_guardrails(
+        severity: int,
+        llm_cvss: float,
+        clf_cvss_score: float,
+        h1_fired: bool,
+        has_corruption: bool,
+        has_network: bool,
+        has_contained: bool,
+    ) -> tuple[int, list[str], str | None]:
+        """Apply post-threshold guardrails G2–G5.
+
+        Returns (severity, guardrails_applied, ext_band).
+        """
+        import math
+
+        SEV = SuggestImpact.SEVERITY_ORDER
+        LABELS = {v: k for k, v in SEV.items()}
+        IMP, MOD = SEV["IMPORTANT"], SEV["MODERATE"]
+
         guardrails_applied: list[str] = []
 
         # G4: LLM band floor for LOW severity.  Al-kernel's thresholds
@@ -389,7 +385,7 @@ class SuggestImpact(Feature):
         # when severity landed at LOW.  For contained subsystems the
         # promotion caps at MODERATE (containment still suppresses
         # escalation above that).
-        if severity == LOW:
+        if severity == SEV["LOW"]:
             llm_band = SuggestImpact._score_to_band(llm_cvss)
             if llm_band and llm_band in SEV:
                 band_rank = SEV[llm_band]
@@ -411,40 +407,10 @@ class SuggestImpact(Feature):
 
         # G5: external CVSS confirmation for H1 de-escalation.
         #
-        # Context — al-kernel uses only 2 signals: NN prediction +
-        # LLM CVSS.  It has no external/NVD CVSS in reconciliation
-        # (spec §"Key architectural principles", principle 4).  When
-        # the LLM underscores a CVE, H1 de-escalates and that's
-        # final.  Al-kernel accepts this because it evaluates each
-        # CVE once and doesn't observe its own non-determinism.
-        #
-        # Aegis has a third signal the daemon lacks: the NVD/OSIDB
-        # CVSS carried in classifier_result["cvss_score"].  This
-        # score is deterministic and independent of the LLM.
-        #
-        # Problem — stability testing (20 iterations) showed that
-        # for certain CVEs the LLM's CVSS swings across a 4+ point
-        # range (e.g. 4.7–8.8), straddling H1's 6.5 threshold.  On
-        # low rolls H1 fires (IMP→MOD) even though the classifier
-        # predicted IMPORTANT and the NVD CVSS is solidly in the
-        # IMPORTANT band (≥ 7.0).  This made evals non-deterministic:
-        # CVE-2025-40248 failed 40% of runs, CVE-2025-38352 35%.
-        #
-        # Fix — when H1 fired and the external CVSS independently
-        # confirms IMPORTANT (band rank < MOD, i.e. IMP or CRIT),
-        # two stable signals (classifier + NVD) outweigh one noisy
-        # signal (LLM CVSS), so we reverse H1's de-escalation.
-        #
-        # Conditions (all must hold):
-        #   1. LLM CVSS was available (not NaN)
-        #   2. H1 actually fired this evaluation (h1_fired flag)
-        #   3. Severity is still MODERATE (no later rule already
-        #      re-escalated or further de-escalated)
-        #   4. External CVSS maps to IMPORTANT or higher band
-        #
-        # This is aegis-specific — it intentionally departs from
-        # al-kernel's single-CVSS-source principle to exploit the
-        # additional signal aegis has access to.
+        # When H1 fired and the external CVSS independently confirms
+        # IMPORTANT (band rank < MOD), two stable signals (classifier +
+        # NVD) outweigh one noisy signal (LLM CVSS), so we reverse H1.
+        # See al-kernel-spec.md for full rationale.
         ext_band = (
             SuggestImpact._score_to_band(clf_cvss_score) if clf_cvss_score else None
         )
@@ -459,21 +425,94 @@ class SuggestImpact(Feature):
             severity = IMP
             guardrails_applied.append(f"ext_cvss_confirms_imp({clf_cvss_score:.1f})")
 
-        final = LABELS.get(severity, clf_impact)
+        return severity, guardrails_applied, ext_band
 
-        trace_parts = [
+    @staticmethod
+    def _build_trace(
+        start_label: str,
+        clf_confidence: float,
+        llm_cvss: float,
+        clf_cvss_score: float,
+        ext_band: str | None,
+        rules_applied: list[str],
+        guardrails_applied: list[str],
+        final: str,
+    ) -> str:
+        """Assemble the reconciliation trace string."""
+        parts = [
             "path=kernel_threshold",
             f"start={start_label}(clf_conf={clf_confidence:.2f})",
             f"llm_cvss={llm_cvss:.1f}",
         ]
         if ext_band:
-            trace_parts.append(f"ext_cvss={clf_cvss_score:.1f}({ext_band})")
+            parts.append(f"ext_cvss={clf_cvss_score:.1f}({ext_band})")
         if rules_applied:
-            trace_parts.append(f"rules=[{', '.join(rules_applied)}]")
+            parts.append(f"rules=[{', '.join(rules_applied)}]")
         if guardrails_applied:
-            trace_parts.append(f"guardrails=[{', '.join(guardrails_applied)}]")
-        trace_parts.append(f"result={final}")
-        trace = "; ".join(trace_parts)
+            parts.append(f"guardrails=[{', '.join(guardrails_applied)}]")
+        parts.append(f"result={final}")
+        return "; ".join(parts)
+
+    @staticmethod
+    def _reconcile_kernel(output, call_str, classifier_result: dict) -> str:
+        """Threshold-based reconciliation for kernel CVEs (al-kernel port).
+
+        The classifier's cascade-adjusted prediction is the starting
+        severity.  The LLM's own CVSS score drives bidirectional
+        adjustments through deterministic threshold rules (H1–H11).
+        Classifier confidence is logged but does not affect the outcome.
+        """
+        from aegis_ai.kernel_classifier.cascade import parse_cvss_vector
+
+        SEV = SuggestImpact.SEVERITY_ORDER
+        LABELS = {v: k for k, v in SEV.items()}
+        MOD = SEV["MODERATE"]
+
+        try:
+            llm_cvss = float(output.cvss3_score)
+        except (ValueError, TypeError):
+            llm_cvss = float("nan")
+
+        llm_vector = parse_cvss_vector(output.cvss3_vector or "")
+
+        clf_impact = classifier_result.get("impact")
+        clf_confidence = classifier_result.get("confidence", 0.0) or 0.0
+        clf_cvss_score = classifier_result.get("cvss_score", 0.0) or 0.0
+        active_features: set[str] = set(classifier_result.get("active_features", []))
+
+        severity = SEV[clf_impact] if clf_impact and clf_impact in SEV else MOD
+        start_label = LABELS.get(severity, clf_impact)
+
+        has_contained = bool(active_features & SuggestImpact._CONTAINED_SUBSYSTEM_FLAGS)
+        has_corruption = bool(active_features & SuggestImpact._MEMORY_CORRUPTION_FLAGS)
+        has_network = bool(active_features & SuggestImpact._NETWORK_EXPOSURE_FLAGS)
+
+        severity, rules_applied, h1_fired = SuggestImpact._apply_threshold_rules(
+            severity, llm_cvss, llm_vector, active_features, has_contained
+        )
+
+        severity, guardrails_applied, ext_band = SuggestImpact._apply_guardrails(
+            severity,
+            llm_cvss,
+            clf_cvss_score,
+            h1_fired,
+            has_corruption,
+            has_network,
+            has_contained,
+        )
+
+        final = LABELS.get(severity, clf_impact)
+
+        trace = SuggestImpact._build_trace(
+            start_label,
+            clf_confidence,
+            llm_cvss,
+            clf_cvss_score,
+            ext_band,
+            rules_applied,
+            guardrails_applied,
+            final,
+        )
 
         if final != output.impact:
             logger.info(
