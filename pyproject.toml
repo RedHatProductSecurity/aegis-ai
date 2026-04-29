@@ -91,6 +91,9 @@ filterwarnings = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegis_ai","src/aegis_ai_cli","src/aegis_ai_web","src/aegis_ai_ml"]
+exclude = [
+    "src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/data/linux_security_vulns",
+]
 [tool.hatch.metadata]
 allow-direct-references = true
 

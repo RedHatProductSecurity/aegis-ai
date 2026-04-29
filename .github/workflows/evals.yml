@@ -77,7 +77,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies (dev group)
-        run: uv sync --group dev
+        run: uv sync --group dev --extra classifier_deps
 
       - name: Run evaluation suite
         run: make eval
