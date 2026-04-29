@@ -83,6 +83,7 @@ class SuggestImpactModel(AegisFeatureModel):
 
     deescalation_rationale: Optional[str] = Field(
         default=None,
+        exclude=True,
         description=(
             "If you are rating impact LOWER than the standard CVSS band would suggest, "
             "explain the Red Hat policy justification here (e.g., 'AV:L + C:N/I:N + "
@@ -93,6 +94,7 @@ class SuggestImpactModel(AegisFeatureModel):
 
     classifier_disagreement_rationale: Optional[str] = Field(
         default=None,
+        exclude=True,
         description=(
             "If the kernel_impact_tool predicted a DIFFERENT severity than your "
             "assessment, explain why you disagree (e.g., 'classifier predicted "

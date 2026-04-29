@@ -17,6 +17,7 @@ from aegis_ai.features.cve.data_models import (
 from aegis_ai.features.cve.data_models import CVEFeatureInput
 from aegis_ai.features.data_models import feature_deps
 
+from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
 import aegis_ai.toolsets.tools.osidb as osidb_tool
@@ -600,15 +601,15 @@ class SuggestImpact(Feature):
                 resolved_static_context = cve_data.model_dump()
                 use_static = True
 
-            is_kernel = any(
-                str(component).lower() == "kernel" for component in components
-            )
+            is_kernel = is_kernel_component(components)
 
         deps = feature_deps(
             exclude_osidb_fields=["impact", "rh_cvss_score"],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
         )
+        if is_kernel:
+            deps._is_kernel_cve = True
         output_schema = SuggestImpactModel.model_json_schema()
         if not is_kernel:
             output_schema.get("properties", {}).pop(

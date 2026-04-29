@@ -37,7 +37,7 @@ from aegis_ai.kernel_classifier.html import extract_html_features
 
 logger = logging.getLogger(__name__)
 
-KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel"}
+KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel", "linux_kernel"}
 
 CVSS_ISSUER_PRIORITY = ["NIST", "RH", "CVEORG", "OSV", "CISA"]
 

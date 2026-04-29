@@ -12,6 +12,7 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from aegis_ai import get_env_flag
 from aegis_ai.data_models import CVEID, cveid_validator
+from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import BaseToolOutput, BaseToolInput
 from aegis_ai.toolsets.tools.osidb.osidb_client import (
