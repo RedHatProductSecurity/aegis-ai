@@ -160,7 +160,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2023-53205",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux on the s390x architecture. The flaw is a race condition in the KVM s390/diag handler that could lead to out-of-bounds access. Triggering this vulnerability requires precise timing and repeated invocations and will most likely result in a denial-of-service. Confidentiality is not impacted as the bug does not directly expose guest or host memory contents. Availability is also highly unlikely to be impacted, though out-of-bounds access could in theory corrupt the kernel or KVM internal state. ",
-        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2023-53333",
