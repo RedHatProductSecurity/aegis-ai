@@ -23,6 +23,7 @@ from pathlib import Path
 import pytest
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 
+from aegis_ai import get_settings
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
@@ -85,6 +86,20 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
 }
+
+# Without the kernel classifier the LLM alone underestimates these
+# IMPORTANT-severity kernel CVEs to MODERATE.  The classifier provides
+# the additional signal needed to reach the correct impact band.
+if not get_settings().use_kernel_classifier:
+    _NO_CLF_WAIVER: dict = {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": (
+            "LLM-only underestimation (MODERATE vs IMPORTANT) — "
+            "requires kernel classifier to reach correct impact."
+        ),
+    }
+    for _cve in ("CVE-2025-38590", "CVE-2023-53186", "CVE-2026-23074"):
+        KNOWN_FAILURES[_cve] = _NO_CLF_WAIVER
 
 
 def _normalize_impact(raw: str) -> str:

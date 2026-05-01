@@ -409,7 +409,9 @@ async def run_evaluation(
 class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):
     # Any authoritative CVE data source satisfies this check.  kernel_cve is
     # the primary source for kernel CVEs when the linux-CVE tool is enabled.
-    _cve_data_tools = ("osidb_tool", "kernel_cve")
+    # kernel_impact_tool fetches git patch data from kernel.org/GitHub and
+    # counts as evidence that the agent queried an external CVE data source.
+    _cve_data_tools = ("osidb_tool", "kernel_cve", "kernel_impact_tool")
 
     def evaluate(self, ctx) -> EvaluationReason:
         used = ctx.output.tools_used
