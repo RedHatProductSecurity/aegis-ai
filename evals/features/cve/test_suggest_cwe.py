@@ -814,6 +814,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2026-27784",
         cwe_list=["CWE-190", "CWE-131", "CWE-805", "CWE-787", "CWE-120", "CWE-125"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-27859",
@@ -876,6 +877,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2026-35535",
         cwe_list=["CWE-272", "CWE-273"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-35536",

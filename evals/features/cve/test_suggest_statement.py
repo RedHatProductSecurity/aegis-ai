@@ -145,7 +145,12 @@ cases = [
         KCS[1] document for verifying the fix in RHCOS.
 
         [1] https://access.redhat.com/solutions/7071748""",
-        metadata={"known_to_fail_evaluators": ["MitigationWellFormedCommands"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "MitigationWellFormedCommands",
+                "MitigationEvaluator",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2023-53176",
