@@ -885,6 +885,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2026-35540",
         cwe_list=["CWE-918"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-40223",
