@@ -109,6 +109,7 @@ class SuggestImpact(Feature):
         "danger",
         "write",
         "outofbounds",
+        "memory",
     }
     _NETWORK_EXPOSURE_FLAGS = {"remote", "networking", "servertoclientfail"}
     _RULES_BASE = """
@@ -658,14 +659,76 @@ class SuggestImpact(Feature):
                 output.cvss3_score = f"{floor}"
 
     @staticmethod
+    def _apply_kpanic_cvss_override(
+        output, call_str, classifier_result: dict | None
+    ) -> str | None:
+        """Override CVSS components when kernel_panic is detected or impact
+        is IMPORTANT.
+
+        Forces ``AC:H``, ``S:U``, ``A:H`` to reflect kernel-panic
+        reachability without assuming user-data exposure.  All other
+        metrics (``C``, ``I``, ``PR``, ``AV``, ``UI``) are preserved
+        from the LLM's assessment — the prompt already requires a
+        concrete user-data impact path for ``C:H``/``I:H`` and uses
+        ``PR:H`` when admin-class capabilities are needed.
+
+        Returns a trace fragment when the override fires, or ``None``.
+        """
+        if not classifier_result or not isinstance(classifier_result, dict):
+            return None
+
+        active_features: set[str] = set(classifier_result.get("active_features", []))
+        has_kpanic = "kernel_panic" in active_features
+        is_important = output.impact == "IMPORTANT"
+
+        if output.impact == "CRITICAL":
+            return None
+
+        if not (has_kpanic or is_important):
+            return None
+
+        original_vector = output.cvss3_vector or ""
+        original_score = output.cvss3_score
+
+        parsed = cvss.CVSS3(original_vector)
+        parsed.metrics.update({"AC": "H", "S": "U", "A": "H"})
+        base_keys = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
+        output.cvss3_vector = "CVSS:3.1/" + "/".join(
+            f"{k}:{parsed.metrics[k]}" for k in base_keys
+        )
+        output.cvss3_score = str(cvss.CVSS3(output.cvss3_vector).scores()[0])
+
+        reason = "kernel_panic" if has_kpanic else "important_impact"
+        trace = (
+            f"kpanic_cvss_override({reason},"
+            f" llm_vector={original_vector},"
+            f" llm_score={original_score})"
+        )
+        logger.info(
+            "%s: CVSS overridden to %s (%s) — %s",
+            call_str,
+            output.cvss3_score,
+            output.cvss3_vector,
+            trace,
+        )
+        return trace
+
+    @staticmethod
     def post_process(output, call_str, classifier_result=None):
         SuggestImpact.post_process_cvss(output, call_str)
         pre_reconcile_impact = output.impact
         trace = SuggestImpact.reconcile_severity(
             output, call_str, classifier_result=classifier_result
         )
-        if output.impact != pre_reconcile_impact:
+
+        override_trace = SuggestImpact._apply_kpanic_cvss_override(
+            output, call_str, classifier_result
+        )
+        if override_trace:
+            trace = f"{trace}; {override_trace}"
+        elif output.impact != pre_reconcile_impact:
             SuggestImpact.align_score_to_impact(output, call_str)
+
         return trace
 
     @staticmethod
@@ -700,12 +763,43 @@ class SuggestImpact(Feature):
                 cleaned.append(msg)
         return cleaned
 
+    _CVSS_METRICS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
+
+    @staticmethod
+    def _diff_vector_metrics(
+        old_vector: str, new_vector: str
+    ) -> tuple[list[str], list[str]]:
+        """Compare two CVSS 3.1 vectors and return (changed, unchanged)
+        metric descriptions.
+
+        Returns two lists:
+          changed  – e.g. ["AC changed from L to H", "S changed from C to U"]
+          unchanged – e.g. ["AV", "PR", "UI", "C", "I"]
+        """
+        old = cvss.CVSS3(old_vector).original_metrics or {}
+        new = cvss.CVSS3(new_vector).original_metrics or {}
+        changed: list[str] = []
+        unchanged: list[str] = []
+        for m in SuggestImpact._CVSS_METRICS:
+            ov, nv = old.get(m), new.get(m)
+            if ov != nv and ov is not None and nv is not None:
+                changed.append(f"{m} changed from {ov} to {nv}")
+            else:
+                unchanged.append(m)
+        return changed, unchanged
+
     async def _revise_explanation(
-        self, result, original_score, original_impact, trace, call_str
+        self,
+        result,
+        original_score,
+        original_impact,
+        original_vector,
+        trace,
+        call_str,
     ):
         """Ask the LLM to revise its explanation after post-processing
-        changed the score or impact.  Best-effort: failures are logged
-        and the original explanation is kept."""
+        changed the score, impact, or CVSS vector.  Best-effort: failures
+        are logged and the original explanation is kept."""
         from aegis_ai.features import llm_sem
 
         changes: list[str] = []
@@ -716,10 +810,32 @@ class SuggestImpact(Feature):
                 f"cvss3_score: {original_score} -> {result.output.cvss3_score}"
             )
 
+        metric_changed: list[str] = []
+        metric_unchanged: list[str] = []
+        new_vector = result.output.cvss3_vector or ""
+        if new_vector != original_vector:
+            metric_changed, metric_unchanged = self._diff_vector_metrics(
+                original_vector, new_vector
+            )
+            changes.extend(metric_changed)
+
+        metric_instructions = ""
+        if metric_changed:
+            metric_instructions = (
+                f"\n\nMetrics that changed: {', '.join(metric_changed)}. "
+                "Update ONLY the justifications for these metrics."
+            )
+            if metric_unchanged:
+                metric_instructions += (
+                    f"\nDo NOT modify the justifications for: "
+                    f"{', '.join(metric_unchanged)}."
+                )
+
         follow_up = (
             "Post-processing has adjusted your assessment.\n"
             f"Changes: {'; '.join(changes)}\n"
-            f"Reconciliation trace: {trace}\n\n"
+            f"Reconciliation trace: {trace}\n"
+            f"{metric_instructions}\n\n"
             "Revise your explanation so the rationale is consistent with "
             "the updated score and impact.  Keep the same structure and "
             "level of detail.  Return only the revised explanation text."
@@ -819,6 +935,7 @@ class SuggestImpact(Feature):
         classifier_result = deps.classifier_result
 
         original_score = result.output.cvss3_score
+        original_vector = result.output.cvss3_vector or ""
         original_impact = result.output.impact
 
         trace = SuggestImpact.post_process(
@@ -827,13 +944,17 @@ class SuggestImpact(Feature):
             classifier_result=classifier_result,
         )
 
-        score_changed = result.output.cvss3_score != original_score
         impact_changed = result.output.impact != original_impact
-        if score_changed or impact_changed:
+        vector_changed = result.output.cvss3_vector != original_vector
+        guardrail_fired = (
+            impact_changed or vector_changed or "kpanic_cvss_override" in trace
+        )
+        if guardrail_fired:
             await self._revise_explanation(
                 result,
                 original_score,
                 original_impact,
+                original_vector,
                 trace,
                 call_str,
             )

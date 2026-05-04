@@ -555,8 +555,8 @@ class TestPostProcessBandAlignment:
 
     def test_g3_promotes_and_score_bumped(self):
         """G3 (network + corruption floor) promotes MODERATE -> IMPORTANT.
-        Score 5.5 (MODERATE band) should be bumped to 7.1.
-        _VEC_LOCAL computes to 5.5."""
+        KPANIC override fires for IMPORTANT, patching AC:H/S:U/A:H while
+        preserving the LLM's C, I, and PR. _VEC_LOCAL computes to 5.5."""
         out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
         SuggestImpact.post_process(
             out,
@@ -564,7 +564,8 @@ class TestPostProcessBandAlignment:
             classifier_result=_clf(impact="MODERATE", features=["uaf", "remote"]),
         )
         assert out.impact == "IMPORTANT"
-        assert float(out.cvss3_score) >= 7.1
+        assert out.cvss3_score == "4.7"
+        assert out.cvss3_vector == "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H"
 
     def test_no_align_when_reconciliation_preserves_impact(self):
         """Classifier and LLM both say MODERATE at 5.5. Reconciliation
