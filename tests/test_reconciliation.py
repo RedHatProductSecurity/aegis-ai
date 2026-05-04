@@ -559,7 +559,9 @@ class TestPostProcessBandAlignment:
         _VEC_LOCAL computes to 5.5."""
         out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
         SuggestImpact.post_process(
-            out, "t", classifier_result=_clf(impact="MODERATE", features=["uaf", "remote"])
+            out,
+            "t",
+            classifier_result=_clf(impact="MODERATE", features=["uaf", "remote"]),
         )
         assert out.impact == "IMPORTANT"
         assert float(out.cvss3_score) >= 7.1
@@ -568,9 +570,7 @@ class TestPostProcessBandAlignment:
         """Classifier and LLM both say MODERATE at 5.5. Reconciliation
         doesn't change impact, so align does not fire."""
         out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
-        SuggestImpact.post_process(
-            out, "t", classifier_result=_clf(impact="MODERATE")
-        )
+        SuggestImpact.post_process(out, "t", classifier_result=_clf(impact="MODERATE"))
         assert out.impact == "MODERATE"
         assert out.cvss3_score == "5.5"
 
@@ -578,9 +578,7 @@ class TestPostProcessBandAlignment:
         """H6 promotes LOW -> MODERATE. _VEC_LOCAL computes to 5.5 which
         is already MODERATE band, so no score bump needed."""
         out = _output(impact="LOW", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
-        SuggestImpact.post_process(
-            out, "t", classifier_result=_clf(impact="LOW")
-        )
+        SuggestImpact.post_process(out, "t", classifier_result=_clf(impact="LOW"))
         assert out.impact == "MODERATE"
         assert out.cvss3_score == "5.5"
 

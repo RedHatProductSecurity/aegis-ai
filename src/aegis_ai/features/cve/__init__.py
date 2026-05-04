@@ -7,6 +7,7 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
     CVSSDiffExplainerModel,
+    RevisedExplanationModel,
     SuggestAffectedComponentsModel,
     SuggestImpactModel,
     SuggestCWEModel,
@@ -667,6 +668,83 @@ class SuggestImpact(Feature):
             SuggestImpact.align_score_to_impact(output, call_str)
         return trace
 
+    @staticmethod
+    def _strip_system_parts(
+        messages: list,
+    ) -> list:
+        """Remove SystemPromptPart from message history.
+
+        When replaying history with a different output_type, pydantic-ai
+        injects new instruction-parts as system messages.  The history
+        already contains SystemPromptPart from the original run, which
+        produces duplicate system messages — rejected by backends that
+        allow only one (e.g. vLLM / Mistral).
+        """
+        from pydantic_ai.messages import ModelRequest, SystemPromptPart
+
+        cleaned: list = []
+        for msg in messages:
+            if isinstance(msg, ModelRequest):
+                non_sys = [p for p in msg.parts if not isinstance(p, SystemPromptPart)]
+                if non_sys or not cleaned:
+                    cleaned.append(
+                        ModelRequest(
+                            parts=non_sys,
+                            instructions=None,
+                            timestamp=msg.timestamp,
+                            run_id=msg.run_id,
+                            metadata=msg.metadata,
+                        )
+                    )
+            else:
+                cleaned.append(msg)
+        return cleaned
+
+    async def _revise_explanation(
+        self, result, original_score, original_impact, trace, call_str
+    ):
+        """Ask the LLM to revise its explanation after post-processing
+        changed the score or impact.  Best-effort: failures are logged
+        and the original explanation is kept."""
+        from aegis_ai.features import llm_sem
+
+        changes: list[str] = []
+        if result.output.impact != original_impact:
+            changes.append(f"impact: {original_impact} -> {result.output.impact}")
+        if result.output.cvss3_score != original_score:
+            changes.append(
+                f"cvss3_score: {original_score} -> {result.output.cvss3_score}"
+            )
+
+        follow_up = (
+            "Post-processing has adjusted your assessment.\n"
+            f"Changes: {'; '.join(changes)}\n"
+            f"Reconciliation trace: {trace}\n\n"
+            "Revise your explanation so the rationale is consistent with "
+            "the updated score and impact.  Keep the same structure and "
+            "level of detail.  Return only the revised explanation text."
+        )
+
+        try:
+            history = self._strip_system_parts(result.all_messages())
+            async with llm_sem:
+                revision = await self._run(
+                    call_str,
+                    follow_up,
+                    message_history=history,
+                    output_type=RevisedExplanationModel,
+                )
+            result.output.explanation = revision.output.explanation
+            logger.info(
+                "%s: explanation revised after post-processing adjustments", call_str
+            )
+        except Exception as exc:
+            logger.warning(
+                "%s: failed to revise explanation after post-processing: %s",
+                call_str,
+                exc,
+            )
+
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_kernel_classifier = get_settings().use_kernel_classifier
 
@@ -739,11 +817,26 @@ class SuggestImpact(Feature):
         result = await self.guarded_run(prompt, **run_kwargs)
         call_str = f"{self.__class__.__name__}({cve_id})"
         classifier_result = deps.classifier_result
+
+        original_score = result.output.cvss3_score
+        original_impact = result.output.impact
+
         trace = SuggestImpact.post_process(
             result.output,
             call_str,
             classifier_result=classifier_result,
         )
+
+        score_changed = result.output.cvss3_score != original_score
+        impact_changed = result.output.impact != original_impact
+        if score_changed or impact_changed:
+            await self._revise_explanation(
+                result,
+                original_score,
+                original_impact,
+                trace,
+                call_str,
+            )
 
         result.output._classifier_diagnostics = classifier_result
         result.output._reconciliation_trace = trace

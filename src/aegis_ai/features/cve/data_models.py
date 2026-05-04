@@ -113,6 +113,16 @@ class SuggestImpactModel(AegisFeatureModel):
         return f"{self.impact} {self.cvss3_score} {self.cvss3_vector}"
 
 
+class RevisedExplanationModel(BaseModel):
+    """Lightweight model for the follow-up LLM call that revises the
+    explanation after post-processing adjusted score or impact."""
+
+    explanation: str = Field(
+        ...,
+        description="Revised explanation consistent with the adjusted CVSS score and impact.",
+    )
+
+
 class SuggestCWEModel(AegisFeatureModel):
     """
     Model to suggest CWE-ID of CVE.
