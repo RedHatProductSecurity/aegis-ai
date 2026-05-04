@@ -385,6 +385,7 @@ class SuggestAffectedComponents(Feature):
                 - If the component is from the Python standard library, use 'python' as the component name.
                 - If the component is from the Go ecosystem and not in the standard library, include the namespace (e.g. github.com/containerd/containerd).
                 - If the component is from the Go standard library, use a specific package name and return it first in the components array in addition to the component 'golang'.
+                - For vulnerabilities in Google Chrome, Chromium, or any Chromium sub-component (V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing, etc.), use 'chromium-browser' as the single component name.
                 - Provide a concise explanation of the rationale.
             """,
             rules="""
