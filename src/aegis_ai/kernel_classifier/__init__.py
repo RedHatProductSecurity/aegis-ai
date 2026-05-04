@@ -84,14 +84,15 @@ def _score_to_bucket(score: float) -> int:
     return len(SCORE_BUCKET_BOUNDARIES)
 
 
-def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float]:
+def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float, str]:
     """Select the best CVSS v3 vector and score from OSIDB-style cvss_scores.
 
     Checks issuers in priority order: NIST > RH > CVEORG > OSV > CISA.
-    Returns (vector_string, score) or ("", 0.0) when unavailable.
+    Returns (vector_string, score, issuer) or ("", 0.0, "") when unavailable.
     """
     best_vector = ""
     best_score = 0.0
+    best_issuer = ""
     best_priority = len(CVSS_ISSUER_PRIORITY) + 1
 
     for entry in cvss_scores:
@@ -106,6 +107,7 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float]:
         if priority < best_priority:
             best_priority = priority
             best_vector = vector
+            best_issuer = issuer
             try:
                 import cvss as cvss_lib
 
@@ -132,7 +134,7 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float]:
                     float(raw) if isinstance(raw, (int, float)) and raw > 0 else 0.0
                 )
 
-    return best_vector, best_score
+    return best_vector, best_score, best_issuer
 
 
 _PATCH_SIZE_LIMIT = 1_000_000
@@ -484,7 +486,7 @@ class KernelImpactClassifier:
 
         self._apply_flag_cascade(patch_features)
 
-        cvss_vector, cvss_score = _select_best_external_cvss3(cvss_scores)
+        cvss_vector, cvss_score, cvss_issuer = _select_best_external_cvss3(cvss_scores)
 
         impact, confidence, probabilities, raw_pred = self._predict(
             patch_features, cvss_score, cvss_vector
@@ -514,6 +516,7 @@ class KernelImpactClassifier:
             "active_features": active,
             "cvss_vector": cvss_vector,
             "cvss_score": cvss_score,
+            "cvss_issuer": cvss_issuer,
             "patches_analyzed": len(patches),
             "patch_summaries": _collect_patches(patches),
         }

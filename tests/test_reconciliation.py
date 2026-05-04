@@ -27,11 +27,14 @@ def _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_BASE):
     )
 
 
-def _clf(impact="MODERATE", confidence=0.8, cvss_score=7.0, features=None):
+def _clf(
+    impact="MODERATE", confidence=0.8, cvss_score=7.0, features=None, cvss_issuer="NIST"
+):
     return {
         "impact": impact,
         "confidence": confidence,
         "cvss_score": cvss_score,
+        "cvss_issuer": cvss_issuer,
         "active_features": features or [],
     }
 
@@ -116,14 +119,14 @@ class TestH6:
 
     def test_blocked_by_contained_low_band(self):
         """H6 blocked by contained subsystem AND LLM band is LOW,
-        so G4 also does not promote."""
+        so G1 also does not promote."""
         out = _output(impact="MODERATE", cvss_score="3.5", cvss_vector=_VEC_BASE)
         SuggestImpact.reconcile_severity(out, "t", _clf(impact="LOW", features=["bpf"]))
         assert out.impact == "LOW"
 
-    def test_contained_moderate_band_promotes_via_g4(self):
+    def test_contained_moderate_band_promotes_via_g1(self):
         """H6 blocked by contained subsystem but LLM band is MODERATE,
-        so G4 promotes LOW -> MODERATE (capped by containment)."""
+        so G1 promotes LOW -> MODERATE (capped by containment)."""
         out = _output(impact="MODERATE", cvss_score="6.7", cvss_vector=_VEC_BASE)
         trace = SuggestImpact.reconcile_severity(
             out, "t", _clf(impact="LOW", features=["bpf"])
@@ -177,8 +180,8 @@ class TestH8:
         assert out.impact == "LOW"
         assert "H8" in trace
 
-    def test_moderate_band_caught_by_g4(self):
-        """H8 fires (MOD->LOW) at CVSS 4.0 but G4 catches it because
+    def test_moderate_band_caught_by_g1(self):
+        """H8 fires (MOD->LOW) at CVSS 4.0 but G1 catches it because
         the LLM band is MODERATE, not LOW."""
         out = _output(
             impact="MODERATE",
@@ -276,10 +279,10 @@ class TestH11:
 
 
 class TestRuleChaining:
-    def test_h1_then_h8_caught_by_g4(self):
-        """H1 de-escalates IMP->MOD, H8 de-escalates MOD->LOW, but G4
+    def test_h1_then_h8_caught_by_g1(self):
+        """H1 de-escalates IMP->MOD, H8 de-escalates MOD->LOW, but G1
         catches it: CVSS 5.0 is MODERATE band, so floor prevents LOW.
-        ext_cvss=5.5 (MODERATE) so G5 does not reverse H1."""
+        ext_cvss=5.5 (MODERATE) so G4 does not reverse H1."""
         vec = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H"
         out = _output(impact="IMPORTANT", cvss_score="5.0", cvss_vector=vec)
         trace = SuggestImpact.reconcile_severity(
@@ -364,16 +367,16 @@ class TestGuardrails:
         assert out.impact == "IMPORTANT"
         assert "network_corruption_floor" in trace
 
-    def test_no_g1_external_cvss_cap(self):
-        """G1 (external CVSS divergence cap) is removed — threshold rules
-        can produce severity that diverges > 1 level from external CVSS."""
+    def test_no_external_cvss_divergence_cap(self):
+        """Threshold rules can produce severity that diverges > 1 level
+        from external CVSS (no cap guardrail exists)."""
         out = _output(impact="MODERATE", cvss_score="9.0", cvss_vector=_VEC_BASE)
         clf = _clf(impact="MODERATE", cvss_score=3.0)
         SuggestImpact.reconcile_severity(out, "t", clf)
         assert out.impact == "IMPORTANT"
 
-    def test_g4_promotes_low_to_moderate_band(self):
-        """G4: severity reaches LOW but LLM band is MODERATE → promote."""
+    def test_g1_promotes_low_to_moderate_band(self):
+        """G1: severity reaches LOW but LLM band is MODERATE → promote."""
         out = _output(
             impact="MODERATE",
             cvss_score="4.5",
@@ -383,14 +386,14 @@ class TestGuardrails:
         assert out.impact == "MODERATE"
         assert "llm_band_floor" in trace
 
-    def test_g4_does_not_fire_at_moderate(self):
-        """G4 only applies when severity is LOW, not MODERATE."""
+    def test_g1_does_not_fire_at_moderate(self):
+        """G1 only applies when severity is LOW, not MODERATE."""
         out = _output(impact="IMPORTANT", cvss_score="7.5", cvss_vector=_VEC_BASE)
         trace = SuggestImpact.reconcile_severity(out, "t", _clf(impact="IMPORTANT"))
         assert "llm_band_floor" not in trace
 
-    def test_g4_contained_caps_at_moderate(self):
-        """G4 with contained subsystem: promotes LOW to MODERATE but not
+    def test_g1_contained_caps_at_moderate(self):
+        """G1 with contained subsystem: promotes LOW to MODERATE but not
         higher, even if LLM band is IMPORTANT."""
         out = _output(impact="MODERATE", cvss_score="7.5", cvss_vector=_VEC_BASE)
         trace = SuggestImpact.reconcile_severity(
@@ -399,9 +402,9 @@ class TestGuardrails:
         assert out.impact == "MODERATE"
         assert "llm_band_floor" in trace
 
-    def test_g5_reverses_h1_when_ext_cvss_confirms(self):
-        """G5: H1 de-escalates IMP->MOD but external CVSS is IMPORTANT,
-        so G5 reverses back to IMPORTANT."""
+    def test_g4_reverses_h1_when_ext_cvss_confirms(self):
+        """G4: H1 de-escalates IMP->MOD but external CVSS is IMPORTANT,
+        so G4 reverses back to IMPORTANT."""
         out = _output(impact="IMPORTANT", cvss_score="5.8", cvss_vector=_VEC_BASE)
         trace = SuggestImpact.reconcile_severity(
             out, "t", _clf(impact="IMPORTANT", cvss_score=7.8)
@@ -410,8 +413,8 @@ class TestGuardrails:
         assert "H1" in trace
         assert "ext_cvss_confirms_imp" in trace
 
-    def test_g5_does_not_fire_when_ext_cvss_moderate(self):
-        """G5 does not fire when external CVSS is also MODERATE."""
+    def test_g4_does_not_fire_when_ext_cvss_moderate(self):
+        """G4 does not fire when external CVSS is also MODERATE."""
         out = _output(impact="IMPORTANT", cvss_score="5.8", cvss_vector=_VEC_BASE)
         trace = SuggestImpact.reconcile_severity(
             out, "t", _clf(impact="IMPORTANT", cvss_score=5.5)
@@ -420,14 +423,25 @@ class TestGuardrails:
         assert "H1" in trace
         assert "ext_cvss_confirms_imp" not in trace
 
-    def test_g5_does_not_fire_without_h1(self):
-        """G5 only applies when H1 fired, not other de-escalations."""
+    def test_g4_does_not_fire_without_h1(self):
+        """G4 only applies when H1 fired, not other de-escalations."""
         out = _output(impact="IMPORTANT", cvss_score="7.5", cvss_vector=_VEC_PR_H)
         trace = SuggestImpact.reconcile_severity(
             out, "t", _clf(impact="IMPORTANT", cvss_score=7.8)
         )
         assert out.impact == "MODERATE"
         assert "H11" in trace
+        assert "ext_cvss_confirms_imp" not in trace
+
+    def test_g4_skips_when_rh_issuer(self):
+        """G4 does not fire when the CVSS issuer is RH — the score may
+        originate from a prior Aegis/LLM run and is not independent."""
+        out = _output(impact="IMPORTANT", cvss_score="5.8", cvss_vector=_VEC_BASE)
+        trace = SuggestImpact.reconcile_severity(
+            out, "t", _clf(impact="IMPORTANT", cvss_score=7.8, cvss_issuer="RH")
+        )
+        assert out.impact == "MODERATE"
+        assert "H1" in trace
         assert "ext_cvss_confirms_imp" not in trace
 
 
@@ -483,3 +497,97 @@ class TestEdgeCases:
         trace = SuggestImpact.reconcile_severity(out, "t", clf)
         assert out.impact is not None
         assert "H1" in trace
+
+
+# ── Score-to-impact band alignment ───────────────────────────────────
+
+
+class TestAlignScoreToImpact:
+    """align_score_to_impact bumps the CVSS score to the band floor when
+    reconciliation moved impact above the score's natural band."""
+
+    def test_bumps_score_moderate_to_important(self):
+        """Impact promoted to IMPORTANT but score is in MODERATE band."""
+        out = SimpleNamespace(impact="IMPORTANT", cvss3_score="5.5")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert float(out.cvss3_score) == 7.1
+
+    def test_bumps_score_low_to_moderate(self):
+        """Impact promoted to MODERATE but score is in LOW band."""
+        out = SimpleNamespace(impact="MODERATE", cvss3_score="2.3")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert float(out.cvss3_score) == 4.0
+
+    def test_bumps_score_low_to_important(self):
+        """Impact promoted to IMPORTANT but score is in LOW band."""
+        out = SimpleNamespace(impact="IMPORTANT", cvss3_score="3.5")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert float(out.cvss3_score) == 7.1
+
+    def test_bumps_score_to_critical(self):
+        """Impact set to CRITICAL but score is in IMPORTANT band."""
+        out = SimpleNamespace(impact="CRITICAL", cvss3_score="8.0")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert float(out.cvss3_score) == 9.1
+
+    def test_no_change_when_already_in_band(self):
+        """Score already matches the impact band — no adjustment."""
+        out = SimpleNamespace(impact="MODERATE", cvss3_score="5.5")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert out.cvss3_score == "5.5"
+
+    def test_no_change_when_impact_less_severe(self):
+        """Impact is less severe than score band — align only bumps up."""
+        out = SimpleNamespace(impact="LOW", cvss3_score="5.5")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert out.cvss3_score == "5.5"
+
+    def test_invalid_score_no_crash(self):
+        """Invalid score string doesn't crash."""
+        out = SimpleNamespace(impact="MODERATE", cvss3_score="bad")
+        SuggestImpact.align_score_to_impact(out, "t")
+        assert out.cvss3_score == "bad"
+
+
+class TestPostProcessBandAlignment:
+    """Integration: align_score_to_impact fires through post_process only
+    when reconciliation changed the impact."""
+
+    def test_g3_promotes_and_score_bumped(self):
+        """G3 (network + corruption floor) promotes MODERATE -> IMPORTANT.
+        Score 5.5 (MODERATE band) should be bumped to 7.1.
+        _VEC_LOCAL computes to 5.5."""
+        out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
+        SuggestImpact.post_process(
+            out, "t", classifier_result=_clf(impact="MODERATE", features=["uaf", "remote"])
+        )
+        assert out.impact == "IMPORTANT"
+        assert float(out.cvss3_score) >= 7.1
+
+    def test_no_align_when_reconciliation_preserves_impact(self):
+        """Classifier and LLM both say MODERATE at 5.5. Reconciliation
+        doesn't change impact, so align does not fire."""
+        out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
+        SuggestImpact.post_process(
+            out, "t", classifier_result=_clf(impact="MODERATE")
+        )
+        assert out.impact == "MODERATE"
+        assert out.cvss3_score == "5.5"
+
+    def test_h6_promotes_low_to_moderate_score_in_band(self):
+        """H6 promotes LOW -> MODERATE. _VEC_LOCAL computes to 5.5 which
+        is already MODERATE band, so no score bump needed."""
+        out = _output(impact="LOW", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
+        SuggestImpact.post_process(
+            out, "t", classifier_result=_clf(impact="LOW")
+        )
+        assert out.impact == "MODERATE"
+        assert out.cvss3_score == "5.5"
+
+    def test_non_kernel_consistent_no_change(self):
+        """Non-kernel with consistent LLM output — nothing changes.
+        _VEC_LOCAL computes to 5.5 (MODERATE band)."""
+        out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
+        SuggestImpact.post_process(out, "t")
+        assert out.impact == "MODERATE"
+        assert out.cvss3_score == "5.5"

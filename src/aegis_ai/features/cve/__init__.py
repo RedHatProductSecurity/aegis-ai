@@ -358,12 +358,13 @@ class SuggestImpact(Feature):
         severity: int,
         llm_cvss: float,
         clf_cvss_score: float,
+        clf_cvss_issuer: str,
         h1_fired: bool,
         has_corruption: bool,
         has_network: bool,
         has_contained: bool,
     ) -> tuple[int, list[str], str | None]:
-        """Apply post-threshold guardrails G2–G5.
+        """Apply post-threshold guardrails G1–G4.
 
         Returns (severity, guardrails_applied, ext_band).
         """
@@ -375,7 +376,7 @@ class SuggestImpact(Feature):
 
         guardrails_applied: list[str] = []
 
-        # G4: LLM band floor for LOW severity.  Al-kernel's thresholds
+        # G1: LLM band floor for LOW severity.  Al-kernel's thresholds
         # assume the NN starting point is close to the final answer, so
         # small CVSS-based adjustments work.  Aegis's XGBoost cascade
         # can produce a starting severity that diverges from the LLM by
@@ -393,24 +394,27 @@ class SuggestImpact(Feature):
                     band_rank = max(band_rank, MOD)
                 if severity > band_rank:
                     severity = band_rank
-                    guardrails_applied.append(f"llm_band_floor({LABELS[band_rank]})")
+                    guardrails_applied.append(
+                        f"G1: llm_band_floor({LABELS[band_rank]})"
+                    )
 
         # G2: memory corruption floor
         if has_corruption and severity > MOD:
             severity = MOD
-            guardrails_applied.append("memory_corruption_floor(MODERATE)")
+            guardrails_applied.append("G2: memory_corruption_floor(MODERATE)")
 
         # G3: network + corruption floor
         if has_corruption and has_network and severity > IMP:
             severity = IMP
-            guardrails_applied.append("network_corruption_floor(IMPORTANT)")
+            guardrails_applied.append("G3: network_corruption_floor(IMPORTANT)")
 
-        # G5: external CVSS confirmation for H1 de-escalation.
+        # G4: external CVSS confirmation for H1 de-escalation.
         #
-        # When H1 fired and the external CVSS independently confirms
+        # When H1 fired and an *independent* external CVSS confirms
         # IMPORTANT (band rank < MOD), two stable signals (classifier +
         # NVD) outweigh one noisy signal (LLM CVSS), so we reverse H1.
-        # See al-kernel-spec.md for full rationale.
+        # RH-issued scores are excluded: they may originate from a prior
+        # Aegis/LLM run, so treating them as independent would be circular.
         ext_band = (
             SuggestImpact._score_to_band(clf_cvss_score) if clf_cvss_score else None
         )
@@ -418,6 +422,7 @@ class SuggestImpact(Feature):
             not math.isnan(llm_cvss)
             and h1_fired
             and severity == MOD
+            and clf_cvss_issuer != "RH"
             and ext_band
             and ext_band in SEV
             and SEV[ext_band] < MOD
@@ -433,6 +438,7 @@ class SuggestImpact(Feature):
         clf_confidence: float,
         llm_cvss: float,
         clf_cvss_score: float,
+        clf_cvss_issuer: str,
         ext_band: str | None,
         rules_applied: list[str],
         guardrails_applied: list[str],
@@ -445,7 +451,8 @@ class SuggestImpact(Feature):
             f"llm_cvss={llm_cvss:.1f}",
         ]
         if ext_band:
-            parts.append(f"ext_cvss={clf_cvss_score:.1f}({ext_band})")
+            issuer_tag = f",{clf_cvss_issuer}" if clf_cvss_issuer else ""
+            parts.append(f"ext_cvss={clf_cvss_score:.1f}({ext_band}{issuer_tag})")
         if rules_applied:
             parts.append(f"rules=[{', '.join(rules_applied)}]")
         if guardrails_applied:
@@ -478,6 +485,7 @@ class SuggestImpact(Feature):
         clf_impact = classifier_result.get("impact")
         clf_confidence = classifier_result.get("confidence", 0.0) or 0.0
         clf_cvss_score = classifier_result.get("cvss_score", 0.0) or 0.0
+        clf_cvss_issuer = classifier_result.get("cvss_issuer", "") or ""
         active_features: set[str] = set(classifier_result.get("active_features", []))
 
         severity = SEV[clf_impact] if clf_impact and clf_impact in SEV else MOD
@@ -495,6 +503,7 @@ class SuggestImpact(Feature):
             severity,
             llm_cvss,
             clf_cvss_score,
+            clf_cvss_issuer,
             h1_fired,
             has_corruption,
             has_network,
@@ -508,6 +517,7 @@ class SuggestImpact(Feature):
             clf_confidence,
             llm_cvss,
             clf_cvss_score,
+            clf_cvss_issuer,
             ext_band,
             rules_applied,
             guardrails_applied,
@@ -603,12 +613,59 @@ class SuggestImpact(Feature):
         output.impact = final
         return trace
 
+    _BAND_SCORE_FLOOR: dict[str, float] = {
+        "CRITICAL": 9.1,
+        "IMPORTANT": 7.1,
+        "MODERATE": 4.0,
+        "LOW": 0.1,
+    }
+
+    @staticmethod
+    def align_score_to_impact(output, call_str) -> None:
+        """Bump CVSS score to the band floor when reconciliation moved
+        impact above the score's natural band.
+
+        Only called when reconciliation actually changed the impact, so
+        LLM-originated mismatches that reconciliation left alone are not
+        touched here.
+        """
+        try:
+            score = float(output.cvss3_score)
+        except (ValueError, TypeError):
+            return
+
+        band = SuggestImpact._score_to_band(score)
+        if band is None or band == output.impact:
+            return
+
+        sev = SuggestImpact.SEVERITY_ORDER
+        impact_rank = sev.get(output.impact, 99)
+        band_rank = sev.get(band, 99)
+
+        if impact_rank < band_rank:
+            floor = SuggestImpact._BAND_SCORE_FLOOR.get(output.impact)
+            if floor is not None:
+                logger.info(
+                    "%s: bumping cvss3_score %.1f -> %.1f to align with "
+                    "reconciled impact %s (was band %s)",
+                    call_str,
+                    score,
+                    floor,
+                    output.impact,
+                    band,
+                )
+                output.cvss3_score = f"{floor}"
+
     @staticmethod
     def post_process(output, call_str, classifier_result=None):
         SuggestImpact.post_process_cvss(output, call_str)
-        return SuggestImpact.reconcile_severity(
+        pre_reconcile_impact = output.impact
+        trace = SuggestImpact.reconcile_severity(
             output, call_str, classifier_result=classifier_result
         )
+        if output.impact != pre_reconcile_impact:
+            SuggestImpact.align_score_to_impact(output, call_str)
+        return trace
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_kernel_classifier = get_settings().use_kernel_classifier
