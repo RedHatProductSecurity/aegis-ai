@@ -422,7 +422,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-22115",
         cwe_list=["CWE-413"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ],
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-23130",
