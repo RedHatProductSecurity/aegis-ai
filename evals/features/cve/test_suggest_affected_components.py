@@ -45,6 +45,7 @@ SAMPLE_SEED = int(
 DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2006-10002",
     "CVE-2025-3416",
+    "CVE-2025-42611",
     "CVE-2025-5991",
     "CVE-2025-6052",
     "CVE-2025-11233",
