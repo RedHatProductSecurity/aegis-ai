@@ -364,6 +364,7 @@ cases = [
         cve_id="CVE-2025-39677",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:H",
     ),
+    # Also present in the kernel eval suite (eval-kernel-cves.csv)
     SuggestImpactCase(
         cve_id="CVE-2025-39754",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
