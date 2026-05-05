@@ -134,6 +134,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-64329",  # Aegis occasionally suggests 'containerd' while 'github.com/containerd/containerd' is expected
     "CVE-2025-6052",  # got ['glib2'], expected ['glib']
+    "CVE-2026-1484",  # got ['glib2'], expected ['Glib']
     "CVE-2026-22815",  # got ['python-aiohttp'], expected ['aiohttp']
     "CVE-2026-26962",  # got ['rubygem-rack'], expected ['rack']
     "CVE-2026-34073",  # got ['cryptography'], expected ['python-cryptography']
