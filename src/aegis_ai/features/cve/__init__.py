@@ -428,8 +428,6 @@ class SuggestImpact(Feature):
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
         )
-        if is_kernel:
-            deps._is_kernel_cve = True
         output_schema = SuggestImpactModel.model_json_schema()
         if not is_kernel:
             output_schema.get("properties", {}).pop(
