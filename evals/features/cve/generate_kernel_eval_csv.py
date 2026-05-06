@@ -88,8 +88,39 @@ def _query_osidb(cve_id: str) -> dict | None:
         return None
 
 
-def _fetch_flaw(cve_id: str, *, use_cache: bool = True) -> dict | None:
-    """Fetch flaw data: cache first, then live OSIDB."""
+def _refresh_osidb_cache(cve_id: str) -> dict | None:
+    """Fetch from live OSIDB via cve_retrieve and overwrite the cache file.
+
+    Uses the same CVE model + serialisation path as osidb_cache_retrieve
+    so the on-disk schema stays consistent.
+    """
+    import asyncio
+
+    from aegis_ai.toolsets.tools.osidb import cve_retrieve  # noqa: E402
+
+    try:
+        cve_data = asyncio.run(cve_retrieve(cve_id))
+    except Exception as exc:
+        log.warning("cve_retrieve failed for %s: %s", cve_id, exc)
+        return None
+
+    from evals.utils.osidb_cache import write_cache_entry  # noqa: E402
+
+    write_cache_entry(cve_id, cve_data)
+    log.info("  (cache refreshed)")
+    return json.loads(cve_data.model_dump_json())
+
+
+def _fetch_flaw(
+    cve_id: str, *, use_cache: bool = True, refresh_cache: bool = False
+) -> dict | None:
+    """Fetch flaw data: cache first, then live OSIDB.
+
+    When *refresh_cache* is set, always query OSIDB and overwrite the
+    cache file so subsequent runs pick up the fresh data.
+    """
+    if refresh_cache:
+        return _refresh_osidb_cache(cve_id)
     if use_cache:
         cached = read_cache_json(cve_id)
         if cached is not None:
@@ -152,7 +183,13 @@ def _normalize_impact(raw: str) -> str:
     return mapping.get(raw.upper(), raw.title()) if raw else ""
 
 
-def generate(cve_ids: list[str], output: Path, *, use_cache: bool = True) -> None:
+def generate(
+    cve_ids: list[str],
+    output: Path,
+    *,
+    use_cache: bool = True,
+    refresh_cache: bool = False,
+) -> None:
     """Look up OSIDB data for each CVE and write the ground-truth CSV."""
     rows: list[dict[str, str]] = []
     errors = 0
@@ -160,7 +197,7 @@ def generate(cve_ids: list[str], output: Path, *, use_cache: bool = True) -> Non
     for i, cve_id in enumerate(cve_ids, 1):
         log.info("[%d/%d] %s", i, len(cve_ids), cve_id)
 
-        data = _fetch_flaw(cve_id, use_cache=use_cache)
+        data = _fetch_flaw(cve_id, use_cache=use_cache, refresh_cache=refresh_cache)
         if data is None:
             errors += 1
             log.warning("No data for %s: not in cache and live query failed", cve_id)
@@ -240,6 +277,12 @@ def main() -> None:
         action="store_true",
         help="Skip local OSIDB cache, always query OSIDB live (requires Kerberos)",
     )
+    parser.add_argument(
+        "--refresh-cache",
+        action="store_true",
+        help="Re-fetch every CVE from OSIDB and overwrite the local cache "
+        "(requires VPN + Kerberos)",
+    )
     args = parser.parse_args()
 
     if args.cves:
@@ -255,7 +298,12 @@ def main() -> None:
         sys.exit(1)
 
     log.info("Processing %d CVEs -> %s", len(cve_ids), args.output)
-    generate(cve_ids, args.output, use_cache=not args.no_cache)
+    generate(
+        cve_ids,
+        args.output,
+        use_cache=not args.no_cache,
+        refresh_cache=args.refresh_cache,
+    )
 
 
 if __name__ == "__main__":

@@ -34,6 +34,12 @@ clean:
 generate-kernel-eval:
 	uv run python evals/features/cve/generate_kernel_eval_csv.py
 
+refresh-kernel-osidb-cache:
+	uv run python evals/features/cve/generate_kernel_eval_csv.py --refresh-cache
+
+# populate-kernel-caches reads CVE IDs from eval-kernel-cves.csv (output of
+# generate-kernel-eval).  Run prepare-kernel-eval instead of calling this
+# target directly to ensure the CSV is generated first.
 populate-kernel-caches:
 	uv run python evals/utils/populate_kernel_cve_cache.py --from-eval-csv
 
