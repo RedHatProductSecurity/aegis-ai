@@ -693,7 +693,7 @@ spec:
         script: |
           #!/bin/bash -ex
           set -o pipefail
-          dnf install -yq jq
+          dnf install -y jq
           export KUBECONFIG="/var/run/eaas-space/kubeconfig"
 
           # transfer the gemini-key secret to the ephemeral namespace
