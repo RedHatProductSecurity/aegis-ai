@@ -85,6 +85,23 @@ KNOWN_FAILURES: dict[str, dict] = {
             "(predicted NONE vs expected LOW)."
         ),
     },
+    "CVE-2023-54258": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "LLM explanation non-deterministically describes the unmount operation as "
+            "privileged while correctly assigning PR:L in the vector (matching OSIDB "
+            "ground truth). The attacker's contribution is having open files during an "
+            "admin-initiated unmount, which does not require elevated privileges. "
+            "Same pattern as CVE-2025-39718."
+        ),
+    },
+    "CVE-2025-39718": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "LLM explanation inconsistent with its own vector: explanation states C:H/I:L "
+            "but vector has C:L/I:H. Scope/privilege narration does not match the vector."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
