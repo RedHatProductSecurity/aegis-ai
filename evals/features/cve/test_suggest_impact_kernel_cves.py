@@ -121,7 +121,8 @@ if not get_settings().use_kernel_classifier:
 
 def _normalize_impact(raw: str) -> str:
     """'Important' -> 'IMPORTANT', 'Moderate <= 5.5' -> 'MODERATE'"""
-    return raw.strip().split()[0].upper()
+    parts = raw.strip().split()
+    return parts[0].upper() if parts else ""
 
 
 class UnderestimationEvaluator(Evaluator[str, SuggestImpactModel]):
@@ -152,7 +153,7 @@ class UnderestimationEvaluator(Evaluator[str, SuggestImpactModel]):
         return EvaluationReason(value=True)
 
 
-VALID_IMPACTS = {"CRITICAL", "IMPORTANT", "MODERATE", "LOW", "NONE"}
+VALID_IMPACTS = {"CRITICAL", "IMPORTANT", "MODERATE", "LOW", "NONE", ""}
 
 
 def _load_cases() -> list[SuggestImpactCase]:
@@ -178,12 +179,15 @@ def _load_cases() -> list[SuggestImpactCase]:
             except (ValueError, KeyError):
                 expected_cvss = None
 
+            expected_vector = row.get("OSIDB CVSS Vector", "").strip() or None
+
             metadata = KNOWN_FAILURES.get(cve_id)
             cases.append(
                 SuggestImpactCase(
                     cve_id=cve_id,
-                    expected_impact=expected_impact,
+                    expected_impact=expected_impact or None,
                     expected_cvss3_score=expected_cvss,
+                    expected_cvss3_vector=expected_vector,
                     metadata=metadata,
                 )
             )

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Generate eval-kernel-cves.csv from the canonical CVE list and OSIDB.
 
-Reads CVE IDs from kernel_eval_cves.txt, queries OSIDB for each CVE's
-impact and CVSS score, and writes the 3-column CSV that the eval suite
-uses as ground truth.
-
-Requires an active Kerberos ticket (kinit).
+Reads CVE IDs from kernel_eval_cves.txt, looks up each CVE's impact and
+CVSS data from the local OSIDB cache (evals/osidb_cache/) first, falling
+back to a live OSIDB query when the cache misses.
 
 Usage:
     uv run python evals/features/cve/generate_kernel_eval_csv.py
     uv run python evals/features/cve/generate_kernel_eval_csv.py --cves CVE-2025-38590 CVE-2024-53104
+    uv run python evals/features/cve/generate_kernel_eval_csv.py --no-cache
 """
 
 from __future__ import annotations
@@ -30,8 +29,15 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 CVE_LIST_PATH = SCRIPT_DIR / "kernel_eval_cves.txt"
 CSV_OUTPUT_PATH = SCRIPT_DIR / "eval-kernel-cves.csv"
+
+# Make evals package importable when running as a standalone script
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from evals.utils.osidb_cache import read_cache_json  # noqa: E402
 
 OSIDB_BASE = "https://osidb.prodsec.redhat.com/osidb/api/v2/flaws"
 
@@ -82,9 +88,23 @@ def _query_osidb(cve_id: str) -> dict | None:
         return None
 
 
-def _pick_cvss_score(cvss_scores: list[dict]) -> float:
-    """Select the best CVSS 3.x base score, preferring RH's assessment."""
-    best_score = 0.0
+def _fetch_flaw(cve_id: str, *, use_cache: bool = True) -> dict | None:
+    """Fetch flaw data: cache first, then live OSIDB."""
+    if use_cache:
+        cached = read_cache_json(cve_id)
+        if cached is not None:
+            log.info("  (cache hit)")
+            return cached
+    return _query_osidb(cve_id)
+
+
+def _pick_best_cvss3(cvss_scores: list[dict]) -> tuple[float | None, str]:
+    """Select the best CVSS 3.x score and vector, preferring RH's assessment.
+
+    Returns (score, vector) where score is None and vector "" if unavailable.
+    """
+    best_score: float | None = None
+    best_vector = ""
     best_priority = len(CVSS_ISSUER_PRIORITY) + 1
 
     for entry in cvss_scores:
@@ -104,6 +124,7 @@ def _pick_cvss_score(cvss_scores: list[dict]) -> float:
         score = entry.get("score")
         if score is not None:
             best_score = float(score)
+            best_vector = vector
             best_priority = priority
             continue
 
@@ -111,11 +132,12 @@ def _pick_cvss_score(cvss_scores: list[dict]) -> float:
             import cvss as cvss_lib
 
             best_score = cvss_lib.CVSS3(vector).scores()[0]
+            best_vector = vector
             best_priority = priority
         except Exception:
             pass
 
-    return best_score
+    return best_score, best_vector
 
 
 def _normalize_impact(raw: str) -> str:
@@ -130,41 +152,52 @@ def _normalize_impact(raw: str) -> str:
     return mapping.get(raw.upper(), raw.title()) if raw else ""
 
 
-def generate(cve_ids: list[str], output: Path) -> None:
-    """Query OSIDB for each CVE and write the ground-truth CSV."""
+def generate(cve_ids: list[str], output: Path, *, use_cache: bool = True) -> None:
+    """Look up OSIDB data for each CVE and write the ground-truth CSV."""
     rows: list[dict[str, str]] = []
     errors = 0
 
     for i, cve_id in enumerate(cve_ids, 1):
         log.info("[%d/%d] %s", i, len(cve_ids), cve_id)
 
-        data = _query_osidb(cve_id)
+        data = _fetch_flaw(cve_id, use_cache=use_cache)
         if data is None:
             errors += 1
-            rows.append({"CVE": cve_id, "OSIDB Impact": "ERROR", "OSIDB CVSS": ""})
+            log.warning("No data for %s: not in cache and live query failed", cve_id)
+            rows.append(
+                {
+                    "CVE": cve_id,
+                    "OSIDB Impact": "ERROR",
+                    "OSIDB CVSS": "",
+                    "OSIDB CVSS Vector": "",
+                }
+            )
             continue
 
         impact = _normalize_impact(data.get("impact", ""))
-        cvss_score = _pick_cvss_score(data.get("cvss_scores", []))
+        cvss_score, cvss_vector = _pick_best_cvss3(data.get("cvss_scores", []))
 
         rows.append(
             {
                 "CVE": cve_id,
                 "OSIDB Impact": impact,
-                "OSIDB CVSS": str(round(cvss_score, 1)) if cvss_score else "",
+                "OSIDB CVSS": str(round(cvss_score, 1))
+                if cvss_score is not None
+                else "",
+                "OSIDB CVSS Vector": cvss_vector,
             }
         )
 
         if i % 10 == 0:
             time.sleep(0.1)
 
-    fieldnames = ["CVE", "OSIDB Impact", "OSIDB CVSS"]
+    fieldnames = ["CVE", "OSIDB Impact", "OSIDB CVSS", "OSIDB CVSS Vector"]
     ok = len(cve_ids) - errors
 
     if ok == 0 and output.exists():
         log.error(
-            "All %d OSIDB queries failed — refusing to overwrite %s with error-only data. "
-            "Is OSIDB reachable? (Requires Kerberos: kinit)",
+            "All %d lookups failed — refusing to overwrite %s with error-only data. "
+            "Are the CVEs in evals/osidb_cache/? For live queries: VPN + kinit.",
             errors,
             output,
         )
@@ -202,6 +235,11 @@ def main() -> None:
         default=CSV_OUTPUT_PATH,
         help=f"Output CSV path (default: {CSV_OUTPUT_PATH.name})",
     )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Skip local OSIDB cache, always query OSIDB live (requires Kerberos)",
+    )
     args = parser.parse_args()
 
     if args.cves:
@@ -217,7 +255,7 @@ def main() -> None:
         sys.exit(1)
 
     log.info("Processing %d CVEs -> %s", len(cve_ids), args.output)
-    generate(cve_ids, args.output)
+    generate(cve_ids, args.output, use_cache=not args.no_cache)
 
 
 if __name__ == "__main__":
