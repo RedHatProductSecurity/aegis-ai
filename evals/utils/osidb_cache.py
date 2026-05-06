@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from aegis_ai.toolsets.tools.osidb import CVE, CVEID, cve_retrieve
 
@@ -14,6 +16,15 @@ OSIDB_CACHE_DIR = os.getenv("OSIDB_CACHE_DIR", "evals/osidb_cache")
 # Note that cache hits (which is the most common case) are handle very quickly.
 # So there is no need to implement any per-file locking for the OSIDB cache.
 cache_lock = asyncio.Lock()
+
+
+def read_cache_json(cve_id: str) -> dict[str, Any] | None:
+    """Read a CVE's cached JSON as a raw dict, or None on miss/error."""
+    cache_file = Path(OSIDB_CACHE_DIR) / f"{cve_id}.json"
+    try:
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 async def osidb_cache_retrieve(cve_id: CVEID) -> CVE:

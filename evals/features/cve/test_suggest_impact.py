@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from typing import get_args
 
 import cvss
@@ -20,7 +18,7 @@ from evals.features.common import (
     reflect_confidence,
     run_evaluation,
 )
-from evals.utils.osidb_cache import OSIDB_CACHE_DIR
+from evals.utils.osidb_cache import read_cache_json
 
 
 # dict to convert "IMPORTANT" to 8.0 etc
@@ -240,12 +238,8 @@ class SuggestImpactCase(Case):
             field_evaluators[f] for f in field_evaluators if getattr(expected_output, f)
         )
 
-        cache_file = Path(OSIDB_CACHE_DIR) / f"{cve_id}.json"
-        try:
-            data = json.loads(cache_file.read_text())
-            components = data.get("components", [])
-        except (OSError, json.JSONDecodeError):
-            components = []
+        cached = read_cache_json(cve_id)
+        components = cached.get("components", []) if cached else []
 
         if is_kernel_component(components):
             evaluators.append(kernel_scope_judge)
