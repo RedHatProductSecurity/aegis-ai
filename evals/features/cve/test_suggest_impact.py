@@ -1,7 +1,9 @@
+import json
+from pathlib import Path
+from typing import get_args
+
 import cvss
 import pytest
-
-from typing import get_args
 
 from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
@@ -9,6 +11,7 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorCont
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
+from aegis_ai.kernel_classifier import is_kernel_component
 
 from evals.features.common import (
     common_feature_evals,
@@ -17,6 +20,7 @@ from evals.features.common import (
     reflect_confidence,
     run_evaluation,
 )
+from evals.utils.osidb_cache import OSIDB_CACHE_DIR
 
 
 # dict to convert "IMPORTANT" to 8.0 etc
@@ -168,6 +172,18 @@ field_evaluators = {
     "cvss3_vector": CVSSVectorEvaluator(),
 }
 
+kernel_scope_judge = create_llm_judge(
+    assertion_name="CVSSKernelScopeAndPrivileges",
+    rubric=(
+        "For Linux kernel or low-level CVEs, the explanation must justify PR, S, C, and I "
+        "in a way consistent with the vector: use PR:H when admin-class capabilities "
+        "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
+        "unless the described effect crosses a security boundary (e.g. container escape to host); "
+        "do not set C:H/I:H for purely internal kernel state issues without a plausible "
+        "user-data impact path. Fail if the rationale clearly contradicts these rules."
+    ),
+)
+
 
 class SuggestImpactCase(Case):
     def __init__(
@@ -204,15 +220,25 @@ class SuggestImpactCase(Case):
         )
 
         # enable field-specific evaluators for this case
-        evaluators = tuple(
+        evaluators = list(
             field_evaluators[f] for f in field_evaluators if getattr(expected_output, f)
         )
+
+        cache_file = Path(OSIDB_CACHE_DIR) / f"{cve_id}.json"
+        try:
+            data = json.loads(cache_file.read_text())
+            components = data.get("components", [])
+        except (OSError, json.JSONDecodeError):
+            components = []
+
+        if is_kernel_component(components):
+            evaluators.append(kernel_scope_judge)
 
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",
             inputs=cve_id,
             expected_output=expected_output,
-            evaluators=evaluators,
+            evaluators=tuple(evaluators),
             **kwargs,
         )
 
@@ -499,17 +525,6 @@ evals = common_feature_evals + [
     create_llm_judge(
         assertion_name="NoAffectsInExplanation",
         rubric="The 'explanation' output field does not list affected Red Hat products.  Red Hat is not a product.",
-    ),
-    create_llm_judge(
-        assertion_name="CVSSKernelScopeAndPrivileges",
-        rubric=(
-            "For Linux kernel or low-level CVEs, the explanation must justify PR, S, C, and I "
-            "in a way consistent with the vector: use PR:H when admin-class capabilities "
-            "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
-            "unless the described effect crosses a security boundary (e.g. container escape to host); "
-            "do not set C:H/I:H for purely internal kernel state issues without a plausible "
-            "user-data impact path. Fail if the rationale clearly contradicts these rules."
-        ),
     ),
 ]
 

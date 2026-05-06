@@ -375,9 +375,22 @@ class SuggestImpact(Feature):
             f"Reconciliation trace: {trace}\n"
             f"{metric_instructions}\n\n"
             "Revise your explanation so the rationale is consistent with "
-            "the updated score and impact.  Keep the same structure and "
+            "the updated score and impact.  Rewrite the affected sentences "
+            "in place — do NOT append a note, disclaimer, or separate "
+            "paragraph about the override.  The result must read as a "
+            "single coherent explanation.  Keep the same structure and "
             "level of detail.  Return only the revised explanation text."
         )
+
+        override_note = ""
+        new_vector = result.output.cvss3_vector or ""
+        if new_vector != original_vector:
+            override_note = (
+                f"\n\nNote: CVSS vector adjusted from "
+                f"{original_score} ({original_vector}) to "
+                f"{result.output.cvss3_score} ({new_vector})"
+                f" during post-processing reconciliation."
+            )
 
         try:
             history = self._strip_system_parts(result.all_messages())
@@ -388,7 +401,7 @@ class SuggestImpact(Feature):
                     message_history=history,
                     output_type=RevisedExplanationModel,
                 )
-            result.output.explanation = revision.output.explanation
+            result.output.explanation = revision.output.explanation + override_note
             logger.info(
                 "%s: explanation revised after post-processing adjustments", call_str
             )
