@@ -487,6 +487,10 @@ class SuggestImpact(Feature):
         original_vector = result.output.cvss3_vector or ""
         original_impact = result.output.impact
 
+        result.output._original_llm_impact = original_impact
+        result.output._original_llm_score = original_score
+        result.output._original_llm_vector = original_vector
+
         trace = SuggestImpact.post_process(
             result.output,
             call_str,
@@ -507,6 +511,7 @@ class SuggestImpact(Feature):
                 trace,
                 call_str,
             )
+            result.output._explanation_revised = True
 
         result.output._classifier_diagnostics = classifier_result
         result.output._reconciliation_trace = trace

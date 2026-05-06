@@ -107,6 +107,10 @@ class SuggestImpactModel(AegisFeatureModel):
     _classifier_diagnostics: Optional[Dict[str, Any]] = PrivateAttr(default=None)
     _reconciliation_trace: Optional[str] = PrivateAttr(default=None)
     _escalation_floor_applied: bool = PrivateAttr(default=False)
+    _original_llm_impact: Optional[str] = PrivateAttr(default=None)
+    _original_llm_score: Optional[str] = PrivateAttr(default=None)
+    _original_llm_vector: Optional[str] = PrivateAttr(default=None)
+    _explanation_revised: bool = PrivateAttr(default=False)
 
     def printable_outcome(self) -> str:
         """override the logging hook to print the resulting suggestion"""
