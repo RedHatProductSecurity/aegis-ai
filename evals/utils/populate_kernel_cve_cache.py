@@ -42,6 +42,15 @@ import httpx
 
 from aegis_ai.kernel_classifier import HTML_COMMIT_URL_TEMPLATES, PATCH_URL_TEMPLATES
 from aegis_ai.toolsets.tools.kernel_cves import LINUXCVEToolResponse, kernel_cve_lookup
+from evals.utils.kernel_cve_context_cache import (
+    CACHE_MISSES_FILE,
+    KERNEL_CVE_CACHE_DIR,
+)
+from evals.utils.kernel_patch_cache import (
+    KERNEL_PATCH_CACHE_DIR,
+    MIN_HTML_SIZE,
+    MIN_PATCH_SIZE,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s  %(levelname)-7s  %(message)s"
@@ -49,11 +58,28 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-CACHE_DIR = SCRIPT_DIR.parent / "kernel_cve_context_cache"
-CACHE_MISSES_FILE = CACHE_DIR / "cache_misses.txt"
-PATCH_CACHE_DIR = SCRIPT_DIR.parent / "kernel_patch_cache"
-PATCH_MISSES_FILE = PATCH_CACHE_DIR / "cache_misses.txt"
+PATCH_MISSES_FILE = KERNEL_PATCH_CACHE_DIR / "cache_misses.txt"
 EVAL_CSV = SCRIPT_DIR.parent / "features" / "cve" / "eval-kernel-cves.csv"
+
+
+class _ArtifactConfig:
+    __slots__ = ("subdir", "ext", "url_templates", "min_size")
+
+    def __init__(
+        self, subdir: str, ext: str, url_templates: list[str], min_size: int
+    ) -> None:
+        self.subdir = subdir
+        self.ext = ext
+        self.url_templates = url_templates
+        self.min_size = min_size
+
+
+_ARTIFACT_CONFIG: dict[str, _ArtifactConfig] = {
+    "patches": _ArtifactConfig(
+        "patches", ".patch", PATCH_URL_TEMPLATES, MIN_PATCH_SIZE
+    ),
+    "html": _ArtifactConfig("html", ".html", HTML_COMMIT_URL_TEMPLATES, MIN_HTML_SIZE),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +111,7 @@ def _read_eval_csv() -> list[str]:
 
 def _is_cached(cve_id: str) -> bool:
     """Return True if a cache file with non-null metadata exists."""
-    cache_file = CACHE_DIR / f"{cve_id}.json"
+    cache_file = KERNEL_CVE_CACHE_DIR / f"{cve_id}.json"
     if not cache_file.exists():
         return False
     try:
@@ -117,7 +143,7 @@ def _collect_commit_hashes(cve_ids: list[str]) -> set[str]:
     """Extract 40-char commit hashes from kernel CVE context cache files."""
     hashes: set[str] = set()
     for cve_id in cve_ids:
-        cache_file = CACHE_DIR / f"{cve_id}.json"
+        cache_file = KERNEL_CVE_CACHE_DIR / f"{cve_id}.json"
         if not cache_file.exists():
             continue
         try:
@@ -140,7 +166,7 @@ def _collect_commit_hashes(cve_ids: list[str]) -> set[str]:
 
 async def _populate_cve_context(cve_ids: list[str]) -> None:
     """Perform live lookups and write results to the cache directory."""
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    KERNEL_CVE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     to_fetch = [cve for cve in cve_ids if not _is_cached(cve)]
     if not to_fetch:
@@ -166,7 +192,7 @@ async def _populate_cve_context(cve_ids: list[str]) -> None:
             still_missing.append(cve_id)
             continue
 
-        cache_file = CACHE_DIR / f"{cve_id}.json"
+        cache_file = KERNEL_CVE_CACHE_DIR / f"{cve_id}.json"
         data = response.model_dump(mode="json")
         if data.get("metadata") and data["metadata"].get("source_files"):
             home = str(Path.home())
@@ -202,90 +228,48 @@ async def _populate_cve_context(cve_ids: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def _fetch_patches(hashes: set[str]) -> None:
-    """Fetch raw patches and write to the cache directory."""
-    patches_dir = PATCH_CACHE_DIR / "patches"
-    patches_dir.mkdir(parents=True, exist_ok=True)
+async def _fetch_artifacts(hashes: set[str], kind: str) -> None:
+    """Fetch artifacts (patches or HTML) and write to the cache directory."""
+    cfg = _ARTIFACT_CONFIG[kind]
+
+    out_dir = KERNEL_PATCH_CACHE_DIR / cfg.subdir
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     to_fetch = [
         h
         for h in sorted(hashes)
-        if not (patches_dir / f"{h}.patch").exists()
-        or (patches_dir / f"{h}.patch").stat().st_size <= 100
+        if not (out_dir / f"{h}{cfg.ext}").exists()
+        or (out_dir / f"{h}{cfg.ext}").stat().st_size <= cfg.min_size
     ]
     if not to_fetch:
-        log.info("[patches] all %d patch(es) already cached", len(hashes))
+        log.info("[%s] all %d item(s) already cached", kind, len(hashes))
         return
 
-    log.info("[patches] %d of %d patch(es) need fetching", len(to_fetch), len(hashes))
+    log.info("[%s] %d of %d item(s) need fetching", kind, len(to_fetch), len(hashes))
     failed: list[str] = []
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         for i, h in enumerate(to_fetch, 1):
-            log.info("[patches] [%d/%d] %s", i, len(to_fetch), h[:12])
+            log.info("[%s] [%d/%d] %s", kind, i, len(to_fetch), h[:12])
             fetched = False
-            for tmpl in PATCH_URL_TEMPLATES:
+            for tmpl in cfg.url_templates:
                 url = tmpl.format(hash=h)
                 try:
                     resp = await client.get(url, follow_redirects=True)
-                    if resp.status_code == 200 and len(resp.text) > 100:
-                        (patches_dir / f"{h}.patch").write_text(resp.text)
+                    if resp.status_code == 200 and len(resp.text) > cfg.min_size:
+                        (out_dir / f"{h}{cfg.ext}").write_text(resp.text)
                         log.info("  cached from %s", url.split("/")[2])
                         fetched = True
                         break
                 except Exception as e:
                     log.debug("  failed %s: %s", url, e)
             if not fetched:
-                log.warning("  could not fetch patch for %s", h[:12])
+                log.warning("  could not fetch %s for %s", kind, h[:12])
                 failed.append(h)
 
     log.info(
-        "[patches] %d fetched, %d failed, %d already cached",
-        len(to_fetch) - len(failed),
-        len(failed),
-        len(hashes) - len(to_fetch),
-    )
-
-
-async def _fetch_html(hashes: set[str]) -> None:
-    """Fetch commit HTML pages and write to the cache directory."""
-    html_dir = PATCH_CACHE_DIR / "html"
-    html_dir.mkdir(parents=True, exist_ok=True)
-
-    to_fetch = [
-        h
-        for h in sorted(hashes)
-        if not (html_dir / f"{h}.html").exists()
-        or (html_dir / f"{h}.html").stat().st_size <= 200
-    ]
-    if not to_fetch:
-        log.info("[html] all %d HTML page(s) already cached", len(hashes))
-        return
-
-    log.info("[html] %d of %d HTML page(s) need fetching", len(to_fetch), len(hashes))
-    failed: list[str] = []
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for i, h in enumerate(to_fetch, 1):
-            log.info("[html] [%d/%d] %s", i, len(to_fetch), h[:12])
-            fetched = False
-            for tmpl in HTML_COMMIT_URL_TEMPLATES:
-                url = tmpl.format(hash=h)
-                try:
-                    resp = await client.get(url, follow_redirects=True)
-                    if resp.status_code == 200 and len(resp.text) > 200:
-                        (html_dir / f"{h}.html").write_text(resp.text)
-                        log.info("  cached from %s", url.split("/")[2])
-                        fetched = True
-                        break
-                except Exception as e:
-                    log.debug("  failed %s: %s", url, e)
-            if not fetched:
-                log.warning("  could not fetch HTML for %s", h[:12])
-                failed.append(h)
-
-    log.info(
-        "[html] %d fetched, %d failed, %d already cached",
+        "[%s] %d fetched, %d failed, %d already cached",
+        kind,
         len(to_fetch) - len(failed),
         len(failed),
         len(hashes) - len(to_fetch),
@@ -310,8 +294,8 @@ async def _populate_patches(
         len(cve_ids),
     )
 
-    await _fetch_patches(hashes)
-    await _fetch_html(hashes)
+    await _fetch_artifacts(hashes, "patches")
+    await _fetch_artifacts(hashes, "html")
 
     if PATCH_MISSES_FILE.exists():
         PATCH_MISSES_FILE.unlink()

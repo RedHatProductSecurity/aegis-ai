@@ -2,21 +2,11 @@
 """Import CVE data into evals/osidb_cache from OSIDB for a list of CVE IDs."""
 
 import asyncio
-import json
 import sys
-from pathlib import Path
 
 from aegis_ai import config_logging
-from evals.utils.osidb_cache import OSIDB_CACHE_DIR, osidb_cache_retrieve
-
-
-def strip_affects(cve_id: str) -> None:
-    path = Path(OSIDB_CACHE_DIR, f"{cve_id}.json")
-    data = json.loads(path.read_text())
-    if "affects" not in data:
-        return
-    del data["affects"]
-    path.write_text(json.dumps(data, indent=4) + "\n")
+from aegis_ai.toolsets.tools.osidb import cve_retrieve
+from evals.utils.osidb_cache import write_cache_entry
 
 
 async def main():
@@ -36,8 +26,8 @@ async def main():
 
     for i, cve_id in enumerate(cve_ids, 1):
         try:
-            await osidb_cache_retrieve(cve_id)
-            strip_affects(cve_id)
+            cve_data = await cve_retrieve(cve_id)
+            write_cache_entry(cve_id, cve_data)
             success += 1
         except Exception as e:
             print(f"[{i}/{total}] FAILED {cve_id}: {e}", file=sys.stderr)

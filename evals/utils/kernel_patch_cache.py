@@ -24,6 +24,9 @@ KERNEL_PATCH_CACHE_DIR = Path(
     os.getenv("KERNEL_PATCH_CACHE_DIR", "evals/kernel_patch_cache")
 )
 
+MIN_PATCH_SIZE = 100
+MIN_HTML_SIZE = 200
+
 patch_cache_misses: set[str] = set()
 html_cache_misses: set[str] = set()
 
@@ -43,7 +46,7 @@ async def cached_fetch_patches(
         cache_file = patches_dir / f"{h}.patch"
         try:
             content = cache_file.read_text()
-            if len(content) > 100:
+            if len(content) > MIN_PATCH_SIZE:
                 results.append((h, content))
                 logger.debug("patch cache hit: %s", h[:12])
             else:
@@ -70,7 +73,7 @@ async def cached_fetch_commit_html(
         cache_file = html_dir / f"{h}.html"
         try:
             content = cache_file.read_text()
-            if len(content) > 200:
+            if len(content) > MIN_HTML_SIZE:
                 results.append((h, content))
                 logger.debug("HTML cache hit: %s", h[:12])
             else:
