@@ -499,8 +499,8 @@ class SuggestImpact(Feature):
 
         impact_changed = result.output.impact != original_impact
         vector_changed = result.output.cvss3_vector != original_vector
-        guardrail_fired = (
-            impact_changed or vector_changed or "kpanic_cvss_override" in trace
+        guardrail_fired = classifier_result is not None and (
+            impact_changed or vector_changed
         )
         if guardrail_fired:
             await self._revise_explanation(
