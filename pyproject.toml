@@ -62,6 +62,10 @@ source = "vcs"
 [tool.hatch.build.hooks.vcs]
 version-file = "src/aegis_ai/_version.py"
 
+[tool.ty.analysis]
+# xgboost is optional (`classifier_deps`); CI/default installs omit it
+allowed-unresolved-imports = ["xgboost.**"]
+
 [tool.logfire]
 ignore_no_config = true
 
@@ -87,6 +91,9 @@ filterwarnings = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aegis_ai","src/aegis_ai_cli","src/aegis_ai_web","src/aegis_ai_ml"]
+exclude = [
+    "src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/data/linux_security_vulns",
+]
 [tool.hatch.metadata]
 allow-direct-references = true
 
@@ -124,7 +131,12 @@ Changelog = "https://github.com/RedHatProductSecurity/aegis-ai/blob/main/docs/CH
 Issues = "https://github.com/RedHatProductSecurity/aegis-ai/issues"
 
 [project.optional-dependencies]
+classifier_deps = [
+    "scikit-learn>=1.1.0",
+    "xgboost>=1.7.0",
+]
 ml_deps = [
+    "aegis-ai[classifier_deps]",
     "accelerate>=0.20.0",
     "datasets>=2.0.0",
     "huggingface-hub>=0.8.0",
@@ -132,10 +144,8 @@ ml_deps = [
     "matplotlib>=3.10.5",
     "numpy>=2.3.2",
     "pandas>=1.5.0",
-    "scikit-learn>=1.1.0",
     "seaborn>=0.13.2",
     "torch>=1.9.0",
     "tqdm>=4.60.0",
     "transformers>=4.20.0",
-    "xgboost>=1.7.0",
 ]

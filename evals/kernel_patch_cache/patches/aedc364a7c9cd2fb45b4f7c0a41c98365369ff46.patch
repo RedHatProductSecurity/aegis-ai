@@ -1,0 +1,36 @@
+From aedc364a7c9cd2fb45b4f7c0a41c98365369ff46 Mon Sep 17 00:00:00 2001
+From: Dan Carpenter <dan.carpenter@linaro.org>
+Date: Wed, 19 Apr 2023 17:30:00 +0300
+Subject: hte: tegra-194: Fix off by one in tegra_hte_map_to_line_id()
+
+[ Upstream commit e078180d66848a6a890daf0a3ce28dc43cc66790 ]
+
+The "map_sz" is the number of elements in the "m" array so the >
+comparison needs to be changed to >= to prevent an out of bounds
+read.
+
+Fixes: 09574cca6ad6 ("hte: Add Tegra194 HTE kernel provider")
+Signed-off-by: Dan Carpenter <dan.carpenter@linaro.org>
+Acked-by: Dipen Patel <dipenp@nvidia.com>
+Signed-off-by: Dipen Patel <dipenp@nvidia.com>
+Signed-off-by: Sasha Levin <sashal@kernel.org>
+---
+ drivers/hte/hte-tegra194.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/hte/hte-tegra194.c b/drivers/hte/hte-tegra194.c
+index 49a27af22742b..d1b579c822797 100644
+--- a/drivers/hte/hte-tegra194.c
++++ b/drivers/hte/hte-tegra194.c
+@@ -251,7 +251,7 @@ static int tegra_hte_map_to_line_id(u32 eid,
+ {
+ 
+ 	if (m) {
+-		if (eid > map_sz)
++		if (eid >= map_sz)
+ 			return -EINVAL;
+ 		if (m[eid].slice == NV_AON_SLICE_INVALID)
+ 			return -EINVAL;
+-- 
+cgit 1.3-korg
+

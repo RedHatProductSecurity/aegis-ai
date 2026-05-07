@@ -131,11 +131,6 @@ if get_settings().use_cwe_tool:
 
     public_toolset_list.append(cwe_toolset)
 
-if get_settings().use_linux_cve_tool:
-    from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
-
-    public_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
-
 if get_settings().use_cisa_kev_tool:
     from aegis_ai.toolsets.tools.cisakev import cisa_kev_tool
 

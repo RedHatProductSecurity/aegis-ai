@@ -3,6 +3,8 @@ info:
   title: Aegis REST-API
   description: A simple web console and REST API for Aegis.
   version: v1
+security:
+  - ApiKeyAuth: []
 paths:
   /:
     get:
@@ -15,6 +17,18 @@ paths:
             text/html:
               schema:
                 type: string
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/analysis/cve:
     get:
       summary: Cve Analysis
@@ -51,6 +65,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/analysis/cve/{feature}:
     post:
       summary: Cve Analysis With Body
@@ -80,6 +106,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/analysis/component:
     get:
       summary: Component Analysis
@@ -115,6 +153,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/analysis/kpi/cve:
     get:
       summary: Get CVE Analysis KPI Metrics
@@ -216,6 +266,12 @@ paths:
                   - query
                   - feature
                   msg: Field required
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
@@ -223,6 +279,12 @@ paths:
               example:
                 detail: 'Error retrieving KPI data for feature ''suggest-impact'':
                   <error message>'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/feedback:
     post:
       summary: Save Feedback
@@ -249,8 +311,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          title: Detail
+      required:
+        - detail
+      title: ErrorResponse
     Feedback:
       properties:
         feature:

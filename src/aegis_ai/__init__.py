@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 import warnings
+from urllib.parse import urlparse
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional, TypedDict
@@ -82,6 +83,22 @@ def get_env_int(key: str, default: int) -> int:
     Otherwise throw a ValueError exception."""
     value = os.getenv(key)
     return default if value is None else int(value)
+
+
+def _llm_base_url_hostname(host: str) -> Optional[str]:
+    """Return the hostname from ``AEGIS_LLM_HOST`` for provider selection.
+
+    Values may be ``host:port`` or a full URL. Prepends ``https://`` when no
+    scheme is present so the host/port parses as netloc (not as a path).
+    Use structured hostname comparison instead of substring checks on the
+    raw string (see CodeQL py/incomplete-url-substring-sanitization).
+    """
+    raw = host.strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = f"https://{raw}"
+    return urlparse(raw).hostname
 
 
 # Ensure console logs include project-relative path and line number
@@ -180,6 +197,12 @@ class AppSettings(BaseSettings):
     use_nvd_dev_tool: bool = get_env_flag("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", False)
     use_cisa_kev_tool: bool = get_env_flag("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", False)
 
+    # Enables the kernel-specific XGBoost impact classifier for Linux kernel CVEs.
+    # When true, kernel CVEs are routed through the patch-feature pipeline before
+    # the LLM reasoning step.  Requires AEGIS_KERNEL_CLASSIFIER_DIR or the
+    # co-located aegis_ai_ml source tree to be present.
+    use_kernel_classifier: bool = get_env_flag("AEGIS_USE_KERNEL_CLASSIFIER", False)
+
     # tavily key
     tavily_api_key: str = os.getenv("TAVILY_API_KEY", "   ")
 
@@ -222,6 +245,7 @@ class AppSettings(BaseSettings):
         Populate default_llm_settings immediately after class initialized.
         """
         host = self.default_llm_host
+        llm_hostname = _llm_base_url_hostname(host)
 
         self.model_kwargs: Dict[str, Any] = {
             "temperature": self.default_llm_temperature,
@@ -232,12 +256,12 @@ class AppSettings(BaseSettings):
         if self.default_llm_max_tokens != 0:
             self.model_kwargs["max_tokens"] = self.default_llm_max_tokens
 
-        if "api.anthropic.com" in host:
+        if llm_hostname == "api.anthropic.com":
             from pydantic_ai.models.anthropic import AnthropicModelSettings
 
             self.default_llm_settings = AnthropicModelSettings(**self.model_kwargs)
 
-        elif "generativelanguage.googleapis.com" in host:
+        elif llm_hostname == "generativelanguage.googleapis.com":
             # lazy import of modules to speed up Aegis CLI
             from pydantic_ai.models.google import GoogleModelSettings
             from google.genai.types import (
@@ -289,12 +313,13 @@ class AppSettings(BaseSettings):
         """
 
         host = self.default_llm_host
+        llm_hostname = _llm_base_url_hostname(host)
 
         provider_kwargs: _ProviderKwargs = {
             "http_client": self._get_http_client(),
         }
 
-        if "api.anthropic.com" in host:
+        if llm_hostname == "api.anthropic.com":
             from pydantic_ai.models.anthropic import AnthropicModel
             from pydantic_ai.providers.anthropic import AnthropicProvider
 
@@ -303,7 +328,7 @@ class AppSettings(BaseSettings):
                 provider=AnthropicProvider(**provider_kwargs),
             )
 
-        elif "generativelanguage.googleapis.com" in host:
+        elif llm_hostname == "generativelanguage.googleapis.com":
             logger.info(f"model_name: {self.default_llm_model_name}")
             from pydantic_ai.models.google import GoogleModel
             from pydantic_ai.providers.google import GoogleProvider

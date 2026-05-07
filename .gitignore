@@ -175,3 +175,6 @@ Makefile
 notes.org
 tmp/
 
+# IDE configuration
+.cursor/
+

@@ -1,0 +1,48 @@
+# Canonical list of kernel CVEs for the suggest-impact eval suite.
+# One CVE per line. Lines starting with # are comments. Blank lines are ignored.
+# Inline comments (after the CVE ID) are allowed.
+#
+# After editing this file, regenerate the CSV and populate all caches:
+#   make prepare-kernel-eval
+
+# -- Important (OSIDB) --
+CVE-2025-38590
+CVE-2024-53104  # also in XgBoost training set
+CVE-2023-53186
+CVE-2026-23074
+CVE-2025-68305
+CVE-2022-50865
+CVE-2025-38352
+CVE-2025-40248
+CVE-2025-38089  # also in XgBoost training set
+CVE-2025-38052
+CVE-2022-50873
+CVE-2023-54258
+
+# -- Moderate (OSIDB) --
+CVE-2025-39718
+CVE-2025-39905
+CVE-2023-53669
+CVE-2025-39682
+CVE-2025-38718
+CVE-2026-23097
+CVE-2026-23003
+CVE-2026-22998
+CVE-2026-23011
+CVE-2025-37803
+CVE-2023-54311
+CVE-2022-50851
+CVE-2023-54045
+CVE-2023-54213
+CVE-2023-54081
+CVE-2022-50768
+
+# -- Low (OSIDB) --
+CVE-2026-23032
+CVE-2025-71182
+CVE-2023-54247
+CVE-2022-50836
+CVE-2023-54181
+CVE-2023-54209
+CVE-2025-68742
+CVE-2023-54222

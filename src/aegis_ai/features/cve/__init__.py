@@ -2,11 +2,12 @@ import cvss
 import logging
 from typing import Any
 
-from aegis_ai import remove_keys
+from aegis_ai import get_settings, remove_keys
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
     CVSSDiffExplainerModel,
+    RevisedExplanationModel,
     SuggestAffectedComponentsModel,
     SuggestImpactModel,
     SuggestCWEModel,
@@ -15,9 +16,18 @@ from aegis_ai.features.cve.data_models import (
     SuggestDescriptionModel,
 )
 from aegis_ai.features.cve.data_models import CVEFeatureInput
+from aegis_ai.features.cve.kernel import (
+    RULES_KERNEL,
+    apply_kpanic_cvss_override,
+    check_kernel_output,
+    reconcile_kernel,
+)
+from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.data_models import feature_deps
+from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
+import aegis_ai.toolsets.tools.osidb as osidb_tool
 
 logger = logging.getLogger(__name__)
 
@@ -50,30 +60,45 @@ class SuggestImpact(Feature):
 
     @staticmethod
     def post_process_impact(output, call_str):
-        # read the suggested cvss3_score (possibly already updated by post_process_cvss)
         try:
             cvss3_score = float(output.cvss3_score)
         except ValueError:
             cvss3_score = float("nan")
 
-        # check which impact corresponds to cvss3_score
-        if 9.0 < cvss3_score:
-            impact_by_cvss3 = "CRITICAL"
-        elif 7.0 < cvss3_score:
-            impact_by_cvss3 = "IMPORTANT"
-        elif 4.0 < cvss3_score:
-            impact_by_cvss3 = "MODERATE"
-        elif 0.0 < cvss3_score:
-            impact_by_cvss3 = "LOW"
-        elif 0.0 == cvss3_score:
-            impact_by_cvss3 = ""
-        else:
+        # check which impact corresponds to cvss3_score (same bands as _score_to_band)
+        impact_by_cvss3 = score_to_band(cvss3_score)
+        if impact_by_cvss3 is None:
             logger.warning(f"{call_str}: invalid cvss3_score: {cvss3_score}")
             return
 
-        # compare with the suggested impact
         impact = output.impact
         if impact == impact_by_cvss3:
+            return
+
+        sev = SEVERITY_ORDER
+        impact_rank = sev.get(impact, 99)
+        band_rank = sev.get(impact_by_cvss3, 99)
+        has_rationale = getattr(output, "deescalation_rationale", None)
+
+        if impact_rank > band_rank and has_rationale:
+            gap = impact_rank - band_rank
+
+            if gap <= 1:
+                logger.info(
+                    f"{call_str}: LLM de-escalated impact below CVSS band "
+                    f"({impact_by_cvss3} -> {impact}), respecting deescalation_rationale"
+                )
+                return
+            # LLM tried to de-escalate more than 1 level — cap and mark
+            # rationale as unreliable so the floor is not suppressed.
+            sev_by_rank = {v: k for k, v in SEVERITY_ORDER.items()}
+            capped = sev_by_rank.get(band_rank + 1, impact_by_cvss3)
+            logger.info(
+                f"{call_str}: LLM de-escalated {gap} levels below CVSS band "
+                f"({impact_by_cvss3} -> {impact}), capping to {capped}"
+            )
+            output.impact = capped
+            output.deescalation_rationale = None
             return
 
         logger.info(
@@ -81,24 +106,7 @@ class SuggestImpact(Feature):
         )
         output.impact = impact_by_cvss3
 
-    @staticmethod
-    def post_process(output, call_str):
-        SuggestImpact.post_process_cvss(output, call_str)
-        SuggestImpact.post_process_impact(output, call_str)
-
-    async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=["impact", "rh_cvss_score"])
-        prompt = AegisPrompt(
-            user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore any pre-labeled impact/CVSS and decide independently.",
-            goals="""
-                - Return exactly one CVSS:3.1 base vector and score consistent with each other.
-                - Provide short reasoning for each base metric (AV, AC, PR, UI, S, C, I, A).
-                - Prefer AV:L for local-only flaws; use AV:N only if remote/network reachable without local access; AV:A when limited to same-link/adjacent network; AV:P for physical.
-                - For DoS-only flaws, emphasize A over C/I; for LPE, emphasize PR>UI and I (and C when secrets are exposed).
-                - Do not base metric choices on which RH products are affected; reason from technical preconditions and exploit mechanics.
-                - Pick impact (Critical/Important/Moderate/Low) from the computed score.
-            """,
-            rules="""
+    _RULES_BASE = """
                 - Output format (must follow exactly):
                     - cvss3_vector: "CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X"
                       where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
@@ -127,18 +135,387 @@ class SuggestImpact(Feature):
                 - Output
                     - Provide the vector and score first, then impact, then a concise explanation with metric-by-metric rationale.
                     - Keep explanations concise.
+            """
+
+    def _check_output(self, result, deps) -> str | None:
+        return check_kernel_output(result.output, deps)
+
+    @staticmethod
+    def reconcile_severity(output, call_str, classifier_result=None) -> str:
+        """Bidirectional severity reconciliation.
+
+        Dispatches to one of two paths:
+
+        **Kernel path** (classifier_result present): threshold-based
+        reconciliation ported from al-kernel.  The classifier's
+        cascade-adjusted prediction is the starting severity; the LLM's
+        own CVSS score drives deterministic threshold rules (H1–H11).
+
+        **Non-kernel path** (no classifier): LLM self-consistency check.
+        If the LLM's stated impact matches its CVSS band, keep it.  If
+        they disagree, trust the CVSS band (quantitative > qualitative).
+
+        The kernel path additionally applies specific guardrails
+        (G2–G5) based on classifier-provided feature flags (memory
+        corruption, network exposure, contained subsystems, etc.).
+
+        Returns a trace string explaining the decision.
+        """
+        if classifier_result and isinstance(classifier_result, dict):
+            return reconcile_kernel(output, call_str, classifier_result)
+
+        # --- Non-kernel path: LLM self-consistency ---
+        SEV = SEVERITY_ORDER
+
+        try:
+            llm_cvss = float(output.cvss3_score)
+        except (ValueError, TypeError):
+            llm_cvss = float("nan")
+
+        llm_cvss_band = score_to_band(llm_cvss)
+        llm_impact = (output.impact or "").strip().upper()
+
+        if not llm_cvss_band or llm_cvss_band not in SEV:
+            return ""
+        if llm_impact not in SEV:
+            return ""
+
+        if llm_impact == llm_cvss_band:
+            trace = (
+                f"path=non_kernel; llm_cvss={llm_cvss:.1f}; "
+                f"band={llm_cvss_band}; stated={llm_impact}; "
+                f"consistent=true; result={llm_impact}"
+            )
+            logger.info(
+                "%s: reconciliation confirmed %s (%s)",
+                call_str,
+                llm_impact,
+                trace,
+            )
+            return trace
+
+        final = llm_cvss_band
+        trace = (
+            f"path=non_kernel; llm_cvss={llm_cvss:.1f}; "
+            f"band={llm_cvss_band}; stated={llm_impact}; "
+            f"consistent=false; result={final}"
+        )
+        logger.info(
+            "%s: reconciled %s -> %s (%s)",
+            call_str,
+            output.impact,
+            final,
+            trace,
+        )
+        output.impact = final
+        return trace
+
+    _BAND_SCORE_FLOOR: dict[str, float] = {
+        "CRITICAL": 9.1,
+        "IMPORTANT": 7.1,
+        "MODERATE": 4.0,
+        "LOW": 0.1,
+    }
+
+    @staticmethod
+    def align_score_to_impact(output, call_str) -> None:
+        """Bump CVSS score to the band floor when reconciliation moved
+        impact above the score's natural band.
+
+        Only called when reconciliation actually changed the impact, so
+        LLM-originated mismatches that reconciliation left alone are not
+        touched here.
+        """
+        try:
+            score = float(output.cvss3_score)
+        except (ValueError, TypeError):
+            return
+
+        band = score_to_band(score)
+        if band is None or band == output.impact:
+            return
+
+        sev = SEVERITY_ORDER
+        impact_rank = sev.get(output.impact, 99)
+        band_rank = sev.get(band, 99)
+
+        if impact_rank < band_rank:
+            floor = SuggestImpact._BAND_SCORE_FLOOR.get(output.impact)
+            if floor is not None:
+                logger.info(
+                    "%s: bumping cvss3_score %.1f -> %.1f to align with "
+                    "reconciled impact %s (was band %s)",
+                    call_str,
+                    score,
+                    floor,
+                    output.impact,
+                    band,
+                )
+                output.cvss3_score = f"{floor}"
+
+    @staticmethod
+    def post_process(output, call_str, classifier_result=None):
+        SuggestImpact.post_process_cvss(output, call_str)
+        pre_reconcile_impact = output.impact
+        trace = SuggestImpact.reconcile_severity(
+            output, call_str, classifier_result=classifier_result
+        )
+
+        override_trace = apply_kpanic_cvss_override(output, call_str, classifier_result)
+        if override_trace:
+            trace = f"{trace}; {override_trace}"
+        elif output.impact != pre_reconcile_impact:
+            SuggestImpact.align_score_to_impact(output, call_str)
+
+        return trace
+
+    @staticmethod
+    def _strip_system_parts(
+        messages: list,
+    ) -> list:
+        """Remove SystemPromptPart from message history.
+
+        When replaying history with a different output_type, pydantic-ai
+        injects new instruction-parts as system messages.  The history
+        already contains SystemPromptPart from the original run, which
+        produces duplicate system messages — rejected by backends that
+        allow only one (e.g. vLLM / Mistral).
+        """
+        from pydantic_ai.messages import ModelRequest, SystemPromptPart
+
+        cleaned: list = []
+        for msg in messages:
+            if isinstance(msg, ModelRequest):
+                non_sys = [p for p in msg.parts if not isinstance(p, SystemPromptPart)]
+                if non_sys or not cleaned:
+                    cleaned.append(
+                        ModelRequest(
+                            parts=non_sys,
+                            instructions=None,
+                            timestamp=msg.timestamp,
+                            run_id=msg.run_id,
+                            metadata=msg.metadata,
+                        )
+                    )
+            else:
+                cleaned.append(msg)
+        return cleaned
+
+    _CVSS_METRICS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
+
+    @staticmethod
+    def _diff_vector_metrics(
+        old_vector: str, new_vector: str
+    ) -> tuple[list[str], list[str]]:
+        """Compare two CVSS 3.1 vectors and return (changed, unchanged)
+        metric descriptions.
+
+        Returns two lists:
+          changed  – e.g. ["AC changed from L to H", "S changed from C to U"]
+          unchanged – e.g. ["AV", "PR", "UI", "C", "I"]
+        """
+        old = cvss.CVSS3(old_vector).original_metrics or {}
+        new = cvss.CVSS3(new_vector).original_metrics or {}
+        changed: list[str] = []
+        unchanged: list[str] = []
+        for m in SuggestImpact._CVSS_METRICS:
+            ov, nv = old.get(m), new.get(m)
+            if ov != nv and ov is not None and nv is not None:
+                changed.append(f"{m} changed from {ov} to {nv}")
+            else:
+                unchanged.append(m)
+        return changed, unchanged
+
+    async def _revise_explanation(
+        self,
+        result,
+        original_score,
+        original_impact,
+        original_vector,
+        trace,
+        call_str,
+    ):
+        """Ask the LLM to revise its explanation after post-processing
+        changed the score, impact, or CVSS vector.  Best-effort: failures
+        are logged and the original explanation is kept."""
+        from aegis_ai.features import llm_sem
+
+        changes: list[str] = []
+        if result.output.impact != original_impact:
+            changes.append(f"impact: {original_impact} -> {result.output.impact}")
+        if result.output.cvss3_score != original_score:
+            changes.append(
+                f"cvss3_score: {original_score} -> {result.output.cvss3_score}"
+            )
+
+        metric_changed: list[str] = []
+        metric_unchanged: list[str] = []
+        new_vector = result.output.cvss3_vector or ""
+        if new_vector != original_vector:
+            metric_changed, metric_unchanged = self._diff_vector_metrics(
+                original_vector, new_vector
+            )
+            changes.extend(metric_changed)
+
+        metric_instructions = ""
+        if metric_changed:
+            metric_instructions = (
+                f"\n\nMetrics that changed: {', '.join(metric_changed)}. "
+                "Update ONLY the justifications for these metrics."
+            )
+            if metric_unchanged:
+                metric_instructions += (
+                    f"\nDo NOT modify the justifications for: "
+                    f"{', '.join(metric_unchanged)}."
+                )
+
+        follow_up = (
+            "Post-processing has adjusted your assessment.\n"
+            f"Changes: {'; '.join(changes)}\n"
+            f"Reconciliation trace: {trace}\n"
+            f"{metric_instructions}\n\n"
+            "Revise your explanation so the rationale is consistent with "
+            "the updated score and impact.  Rewrite the affected sentences "
+            "in place — do NOT append a note, disclaimer, or separate "
+            "paragraph about the override.  The result must read as a "
+            "single coherent explanation.  Keep the same structure and "
+            "level of detail.  Return only the revised explanation text."
+        )
+
+        override_note = ""
+        new_vector = result.output.cvss3_vector or ""
+        if new_vector != original_vector:
+            override_note = (
+                f"\n\nNote: CVSS vector adjusted from "
+                f"{original_score} ({original_vector}) to "
+                f"{result.output.cvss3_score} ({new_vector})"
+                f" during post-processing reconciliation."
+            )
+
+        try:
+            history = self._strip_system_parts(result.all_messages())
+            async with llm_sem:
+                revision = await self._run(
+                    call_str,
+                    follow_up,
+                    message_history=history,
+                    output_type=RevisedExplanationModel,
+                )
+            result.output.explanation = revision.output.explanation + override_note
+            logger.info(
+                "%s: explanation revised after post-processing adjustments", call_str
+            )
+        except Exception as exc:
+            logger.warning(
+                "%s: failed to revise explanation after post-processing: %s",
+                call_str,
+                exc,
+            )
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        use_kernel_classifier = get_settings().use_kernel_classifier
+
+        use_static = (
+            static_context
+            and isinstance(static_context, dict)
+            and static_context.get("cvss_scores") is not None
+        )
+        resolved_static_context = static_context if use_static else None
+        is_kernel = False
+
+        if use_kernel_classifier:
+            components = []
+            if isinstance(static_context, dict):
+                components = static_context.get("components") or []
+
+            if not components:
+                cve_data = await osidb_tool.cve_retrieve(cve_id)
+                components = cve_data.components
+                resolved_static_context = cve_data.model_dump()
+                use_static = True
+
+            is_kernel = is_kernel_component(components)
+
+        deps = feature_deps(
+            exclude_osidb_fields=["impact", "rh_cvss_score"],
+            static_context=resolved_static_context if use_static else None,
+            is_kernel_cve=is_kernel,
+        )
+        output_schema = SuggestImpactModel.model_json_schema()
+        if not is_kernel:
+            output_schema.get("properties", {}).pop(
+                "classifier_disagreement_rationale", None
+            )
+
+        prompt = AegisPrompt(
+            user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore any pre-labeled impact/CVSS and decide independently.",
+            goals="""
+                - Return exactly one CVSS:3.1 base vector and score consistent with each other.
+                - Provide short reasoning for each base metric (AV, AC, PR, UI, S, C, I, A).
+                - Prefer AV:L for local-only flaws; use AV:N only if remote/network reachable without local access; AV:A when limited to same-link/adjacent network; AV:P for physical.
+                - For DoS-only flaws, emphasize A over C/I; for LPE, emphasize PR>UI and I (and C when secrets are exposed).
+                - Do not base metric choices on which RH products are affected; reason from technical preconditions and exploit mechanics.
+                - Pick impact (Critical/Important/Moderate/Low) from the computed score.
             """,
+            rules=RULES_KERNEL if is_kernel else self._RULES_BASE,
             context=CVEFeatureInput(cve_id=cve_id),
             static_context=remove_keys(
-                static_context, keys_to_remove=deps.exclude_osidb_fields
+                resolved_static_context, keys_to_remove=deps.exclude_osidb_fields
             ),
-            output_schema=SuggestImpactModel.model_json_schema(),
+            output_schema=output_schema,
         )
-        result = await self.run_if_safe(
-            prompt, deps=deps, output_type=SuggestImpactModel
-        )
+
+        run_kwargs: dict = dict(deps=deps, output_type=SuggestImpactModel)
+
+        if use_kernel_classifier and is_kernel:
+            from pydantic_ai.toolsets import FunctionToolset
+            from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_tool
+
+            kernel_tools: list = [kernel_impact_tool]
+            if get_settings().use_linux_cve_tool:
+                from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
+
+                kernel_tools.append(kernel_cve_tool)
+
+            run_kwargs["toolsets"] = [FunctionToolset[feature_deps](tools=kernel_tools)]
+
+        result = await self.guarded_run(prompt, **run_kwargs)
         call_str = f"{self.__class__.__name__}({cve_id})"
-        SuggestImpact.post_process(result.output, call_str)
+        classifier_result = deps.classifier_result
+
+        original_score = result.output.cvss3_score
+        original_vector = result.output.cvss3_vector or ""
+        original_impact = result.output.impact
+
+        result.output._original_llm_impact = original_impact
+        result.output._original_llm_score = original_score
+        result.output._original_llm_vector = original_vector
+
+        trace = SuggestImpact.post_process(
+            result.output,
+            call_str,
+            classifier_result=classifier_result,
+        )
+
+        impact_changed = result.output.impact != original_impact
+        vector_changed = result.output.cvss3_vector != original_vector
+        guardrail_fired = (
+            impact_changed or vector_changed or "kpanic_cvss_override" in trace
+        )
+        if guardrail_fired:
+            await self._revise_explanation(
+                result,
+                original_score,
+                original_impact,
+                original_vector,
+                trace,
+                call_str,
+            )
+            result.output._explanation_revised = True
+
+        result.output._classifier_diagnostics = classifier_result
+        result.output._reconciliation_trace = trace
+
         return result
 
 
@@ -147,6 +524,7 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(exclude_osidb_fields=["cwe_id"])
+
         prompt = AegisPrompt(
             user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause of software weakness. Ignore any pre-labeled CWE.",
             goals="""
@@ -176,7 +554,9 @@ class SuggestCWE(Feature):
             ),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
-        result = await self.run_if_safe(prompt, deps=deps, output_type=SuggestCWEModel)
+
+        run_kwargs: dict = dict(deps=deps, output_type=SuggestCWEModel)
+        result = await self.guarded_run(prompt, **run_kwargs)
         # Post-process: filter out any disallowed CWE IDs (guardrail in case LLM misses rules)
         await cwe_manager.initialize()
         allowed_cwe_ids = set(cwe_manager.get_allowed_cwe_ids())
@@ -219,7 +599,7 @@ class IdentifyPII(Feature):
             static_context=static_context,
             output_schema=PIIReportModel.model_json_schema(),
         )
-        return await self.run_if_safe(prompt, deps=deps, output_type=PIIReportModel)
+        return await self.guarded_run(prompt, deps=deps, output_type=PIIReportModel)
 
 
 class SuggestDescriptionText(Feature):
@@ -268,7 +648,7 @@ class SuggestDescriptionText(Feature):
             ),
             output_schema=SuggestDescriptionModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=SuggestDescriptionModel
         )
 
@@ -349,7 +729,7 @@ class SuggestStatementText(Feature):
             ),
             output_schema=SuggestStatementModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=SuggestStatementModel
         )
 
@@ -401,7 +781,7 @@ class SuggestAffectedComponents(Feature):
             ),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=SuggestAffectedComponentsModel
         )
 
@@ -426,6 +806,6 @@ class CVSSDiffExplainer(Feature):
             static_context=static_context,
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
-        return await self.run_if_safe(
+        return await self.guarded_run(
             prompt, deps=deps, output_type=CVSSDiffExplainerModel
         )

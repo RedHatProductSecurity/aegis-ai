@@ -734,6 +734,8 @@ spec:
                     secretKeyRef:
                       name: gemini-key
                       key: token
+                - name: AEGIS_USE_KERNEL_CLASSIFIER
+                  value: "true"
               resources:
                 requests:
                   memory: "2Gi"

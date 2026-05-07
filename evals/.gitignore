@@ -1,0 +1,4 @@
+# Eval result exports (generated per-run, not committed)
+features/cve/kernel_eval_results.json
+features/cve/kernel_eval_audit.json
+kernel_cve_context_cache/cache_misses.txt

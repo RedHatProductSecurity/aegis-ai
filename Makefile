@@ -31,6 +31,20 @@ check: format lint check-type
 clean:
 	uv clean
 
+generate-kernel-eval:
+	uv run python evals/features/cve/generate_kernel_eval_csv.py
+
+refresh-kernel-osidb-cache:
+	uv run python evals/features/cve/generate_kernel_eval_csv.py --refresh-cache
+
+# populate-kernel-caches reads CVE IDs from eval-kernel-cves.csv (output of
+# generate-kernel-eval).  Run prepare-kernel-eval instead of calling this
+# target directly to ensure the CSV is generated first.
+populate-kernel-caches:
+	uv run python evals/utils/populate_kernel_cve_cache.py --from-eval-csv
+
+prepare-kernel-eval: generate-kernel-eval populate-kernel-caches
+
 eval:
 	uv run pytest -vv -s --show-capture=no evals
 
@@ -70,7 +84,7 @@ publish-dist:
 KERNEL_CLF_DIR = src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier
 
 retrain-kernel:
-	$(MAKE) -C $(KERNEL_CLF_DIR) retrain
+	$(MAKE) -C $(KERNEL_CLF_DIR) retrain $(if $(RETUNE),RETUNE=1)
 
 test-kernel:
 	$(MAKE) -C $(KERNEL_CLF_DIR) test

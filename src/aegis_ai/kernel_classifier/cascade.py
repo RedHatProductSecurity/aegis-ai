@@ -22,6 +22,7 @@ rules.  Without this ordering, LOW → MODERATE → IMPORTANT is impossible in
 a single pass (the al-kernel daemon applies rules in this same order).
 
 Promotion rules (LOW → MODERATE):
+  R5  LOW  → MODERATE  if kernel_panic detected (al-kernel workaround)
   R6  LOW  → MODERATE  if CVSS ≥ 6.7 (or ≥ 5.5 with C:H/I:H/A:H), !contained
 
 Escalation rules (MODERATE → IMPORTANT):
@@ -41,7 +42,7 @@ rules on it.
 
 De-escalation rules (MODERATE → LOW):
   R7  MODERATE → LOW   if CVSS ≤ 3.9, !KPANIC
-  R8  MODERATE → LOW   if CVSS < 5.5, AV:L, low CIA impact, !C:H/I:H/A:H
+  R8  MODERATE → LOW   if CVSS < 5.5, AV:L, low CIA impact, !C:H/I:H/A:H, !KPANIC
 
 All rules gracefully degrade to no-ops when CVSS data is unavailable.
 R11/R12 are feature-only rules that fire regardless of CVSS availability.
@@ -132,7 +133,7 @@ def apply_cascade(
     cvss_vector: str,
     patch_flags: set[str],
 ) -> int:
-    """Apply daemon-derived severity adjustment rules (R6–R12).
+    """Apply daemon-derived severity adjustment rules (R5–R12).
 
     Args:
         severity: XGBoost prediction (0=IMPORTANT, 1=MODERATE, 2=LOW)
@@ -155,6 +156,12 @@ def apply_cascade(
         cia_hhh = False
 
     # --- Promotion: LOW → MODERATE (run first so escalation rules see it) ---
+
+    # R5: LOW → MODERATE when kernel panic detected (al-kernel workaround,
+    # daemon line 2561).  KPANIC implies the bug can crash the kernel, so
+    # LOW is inappropriate regardless of CVSS availability.
+    if severity == 2 and has_kpanic:
+        severity = 1
 
     # R6: LOW → MODERATE when CVSS indicates meaningful severity
     if has_cvss and severity == 2:
@@ -197,7 +204,7 @@ def apply_cascade(
         severity = 2
 
     # R8: MODERATE → LOW when CVSS is low-moderate with local/low-impact vector
-    if has_cvss and severity == 1 and cvss_score < 5.5:
+    if has_cvss and severity == 1 and cvss_score < 5.5 and not has_kpanic:
         if vec.get("AV") == "L" and not cia_hhh:
             c = vec.get("C", "")
             i = vec.get("I", "")

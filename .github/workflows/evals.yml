@@ -45,6 +45,10 @@ jobs:
       # (if unset, all of them need to succeed)
       AEGIS_EVALS_MIN_PASSED: ${{ vars.AEGIS_EVALS_MIN_PASSED }}
 
+      # kernel classifier
+      AEGIS_USE_KERNEL_CLASSIFIER: ${{ vars.AEGIS_USE_KERNEL_CLASSIFIER }}
+      AEGIS_USE_LINUX_CVE_TOOL_CONTEXT: ${{ vars.AEGIS_USE_LINUX_CVE_TOOL_CONTEXT }}
+
       # will be uploaded to GitHub as an artifact
       AEGIS_LOG_FILE: "/tmp/aegis-evals.log"
 
@@ -73,7 +77,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies (dev group)
-        run: uv sync --group dev
+        run: uv sync --group dev --extra classifier_deps
 
       - name: Run evaluation suite
         run: make eval

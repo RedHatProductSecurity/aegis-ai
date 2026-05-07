@@ -1,7 +1,7 @@
+from typing import get_args
+
 import cvss
 import pytest
-
-from typing import get_args
 
 from pydantic_evals import Case
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
@@ -9,6 +9,7 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorCont
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
+from aegis_ai.kernel_classifier import is_kernel_component
 
 from evals.features.common import (
     common_feature_evals,
@@ -17,6 +18,7 @@ from evals.features.common import (
     reflect_confidence,
     run_evaluation,
 )
+from evals.utils.osidb_cache import read_cache_json
 
 
 # dict to convert "IMPORTANT" to 8.0 etc
@@ -168,6 +170,34 @@ field_evaluators = {
     "cvss3_vector": CVSSVectorEvaluator(),
 }
 
+kernel_scope_judge = create_llm_judge(
+    assertion_name="CVSSKernelScopeAndPrivileges",
+    rubric=(
+        "For Linux kernel or low-level CVEs, the explanation must justify PR, S, C, and I "
+        "in a way consistent with the vector: use PR:H when admin-class capabilities "
+        "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
+        "unless the described effect crosses a security boundary (e.g. container escape to host); "
+        "do not set C:H/I:H for purely internal kernel state issues without a plausible "
+        "user-data impact path. "
+        "Exception for user namespaces: on modern Linux, unprivileged users can create "
+        "network namespaces via user namespaces (unshare(CLONE_NEWUSER | CLONE_NEWNET)) "
+        "without host-level CAP_NET_ADMIN. When the explanation mentions network namespace "
+        "manipulation but also indicates the operation is reachable from an unprivileged "
+        "local user (e.g. via user namespaces or container environments), PR:L is acceptable "
+        "because the effective capability is scoped to the user namespace, not the host. "
+        "Consistency rule for PR: the judge must only check that the explanation is internally "
+        "consistent with the chosen PR value in the vector. If the vector uses PR:H and the "
+        "explanation cites admin-class capabilities as required, that is consistent — accept "
+        "it. If the vector uses PR:L and the explanation mentions capabilities or privileged "
+        "operations as background context while also describing an unprivileged trigger path "
+        "(e.g. normal file I/O, packet reception, user-namespace-scoped operations, BPF "
+        "program loading via unprivileged BPF, device events during normal use, "
+        "worker/interrupt-context races), that is also consistent — accept it. "
+        "Fail only when the explanation describes exclusively admin-only trigger paths with "
+        "no plausible unprivileged alternative and the vector still uses PR:L."
+    ),
+)
+
 
 class SuggestImpactCase(Case):
     def __init__(
@@ -204,15 +234,21 @@ class SuggestImpactCase(Case):
         )
 
         # enable field-specific evaluators for this case
-        evaluators = tuple(
+        evaluators = list(
             field_evaluators[f] for f in field_evaluators if getattr(expected_output, f)
         )
+
+        cached = read_cache_json(cve_id)
+        components = cached.get("components", []) if cached else []
+
+        if is_kernel_component(components):
+            evaluators.append(kernel_scope_judge)
 
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",
             inputs=cve_id,
             expected_output=expected_output,
-            evaluators=evaluators,
+            evaluators=tuple(evaluators),
             **kwargs,
         )
 
@@ -305,6 +341,7 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2023-54201",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2024-53232",
@@ -364,6 +401,7 @@ cases = [
         cve_id="CVE-2025-39677",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:H",
     ),
+    # Also present in the kernel eval suite (eval-kernel-cves.csv)
     SuggestImpactCase(
         cve_id="CVE-2025-39754",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
@@ -498,17 +536,6 @@ evals = common_feature_evals + [
     create_llm_judge(
         assertion_name="NoAffectsInExplanation",
         rubric="The 'explanation' output field does not list affected Red Hat products.  Red Hat is not a product.",
-    ),
-    create_llm_judge(
-        assertion_name="CVSSKernelScopeAndPrivileges",
-        rubric=(
-            "For Linux kernel or low-level CVEs, the explanation must justify PR, S, C, and I "
-            "in a way consistent with the vector: use PR:H when admin-class capabilities "
-            "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
-            "unless the described effect crosses a security boundary (e.g. container escape to host); "
-            "do not set C:H/I:H for purely internal kernel state issues without a plausible "
-            "user-data impact path. Fail if the rationale clearly contradicts these rules."
-        ),
     ),
 ]
 

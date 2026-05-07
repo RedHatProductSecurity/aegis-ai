@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from aegis_ai.toolsets.tools.osidb import CVE, CVEID, cve_retrieve
 
@@ -14,6 +16,33 @@ OSIDB_CACHE_DIR = os.getenv("OSIDB_CACHE_DIR", "evals/osidb_cache")
 # Note that cache hits (which is the most common case) are handle very quickly.
 # So there is no need to implement any per-file locking for the OSIDB cache.
 cache_lock = asyncio.Lock()
+
+
+def write_cache_entry(
+    cve_id: str, cve_data: CVE, *, include_affects: bool = False
+) -> Path:
+    """Serialize a CVE to the OSIDB cache.
+
+    When *include_affects* is False (default), the ``affects`` field is
+    excluded from the JSON to keep committed cache files small.  The input
+    model is never mutated.
+    """
+    cache_file = Path(OSIDB_CACHE_DIR) / f"{cve_id}.json"
+    exclude: set[str] = {"affects"} if not include_affects else set()
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(
+        cve_data.model_dump_json(indent=4, exclude=exclude) + "\n", encoding="utf-8"
+    )
+    return cache_file
+
+
+def read_cache_json(cve_id: str) -> dict[str, Any] | None:
+    """Read a CVE's cached JSON as a raw dict, or None on miss/error."""
+    cache_file = Path(OSIDB_CACHE_DIR) / f"{cve_id}.json"
+    try:
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 async def osidb_cache_retrieve(cve_id: CVEID) -> CVE:
@@ -36,9 +65,7 @@ async def osidb_cache_retrieve(cve_id: CVEID) -> CVE:
             # cached CVE data not available -> query OSIDB
             cve_data = await cve_retrieve(cve_id)
 
-            logger.info(f'writing CVE data cache to "{cache_file}"')
-            with open(cache_file, "w") as f:
-                f.write(cve_data.model_dump_json(indent=4))
-                f.write("\n")
+            path = write_cache_entry(str(cve_id), cve_data)
+            logger.info('writing CVE data cache to "%s"', path)
 
     return cve_data

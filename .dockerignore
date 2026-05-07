@@ -24,6 +24,11 @@ htmlcov/
 # Local data
 *.log
 
+# Environment files (secrets)
+.env
+.env-example
+.env*
+
 # Packaging
 dist/
 build/

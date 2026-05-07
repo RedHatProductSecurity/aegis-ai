@@ -823,9 +823,13 @@ cases = [
         cwe_list=["CWE-190", "CWE-131", "CWE-805", "CWE-787", "CWE-120", "CWE-125"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
+    # Aegis suggests CWE-1050 (Excessive Platform Resource Consumption within a Loop),
+    # possibly a reasonable alternative for the Dovecot RFC 2231 MIME parameter CPU DoS.
+    # Consider broadening cwe_list to ["CWE-770", "CWE-1050"] if CWE-1050 is accepted.
     SuggestCweCase(
         cve_id="CVE-2026-27859",
         cwe_list=["CWE-770"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-28500",

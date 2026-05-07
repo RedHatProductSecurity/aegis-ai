@@ -37,19 +37,29 @@ from aegis_ai.kernel_classifier.html import extract_html_features
 
 logger = logging.getLogger(__name__)
 
-KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel"}
+KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel", "linux_kernel"}
 
 CVSS_ISSUER_PRIORITY = ["NIST", "RH", "CVEORG", "OSV", "CISA"]
 
 SCORE_BUCKET_BOUNDARIES = [4.0, 7.0, 9.0]
 
 # URLs tried in order to fetch raw git patches for kernel commits.
-# These may need updating if upstream hosting changes.
+# git.kernel.org's CGI only resolves commits on the default branch of each
+# tree, so stable-backport hashes often fail there.  The GitHub fallback
+# resolves any commit reachable from any branch in gregkh/linux (the
+# stable mirror that al-kernel also uses as its primary source).
 PATCH_URL_TEMPLATES = [
     "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/patch/?id={hash}",
     "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/patch/?id={hash}",
     "https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/patch/?id={hash}",
+    # Stable-backport commits live on per-version branches (linux-X.Y.y) that
+    # git.kernel.org's CGI cannot resolve.  gregkh/linux is the GitHub mirror
+    # of the stable tree and resolves commits across all branches — the same
+    # source al-kernel uses.  This is the last-resort fallback.
+    "https://github.com/gregkh/linux/commit/{hash}.patch",
 ]
+
+_GREGKH_FALLBACK_TEMPLATE = PATCH_URL_TEMPLATES[-1]
 
 # URLs tried in order to fetch rendered commit HTML pages (for supplemental feature extraction).
 # These may need updating if upstream hosting changes.
@@ -74,14 +84,15 @@ def _score_to_bucket(score: float) -> int:
     return len(SCORE_BUCKET_BOUNDARIES)
 
 
-def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float]:
+def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float, str]:
     """Select the best CVSS v3 vector and score from OSIDB-style cvss_scores.
 
     Checks issuers in priority order: NIST > RH > CVEORG > OSV > CISA.
-    Returns (vector_string, score) or ("", 0.0) when unavailable.
+    Returns (vector_string, score, issuer) or ("", 0.0, "") when unavailable.
     """
     best_vector = ""
     best_score = 0.0
+    best_issuer = ""
     best_priority = len(CVSS_ISSUER_PRIORITY) + 1
 
     for entry in cvss_scores:
@@ -96,6 +107,7 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float]:
         if priority < best_priority:
             best_priority = priority
             best_vector = vector
+            best_issuer = issuer
             try:
                 import cvss as cvss_lib
 
@@ -122,7 +134,29 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float]:
                     float(raw) if isinstance(raw, (int, float)) and raw > 0 else 0.0
                 )
 
-    return best_vector, best_score
+    return best_vector, best_score, best_issuer
+
+
+_PATCH_SIZE_LIMIT = 1_000_000
+
+
+def _collect_patches(patches: list[tuple[str, str]]) -> list[str]:
+    """Return patch content strings, dropping any that exceed the size limit.
+
+    Large non-fix commits exist (driver imports, treewide refactors) but
+    CVE fix commits are targeted bug fixes that are well under 1 MB.
+    The guard protects against accidental inclusion of a prohibitively
+    large patch (e.g. the ~200 MB initial kernel commit).
+    """
+    out: list[str] = []
+    for commit_hash, content in patches:
+        if len(content) > _PATCH_SIZE_LIMIT:
+            logger.warning(
+                "Dropping oversized patch %s (%d chars)", commit_hash[:12], len(content)
+            )
+            continue
+        out.append(content)
+    return out
 
 
 class KernelImpactClassifier:
@@ -186,7 +220,7 @@ class KernelImpactClassifier:
     def _load_model(self, classifier_dir: Path):
         model_dir = classifier_dir / "models"
         try:
-            import xgboost as xgb  # ty: ignore[unresolved-import]
+            import xgboost as xgb
 
             model = xgb.XGBClassifier()
             json_path = model_dir / "cve_severity_model.json"
@@ -247,13 +281,15 @@ class KernelImpactClassifier:
     async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
         """Fetch raw patches from git.kernel.org for given commit hashes.
 
-        Tries torvalds, stable, and linux-next trees in order.
+        Tries torvalds, stable, linux-next, and the gregkh/linux GitHub
+        fallback in order.
         Returns list of (commit_hash, patch_content) tuples.
         """
         patches = []
         async with httpx.AsyncClient(timeout=30.0) as client:
             for commit_hash in commit_hashes:
                 fetched = False
+                used_template = None
                 for tmpl in PATCH_URL_TEMPLATES:
                     url = tmpl.format(hash=commit_hash)
                     try:
@@ -262,12 +298,23 @@ class KernelImpactClassifier:
                             patches.append((commit_hash, resp.text))
                             logger.debug("Fetched patch for %s", commit_hash[:12])
                             fetched = True
+                            used_template = tmpl
                             break
                     except Exception:
                         continue
                 if not fetched:
                     logger.warning(
-                        "Could not fetch patch %s from any tree", commit_hash[:12]
+                        "Could not fetch patch %s from any source "
+                        "(including gregkh/linux fallback for resolving "
+                        "backport patches) — commit may not exist in "
+                        "any known tree",
+                        commit_hash[:12],
+                    )
+                elif used_template == _GREGKH_FALLBACK_TEMPLATE:
+                    logger.debug(
+                        "Patch %s resolved via gregkh/linux fallback "
+                        "(stable-backport commit)",
+                        commit_hash[:12],
                     )
         return patches
 
@@ -319,13 +366,21 @@ class KernelImpactClassifier:
         """Extract and OR-combine features across all patches for a CVE."""
         assert self._feature_extractor is not None
         combined = {name: False for name in self._feature_extractor.feature_names}
+        agg_total_lines = 0
+        agg_src_lines = 0
         for commit_hash, content in patches:
             features = self._feature_extractor.extract_patch_features(
                 content, patch_filename="", cve_id=cve_id
             )
+            agg_total_lines += features.pop("_total_lines", 0)
+            agg_src_lines += features.pop("_src_lines", 0)
             for key, val in features.items():
                 if val:
                     combined[key] = True
+
+        combined["simplefix"] = agg_total_lines < 21 and agg_src_lines < 15
+        if combined.get("hardware") or combined.get("uaf"):
+            combined["simplefix"] = False
         return combined
 
     def _predict(
@@ -431,7 +486,7 @@ class KernelImpactClassifier:
 
         self._apply_flag_cascade(patch_features)
 
-        cvss_vector, cvss_score = _select_best_external_cvss3(cvss_scores)
+        cvss_vector, cvss_score, cvss_issuer = _select_best_external_cvss3(cvss_scores)
 
         impact, confidence, probabilities, raw_pred = self._predict(
             patch_features, cvss_score, cvss_vector
@@ -461,7 +516,9 @@ class KernelImpactClassifier:
             "active_features": active,
             "cvss_vector": cvss_vector,
             "cvss_score": cvss_score,
+            "cvss_issuer": cvss_issuer,
             "patches_analyzed": len(patches),
+            "patch_summaries": _collect_patches(patches),
         }
         if html_supplemented_flags:
             result["html_supplemented_flags"] = html_supplemented_flags
