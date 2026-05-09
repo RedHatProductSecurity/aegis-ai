@@ -294,7 +294,7 @@ spec:
       stepTemplate: {volumeMounts: [{name: workdir, mountPath: /var/workdir}]}
       steps:
       - name: use-trusted-artifact
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:981fba82bbc06f6faa99afb83ce93ec165216912e38a341496163e48f569d57e
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:fe8e5c96d66b9b72ed8adeebecf9121c57ca198a9331983ca985670a2ef55647
         args: [use, $(params.SOURCE_ARTIFACT)=/var/workdir/source]
       - name: git-tags-to-image-labels
         image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:6f0d202d7981c1577057c1904d7a2fadd37dc0be9075fc1945ee69df2b89d425
