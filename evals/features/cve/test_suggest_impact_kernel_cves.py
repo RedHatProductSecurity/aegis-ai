@@ -95,6 +95,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "Same pattern as CVE-2025-39718."
         ),
     },
+    "CVE-2023-54081": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "CVSS vector uses S:C but explanation states impact is contained within "
+            "the guest VM without crossing a security boundary, implying S:U. "
+            "Scope narration inconsistent with vector."
+        ),
+    },
     "CVE-2023-54181": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
