@@ -111,6 +111,13 @@ KNOWN_FAILURES: dict[str, dict] = {
             "while the CVSS vector uses PR:L. Explanation-vs-vector inconsistency."
         ),
     },
+    "CVE-2025-39682": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "LLM explanation states C:N, I:N but CVSS vector specifies C:L, I:L. "
+            "Explanation-vs-vector inconsistency."
+        ),
+    },
     "CVE-2025-39718": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
