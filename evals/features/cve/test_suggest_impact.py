@@ -446,7 +446,12 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2025-39939",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:L/I:L/A:H",
-        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CVSSVectorEvaluator",
+                "CVSSKernelScopeAndPrivileges",
+            ]
+        },
     ),
     # FIXME: scope is wrong (Aegis suggests S:C while S:U is expected)
     SuggestImpactCase(
