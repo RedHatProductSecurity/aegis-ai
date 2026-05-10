@@ -95,6 +95,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "Same pattern as CVE-2025-39718."
         ),
     },
+    "CVE-2023-54181": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "LLM explanation states that CAP_BPF and CAP_NET_ADMIN are required "
+            "(admin-class capabilities) with no plausible unprivileged alternative, "
+            "while the CVSS vector uses PR:L. Explanation-vs-vector inconsistency."
+        ),
+    },
     "CVE-2025-39718": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
