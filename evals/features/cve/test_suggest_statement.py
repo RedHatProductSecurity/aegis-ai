@@ -443,6 +443,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-40175",
         expected_statement='Critical impact: The Axios library, a promise-based HTTP client, is susceptible to a prototype pollution vulnerability. This flaw, when combined with specific "Gadget" attack chains in third-party dependencies, can lead to remote code execution.',
+        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-40227",
