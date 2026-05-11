@@ -42,12 +42,12 @@ simple_agent = create_aegis_agent(
 
 rh_feature_agent = create_aegis_agent(
     name="RHFeatureAgent",
-    retries=agent_default_max_retries,
+    tool_retries=agent_default_max_retries,
     toolsets=[redhat_cve_toolset, public_toolset],
 )
 
 public_feature_agent = create_aegis_agent(
     name="PublicFeatureAgent",
-    retries=agent_default_max_retries,
+    tool_retries=agent_default_max_retries,
     toolsets=[public_cve_toolset, public_toolset],
 )
