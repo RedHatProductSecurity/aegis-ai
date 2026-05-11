@@ -26,8 +26,8 @@ htmlcov/
 
 # Environment files (secrets)
 .env
-.env-example
 .env*
+!.env-example
 
 # Packaging
 dist/
