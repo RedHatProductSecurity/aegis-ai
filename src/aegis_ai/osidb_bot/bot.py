@@ -211,6 +211,9 @@ class FlawUpdater:
         # apply suggestions
         await self.apply_suggestions()
 
+        # XXX: do not save anything to OSIDB
+        return
+
         # mark the flaw as processed by Aegis/osidb-bot
         aegis_meta = self.flaw_data.setdefault("aegis_meta", {})
         aegis_meta["processed"] = True
