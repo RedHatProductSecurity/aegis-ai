@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-05-11
+
+### Changed
+- `suggest-impact` now incorporates kernel patch context and integrates the kernel impact classifier for severity reconciliation on kernel CVEs
+- the `suggest-impact` explanation is revised when the kernel classifier adjusts the score or impact
+
+### Added
+- added `--refresh-cache` flag to regenerate OSIDB cache entries in evals
+- added verbose pipeline diagnostics to `suggest-impact`
+- added evaluation cases and annotations based on feedback from security analysts
+- documented eval framework, environment variables, and guardrail docstrings
+
+### Fixed
+- improved `suggest-affected-components` accuracy and Chromium sub-component mapping
+- do not suggest sub-services as separate affected components
+- addressed security scanner findings in OpenAPI and container image
+- deferred safety agent import until after the enabled check
+
+
 ## [0.6.3] - 2026-04-27
 
 ### Changed
