@@ -154,7 +154,7 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
 
 DEFAULT_SUGGESTION_LIST = [
     suggest_components,
-    suggest_description,
-    suggest_cwe,
-    suggest_impact,
+    #    suggest_description,
+    #    suggest_cwe,
+    #    suggest_impact,
 ]
