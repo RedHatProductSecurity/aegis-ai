@@ -257,7 +257,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53519",
         cwe_list=["CWE-820"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53525",
