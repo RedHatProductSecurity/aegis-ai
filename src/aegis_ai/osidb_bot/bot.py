@@ -19,28 +19,8 @@ from typing import Any, Optional, Sequence, cast
 
 
 ELIGIBLE_FLAWS = {
-    # only flaws coming from collectors
-    "source": (
-        # TODO: extend the sequence
-        "CVEORG",
-    ),
-    # only flaws in the NEW/empty state
-    "classification": (
-        {"workflow": "DEFAULT", "state": "NEW"},
-        {"workflow": "DEFAULT", "state": ""},
-    ),
-    # only flaws where Aegis has not been used yet
-    "aegis_meta": ({},),
-    # only flaws with no affects
-    "affects": ([],),
-    # only flaws with no owner
-    "owner": ("",),
-    # only flaws with empty description
-    "cve_description": ("",),
-    # only flaws with no statement
-    "statement": ("",),
-    # only flaws with no mitigation
-    "mitigation": ("",),
+    "classification": ({"workflow": "REJECTED", "state": "REJECTED"},),
+    "components": ([],),
 }
 
 FLAW_FIELDS = [
@@ -91,9 +71,8 @@ class FlawFinder:
     def search(self, state: Optional[BotState] = None) -> Sequence[CVEID]:
         # infer search predicates from ELIGIBLE_FLAWS
         kwargs: dict[str, Any] = {
-            "include_fields": ["cve_id"],
+            "include_fields": ["cve_id", "components"],
             "order": ["created_dt"],
-            "source_in": [s for s in ELIGIBLE_FLAWS["source"]],
             "workflow_state_in": [
                 cast(dict[str, str], c)["state"]
                 for c in ELIGIBLE_FLAWS["classification"]
@@ -104,7 +83,7 @@ class FlawFinder:
 
         # emptiness predicates for indexed fields
         for field, allowed in ELIGIBLE_FLAWS.items():
-            if field in ("affects", "aegis_meta"):
+            if field in ("affects", "aegis_meta", "components"):
                 # not indexed in OSIDB
                 continue
 
@@ -119,7 +98,7 @@ class FlawFinder:
         # initiate the OSIDB search
         logger.info("searching CVEs: %s", _kwargs_for_log(kwargs))
         flaw_iterator = self.osidb.flaws.retrieve_list_iterator(**kwargs)
-        cve_ids = [flaw.cve_id for flaw in flaw_iterator]
+        cve_ids = [flaw.cve_id for flaw in flaw_iterator if not flaw.components]
         if state is None:
             return cve_ids
 
