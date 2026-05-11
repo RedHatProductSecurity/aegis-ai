@@ -11,6 +11,8 @@ from osidb_bindings.bindings.python_client.types import Unset
 from osidb_bindings.session import Session
 
 import asyncio
+import csv
+import io
 import requests
 import textwrap
 
@@ -63,6 +65,7 @@ FLAW_FIELDS = [
 
 
 max_jobs_sem = asyncio.Semaphore(get_settings().llm_max_jobs)
+_csv_lock = asyncio.Lock()
 
 
 def _kwargs_for_log(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -200,6 +203,21 @@ class FlawUpdater:
             # nothing has changed
             raise RuntimeError("left unchanged")
 
+    async def append_csv(self) -> None:
+        assert self.flaw_data
+        row = {
+            "cve_id": self.flaw_data["cve_id"],
+            "components": self.flaw_data["components"],
+        }
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=row.keys())
+        writer.writerow(row)
+        line = buf.getvalue()
+
+        async with _csv_lock:
+            with open("/opt/app-data/rejected_flaws_components.csv", "a") as f:
+                f.write(line)
+
     async def do(self) -> None:
         assert self.flaw_data
 
@@ -208,6 +226,8 @@ class FlawUpdater:
 
         # apply suggestions
         await self.apply_suggestions()
+
+        await self.append_csv()
 
         # XXX: do not save anything to OSIDB
         return
