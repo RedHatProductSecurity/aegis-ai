@@ -193,6 +193,9 @@ class FlawUpdater:
         for fnc in DEFAULT_SUGGESTION_LIST:
             self.updated_fields |= await fnc(self.agent, self.flaw_data, timestamp)
 
+        # XXX: process flaws with an empty list of suggested components
+        return
+
         if not self.updated_fields:
             # nothing has changed
             raise RuntimeError("left unchanged")
