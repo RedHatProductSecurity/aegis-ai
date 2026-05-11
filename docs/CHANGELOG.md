@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `suggest-impact` now integrates the kernel impact classifier for severity reconciliation on kernel CVEs
-- `suggest-impact` explanation is revised when the kernel classifier adjusts score or impact
+- The `suggest-impact` explanation is revised when the kernel classifier adjusts score or impact
 
 ### Added
 - added `--refresh-cache` flag to regenerate OSIDB cache entries in evals
