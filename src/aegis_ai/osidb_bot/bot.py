@@ -18,7 +18,21 @@ from datetime import datetime, timezone
 from typing import Any, Optional, Sequence, cast
 
 
-ELIGIBLE_FLAWS = {
+class _NonEmpty:
+    """Sentinel that matches any truthy value in validate()."""
+
+    def __eq__(self, other: object) -> bool:
+        return bool(other)
+
+    def __bool__(self) -> bool:
+        return True
+
+    def __repr__(self) -> str:
+        return "<non-empty>"
+
+
+ELIGIBLE_FLAWS: dict[str, tuple] = {
+    "cve_id": (_NonEmpty(),),
     "classification": ({"workflow": "REJECTED", "state": "REJECTED"},),
     "components": ([],),
 }
@@ -87,9 +101,11 @@ class FlawFinder:
                 # not indexed in OSIDB
                 continue
 
-            if len(allowed) == 1 and not allowed[0]:
-                key = f"{field}_isempty"
-                kwargs[key] = True
+            if len(allowed) == 1:
+                if not allowed[0]:
+                    kwargs[f"{field}_isempty"] = True
+                elif isinstance(allowed[0], _NonEmpty):
+                    kwargs[f"{field}_isempty"] = False
 
         # filter by timestamp if state file is used
         if state is not None:
