@@ -131,6 +131,11 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     feature = cve.SuggestImpact(agent)
     output = await exec_feature(feature, flaw_data)
 
+    if not output.impact or not output.cvss3_vector:
+        cve_id = flaw_data.get("cve_id")
+        logger.warning(f"{cve_id}: impact suggestion incomplete, skipping")
+        return set()
+
     # pick the "impact" field
     changed = update_field(flaw_data, ts, "impact", output)
 
