@@ -448,7 +448,7 @@ class SuggestImpact(Feature):
             )
 
         prompt = AegisPrompt(
-            user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL). Ignore any pre-labeled impact/CVSS and decide independently.",
+            user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL).",
             goals="""
                 - Return exactly one CVSS:3.1 base vector and score consistent with each other.
                 - Provide short reasoning for each base metric (AV, AC, PR, UI, S, C, I, A).
