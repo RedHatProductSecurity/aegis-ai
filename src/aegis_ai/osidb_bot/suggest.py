@@ -120,16 +120,16 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
 
 
 async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
-    # request the suggestion from Aegis
-    feature = cve.SuggestImpact(agent)
-    output = await exec_feature(feature, flaw_data)
-
     # look for existing RH CVSS
     for cvss in flaw_data["cvss_scores"]:
         if cvss["issuer"] == "RH":
             cve_id = flaw_data.get("cve_id")
             logger.warning(f"{cve_id}: refusing to overwrite RH CVSS")
             return set()
+
+    # request the suggestion from Aegis
+    feature = cve.SuggestImpact(agent)
+    output = await exec_feature(feature, flaw_data)
 
     # pick the "impact" field
     changed = update_field(flaw_data, ts, "impact", output)
