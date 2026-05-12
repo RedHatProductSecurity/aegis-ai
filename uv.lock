@@ -61,6 +61,8 @@ dependencies = [
 
 [package.optional-dependencies]
 classifier-deps = [
+    { name = "imbalanced-learn" },
+    { name = "pandas" },
     { name = "scikit-learn" },
     { name = "xgboost" },
 ]
@@ -122,6 +124,7 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=3.0.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub", marker = "extra == 'ml-deps'", specifier = ">=0.8.0" },
+    { name = "imbalanced-learn", marker = "extra == 'classifier-deps'", specifier = ">=0.13.0" },
     { name = "imbalanced-learn", marker = "extra == 'ml-deps'", specifier = ">=0.13.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "logfire", extras = ["fastapi", "httpx", "sqlite3"] },
@@ -132,6 +135,7 @@ requires-dist = [
     { name = "numpy", marker = "extra == 'ml-deps'", specifier = ">=2.3.2" },
     { name = "osidb-bindings", specifier = ">=5.0.0" },
     { name = "packageurl-python", specifier = ">=0.16.0" },
+    { name = "pandas", marker = "extra == 'classifier-deps'", specifier = ">=1.5.0" },
     { name = "pandas", marker = "extra == 'ml-deps'", specifier = ">=1.5.0" },
     { name = "platformdirs", specifier = ">=4.3.8" },
     { name = "pydantic", specifier = ">=2.12.4" },
