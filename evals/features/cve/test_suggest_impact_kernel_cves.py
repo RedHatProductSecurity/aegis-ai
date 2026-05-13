@@ -125,6 +125,15 @@ KNOWN_FAILURES: dict[str, dict] = {
             "but vector has C:L/I:H. Scope/privilege narration does not match the vector."
         ),
     },
+    "CVE-2022-50836": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "LLM explanation states that exploitation requires local access and privileged "
+            "user or system service capabilities, and that remote processor management is "
+            "restricted to privileged users or system services — implying PR:H. However, "
+            "the CVSS vector uses PR:L, which is inconsistent with the explanation."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
