@@ -14,6 +14,7 @@ from pydantic_ai import Tool, RunContext
 
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
+from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
 logger = logging.getLogger(__name__)
@@ -272,9 +273,15 @@ async def kernel_cve_lookup(cve_id: CVEID) -> LINUXCVEToolResponse:
 
 @Tool
 async def kernel_cve_tool(
-    ctx: RunContext, input: LINUXCVEToolInput
+    ctx: RunContext[feature_deps], input: LINUXCVEToolInput
 ) -> LINUXCVEToolResponse:
     """Looks up a Linux kernel CVE definition by its ID and returns structured data,
     including related commit hashes and affected files."""
+    if not ctx.deps.is_kernel_cve:
+        return LINUXCVEToolResponse(
+            cve_id=input.cve_id,
+            status="error",
+            error_message="Not a kernel CVE; tool not applicable.",
+        )
     logger.info(f"Looking up kernel context for {input.cve_id}...")
     return await kernel_cve_lookup(input.cve_id)
