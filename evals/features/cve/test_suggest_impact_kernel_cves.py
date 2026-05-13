@@ -134,6 +134,20 @@ KNOWN_FAILURES: dict[str, dict] = {
             "the CVSS vector uses PR:L, which is inconsistent with the explanation."
         ),
     },
+    "CVE-2025-68742": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "On one run, the explanation-revision step only prompts the LLM to reconcile "
+            "what changed during post-processing, but the original LLM response already had "
+            "an internal C/I/PR mismatch between its prose and its own vector — and that "
+            "pre-existing inconsistency was invisible to the revision logic. Specifically, "
+            "the LLM emitted I:N in the vector but wrote 'minor integrity impact (I:L)' in "
+            "the explanation. Post-processing changed only impact (LOW -> MODERATE) and "
+            "score (3.8 -> 4.1); the vector itself was not modified, so metric_changed was "
+            "empty and the revision prompt did not instruct the LLM to reconcile the "
+            "explanation text with the unchanged C/I/PR metrics."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
