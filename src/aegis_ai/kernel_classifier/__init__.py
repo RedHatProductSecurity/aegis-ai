@@ -18,6 +18,7 @@ Configuration (environment variables):
   AEGIS_USE_KERNEL_CLASSIFIER  — set to "true" to enable (default: false)
 """
 
+import difflib
 import importlib.util
 import json
 import logging
@@ -139,23 +140,140 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float, st
 
 _PATCH_SIZE_LIMIT = 1_000_000
 
+_BACKPORT_SIMILARITY_THRESHOLD = 0.75
 
-def _collect_patches(patches: list[tuple[str, str]]) -> list[str]:
-    """Return patch content strings, dropping any that exceed the size limit.
 
-    Large non-fix commits exist (driver imports, treewide refactors) but
-    CVE fix commits are targeted bug fixes that are well under 1 MB.
-    The guard protects against accidental inclusion of a prohibitively
-    large patch (e.g. the ~200 MB initial kernel commit).
+def _filter_oversized(
+    patches: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """Return patches that are within the size limit, warning about dropped ones.
+
+    Large non-fix commits exist (driver imports, treewide refactors) but CVE
+    fix commits are targeted bug fixes well under 1 MB.  The guard protects
+    against accidental inclusion of a prohibitively large patch (e.g. the
+    ~200 MB initial kernel commit).
     """
-    out: list[str] = []
+    out: list[tuple[str, str]] = []
     for commit_hash, content in patches:
         if len(content) > _PATCH_SIZE_LIMIT:
             logger.warning(
                 "Dropping oversized patch %s (%d chars)", commit_hash[:12], len(content)
             )
             continue
-        out.append(content)
+        out.append((commit_hash, content))
+    return out
+
+
+def _is_backport_of(canonical: str, candidate: str) -> bool:
+    """Return True when candidate is a stable-backport of canonical.
+
+    Uses a two-phase SequenceMatcher check: cheap quick_ratio() pre-filter
+    followed by the full ratio() only when the upper bound is promising.
+    Kernel backports of the same fix typically score 0.85-0.98; the threshold
+    of 0.75 leaves a comfortable margin below that band while excluding
+    genuinely distinct patches (which score < 0.20 in practice).
+
+    The "diff of the diff" insight: backports differ from mainline only in
+    mail headers, index object hashes, @@ hunk line-numbers, and an
+    [Upstream commit] annotation -- everything security-relevant (commit
+    message body, fix lines) is identical.
+    """
+    sm = difflib.SequenceMatcher(None, canonical, candidate)
+    return (
+        sm.quick_ratio() >= _BACKPORT_SIMILARITY_THRESHOLD
+        and sm.ratio() >= _BACKPORT_SIMILARITY_THRESHOLD
+    )
+
+
+def _patch_delta(
+    canonical_hash: str,
+    canonical_lines: list[str],
+    commit_hash: str,
+    content: str,
+) -> str:
+    """Return a compact delta string representing a backport's differences.
+
+    Uses difflib.unified_diff with n=0 (no context lines) so only the
+    changed lines appear.  Typical differences preserved:
+      - Hunk line numbers (@@ -100 vs @@ -95) -- signals code offset in
+        the target stable branch.
+      - [Upstream commit ...] annotation -- confirms cherry-pick.
+      - Additional Signed-off-by (e.g. Greg Kroah-Hartman).
+      - index object hashes (index aaa..bbb vs index ccc..ddd).
+      - Adapted fix or context lines when the backport required manual
+        adjustment (different variable names, missing prerequisite code).
+    Everything identical between patches (commit message body, the actual
+    fix +/- lines, diffstat) is elided because unified_diff only emits
+    change hunks.  For a 10 KB patch with 5 differing lines the delta is
+    ~200-500 bytes -- a ~95% reduction per duplicate.
+    """
+    backport_lines = content.splitlines(keepends=True)
+    delta_lines = list(
+        difflib.unified_diff(
+            canonical_lines,
+            backport_lines,
+            fromfile=f"canonical ({canonical_hash[:12]})",
+            tofile=f"backport ({commit_hash[:12]})",
+            n=0,
+        )
+    )
+    if delta_lines:
+        return "".join(delta_lines)
+    return f"(identical to canonical {canonical_hash[:12]})"
+
+
+def _deduplicate_patches(patches: list[tuple[str, str]]) -> list[str]:
+    """Deduplicate near-identical stable-backport patches for LLM consumption.
+
+    Kernel CVE fixes are typically one mainline commit cherry-picked into
+    multiple stable branches (6.1.y, 6.6.y, ...).  Sending all N copies to
+    the LLM wastes tokens on redundant content.  This function picks the
+    longest patch as canonical (returned in full); near-duplicates are
+    replaced by a compact delta (see ``_patch_delta``); genuinely distinct
+    patches are kept in full (see ``_is_backport_of``).  Oversized patches
+    are dropped first (see ``_filter_oversized``).
+
+    Args:
+        patches: (commit_hash, patch_content) tuples from ``_fetch_patches``.
+
+    Returns:
+        Compact list of strings suitable for LLM consumption.
+    """
+    sized = _filter_oversized(patches)
+
+    if not sized:
+        return []
+
+    if len(sized) == 1:
+        return [sized[0][1]]
+
+    out: list[str] = []
+    remaining = sized[:]
+    while remaining:
+        canonical_idx = max(range(len(remaining)), key=lambda i: len(remaining[i][1]))
+        canonical_hash, canonical_content = remaining.pop(canonical_idx)
+        canonical_lines = canonical_content.splitlines(keepends=True)
+        out.append(canonical_content)
+
+        duplicates: list[str] = []
+        unmatched: list[tuple[str, str]] = []
+        for commit_hash, content in remaining:
+            if _is_backport_of(canonical_content, content):
+                duplicates.append(
+                    _patch_delta(canonical_hash, canonical_lines, commit_hash, content)
+                )
+            else:
+                unmatched.append((commit_hash, content))
+
+        if duplicates:
+            header = (
+                f"[{len(duplicates)} additional backport commit(s) with "
+                f"near-identical diffs — only differences shown]\n"
+            )
+            out.append(header + "\n---\n".join(duplicates))
+
+        remaining = unmatched
+
     return out
 
 
@@ -518,7 +636,7 @@ class KernelImpactClassifier:
             "cvss_score": cvss_score,
             "cvss_issuer": cvss_issuer,
             "patches_analyzed": len(patches),
-            "patch_summaries": _collect_patches(patches),
+            "patch_summaries": _deduplicate_patches(patches),
         }
         if html_supplemented_flags:
             result["html_supplemented_flags"] = html_supplemented_flags
