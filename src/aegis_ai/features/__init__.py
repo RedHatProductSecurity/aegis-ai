@@ -206,6 +206,12 @@ class Feature(ABC):
                 model_settings=model_settings,
                 **retry_kwargs,
             )
+        else:
+            logger.warning(
+                "%s: output enforcement exhausted %d retries; accepting result as-is",
+                call_str,
+                _MAX_OUTPUT_ENFORCEMENT_RETRIES,
+            )
 
         # check how many input tokens were processed by the LLM
         input_tokens = result._state.usage.input_tokens

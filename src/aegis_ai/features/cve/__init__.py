@@ -436,7 +436,6 @@ class SuggestImpact(Feature):
         )
         if pre_clf is not None:
             deps.classifier_result = pre_clf
-            deps.kernel_tool_called = True
 
         output_schema = SuggestImpactModel.model_json_schema()
         if not is_kernel:

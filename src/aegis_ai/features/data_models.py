@@ -29,10 +29,11 @@ class feature_deps:
     # enforce kernel_impact_tool usage, and by the tool itself to gate
     # non-kernel calls.
     is_kernel_cve: bool = field(default=False)
-    # Set True by exec() when it pre-computes the classifier result, or by
-    # kernel_impact_tool when the LLM calls it.  check_kernel_output reads
-    # this to distinguish "tool not called" from "tool called but no data".
-    kernel_tool_called: bool = field(default=False)
+    # Incremented by kernel_impact_tool each time the LLM invokes it.
+    # check_kernel_output reads this: 0 means the LLM never called the tool
+    # (triggers retry), >0 means it tried (accept, even if classifier_result
+    # is None).
+    classifier_attempts: int = field(default=0)
     # Pre-computed classifier result from kernel_impact_classify.  Set by
     # exec() before the LLM run; kernel_impact_tool returns it immediately
     # via its fast-path cache (mirrors the flaw_tool static_context pattern).

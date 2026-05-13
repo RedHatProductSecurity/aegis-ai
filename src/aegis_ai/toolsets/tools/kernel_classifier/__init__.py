@@ -168,7 +168,7 @@ async def kernel_impact_tool(
     signals: which patch feature flags fired and the model's per-class severity
     probabilities.  Use this when the CVE component is the Linux kernel."""
 
-    ctx.deps.kernel_tool_called = True
+    ctx.deps.classifier_attempts += 1
 
     if not ctx.deps.is_kernel_cve:
         return KernelImpactToolResponse(
