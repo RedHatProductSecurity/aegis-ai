@@ -269,38 +269,6 @@ class SuggestImpact(Feature):
 
         return trace
 
-    @staticmethod
-    def _strip_system_parts(
-        messages: list,
-    ) -> list:
-        """Remove SystemPromptPart from message history.
-
-        When replaying history with a different output_type, pydantic-ai
-        injects new instruction-parts as system messages.  The history
-        already contains SystemPromptPart from the original run, which
-        produces duplicate system messages — rejected by backends that
-        allow only one (e.g. vLLM / Mistral).
-        """
-        from pydantic_ai.messages import ModelRequest, SystemPromptPart
-
-        cleaned: list = []
-        for msg in messages:
-            if isinstance(msg, ModelRequest):
-                non_sys = [p for p in msg.parts if not isinstance(p, SystemPromptPart)]
-                if non_sys or not cleaned:
-                    cleaned.append(
-                        ModelRequest(
-                            parts=non_sys,
-                            instructions=None,
-                            timestamp=msg.timestamp,
-                            run_id=msg.run_id,
-                            metadata=msg.metadata,
-                        )
-                    )
-            else:
-                cleaned.append(msg)
-        return cleaned
-
     _CVSS_METRICS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
 
     @staticmethod
@@ -334,6 +302,8 @@ class SuggestImpact(Feature):
         original_vector,
         trace,
         call_str,
+        *,
+        cve_context: dict | None = None,
     ):
         """Ask the LLM to revise its explanation after post-processing
         changed the score, impact, or CVSS vector.  Best-effort: failures
@@ -369,7 +339,29 @@ class SuggestImpact(Feature):
                     f"{', '.join(metric_unchanged)}."
                 )
 
+        # Build a concise CVE context block so the revision LLM can write
+        # technically accurate justifications without the full conversation.
+        context_block = ""
+        if cve_context:
+            title = cve_context.get("title", "")
+            description_text = (
+                cve_context.get("cve_description")
+                or cve_context.get("comment_zero")
+                or cve_context.get("description", "")
+            )
+            components = cve_context.get("components", [])
+            parts: list[str] = []
+            if title:
+                parts.append(f"Title: {title}")
+            if components:
+                parts.append(f"Components: {', '.join(components)}")
+            if description_text:
+                parts.append(f"Description: {description_text}")
+            if parts:
+                context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
+
         follow_up = (
+            f"{context_block}"
             "Post-processing has adjusted your assessment.\n"
             f"Changes: {'; '.join(changes)}\n"
             f"Reconciliation trace: {trace}\n"
@@ -393,12 +385,13 @@ class SuggestImpact(Feature):
             )
 
         try:
-            history = self._strip_system_parts(result.all_messages())
+            revision_prompt = (
+                f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+            )
             async with llm_sem:
                 revision = await self._run(
                     call_str,
-                    follow_up,
-                    message_history=history,
+                    revision_prompt,
                     output_type=RevisedExplanationModel,
                 )
             result.output.explanation = revision.output.explanation + override_note
@@ -510,6 +503,7 @@ class SuggestImpact(Feature):
                 original_vector,
                 trace,
                 call_str,
+                cve_context=resolved_static_context,
             )
             result.output._explanation_revised = True
 
