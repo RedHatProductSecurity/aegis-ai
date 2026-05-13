@@ -164,9 +164,19 @@ public_toolset = CombinedToolset(public_toolset_list)
 
 
 # Toolset containing rh specific tooling for CVE
-redhat_cve_toolset_list = [
+redhat_cve_toolset_list: list[AbstractToolset[Any]] = [
     osidb_toolset,
 ]
+
+if get_settings().use_kernel_classifier:
+    from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_tool
+
+    redhat_cve_toolset_list.append(FunctionToolset(tools=[kernel_impact_tool]))
+
+if get_settings().use_linux_cve_tool:
+    from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
+
+    redhat_cve_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
 
 redhat_cve_toolset = CombinedToolset(redhat_cve_toolset_list)
 

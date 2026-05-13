@@ -416,11 +416,28 @@ class SuggestImpact(Feature):
 
             is_kernel = is_kernel_component(components)
 
+        # Eagerly run the kernel classifier so the result is available on
+        # deps for both the tool fast-path and post-processing (reconciliation,
+        # guardrails).  kernel_impact_tool will return this cached result
+        # instantly when the LLM calls it.
+        if use_kernel_classifier and is_kernel:
+            from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_classify
+
+            pre_clf = await kernel_impact_classify(
+                cve_id, static_context=resolved_static_context
+            )
+        else:
+            pre_clf = None
+
         deps = feature_deps(
             exclude_osidb_fields=["impact", "rh_cvss_score"],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
         )
+        if pre_clf is not None:
+            deps.classifier_result = pre_clf
+            deps.kernel_tool_called = True
+
         output_schema = SuggestImpactModel.model_json_schema()
         if not is_kernel:
             output_schema.get("properties", {}).pop(
@@ -443,18 +460,6 @@ class SuggestImpact(Feature):
         )
 
         run_kwargs: dict = dict(deps=deps, output_type=SuggestImpactModel)
-
-        if use_kernel_classifier and is_kernel:
-            from pydantic_ai.toolsets import FunctionToolset
-            from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_tool
-
-            kernel_tools: list = [kernel_impact_tool]
-            if get_settings().use_linux_cve_tool:
-                from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
-
-                kernel_tools.append(kernel_cve_tool)
-
-            run_kwargs["toolsets"] = [FunctionToolset[feature_deps](tools=kernel_tools)]
 
         result = await self.guarded_run(prompt, **run_kwargs)
         call_str = f"{self.__class__.__name__}({cve_id})"
