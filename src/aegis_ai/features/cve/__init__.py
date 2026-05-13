@@ -1,3 +1,4 @@
+import asyncio
 import cvss
 import logging
 from typing import Any
@@ -307,8 +308,10 @@ class SuggestImpact(Feature):
     ):
         """Ask the LLM to revise its explanation after post-processing
         changed the score, impact, or CVSS vector.  Best-effort: failures
-        are logged and the original explanation is kept."""
-        from aegis_ai.features import llm_sem
+        are logged and the original explanation is kept.
+
+        Returns True if the revision succeeded, False otherwise."""
+        from aegis_ai.features import llm_prompt_timeout, llm_sem
 
         changes: list[str] = []
         if result.output.impact != original_impact:
@@ -384,26 +387,44 @@ class SuggestImpact(Feature):
                 f" during post-processing reconciliation."
             )
 
+        _REVISION_TIMEOUT = llm_prompt_timeout
+
         try:
             revision_prompt = (
                 f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
             )
             async with llm_sem:
-                revision = await self._run(
-                    call_str,
-                    revision_prompt,
-                    output_type=RevisedExplanationModel,
+                revision = await asyncio.wait_for(
+                    self._run(
+                        call_str,
+                        revision_prompt,
+                        output_type=RevisedExplanationModel,
+                    ),
+                    timeout=_REVISION_TIMEOUT,
                 )
             result.output.explanation = revision.output.explanation + override_note
             logger.info(
                 "%s: explanation revised after post-processing adjustments", call_str
             )
+            return True
+        except asyncio.TimeoutError:
+            logger.warning(
+                "%s: revision timed out after %ds, keeping original explanation",
+                call_str,
+                _REVISION_TIMEOUT,
+            )
+            if override_note:
+                result.output.explanation += override_note
+            return False
         except Exception as exc:
             logger.warning(
                 "%s: failed to revise explanation after post-processing: %s",
                 call_str,
                 exc,
             )
+            if override_note:
+                result.output.explanation += override_note
+            return False
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_kernel_classifier = get_settings().use_kernel_classifier
@@ -496,7 +517,7 @@ class SuggestImpact(Feature):
             impact_changed or vector_changed
         )
         if guardrail_fired:
-            await self._revise_explanation(
+            result.output._explanation_revised = await self._revise_explanation(
                 result,
                 original_score,
                 original_impact,
@@ -505,7 +526,6 @@ class SuggestImpact(Feature):
                 call_str,
                 cve_context=resolved_static_context,
             )
-            result.output._explanation_revised = True
 
         result.output._classifier_diagnostics = classifier_result
         result.output._reconciliation_trace = trace
