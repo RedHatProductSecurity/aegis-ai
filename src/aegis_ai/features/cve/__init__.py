@@ -128,8 +128,18 @@ class SuggestImpact(Feature):
                     - Use github mcp and web search tools to resolve reference URLs.
                     - Always use kernel_cve tool if the component is the Linux kernel.
                     - If cisa_kev_tool is available, check for known exploits.
+                - Data quality:
+                    - Set data_quality to reflect how much actionable technical detail the input (comment_zero / CVE description) provides for CVSS scoring.
+                    - Reserve 0.9–1.0 only when the input spells out attack vector, privileges, user interaction, scope, and concrete CIA consequences.
+                    - Use 0.6–0.8 when the input gives a general idea of the flaw but omits some metrics-relevant detail (e.g., no exploitation path, unclear privilege requirements).
+                    - Use 0.3–0.5 when the input is vague, merely names a vulnerability class, or lacks technical context.
+                    - Use below 0.3 when the input is essentially empty or uninformative.
                 - Confidence:
-                    - Calibrate confidence to the fraction of base metrics you are ≥80% sure about (e.g., 0.75 if 6/8 are certain).
+                    - Set confidence to reflect how reliable the overall suggestion is. Be conservative.
+                    - Reserve 0.9–1.0 only when input data is unambiguous and you are near-certain about the vector, score, and impact.
+                    - Use 0.6–0.8 when most metrics are clear but one or two require assumptions (e.g., unclear scope or privilege level).
+                    - Use 0.3–0.5 when significant guesswork is involved due to sparse or ambiguous input.
+                    - Use below 0.3 when the suggestion is largely speculative.
                 - Explanation must match the vector (mandatory):
                     - Do not write that exploitation requires admin capabilities, mount privileges, or privileged syscalls and output PR:L; use PR:H when those are required to trigger the flaw.
                     - If you revise the narrative and it implies stricter privileges than your draft vector, update PR in the vector before finalizing.

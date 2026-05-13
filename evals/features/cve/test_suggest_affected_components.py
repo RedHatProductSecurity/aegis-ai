@@ -135,6 +135,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-5991",  # got ['qt6'], expected ['qt']
     "CVE-2025-6052",  # got ['glib2'], expected ['glib']
+    "CVE-2025-23050",  # got ['qt5-qtconnectivity', 'qt6-qtconnectivity'], expected ['qt', 'qt5', 'qt6']
     "CVE-2025-58190",  # got ['golang.org/x/net'], expected ['golang.org/x/net/html']
     "CVE-2025-64329",  # Aegis occasionally suggests 'containerd' while 'github.com/containerd/containerd' is expected
     "CVE-2026-0988",  # got ['glib2'], expected ['glib']

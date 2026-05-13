@@ -51,19 +51,14 @@ class AegisFeatureModel(BaseModel):
         ...,
         ge=0.0,
         le=1.0,
-        description="Overall assessment of the underlying data quality, completeness and internal consistency.",
+        description="Amount of technical data in the `comment_zero` input field relevant for generating the requested suggestions, ranging from 0.0 (insufficient) to 1.0 (perfect).",
     )
 
     confidence: float = Field(
         ...,
         ge=0.0,
         le=1.0,
-        description="""
-        # Confidence Score Methodology: Quantifying Analytical Reliability
-
-        ## Definition
-        A precision-driven numerical representation of analysis reliability, scaled from 0.00 to 1.00, capturing the probabilistic certainty of analytical accuracy.
-        """,
+        description="Quantification of reliability of the provided suggestion, ranging from 0.0 (guessing) to 1.0 (certainty).  Be conservative in this judgment.",
     )
 
     tools_used: List = Field(
