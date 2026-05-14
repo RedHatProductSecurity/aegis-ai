@@ -3,7 +3,7 @@ import cvss
 import logging
 from typing import Any
 
-from aegis_ai import get_settings, remove_keys
+from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
@@ -483,9 +483,6 @@ class SuggestImpact(Feature):
             """,
             rules=RULES_KERNEL if is_kernel else self._RULES_BASE,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=remove_keys(
-                resolved_static_context, keys_to_remove=deps.exclude_osidb_fields
-            ),
             output_schema=output_schema,
         )
 
@@ -547,7 +544,10 @@ class SuggestCWE(Feature):
     """Based on current CVE information and context assert CWE(s)."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=["cwe_id"])
+        deps = feature_deps(
+            exclude_osidb_fields=["cwe_id"],
+            static_context=static_context,
+        )
 
         prompt = AegisPrompt(
             user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause of software weakness. Ignore any pre-labeled CWE.",
@@ -573,9 +573,6 @@ class SuggestCWE(Feature):
                 - confidence: [0.00..1.00].
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=remove_keys(
-                static_context, keys_to_remove=deps.exclude_osidb_fields
-            ),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
 
@@ -620,7 +617,6 @@ class IdentifyPII(Feature):
                 Only report PII present in the JSON. Do not add extra text or line breaks like \n inside items.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=static_context,
             output_schema=PIIReportModel.model_json_schema(),
         )
         return await self.guarded_run(prompt, deps=deps, output_type=PIIReportModel)
@@ -630,7 +626,10 @@ class SuggestDescriptionText(Feature):
     """Based on current CVE information and context suggest a description and title."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=["title", "cve_description"])
+        deps = feature_deps(
+            exclude_osidb_fields=["title", "cve_description"],
+            static_context=static_context,
+        )
         prompt = AegisPrompt(
             user_instruction="Analyze the CVE JSON and suggest the CVE description and title to be brief, clear, and accurate. If missing, propose them. Write for a non-technical/executive audience (e.g., a CISO) using plain English; avoid jargon and define unavoidable terms briefly.",
             goals="""
@@ -667,9 +666,6 @@ class SuggestDescriptionText(Feature):
                 - Never output meta-diagnostic text such as "information is inconsistent", "insufficient data", "cannot determine", or similar. Provide the best-supported description instead with calibrated confidence.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=remove_keys(
-                static_context, keys_to_remove=deps.exclude_osidb_fields
-            ),
             output_schema=SuggestDescriptionModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -748,9 +744,6 @@ class SuggestStatementText(Feature):
             - Length: < 2000 characters.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=remove_keys(
-                static_context, keys_to_remove=deps.exclude_osidb_fields
-            ),
             output_schema=SuggestStatementModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -802,9 +795,6 @@ class SuggestAffectedComponents(Feature):
                 - Output format: components (list of strings), explanation (string), confidence (0.00–1.00).
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=remove_keys(
-                static_context, keys_to_remove=deps.exclude_osidb_fields
-            ),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -829,7 +819,6 @@ class CVSSDiffExplainer(Feature):
                 - Keep the rationale brief and factual. If no difference, return an empty explanation.
             """,
             context=CVEFeatureInput(cve_id=cve_id),
-            static_context=static_context,
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
         return await self.guarded_run(
