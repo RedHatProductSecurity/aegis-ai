@@ -161,13 +161,9 @@ class Feature(ABC):
                     # retry the prompt with gradually increasing delay
                     delay = (delay * 2) if delay else PROMPT_RETRY_503_DELAY_INIT
 
-                except UnexpectedModelBehavior as e:
+                except UnexpectedModelBehavior:
                     if agent_default_max_retries <= attempt:
                         # exceeded retry attempts
-                        raise
-
-                    if "RECITATION" not in str(e):
-                        # propagate other exceptions
                         raise
 
                     # retry with high temperature
