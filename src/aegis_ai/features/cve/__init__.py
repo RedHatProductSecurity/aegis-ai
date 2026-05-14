@@ -379,7 +379,7 @@ class SuggestImpact(Feature):
 
         override_note = ""
         new_vector = result.output.cvss3_vector or ""
-        if new_vector != original_vector:
+        if new_vector != original_vector or result.output.cvss3_score != original_score:
             override_note = (
                 f"\n\nNote: CVSS vector adjusted from "
                 f"{original_score} ({original_vector}) to "
