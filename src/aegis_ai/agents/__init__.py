@@ -17,7 +17,7 @@ from aegis_ai.toolsets import (
 agent_default_max_retries = get_env_int("AEGIS_AGENT_MAX_RETRIES", 5)
 
 
-def create_aegis_agent(**kwargs: Any) -> Agent:
+def create_aegis_agent(**kwargs: Any) -> Agent[Any, Any]:
     """
     Factory for a pre-configured `Agent` that mirrors the previous AegisAgent defaults
     without subclassing the (final) `Agent` class.
@@ -28,8 +28,14 @@ def create_aegis_agent(**kwargs: Any) -> Agent:
         | get_settings().model_kwargs
         | {
             "seed": 42,  # FIXME: we should not hardcode the seed
-            "response_format": {"type": "json_object"},
         },
+        # pydantic-ai default is 1, which means one internal retry before
+        # raising UnexpectedModelBehavior.  With function tools present,
+        # Google's API cannot enforce output schemas (no native mode), so
+        # the model generates freeform JSON validated only by Pydantic.
+        # 3 retries give the model enough feedback rounds to self-correct
+        # validation errors (CVSS vector format, Literal fields, etc.).
+        output_retries=3,
         **kwargs,
     )
 
