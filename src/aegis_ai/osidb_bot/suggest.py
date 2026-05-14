@@ -1,7 +1,7 @@
 from aegis_ai.osidb_bot.util import FlawData, logger
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
-from aegis_ai.features.data_models import AegisAnswer
+from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
 
 from pydantic_ai import Agent
 
@@ -9,11 +9,48 @@ from datetime import datetime
 from typing import Any, Optional
 
 
+# define the quality of suggestions that we accept
+METRICS_THR = {
+    "data_quality": {
+        "info_thr": 0.8,
+        "skip_thr": 0.6,
+    },
+    "confidence": {
+        "info_thr": 0.8,
+        "skip_thr": 0.6,
+    },
+}
+
+
+def check_metrics(feat_name: str, cve_id: CVEID, output: AegisFeatureModel) -> bool:
+    """return True if both data_quality and confidence are above skip_thr"""
+    skip = False
+    for field, thr_map in METRICS_THR.items():
+        value = getattr(output, field)
+        if value <= thr_map["info_thr"]:
+            logger.info(f"{cve_id}: {feat_name}: too low {field}: {value}")
+        if value <= thr_map["skip_thr"]:
+            skip = True
+
+    if skip:
+        logger.warning(f"{cve_id}: {feat_name}: discarding suggestion")
+        return False
+
+    return True
+
+
 async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
     try:
         cve_id: CVEID = cveid_validator.validate_python(flaw_data["cve_id"])
         result = await feature.exec(cve_id, static_context=flaw_data)
-        return result.output
+        output = result.output
+        if not isinstance(output, AegisFeatureModel):
+            return None
+        if check_metrics(feature.__class__.__name__, cve_id, output):
+            return output
+        else:
+            return None
+
     except Exception as e:
         msg = "exec_feature() terminated with Exception"
         logger.debug(f"{msg}: {str(e)}")
@@ -76,6 +113,9 @@ async def suggest_components(
     # request the suggestion from Aegis
     feature = cve.SuggestAffectedComponents(agent)
     output = await exec_feature(feature, flaw_data)
+    if output is None:
+        return set()
+
     return update_field(flaw_data, ts, "components", output)
 
 
@@ -85,6 +125,8 @@ async def suggest_description(
     # request the suggestion from Aegis
     feature = cve.SuggestDescriptionText(agent)
     output = await exec_feature(feature, flaw_data)
+    if output is None:
+        return set()
 
     # pick the relevant fields
     changed = update_field(flaw_data, ts, "title", output, src="suggested_title")
@@ -106,6 +148,9 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
     # request the suggestion from Aegis
     feature = cve.SuggestCWE(agent)
     output = await exec_feature(feature, flaw_data)
+    if output is None:
+        return set()
+
     suggested_cwes = output.cwe
     if not suggested_cwes:
         logger.warning(f"{cve_id}: CWE suggestion failed")
@@ -130,6 +175,8 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     # request the suggestion from Aegis
     feature = cve.SuggestImpact(agent)
     output = await exec_feature(feature, flaw_data)
+    if output is None:
+        return set()
 
     if not output.impact or not output.cvss3_vector:
         cve_id = flaw_data.get("cve_id")
