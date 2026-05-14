@@ -1,3 +1,4 @@
+import math
 from typing import get_args
 
 import cvss
@@ -163,6 +164,19 @@ class CVSSVectorEvaluator(Evaluator[str, SuggestImpactModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
+class DataQualityEvaluator(Evaluator[str, SuggestImpactModel]):
+    """Compare data_quality with the expected value when specified"""
+
+    _sigma = 0.1  # controls tolerance: ~0.61 at ±0.1, ~0.14 at ±0.2
+
+    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
+        assert ctx.expected_output is not None
+        diff = ctx.output.data_quality - ctx.expected_output.data_quality
+
+        # Gaussian similarity
+        return math.exp(-(diff**2) / (2 * self._sigma**2))
+
+
 # some evaluators are only applicable if the expected output for a specific field is provided
 field_evaluators = {
     "impact": ImpactEvaluator(),
@@ -206,6 +220,7 @@ class SuggestImpactCase(Case):
         expected_impact=None,
         expected_cvss3_score=None,
         expected_cvss3_vector=None,
+        data_quality=None,
         **kwargs,
     ):
         """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
@@ -228,16 +243,19 @@ class SuggestImpactCase(Case):
             impact=expected_impact,
             cvss3_score=str(expected_cvss3_score),
             cvss3_vector=expected_cvss3_vector,
-            data_quality=1.0,
+            data_quality=data_quality if data_quality is not None else 1.0,
             confidence=1.0,
             tools_used=[],
             disclaimer=disclaimer,
         )
 
         # enable field-specific evaluators for this case
-        evaluators = list(
+        evaluators: list[Evaluator] = list(
             field_evaluators[f] for f in field_evaluators if getattr(expected_output, f)
         )
+
+        if data_quality is not None:
+            evaluators.append(DataQualityEvaluator())
 
         cached = read_cache_json(cve_id)
         components = cached.get("components", []) if cached else []
@@ -504,16 +522,19 @@ cases = [
         cve_id="CVE-2026-4705",
         expected_impact="MODERATE",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+        data_quality=0.6,
     ),
     SuggestImpactCase(
         cve_id="CVE-2026-4718",
         expected_impact="LOW",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:N/A:N",
+        data_quality=0.6,
     ),
     SuggestImpactCase(
         cve_id="CVE-2026-4724",
         expected_impact="MODERATE",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+        data_quality=0.6,
     ),
     SuggestImpactCase(
         cve_id="CVE-2026-21727",
