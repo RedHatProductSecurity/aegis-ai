@@ -501,6 +501,21 @@ cases = [
         metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
+        cve_id="CVE-2026-4705",
+        expected_impact="MODERATE",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-4718",
+        expected_impact="LOW",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:N/A:N",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-4724",
+        expected_impact="MODERATE",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2026-21727",
         expected_impact="LOW",
     ),
