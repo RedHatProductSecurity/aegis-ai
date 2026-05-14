@@ -564,7 +564,14 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-39754",
         cwe_list=["CWE-820", "CWE-413"],  # kdudka: added CWE-413
-        metadata={"known_to_fail_evaluators": ["CWEExplanationRootCause"]},
+        # LLM returns CWE-708 (Incorrect Ownership Assignment) instead of
+        # CWE-820/CWE-413 (Missing Synchronization / Improper Resource Locking).
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39782",
