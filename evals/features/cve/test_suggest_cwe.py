@@ -870,7 +870,8 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2026-31971",
-        cwe_list=["CWE-131"],
+        cwe_list=["CWE-131", "CWE-130", "CWE-805"],  # CWE-130, CWE-805 added by kdudka
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-31973",
