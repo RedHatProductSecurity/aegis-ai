@@ -148,6 +148,17 @@ KNOWN_FAILURES: dict[str, dict] = {
             "explanation text with the unchanged C/I/PR metrics."
         ),
     },
+    "CVE-2024-53104": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The explanation for I:H states 'The out-of-bounds write can overwrite kernel "
+            "data structures, leading to significant integrity impact.' This describes a "
+            "purely internal kernel state issue without providing a plausible user-data "
+            "impact path, which contradicts the rubric's instruction to 'do not set "
+            "C:H/I:H for purely internal kernel state issues without a plausible "
+            "user-data impact path.'"
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
