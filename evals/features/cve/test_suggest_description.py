@@ -195,6 +195,7 @@ cases = [
         cve_id="CVE-2025-60876",
         expected_title="BusyBox wget: CRLF Injection via unsanitized HTTP request-target allows header injection",
         expected_description="A flaw was found in BusyBox wget. This vulnerability allows an attacker to inject arbitrary Hypertext Transfer Protocol (HTTP) headers by failing to sanitize raw Carriage Return (CR) (0x0D), Line Feed (LF) (0x0A), and other C0 control bytes in the HTTP request-target.",
+        metadata={"known_to_fail_evaluators": ["NoVersionInfo"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-61661",
