@@ -141,6 +141,7 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-0988",  # got ['glib2'], expected ['glib']
     "CVE-2026-1484",  # got ['glib2'], expected ['Glib']
     "CVE-2026-22815",  # got ['python-aiohttp'], expected ['aiohttp']
+    "CVE-2026-23950",  # got ['nodejs-tar'], expected ['node-tar', 'tar']
     "CVE-2026-26962",  # got ['rubygem-rack'], expected ['rack']
     "CVE-2026-34073",  # got ['cryptography'], expected ['python-cryptography']
     "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
