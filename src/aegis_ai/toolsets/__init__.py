@@ -167,18 +167,23 @@ public_toolset = CombinedToolset(public_toolset_list)
 redhat_cve_toolset_list: list[AbstractToolset[Any]] = [
     osidb_toolset,
 ]
+redhat_cve_toolset = CombinedToolset(redhat_cve_toolset_list)
+
+# Kernel-only tools (classifier + linux CVE lookup) for per-run injection
+# into SuggestImpact so non-impact features never see kernel tool descriptions.
+kernel_extra_toolset_list: list[AbstractToolset[Any]] = []
 
 if get_settings().use_kernel_classifier:
     from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_tool
 
-    redhat_cve_toolset_list.append(FunctionToolset(tools=[kernel_impact_tool]))
+    kernel_extra_toolset_list.append(FunctionToolset(tools=[kernel_impact_tool]))
 
 if get_settings().use_linux_cve_tool:
     from aegis_ai.toolsets.tools.kernel_cves import kernel_cve_tool
 
-    redhat_cve_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
+    kernel_extra_toolset_list.append(FunctionToolset(tools=[kernel_cve_tool]))
 
-redhat_cve_toolset = CombinedToolset(redhat_cve_toolset_list)
+kernel_extra_toolset = CombinedToolset(kernel_extra_toolset_list)
 
 
 # Toolset containing generic tooling for CVE
@@ -195,4 +200,5 @@ public_cve_toolset = CombinedToolset(public_cve_toolset_list)
 # chain logging wrappers
 public_toolset = LoggingToolset(public_toolset)
 redhat_cve_toolset = LoggingToolset(redhat_cve_toolset)
+kernel_extra_toolset = LoggingToolset(kernel_extra_toolset)
 public_cve_toolset = LoggingToolset(public_cve_toolset)

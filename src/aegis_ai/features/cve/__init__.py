@@ -79,7 +79,6 @@ class SuggestImpact(Feature):
                 - Consider Red Hat hardening defaults (SELinux enforcing, least privilege) only to inform AC and S, not AV.
                 - Retrieve and summarize additional context from vulnerability references:
                     - Use github mcp and web search tools to resolve reference URLs.
-                    - Always use kernel_cve tool if the component is the Linux kernel.
                     - If cisa_kev_tool is available, check for known exploits.
                 - Data quality:
                     - Set data_quality to reflect how much actionable technical detail the input (comment_zero / CVE description) provides for CVSS scoring.
@@ -460,6 +459,11 @@ class SuggestImpact(Feature):
 
         run_kwargs: dict = dict(deps=deps, output_type=SuggestImpactModel)
 
+        if is_kernel:
+            from aegis_ai.toolsets import kernel_extra_toolset
+
+            run_kwargs["toolsets"] = [kernel_extra_toolset]
+
         result = await self.guarded_run(prompt, **run_kwargs)
         call_str = f"{self.__class__.__name__}({cve_id})"
         classifier_result = deps.classifier_result
@@ -516,7 +520,6 @@ class SuggestCWE(Feature):
                 - Return a short explanation and confidence.
             """,
             rules="""
-                - When CVE component is kernel always use kernel_cve tool to retrieve additional context.
                 - Retrieve and summarise additional context strictly from vulnerability reference URLs and CWE tool outputs.
                     - Prefer mitre_cwe tools (retrieve_allowed_cwe_ids, search_cwes, retrieve_cwes) for CWE selection and definitions.
                     - Use github mcp tool to resolve vulnerability reference URLs if present.

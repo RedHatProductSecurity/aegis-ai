@@ -768,8 +768,9 @@ def apply_kpanic_cvss_override(
 
 
 def check_kernel_output(output, deps) -> str | None:
-    """Return a retry message if kernel_impact_tool was not called for a
-    kernel CVE, or ``None`` to accept the output."""
+    """Accept when a classifier result is available (eagerly pre-computed or
+    via tool call).  Retry only when neither source produced a result and the
+    LLM has not yet attempted kernel_impact_tool."""
     use_clf = get_settings().use_kernel_classifier
     is_kernel = getattr(deps, "is_kernel_cve", False)
 
