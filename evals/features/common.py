@@ -221,12 +221,17 @@ def eval_name_from_result(result):
 
 
 def _format_suggest_affected_components_output(val: Any) -> str:
-    """Format suggest_affected_components output for display: show components only."""
+    """Format suggest_affected_components output for display."""
     if val is None:
         return ""
+    parts: list[str] = []
     if hasattr(val, "components") and val.components is not None:
-        return str(val.components)
-    return str(val)
+        parts.append(str(val.components))
+    if hasattr(val, "data_quality"):
+        parts.append(f"data_quality={val.data_quality}")
+    if hasattr(val, "confidence"):
+        parts.append(f"confidence={val.confidence}")
+    return " ".join(parts) if parts else str(val)
 
 
 def _score_with_threshold_indicator(value: float | int) -> str:
