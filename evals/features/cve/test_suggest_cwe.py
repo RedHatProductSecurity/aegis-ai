@@ -524,10 +524,20 @@ cases = [
         cve_id="CVE-2025-39677",
         cwe_list=["CWE-191"],
     ),
+    # Aegis suggests CWE-823 (Unnecessary Inclusion of Sensitive Information in Debug Log)
+    # while explaining "memory allocation failures and out-of-range memory access".
+    # The model appears to confuse the `arm_smmu_context_fault` log output in the bug
+    # description with an information-disclosure weakness, producing an incoherent
+    # CWE/explanation pair. The correct CWE is CWE-358 (missing IOMMU workaround entry).
     SuggestCweCase(
         cve_id="CVE-2025-39739",
         cwe_list=["CWE-358"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39750",
