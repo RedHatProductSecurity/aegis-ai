@@ -45,15 +45,15 @@ populate-kernel-caches:
 
 prepare-kernel-eval: generate-kernel-eval populate-kernel-caches
 
-eval:
+eval: fetch-deps
 	uv run pytest -vv -s --show-capture=no evals
 
 # The eval-debug target enforces single-job concurrency for debugging purposes
 # by setting AEGIS_LLM_MAX_JOBS=1. This ensures only one job runs at a time.
-eval-debug:
+eval-debug: fetch-deps
 	AEGIS_LLM_MAX_JOBS=1 uv run pytest -vv -s -o log_cli_level=DEBUG --show-capture=no evals
 
-eval-in-parallel:
+eval-in-parallel: fetch-deps
 	uv run pytest -vv -n auto evals
 
 test:
@@ -63,7 +63,7 @@ test-web:
 	uv run pytest src/aegis_ai_web/tests
 
 fetch-deps:
-	uv sync --frozen
+	uv sync --frozen --extra=classifier_deps
 
 upgrade-deps:
 	uv sync --upgrade
