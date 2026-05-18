@@ -6,6 +6,7 @@ Aegis MCP - register mcp here
 import os
 import logging
 import time
+import warnings
 
 from typing import Any
 
@@ -51,6 +52,9 @@ class LoggingToolset(WrapperToolset[AgentDepsT]):
 
 
 # register any MCP tools below:
+# MCPServerStdio is deprecated in pydantic-ai v2 in favor of MCPToolset, but
+# MCPToolset requires fastmcp[client] which is not yet available in our env.
+warnings.filterwarnings("ignore", r"`MCPServer\w+` is deprecated", DeprecationWarning)
 
 # mcp-nvd: query NIST National Vulnerability Database (NVD)
 # https://github.com/marcoeg/mcp-nvd
