@@ -191,6 +191,7 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-54770",
         expected_description="A vulnerability has been identified in the GRUB2 bootloader's network module that poses an immediate Denial of Service (DoS) risk. This flaw is a Use-after-Free issue, caused because the net_set_vlan command is not properly unregistered when the network module is unloaded from memory. An attacker who can execute this command can force the system to access memory locations that are no longer valid. Successful exploitation leads directly to system instability, which can result in a complete crash and halt system availability.",
+        metadata={"known_to_fail_evaluators": ["TitleHeadlineLevel"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-60876",

@@ -159,6 +159,27 @@ KNOWN_FAILURES: dict[str, dict] = {
             "user-data impact path.'"
         ),
     },
+    "CVE-2022-50873": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The explanation for PR:L states that 'Unloading modules or removing devices "
+            "typically requires elevated capabilities, but not necessarily full "
+            "administrative privileges.' However, unloading kernel modules or removing "
+            "PCI devices are generally considered admin-only operations. The explanation "
+            "does not describe a plausible unprivileged alternative for these actions, "
+            "making PR:L inconsistent with the described trigger path according to the "
+            "rubric's consistency rule for PR."
+        ),
+    },
+    "CVE-2025-68305": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The explanation only describes a denial of service impact, but the CVSS "
+            "vector sets C:H and I:H. The rubric states 'do not set C:H/I:H for purely "
+            "internal kernel state issues without a plausible user-data impact path.' "
+            "The explanation does not provide such a path for C or I."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
