@@ -1,3 +1,4 @@
+import asyncio
 import cvss
 import logging
 from typing import Any
@@ -269,38 +270,6 @@ class SuggestImpact(Feature):
 
         return trace
 
-    @staticmethod
-    def _strip_system_parts(
-        messages: list,
-    ) -> list:
-        """Remove SystemPromptPart from message history.
-
-        When replaying history with a different output_type, pydantic-ai
-        injects new instruction-parts as system messages.  The history
-        already contains SystemPromptPart from the original run, which
-        produces duplicate system messages — rejected by backends that
-        allow only one (e.g. vLLM / Mistral).
-        """
-        from pydantic_ai.messages import ModelRequest, SystemPromptPart
-
-        cleaned: list = []
-        for msg in messages:
-            if isinstance(msg, ModelRequest):
-                non_sys = [p for p in msg.parts if not isinstance(p, SystemPromptPart)]
-                if non_sys or not cleaned:
-                    cleaned.append(
-                        ModelRequest(
-                            parts=non_sys,
-                            instructions=None,
-                            timestamp=msg.timestamp,
-                            run_id=msg.run_id,
-                            metadata=msg.metadata,
-                        )
-                    )
-            else:
-                cleaned.append(msg)
-        return cleaned
-
     _CVSS_METRICS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
 
     @staticmethod
@@ -334,11 +303,15 @@ class SuggestImpact(Feature):
         original_vector,
         trace,
         call_str,
+        *,
+        cve_context: dict | None = None,
     ):
         """Ask the LLM to revise its explanation after post-processing
         changed the score, impact, or CVSS vector.  Best-effort: failures
-        are logged and the original explanation is kept."""
-        from aegis_ai.features import llm_sem
+        are logged and the original explanation is kept.
+
+        Returns True if the revision succeeded, False otherwise."""
+        from aegis_ai.features import llm_prompt_timeout, llm_sem
 
         changes: list[str] = []
         if result.output.impact != original_impact:
@@ -369,7 +342,29 @@ class SuggestImpact(Feature):
                     f"{', '.join(metric_unchanged)}."
                 )
 
+        # Build a concise CVE context block so the revision LLM can write
+        # technically accurate justifications without the full conversation.
+        context_block = ""
+        if cve_context:
+            title = cve_context.get("title", "")
+            description_text = (
+                cve_context.get("cve_description")
+                or cve_context.get("comment_zero")
+                or cve_context.get("description", "")
+            )
+            components = cve_context.get("components", [])
+            parts: list[str] = []
+            if title:
+                parts.append(f"Title: {title}")
+            if components:
+                parts.append(f"Components: {', '.join(components)}")
+            if description_text:
+                parts.append(f"Description: {description_text}")
+            if parts:
+                context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
+
         follow_up = (
+            f"{context_block}"
             "Post-processing has adjusted your assessment.\n"
             f"Changes: {'; '.join(changes)}\n"
             f"Reconciliation trace: {trace}\n"
@@ -384,7 +379,7 @@ class SuggestImpact(Feature):
 
         override_note = ""
         new_vector = result.output.cvss3_vector or ""
-        if new_vector != original_vector:
+        if new_vector != original_vector or result.output.cvss3_score != original_score:
             override_note = (
                 f"\n\nNote: CVSS vector adjusted from "
                 f"{original_score} ({original_vector}) to "
@@ -392,25 +387,44 @@ class SuggestImpact(Feature):
                 f" during post-processing reconciliation."
             )
 
+        _REVISION_TIMEOUT = llm_prompt_timeout
+
         try:
-            history = self._strip_system_parts(result.all_messages())
+            revision_prompt = (
+                f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+            )
             async with llm_sem:
-                revision = await self._run(
-                    call_str,
-                    follow_up,
-                    message_history=history,
-                    output_type=RevisedExplanationModel,
+                revision = await asyncio.wait_for(
+                    self._run(
+                        call_str,
+                        revision_prompt,
+                        output_type=RevisedExplanationModel,
+                    ),
+                    timeout=_REVISION_TIMEOUT,
                 )
             result.output.explanation = revision.output.explanation + override_note
             logger.info(
                 "%s: explanation revised after post-processing adjustments", call_str
             )
+            return True
+        except asyncio.TimeoutError:
+            logger.warning(
+                "%s: revision timed out after %ds, keeping original explanation",
+                call_str,
+                _REVISION_TIMEOUT,
+            )
+            if override_note:
+                result.output.explanation += override_note
+            return False
         except Exception as exc:
             logger.warning(
                 "%s: failed to revise explanation after post-processing: %s",
                 call_str,
                 exc,
             )
+            if override_note:
+                result.output.explanation += override_note
+            return False
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_kernel_classifier = get_settings().use_kernel_classifier
@@ -503,15 +517,15 @@ class SuggestImpact(Feature):
             impact_changed or vector_changed
         )
         if guardrail_fired:
-            await self._revise_explanation(
+            result.output._explanation_revised = await self._revise_explanation(
                 result,
                 original_score,
                 original_impact,
                 original_vector,
                 trace,
                 call_str,
+                cve_context=resolved_static_context,
             )
-            result.output._explanation_revised = True
 
         result.output._classifier_diagnostics = classifier_result
         result.output._reconciliation_trace = trace
