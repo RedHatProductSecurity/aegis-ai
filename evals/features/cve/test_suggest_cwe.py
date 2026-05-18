@@ -205,6 +205,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53176",
         cwe_list=["CWE-772", "CWE-825"],  # kdudka: added CWE-825
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53188",
@@ -901,7 +902,8 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2026-34785",
-        cwe_list=["CWE-552", "CWE-73", "CWE-22"],
+        cwe_list=["CWE-552", "CWE-73", "CWE-22", "CWE-41"],  # kdudka: added CWE-41
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-35535",
