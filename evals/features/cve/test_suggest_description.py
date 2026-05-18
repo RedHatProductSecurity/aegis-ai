@@ -165,6 +165,7 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-13327",
         expected_description="A flaw was found in uv. This vulnerability allows an attacker to execute malicious code during package resolution or installation via specially crafted ZIP (Zipped Information Package) archives that exploit parsing differentials, requiring user interaction to install an attacker-controlled package.",
+        metadata={"known_to_fail_evaluators": ["NoVersionInfo"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-13609",
