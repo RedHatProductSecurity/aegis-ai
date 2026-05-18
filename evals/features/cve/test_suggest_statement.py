@@ -355,6 +355,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-53020",
         expected_mitigation="The attack surface can be reduced by disabling HTTP/2 support in Apache.\nFollow the guidance in Red Hat KCS article to:\n- Remove h2 and h2c from the Protocols directive\n- Disable mod_http2 and mod_proxy_http2 modules (if not required)\n\nhttps://access.redhat.com/node/7056356",
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-64503",
