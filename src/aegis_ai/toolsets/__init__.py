@@ -9,7 +9,7 @@ import time
 
 from typing import Any
 
-from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.mcp import MCPServerStdio  # ty: ignore[deprecated]
 from pydantic_ai.toolsets import (
     AbstractToolset,
     CombinedToolset,
@@ -56,7 +56,7 @@ class LoggingToolset(WrapperToolset[AgentDepsT]):
 # https://github.com/marcoeg/mcp-nvd
 #
 # requires NVD_API_KEY=
-nvd_stdio_server = MCPServerStdio(
+nvd_stdio_server = MCPServerStdio(  # ty: ignore[deprecated]
     "uv",
     args=[
         "run",
@@ -74,7 +74,7 @@ nvd_stdio_server = MCPServerStdio(
 #
 # Use FQIN (ghcr.io/github/github-mcp-server) to avoid Podman short-name
 # resolution prompt when running without a TTY (e.g. web server, CI).
-github_stdio_server = MCPServerStdio(
+github_stdio_server = MCPServerStdio(  # ty: ignore[deprecated]
     "podman",
     args=[
         "run",
@@ -99,7 +99,7 @@ github_stdio_server = MCPServerStdio(
 # https://github.com/rudra-ravi/wikipedia-mcp
 #
 # requires wikipedia PAT
-wikipedia_stdio_server = MCPServerStdio(
+wikipedia_stdio_server = MCPServerStdio(  # ty: ignore[deprecated]
     "uv",
     args=[
         "run",
@@ -111,7 +111,7 @@ wikipedia_stdio_server = MCPServerStdio(
 # mcp-pypi: query pypi
 # https://github.com/kimasplund/mcp-pypi
 #
-pypi_stdio_server = MCPServerStdio(
+pypi_stdio_server = MCPServerStdio(  # ty: ignore[deprecated]
     "uv",
     args=[
         "run",
