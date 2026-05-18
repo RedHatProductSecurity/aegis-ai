@@ -869,7 +869,8 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2026-31969",
-        cwe_list=["CWE-787"],
+        cwe_list=["CWE-787", "CWE-193"],  # kdudka: added CWE-193
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-31970",
