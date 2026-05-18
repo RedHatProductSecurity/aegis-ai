@@ -37,7 +37,7 @@ class LoggingToolset(WrapperToolset[AgentDepsT]):
         tool: ToolsetTool[AgentDepsT],
     ) -> Any:
         # log tool call entry
-        args = str(tool_args) if tool_args else ""
+        args = str(tool_args.get("input", "")) if isinstance(tool_args, dict) else ""
         prefix = f"[tool call] {name}({args})"
         start = time.time()
         logger.info(f"{prefix} started")
