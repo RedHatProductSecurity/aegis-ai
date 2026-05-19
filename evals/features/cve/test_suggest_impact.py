@@ -559,8 +559,32 @@ cases = [
         expected_impact="LOW",
     ),
     SuggestImpactCase(
+        cve_id="CVE-2026-32144",
+        expected_impact="IMPORTANT",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-33691",
+        expected_impact="MODERATE",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-33993",
+        expected_impact="MODERATE",
+    ),
+    SuggestImpactCase(
         cve_id="CVE-2026-34073",
         expected_impact="LOW",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-34444",
+        expected_impact="IMPORTANT",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-34978",
+        expected_impact="MODERATE",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-34980",
+        expected_impact="MODERATE",
     ),
     SuggestImpactCase(
         cve_id="CVE-2026-35386",
@@ -572,6 +596,39 @@ cases = [
         expected_impact="LOW",
         expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
         metadata={"known_to_fail_evaluators": ["ImpactEvaluator"]},
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-39946",
+        expected_impact="MODERATE",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-40193",
+        expected_impact="IMPORTANT",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-40575",
+        expected_impact="IMPORTANT",  # mbenatto: This vulnerability is configuration dependent, so it doesn't fit as a Critical
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-40611",
+        expected_impact="IMPORTANT",  # mbenatto: This vulnerability doesn't meet the criteria to be classified as CRITICAL according to our public severity policy.
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-40892",
+        expected_impact="IMPORTANT",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-40938",
+        # mbenatto: This flaw requires a certain user privileges to be exploited, this means it doesn't fits our security policy for criticals by default.
+        # Additionally the CVSS score seems wrong when it assumes AC:L. Looking at upstream advisory:
+        # Attack complexity is High because the exploit requires either:
+        # A valid git repository at a known, predicable path on the resolver pod (e.g., /tmp/<reponame>-<suffix> from a concurrent resolution), or
+        # A default-URL configuration pointing at a local path
+        expected_impact="IMPORTANT",
+    ),
+    SuggestImpactCase(
+        cve_id="CVE-2026-43914",
+        expected_impact="IMPORTANT",
     ),
 ]
 
