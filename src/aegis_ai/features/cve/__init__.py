@@ -65,6 +65,7 @@ class SuggestImpact(Feature):
                       where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
                     - cvss3_score: numeric string matching the vector (we will verify and adjust if needed).
                     - impact: Critical/Important/Moderate/Low based on the score.
+                      CRITICAL (CVSS > 9.0) is exceptionally rare in Red Hat's taxonomy (< 2% of all CVEs). It requires unauthenticated remote exploitation (AV:N/AC:L/PR:N/UI:N) with broad impact across at least two of C:H, I:H, A:H affecting user data. When uncertain between CRITICAL and IMPORTANT, choose IMPORTANT.
                 - Metric selection guide:
                     - AV: N if reachable over network from off-host; A if same subnet/Bluetooth/802.11 link-limited; L if requires local account/session/CLI/local IPC; P if requires physical access.
                     - AC: H if requires uncommon configuration, precise timing/race, multiple conditions, or lengthy preparation; else L.
@@ -117,6 +118,9 @@ class SuggestImpact(Feature):
         **Non-kernel path** (no classifier): LLM self-consistency check.
         If the LLM's stated impact matches its CVSS band, keep it.  If
         they disagree, trust the CVSS band (quantitative > qualitative).
+        In both cases, CRITICAL is capped to IMPORTANT unless the
+        CVSS vector objectively supports it (AV:N/AC:L/PR:N/UI:N
+        with at least two of C:H, I:H, A:H).
 
         The kernel path additionally applies specific guardrails
         (G2–G5) based on classifier-provided feature flags (memory

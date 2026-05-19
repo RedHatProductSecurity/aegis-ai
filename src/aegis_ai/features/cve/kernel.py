@@ -70,6 +70,7 @@ RULES_KERNEL = """
                       where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
                     - cvss3_score: numeric string matching the vector (we will verify and adjust if needed).
                     - impact: Critical/Important/Moderate/Low — set this to match the standard CVSS band from your computed score. Post-processing handles any severity adjustments.
+                      CRITICAL (CVSS > 9.0) is exceptionally rare for kernel CVEs. It requires unauthenticated remote code execution (AV:N/AC:L/PR:N/UI:N) with broad C:H + I:H impact on user data. Most kernel vulnerabilities require local access (AV:L) or elevated privileges (PR:H), which precludes CRITICAL. When uncertain between CRITICAL and IMPORTANT, choose IMPORTANT.
                     - deescalation_rationale: If you believe the impact should be LOWER than the standard CVSS band based on contextual factors (contained subsystem, restricted attack surface, high privilege requirements), note the justification here as advisory input. Leave null when impact matches the standard band.
                     - classifier_disagreement_rationale: If the kernel_impact_tool returned patch signals and your CVSS-based assessment implies a different severity, explain factually why your independent technical assessment differs (attack surface, preconditions, scope). Do not adjust your CVSS metrics to match the classifier. Leave null when you agree or no classifier result was available.
                 - Metric selection guide:
