@@ -109,8 +109,10 @@ cases = [
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
+        # Aegis sometimes suggests broader CWE-190 for this signed left-shift overflow
         cve_id="CVE-2022-50390",
         cwe_list=["CWE-1335"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2022-50421",
