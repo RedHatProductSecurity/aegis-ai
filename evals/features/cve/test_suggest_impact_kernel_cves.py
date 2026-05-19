@@ -180,6 +180,15 @@ KNOWN_FAILURES: dict[str, dict] = {
             "The explanation does not provide such a path for C or I."
         ),
     },
+    "CVE-2025-39905": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The explanation for C states 'limited disclosure of sensitive information' "
+            "and for I states 'limited modification of system data or state', but the "
+            "CVSS vector uses C:H and I:H. Descriptions of 'limited' impact are "
+            "inconsistent with High ratings for C and I."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
