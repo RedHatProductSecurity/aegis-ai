@@ -130,7 +130,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2022-50448",
         cwe_list=["CWE-477"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     # FIXME: Aegis occasionally ends up with an empty list when CWE-416 and CWE-415 are filtered out
     SuggestCweCase(

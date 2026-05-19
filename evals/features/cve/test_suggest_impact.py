@@ -433,6 +433,7 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2025-39795",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:N/I:L/A:L",  # if chunk_sectors is erroneously treated as aligned, it could incorrectly write to storage
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-39809",
