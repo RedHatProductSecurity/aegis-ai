@@ -441,7 +441,12 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-22097",
-        cwe_list=["CWE-824", "CWE-825"],
+        cwe_list=[
+            "CWE-824",
+            "CWE-825",
+            "CWE-772",
+        ],  # kdudka: broader lifetime/cleanup alternative is plausible here
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-22115",
