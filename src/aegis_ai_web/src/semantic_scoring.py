@@ -34,6 +34,7 @@ def get_semantic_scored_features() -> list[str]:
     semantically scored.
     """
     return list(FIELD_RUBRICS.keys()) + [
+        "suggest-affected-components",
         "suggest-cwe",
         "suggest-cvss",
         "suggest-impact",
@@ -57,6 +58,31 @@ def _parse_json_list(value: str) -> Optional[list[str]]:
         return None
     except (json.JSONDecodeError, TypeError):
         return None
+
+
+def _score_component_lists(suggested: list[str], submitted: list[str]) -> float:
+    """
+    Score similarity between two component lists using Jaccard similarity.
+
+    Args:
+        suggested: List of suggested component names
+        submitted: List of submitted component names
+
+    Returns:
+        Score between 0.0 and 1.0
+    """
+    suggested_set = {n.lower().strip() for n in suggested if n}
+    submitted_set = {n.lower().strip() for n in submitted if n}
+
+    if not submitted_set:
+        return 1.0 if not suggested_set else 0.0
+
+    if suggested_set == submitted_set:
+        return 1.0
+
+    inter = len(suggested_set & submitted_set)
+    union = len(suggested_set | submitted_set)
+    return inter / union if union else 0.0
 
 
 def _score_cwe_lists(suggested: list[str], submitted: list[str]) -> float:
@@ -254,8 +280,22 @@ async def calculate_semantic_proximity_score(
     try:
         score: Optional[float] = None
         explanation: Optional[str] = None
+        # Handle component list scoring
+        if feature == "suggest-affected-components":
+            suggested_list = _parse_json_list(suggested)
+            submitted_list = _parse_json_list(submitted)
+
+            if suggested_list is None or submitted_list is None:
+                logger.warning(
+                    f"Failed to parse component lists as JSON: "
+                    f"suggested={suggested[:100]}, submitted={submitted[:100]}"
+                )
+                return (None, None)
+
+            score = _score_component_lists(suggested_list, submitted_list)
+
         # Handle CWE list scoring
-        if feature == "suggest-cwe":
+        elif feature == "suggest-cwe":
             suggested_list = _parse_json_list(suggested)
             submitted_list = _parse_json_list(submitted)
 

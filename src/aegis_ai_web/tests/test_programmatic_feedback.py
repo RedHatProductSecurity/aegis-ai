@@ -471,6 +471,14 @@ class TestGetSemanticScoredFeatures:
         assert "suggest-statement" in features
         assert "suggest-mitigation" in features
 
+    def test_includes_component_features(self):
+        """Test that suggest-affected-components is included."""
+        from aegis_ai_web.src.semantic_scoring import get_semantic_scored_features
+
+        features = get_semantic_scored_features()
+
+        assert "suggest-affected-components" in features
+
     def test_includes_structured_features(self):
         """Test that structured features (CWE, CVSS) are included."""
         from aegis_ai_web.src.semantic_scoring import get_semantic_scored_features
@@ -488,7 +496,7 @@ class TestGetSemanticScoredFeatures:
         features = get_semantic_scored_features()
 
         assert isinstance(features, list)
-        assert len(features) >= 7  # At least the 7 known features
+        assert len(features) >= 8  # At least the 8 known features
 
 
 class TestParseJsonList:
@@ -521,6 +529,68 @@ class TestParseJsonList:
 
         result = _parse_json_list('{"key": "value"}')
         assert result is None
+
+
+class TestScoreComponentLists:
+    """Tests for _score_component_lists function."""
+
+    def test_identical_lists(self):
+        """Test scoring identical component lists."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists(["kernel"], ["kernel"])
+        assert score == 1.0
+
+    def test_identical_lists_case_insensitive(self):
+        """Test that component comparison is case-insensitive."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists(["Kernel"], ["kernel"])
+        assert score == 1.0
+
+    def test_overlapping_lists(self):
+        """Test scoring overlapping component lists."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists(["kernel", "linux-kernel"], ["kernel"])
+        assert 0.0 < score < 1.0
+
+    def test_disjoint_lists(self):
+        """Test scoring disjoint component lists."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists(["kernel"], ["curl"])
+        assert score == 0.0
+
+    def test_empty_lists(self):
+        """Test scoring empty component lists."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists([], [])
+        assert score == 1.0
+
+    def test_empty_suggested(self):
+        """Test scoring with empty suggested list and non-empty submitted list."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists([], ["kernel"])
+        assert score == 0.0
+
+    def test_empty_submitted(self):
+        """Test scoring with empty submitted list."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists(["kernel"], [])
+        assert score == 0.0
+
+    def test_multi_component_exact_match(self):
+        """Test scoring multi-component exact match."""
+        from aegis_ai_web.src.semantic_scoring import _score_component_lists
+
+        score = _score_component_lists(
+            ["kernel", "linux-firmware"], ["kernel", "linux-firmware"]
+        )
+        assert score == 1.0
 
 
 class TestScoreCweLists:
@@ -795,6 +865,51 @@ class TestCalculateSemanticProximityScore:
         # Different vectors should return a score < 1.0
         assert score is not None
         assert 0.0 < score < 1.0
+
+    async def test_components_exact_match(self):
+        """Test component list scoring with exact match."""
+        from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
+
+        score, explanation = await calculate_semantic_proximity_score(
+            suggested='["kernel"]',
+            submitted='["kernel"]',
+            feature="suggest-affected-components",
+        )
+        assert score == 1.0
+
+    async def test_components_partial_overlap(self):
+        """Test component list scoring with partial overlap."""
+        from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
+
+        score, explanation = await calculate_semantic_proximity_score(
+            suggested='["kernel", "linux-kernel"]',
+            submitted='["kernel"]',
+            feature="suggest-affected-components",
+        )
+        assert score is not None
+        assert 0.0 < score < 1.0
+
+    async def test_components_no_overlap(self):
+        """Test component list scoring with no overlap."""
+        from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
+
+        score, explanation = await calculate_semantic_proximity_score(
+            suggested='["kernel"]',
+            submitted='["curl"]',
+            feature="suggest-affected-components",
+        )
+        assert score == 0.0
+
+    async def test_components_malformed_json(self):
+        """Test component list scoring with malformed JSON returns None."""
+        from aegis_ai_web.src.semantic_scoring import calculate_semantic_proximity_score
+
+        score, explanation = await calculate_semantic_proximity_score(
+            suggested='["kernel"]',
+            submitted="not-json",
+            feature="suggest-affected-components",
+        )
+        assert score is None
 
 
 class TestRetryUnscoredEntries:
