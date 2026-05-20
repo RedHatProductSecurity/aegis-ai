@@ -189,6 +189,16 @@ KNOWN_FAILURES: dict[str, dict] = {
             "inconsistent with High ratings for C and I."
         ),
     },
+    "CVE-2025-71182": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The explanation for PR:L states that the attacker needs privileges typically "
+            "involving CAP_NET_ADMIN. However, it does not provide a plausible unprivileged "
+            "alternative (e.g., via user namespaces) to justify PR:L when CAP_NET_ADMIN is "
+            "generally considered an admin-class capability. Explanation-vs-vector "
+            "inconsistency. Same pattern as CVE-2023-54181."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
