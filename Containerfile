@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi10-minimal:10.1-1778576723
+FROM registry.access.redhat.com/ubi10-minimal:10.2-1777462752
 
 LABEL summary="AEGIS" \
       maintainer="Product Security DevOps <prodsec-dev@redhat.com>"
