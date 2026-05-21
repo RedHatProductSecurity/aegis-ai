@@ -106,7 +106,7 @@ class OSVClient:
         Returns:
             A dictionary containing the vulnerability data.
         """
-        print(f"Querying for vulnerability ID: {vuln_id}")
+        logger.info(f"{vuln_id}: OSVClient: querying OSV.dev")
         return self._get(f"vulns/{vuln_id}")
 
     def query(self, payload: JsonBlob) -> JsonBlob:

@@ -757,6 +757,7 @@ class SuggestAffectedComponents(Feature):
                 - Use the osidb_tool with the provided cve_id to retrieve CVE flaw data.
                 - Leverage title, description (or comment_zero), statement, references, affects, comments, and any other fields to infer affected components.
                 - Use github mcp tool to resolve vulnerability reference URLs if present (e.g. to confirm repo/component names).
+                - If GHSA reference URLs are present in the flaw data, pass them to the osv_dev_ghsa tool to get structured affected-package data (package names, ecosystems, PURLs, version ranges) for component identification.
                 - Follow GitHub/golang-style naming: use full import paths for Go packages outside stdlib.
                 - Output format: components (list of strings), explanation (string), confidence (0.00–1.00).
             """,
