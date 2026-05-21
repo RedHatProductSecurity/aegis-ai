@@ -23,7 +23,7 @@ from pydantic_ai._run_context import AgentDepsT, RunContext
 from aegis_ai import get_settings
 
 from aegis_ai.toolsets.tools.osidb import osidb_toolset
-from aegis_ai.toolsets.tools.osvdev import osv_dev_cve_tool
+from aegis_ai.toolsets.tools.osv_dev_cve import osv_dev_cve_tool
 
 logger = logging.getLogger(__name__)
 
