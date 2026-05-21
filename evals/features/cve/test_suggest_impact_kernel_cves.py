@@ -199,6 +199,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "inconsistency. Same pattern as CVE-2023-54181."
         ),
     },
+    "CVE-2023-53669": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "Same pattern as CVE-2025-68742: LLM non-deterministically emits I:N in the "
+            "vector while the explanation describes 'low integrity impact (I:L)'. The cached "
+            "run had I:L (matching OSIDB) and passed; subsequent runs flip to I:N."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these

@@ -25,7 +25,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from aegis_ai import config_logging, get_settings
-from aegis_ai.agents import public_feature_agent, rh_feature_agent
+from aegis_ai.agents import (
+    public_feature_agent,
+    rh_feature_agent,
+)
 
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.toolsets.tools.osidb.osidb_client import (

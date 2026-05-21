@@ -13,6 +13,70 @@ from pydantic_ai.run import AgentRunResult
 
 logger = logging.getLogger(__name__)
 
+
+def _extract_model_error(exc: BaseException) -> str | None:
+    """Extract a human-readable validation error from a pydantic-ai exception.
+
+    pydantic-ai's ``increment_retries`` raises ``UnexpectedModelBehavior``
+    in two distinct ways:
+
+    - ``from ToolRetryError`` — ``__cause__`` carries the Pydantic validation
+      error text (e.g. which field failed and why).
+    - ``from None`` (empty/thinking-only model response) — ``__cause__`` is
+      explicitly suppressed; no validation detail is available.
+
+    For other exceptions (``ModelHTTPError``, ``ServerError``, …) the
+    function walks ``__cause__``/``__context__`` chains — including
+    ``ExceptionGroup`` sub-exceptions — to find leaf causes.
+
+    Returns a descriptive string, or ``None`` when no additional detail
+    beyond ``str(exc)`` can be recovered.
+    """
+    # Walk exception chains (including ExceptionGroups) for leaf causes.
+    leaves = _collect_leaf_causes(exc)
+    if leaves:
+        return "; ".join(str(c) for c in leaves)
+
+    if isinstance(exc, UnexpectedModelBehavior):
+        if exc.__suppress_context__ and exc.__cause__ is None:
+            return f"model returned empty/unparseable response: {exc.message}"
+        detail = str(exc)
+        if exc.body:
+            detail += f" | body snippet: {exc.body[:300]}"
+        return f"output validation failed: {detail}"
+
+    return None
+
+
+def _collect_leaf_causes(exc: BaseException) -> list[BaseException]:
+    """Walk __cause__/__context__ chains (including ExceptionGroups) to find leaf causes."""
+    seen: set[int] = set()
+    leaves: list[BaseException] = []
+
+    def _walk(e: BaseException) -> None:
+        eid = id(e)
+        if eid in seen:
+            return
+        seen.add(eid)
+
+        if isinstance(e, ExceptionGroup):
+            for sub in e.exceptions:
+                _walk(sub)
+            return
+
+        chained = e.__cause__ or e.__context__
+        if chained is not None:
+            _walk(chained)
+        elif e is not exc:
+            leaves.append(e)
+
+    chained = exc.__cause__ or exc.__context__
+    if chained is not None:
+        _walk(chained)
+
+    return leaves
+
+
 # Timeout in seconds for a single LLM prompt
 llm_prompt_timeout = get_settings().default_llm_prompt_timeout
 
@@ -113,9 +177,11 @@ class Feature(ABC):
             # fmt: on
 
         except Exception as e:
-            # log only exception name by default, details only when debugging
             logger.warning(f"{call_str} raised an exception: {e.__class__.__name__}")
             logger.debug(f"{call_str} raised an exception: {e}")
+            detail = _extract_model_error(e)
+            if detail:
+                logger.warning(f"{call_str} {detail}")
             raise
 
     async def guarded_run(self, prompt, **kwargs):
@@ -143,7 +209,13 @@ class Feature(ABC):
             # how long we sleep before next attempt
             delay = 0
 
-            # retry loop
+            # Outer retry loop (up to agent_default_max_retries attempts).
+            # Each iteration calls self._run() which starts a *fresh*
+            # pydantic-ai agent run — the internal output-validation retry
+            # counter resets to 0.  With output_retries=3 (see
+            # create_aegis_agent), each _run() makes up to 4 model
+            # invocations (1 initial + 3 validation retries).  Worst-case
+            # total: 6 × 4 = 24 model calls before final failure.
             attempt = 0
             while True:
                 msg = f"{call_str} retrying prompt"
@@ -170,11 +242,16 @@ class Feature(ABC):
 
                 except UnexpectedModelBehavior:
                     if agent_default_max_retries <= attempt:
-                        # exceeded retry attempts
                         raise
 
                     # retry with high temperature
                     # see https://github.com/RedHatProductSecurity/aegis-ai/issues/271
+                    # Retry all UnexpectedModelBehavior errors (validation
+                    # exhaustion, empty responses, recitation, etc.).  Each
+                    # _run() resets pydantic-ai's internal retry counter, so
+                    # a fresh run gives a full new set of validation attempts.
+                    # Temperature jitter helps the model escape repeated
+                    # failures (originally added for RECITATION — see #271).
                     model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
                     msg += f" with temperature={PROMPT_RETRY_TEMPERATURE}"
 
@@ -212,6 +289,12 @@ class Feature(ABC):
                 retry_msg,
                 model_settings=model_settings,
                 **retry_kwargs,
+            )
+        else:
+            logger.warning(
+                "%s: output enforcement exhausted %d retries; accepting result as-is",
+                call_str,
+                _MAX_OUTPUT_ENFORCEMENT_RETRIES,
             )
 
         # check how many input tokens were processed by the LLM

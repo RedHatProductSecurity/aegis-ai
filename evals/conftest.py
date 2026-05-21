@@ -120,14 +120,14 @@ def setup_logging_for_session():
         logging.getLogger("aegis_ai.toolsets").addFilter(_SuppressToolCallFilter())
 
 
-# We need to cache OSIDB responses (and maintain them in git) to make
-# sure that our evaluation is invariant to future changes in OSIDB data
+# Cache OSIDB responses (maintained in git) so evals are invariant to
+# future OSIDB data changes.
 @pytest.fixture(scope="session", autouse=True)
-def override_rh_feature_agent():
-    # Replace the first inner FunctionToolset with one that contains our wrapper
+def override_osidb_toolset():
+    cached = FunctionToolset[feature_deps](tools=[osidb_tool])
     wrapped = ts.redhat_cve_toolset.wrapped
     if isinstance(wrapped, CombinedToolset):
-        wrapped.toolsets[0] = FunctionToolset(tools=[osidb_tool])  # type:ignore
+        wrapped.toolsets[0] = cached  # type:ignore
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded

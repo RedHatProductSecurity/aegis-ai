@@ -168,8 +168,24 @@ async def kernel_impact_tool(
     signals: which patch feature flags fired and the model's per-class severity
     probabilities.  Use this when the CVE component is the Linux kernel."""
 
+    ctx.deps.classifier_attempts += 1
+
+    if not ctx.deps.is_kernel_cve:
+        return KernelImpactToolResponse(
+            cve_id=input.cve_id,
+            status="error",
+            error_message="Not a kernel CVE; tool not applicable.",
+        )
+
+    # Fast path: return pre-computed result when available (mirrors flaw_tool
+    # static_context pattern).  exec() eagerly runs kernel_impact_classify
+    # before the LLM call and stores the result on deps.
+    if ctx.deps.classifier_result is not None:
+        logger.info("Using pre-computed classifier result for %s", input.cve_id)
+        return _response_from_result(input.cve_id, ctx.deps.classifier_result)
+
+    # Slow path: run classifier on demand
     logger.info("Analysing kernel patch features for %s...", input.cve_id)
-    ctx.deps.kernel_tool_called = True
     static_context = getattr(ctx.deps, "static_context", None)
     result = await kernel_impact_classify(input.cve_id, static_context=static_context)
 
@@ -180,8 +196,5 @@ async def kernel_impact_tool(
             error_message="Kernel classifier could not produce a result for this CVE.",
         )
 
-    # Store the full result (including impact) on deps so post-processing
-    # (escalation floor) can read it after the agent run completes.
     ctx.deps.classifier_result = result
-
     return _response_from_result(input.cve_id, result)

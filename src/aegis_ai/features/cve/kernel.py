@@ -768,30 +768,30 @@ def apply_kpanic_cvss_override(
 
 
 def check_kernel_output(output, deps) -> str | None:
-    """Return a retry message if kernel_impact_tool was not called for a
-    kernel CVE, or ``None`` to accept the output.
-
-    The kernel_impact_tool provides patch-level analysis (active feature
-    flags and severity class probabilities) that the LLM must incorporate
-    into its assessment.  If the tool was available but not invoked, the
-    output is rejected and the LLM is asked to retry.
-    """
+    """Accept when a classifier result is available (eagerly pre-computed or
+    via tool call).  Retry only when neither source produced a result and the
+    LLM has not yet attempted kernel_impact_tool."""
     use_clf = get_settings().use_kernel_classifier
     is_kernel = getattr(deps, "is_kernel_cve", False)
-    tool_called = getattr(deps, "kernel_tool_called", False)
-    clf_result = getattr(deps, "classifier_result", None)
 
-    if use_clf and is_kernel and hasattr(output, "cvss3_vector"):
-        if not tool_called:
-            logger.warning(
-                "kernel_impact_tool was not called for a kernel CVE; requesting retry"
-            )
-            return (
-                "This is a Linux kernel CVE. You MUST call kernel_impact_tool "
-                "to obtain patch-level analysis before producing your final answer."
-            )
-        if tool_called and clf_result is None:
-            logger.warning(
-                "kernel_impact_tool was called but returned no classifier data for this CVE"
-            )
-    return None
+    if not (use_clf and is_kernel and hasattr(output, "cvss3_vector")):
+        return None
+
+    clf_result = getattr(deps, "classifier_result", None)
+    if clf_result is not None:
+        return None
+
+    attempts = getattr(deps, "classifier_attempts", 0)
+    if attempts > 0:
+        logger.warning(
+            "kernel_impact_tool was called but returned no classifier data for this CVE"
+        )
+        return None
+
+    logger.warning(
+        "kernel_impact_tool was not called for a kernel CVE; requesting retry"
+    )
+    return (
+        "This is a Linux kernel CVE. You MUST call kernel_impact_tool "
+        "to obtain patch-level analysis before producing your final answer."
+    )

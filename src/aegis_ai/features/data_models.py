@@ -25,16 +25,19 @@ class feature_deps:
     # Used when static_context already contains sufficient CVE data (e.g. from web API).
     static_context: Optional[Any] = field(default=None)
     # Set by SuggestImpact.exec (pre-run) or flaw_tool (at runtime) when OSIDB
-    # data indicates a kernel component.  Read by _check_output to enforce
-    # kernel_impact_tool usage.
+    # data indicates a kernel component.  Read by check_kernel_output to
+    # enforce kernel_impact_tool usage, and by the tool itself to gate
+    # non-kernel calls.
     is_kernel_cve: bool = field(default=False)
-    # Set by kernel_impact_tool when it is invoked, regardless of whether the
-    # classifier produced a result.  _check_output uses this to distinguish
-    # "tool not called" from "tool called but no data available".
-    kernel_tool_called: bool = field(default=False)
-    # Pre-computed classifier result (e.g. from kernel_impact_classify).
-    # Set before the agent run and read-only during execution.  Used by
-    # tools (fast-path cache) and post-processing (escalation floor).
+    # Incremented by kernel_impact_tool each time the LLM invokes it.
+    # check_kernel_output reads this: 0 means the LLM never called the tool
+    # (triggers retry), >0 means it tried (accept, even if classifier_result
+    # is None).
+    classifier_attempts: int = field(default=0)
+    # Pre-computed classifier result from kernel_impact_classify.  Set by
+    # exec() before the LLM run; kernel_impact_tool returns it immediately
+    # via its fast-path cache (mirrors the flaw_tool static_context pattern).
+    # Also read by post-processing (reconciliation, guardrails).
     classifier_result: Optional[dict] = field(default=None)
 
 

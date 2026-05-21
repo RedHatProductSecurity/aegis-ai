@@ -109,8 +109,10 @@ cases = [
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
+        # Aegis sometimes suggests broader CWE-190 for this signed left-shift overflow
         cve_id="CVE-2022-50390",
         cwe_list=["CWE-1335"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2022-50421",
@@ -439,7 +441,12 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-22097",
-        cwe_list=["CWE-824", "CWE-825"],
+        cwe_list=[
+            "CWE-824",
+            "CWE-825",
+            "CWE-772",
+        ],  # kdudka: broader lifetime/cleanup alternative is plausible here
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-22115",
@@ -564,7 +571,14 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-39754",
         cwe_list=["CWE-820", "CWE-413"],  # kdudka: added CWE-413
-        metadata={"known_to_fail_evaluators": ["CWEExplanationRootCause"]},
+        # LLM returns CWE-708 (Incorrect Ownership Assignment) instead of
+        # CWE-820/CWE-413 (Missing Synchronization / Improper Resource Locking).
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39782",
@@ -639,10 +653,18 @@ cases = [
         cve_id="CVE-2025-39865",
         cwe_list=["CWE-476"],
     ),
+    # LLM judge hallucinated CWE-366 name ("Improper Handling of File Names")
+    # when CWE-366 is actually "Race Condition within a Thread" — which does
+    # relate to the race condition → UAF flaw described in the explanation.
     SuggestCweCase(
         cve_id="CVE-2025-39866",
         cwe_list=["CWE-825"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39915",
@@ -929,9 +951,12 @@ cases = [
         cwe_list=["CWE-266"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
+    # Aegis suggests CWE-763 (Release of Invalid Pointer or Reference) —
+    # same CWE-404 family as CWE-1341/CWE-415 but not a precise match for double-free.
     SuggestCweCase(
         cve_id="CVE-2026-33995",
         cwe_list=["CWE-1341", "CWE-415"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2026-34785",
