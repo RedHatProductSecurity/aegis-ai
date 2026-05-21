@@ -32,7 +32,7 @@ from pydantic_evals.reporting.render_numbers import default_render_number
 
 from aegis_ai import get_settings
 from aegis_ai.agents import agent_default_max_retries
-from aegis_ai.features import PROMPT_RETRY_503_DELAY_INIT
+from aegis_ai.features import HTTP_RETRY_CODES, PROMPT_RETRY_503_DELAY_INIT
 from aegis_ai.features.data_models import AegisFeatureModel
 
 
@@ -168,9 +168,13 @@ class LLMJudgeWrapper(LLMJudge):
                 return await super().evaluate(ctx)
 
             except (ModelHTTPError, ServerError) as e:
+                if agent_default_max_retries <= attempt:
+                    # exceeded retry attempts count
+                    raise
+
                 code = e.status_code if isinstance(e, ModelHTTPError) else e.code
-                if agent_default_max_retries <= attempt or code not in [500, 503]:
-                    # propagate other exceptions (or exceeded retry attempts)
+                if code not in HTTP_RETRY_CODES:
+                    # propagate other exceptions
                     raise
 
                 # increment the counter of retries

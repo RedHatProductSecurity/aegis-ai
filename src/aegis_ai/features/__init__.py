@@ -35,6 +35,9 @@ PROMPT_INFO_PERIOD = 60
 # Max times guarded_run re-invokes the LLM when _check_output returns a retry prompt (output enforcement).
 _MAX_OUTPUT_ENFORCEMENT_RETRIES = 3
 
+# HTTP status codes for which LLM prompt should be retried on ModelHTTPError or ServerError
+HTTP_RETRY_CODES = (500, 503, 504)
+
 
 def id_from_context(context: BaseModel) -> str:
     """return entity ID for logging purposes based on context"""
@@ -153,9 +156,13 @@ class Feature(ABC):
                     break
 
                 except (ModelHTTPError, ServerError) as e:
+                    if agent_default_max_retries <= attempt:
+                        # exceeded retry attempts count
+                        raise
+
                     code = e.status_code if isinstance(e, ModelHTTPError) else e.code
-                    if agent_default_max_retries <= attempt or code not in [500, 503]:
-                        # propagate other exceptions (or exceeded retry attempts)
+                    if code not in HTTP_RETRY_CODES:
+                        # propagate other exceptions
                         raise
 
                     # retry the prompt with gradually increasing delay
