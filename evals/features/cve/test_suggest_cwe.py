@@ -738,10 +738,17 @@ cases = [
         cwe_list=["CWE-770"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
+    # Aegis explains a plausible flaw (improper file extraction / input validation)
+    # but neither suggested CWE (CWE-641, CWE-1286) relates to that description.
     SuggestCweCase(
         cve_id="CVE-2025-59031",
         cwe_list=["CWE-611", "CWE-22"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-59032",
