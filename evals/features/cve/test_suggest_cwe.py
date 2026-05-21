@@ -750,10 +750,18 @@ cases = [
             ]
         },
     ),
+    # Aegis describes improper input validation causing a crash on malformed SASL
+    # response, but suggests injection-related CWEs (CWE-1286, CWE-1287) instead
+    # of a general input parsing/validation CWE.
     SuggestCweCase(
         cve_id="CVE-2025-59032",
         cwe_list=["CWE-229"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-59303",
