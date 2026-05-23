@@ -325,10 +325,16 @@ cases = [
         expected_cvss3_score=7.5,
     ),
     # FIXME: scope is wrong (Aegis suggests S:C while S:U is expected)
+    # FIXME: mounting a JFS filesystem requires CAP_SYS_ADMIN, yet Aegis uses PR:L
     SuggestImpactCase(
         cve_id="CVE-2023-53222",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:H",
-        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CVSSKernelScopeAndPrivileges",
+                "CVSSVectorEvaluator",
+            ]
+        },
     ),
     SuggestImpactCase(
         cve_id="CVE-2023-53491",
