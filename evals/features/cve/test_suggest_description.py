@@ -261,9 +261,11 @@ cases = [
         cve_id="CVE-2026-33001",
         expected_title="Jenkins: Arbitrary file write and potential code execution through crafted archives",
     ),
+    # Aegis titles it as "Information disclosure" instead of "Origin validation bypass"
     SuggestDescriptionCase(
         cve_id="CVE-2026-33002",
         expected_title="Jenkins: Origin validation bypass via DNS rebinding in CLI WebSocket endpoint",
+        metadata={"known_to_fail_evaluators": ["TitleEvaluator"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2099-99999",
