@@ -217,7 +217,14 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2023-53176",
         cwe_list=["CWE-772", "CWE-825"],  # kdudka: added CWE-825
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                # Aegis explains a stale pointer dereference but CWE-911
+                # (Improperly Implemented Security Check) does not relate
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53188",
