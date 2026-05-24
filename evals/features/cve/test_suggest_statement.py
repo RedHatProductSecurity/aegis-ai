@@ -220,7 +220,12 @@ cases = [
             If you need further assistance, see KCS article https://access.redhat.com/solutions/41278 or contact Red Hat Global Support Services.
             """,
         metadata={
-            "known_to_fail_evaluators": ["MitigationEvaluator", "StatementEvaluator"]
+            "known_to_fail_evaluators": [
+                "MitigationEvaluator",
+                # Aegis recommends mkinitcpio -P for Fedora but Fedora uses dracut
+                "MitigationWellFormedCommands",
+                "StatementEvaluator",
+            ]
         },
     ),
     SuggestStatementCase(
