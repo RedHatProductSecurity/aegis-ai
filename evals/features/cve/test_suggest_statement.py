@@ -176,7 +176,13 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2023-53333",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux. The flaw is a stack-out-of-bounds read in the netfilter DCCP connection tracking module. Exploitation requires an attacker to send specially crafted DCCP packets to a system with the `nf_conntrack_dccp` module loaded. The vulnerability's impact is primarily on availability, since a malformed packet can lead to a warning or panic, though it can also pose a potential (though unlikely) risk to confidentiality, since kernel stack values could be exposed indirectly through side channels or other error-dependent behaviors. ",
-        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementEvaluator",
+                # Aegis mentions function name nf_conntrack_dccp_packet
+                "StatementNoCodeLevelDetails",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2023-54108",
