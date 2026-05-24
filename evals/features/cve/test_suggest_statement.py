@@ -427,7 +427,13 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-27820",
         expected_statement="A buffer overflow vulnerability exists in the Zlib::GzipReader component of the Ruby zlib interface. This flaw, caused by insufficient memory capacity during data manipulation, could lead to memory corruption and system instability. This vulnerability is considered of a Moderate severity this happens because the high complexity to exploit, additionally the attacker may have not full control over the data is being corrupted or exfiltrated.",
-        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                # Aegis mentions function name zstream_buffer_ungets in the statement
+                "StatementNoCodeLevelDetails",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-27962",
