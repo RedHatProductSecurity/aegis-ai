@@ -107,6 +107,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-23666",
     "CVE-2026-23950",
     "CVE-2026-24842",
+    "CVE-2026-25243",
     "CVE-2026-26962",
     "CVE-2026-27140",
     "CVE-2026-27447",
@@ -145,6 +146,13 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-34073",  # got ['cryptography'], expected ['python-cryptography']
     "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
 )
+
+
+# Expected ecosystems for CVEs where ground-truth is known.
+# Allowed values: golang, npm, pypi, maven, gem, upstream, unknown.
+EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
+    "CVE-2026-25243": ["upstream"],
+}
 
 
 def _description_from_cve(cve: CVE) -> str:
@@ -213,14 +221,20 @@ def _build_cases(
         expected_components = _components_list(cve)
         metadata: dict[str, Any] = {"cve_id": cve_id}
         if cve_id in KNOWN_TO_FAIL_CVE_IDS:
-            # annotate known-to-fail evaluation cases
             metadata["known_to_fail_evaluators"] = ["ComponentsOverlapEvaluator"]
+        if cve_id in EXPECTED_ECOSYSTEMS:
+            metadata["expected_ecosystems"] = EXPECTED_ECOSYSTEMS[cve_id]
+
+        case_evaluators = tuple(
+            field_evaluators[f] for f in field_evaluators if f in metadata
+        )
 
         case = SuggestAffectedComponentsCase(
             name=f"suggest-affected-components-{cve_id}",
             inputs=cve_id,
             expected_output=expected_components,
             metadata=metadata,
+            evaluators=case_evaluators,
         )
         cases.append(case)
 
@@ -294,6 +308,36 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         reason = f"got {suggested}, expected {expected}"
         score = reflect_confidence(ctx, score)
         return EvaluationReason(value=score, reason=reason)
+
+
+class EcosystemEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
+    """Scores ecosystem prediction against expected_ecosystems in metadata."""
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestAffectedComponentsModel]
+    ) -> EvaluationReason:
+        expected = (ctx.metadata or {}).get("expected_ecosystems", [])
+        assert expected, "EcosystemEvaluator requires expected_ecosystems in metadata"
+
+        got = getattr(ctx.output, "ecosystems", None) or []
+        exp_set = {e.lower().strip() for e in expected}
+        got_set = {e.lower().strip() for e in got}
+
+        if exp_set == got_set:
+            return EvaluationReason(value=reflect_confidence(ctx, 1.0), reason=None)
+
+        inter = len(exp_set & got_set)
+        union = len(exp_set | got_set)
+        score = inter / union if union else 0.0
+        reason = f"ecosystems: got {got}, expected {expected}"
+        score = reflect_confidence(ctx, score)
+        return EvaluationReason(value=score, reason=reason)
+
+
+# evaluators only attached to cases that provide the corresponding expected data
+field_evaluators = {
+    "expected_ecosystems": EcosystemEvaluator(),
+}
 
 
 async def suggest_affected_components(cve_id: CVEID) -> SuggestAffectedComponentsModel:
