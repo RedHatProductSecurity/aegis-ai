@@ -136,14 +136,9 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-5991",  # got ['qt6'], expected ['qt']
     "CVE-2025-23050",  # got ['qt5-qtconnectivity', 'qt6-qtconnectivity'], expected ['qt', 'qt5', 'qt6']
-    "CVE-2025-58190",  # got ['golang.org/x/net'], expected ['golang.org/x/net/html']
-    "CVE-2025-62718",  # got ['nodejs-axios'], expected ['axios']
-    "CVE-2025-64329",  # Aegis occasionally suggests 'containerd' while 'github.com/containerd/containerd' is expected
-    "CVE-2026-22815",  # got ['python-aiohttp'], expected ['aiohttp']
+    "CVE-2025-58190",  # got ['net'] or ['net/http'], expected ['net/html']
     "CVE-2026-23950",  # got ['nodejs-tar'], expected ['node-tar', 'tar']
-    "CVE-2026-26962",  # got ['rubygem-rack'], expected ['rack']
     "CVE-2026-27140",  # got ['golang'], expected ['cmd/go', 'golang']
-    "CVE-2026-34073",  # got ['cryptography'], expected ['python-cryptography']
     "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
 )
 
@@ -151,7 +146,9 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 # Expected ecosystems for CVEs where ground-truth is known.
 # Allowed values: golang, npm, pypi, maven, gem, upstream, unknown.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
+    "CVE-2026-24842": ["npm"],
     "CVE-2026-25243": ["upstream"],
+    "CVE-2026-33891": ["npm"],
 }
 
 
