@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-05-25
+
+### Changed
+- `osidb-bot` now discards low-quality suggestions
+- `suggest-impact` revision now uses a self-contained prompt for better performance
+- reworked the definition of `data_quality` and `confidence` to provide more meaningful values
+- retrained kernel CVE impact classifier with refreshed patch data
+
+### Added
+- added semantic scoring for `suggest-affected-components` feedback
+- added `DataQualityEvaluator` for `suggest-impact` 
+- included `data_quality` and `confidence` in evaluation results of `suggest-affected-components`
+- added evaluation cases based on feedback from security analysts
+- retry LLM prompt on `ModelHTTPError: status_code: 504` and `UnexpectedModelBehavior` exceptions
+- deduplicate stable-backport patches before sending to the LLM in the kernel classifier
+
+### Fixed
+- do not suggest `kernel` component for `macOS` CVEs
+- `osidb-bot` now checks for existing RH CVSS early to avoid unnecessary resource consumption
+- `osidb-bot` now skips incomplete impact suggestions without logging a traceback
+- prevent kernel tool leakage into non-impact features and ensure kernel classifier runs before agent for kernel CVEs
+- strengthened prompt guidance to discourage CRITICAL impact suggestions
+- generate `override_note` when CVSS score changes without vector change
+- apply `llm_prompt_timeout` to `suggest-impact` revision calls and fix failure handling
+- drop misleading CVSS ignore clause from `suggest-impact` prompt
+- improved tool call logging readability
+- suppressed `MCPServerStdio` deprecation warnings
+- increased `pydantic-ai` output retries and added logging for validation failures
+
+
 ## [0.7.1] - 2026-05-12
 
 ### Added
