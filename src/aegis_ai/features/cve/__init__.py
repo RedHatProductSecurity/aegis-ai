@@ -751,6 +751,7 @@ class SuggestAffectedComponents(Feature):
                 - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet', GLib/GLib2 → 'glib'.
                 - For proprietary OS kernel vulnerabilities (macOS, iOS, Windows, etc.), use the OS name as the component (e.g. 'macOS', 'iOS', 'Windows'), not 'kernel'. Only use 'kernel' for the Linux kernel.
                 - When a vulnerability is in a product's own code (e.g. its shared certificate validation logic), list only the product itself as the affected component. Do not list services, protocols, or features that the product merely uses or integrates (e.g. RouterOS using OpenVPN/CAPsMAN/Dot1x → 'RouterOS' only).
+                - Determine which package ecosystem(s) are impacted by the vulnerability. Many components are published to multiple ecosystems (e.g. Redis has pypi, npm, upstream); the vulnerability may only affect one. Populate the 'ecosystems' field with one or more of: golang, npm, pypi, maven, gem, upstream, unknown.
                 - Provide a concise explanation of the rationale.
             """,
             rules="""
@@ -758,8 +759,11 @@ class SuggestAffectedComponents(Feature):
                 - Leverage title, description (or comment_zero), statement, references, affects, comments, and any other fields to infer affected components.
                 - Use github mcp tool to resolve vulnerability reference URLs if present (e.g. to confirm repo/component names).
                 - If GHSA reference URLs are present in the flaw data, pass them to the osv_dev_ghsa tool to get structured affected-package data (package names, ecosystems, PURLs, version ranges) for component identification.
+                - Use osv_dev_ghsa_tool responses to determine impacted ecosystems — the affected[].package.ecosystem field is the most authoritative ecosystem signal.
+                - Analyze CVE reference URLs to determine ecosystem: advisory URLs often indicate it (GHSA advisories, npmjs.com, pypi.org links, commit URLs pointing to upstream source). A vulnerability in core source code does not automatically mean every language binding is affected.
+                - Use 'unknown' for the ecosystem only when it genuinely cannot be determined from available data.
                 - Follow GitHub/golang-style naming: use full import paths for Go packages outside stdlib.
-                - Output format: components (list of strings), explanation (string), confidence (0.00–1.00).
+                - Output format: components (list of strings), ecosystems (list of strings), explanation (string), confidence (0.00–1.00).
             """,
             context=CVEFeatureInput(cve_id=cve_id),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),

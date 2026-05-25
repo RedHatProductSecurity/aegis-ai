@@ -35,6 +35,12 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
         description="Suggested affected component names.",
     )
 
+    ecosystems: List[str] = Field(
+        default_factory=list,
+        description="Package ecosystems impacted by this vulnerability. "
+        "Allowed values: cargo, golang, npm, pypi, maven, gem, upstream, unknown.",
+    )
+
     explanation: str = Field(
         ...,
         description="Rationale for component suggestions.",
@@ -42,6 +48,8 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
 
     def printable_outcome(self) -> str:
         """Override the logging hook to print the resulting suggestion."""
+        if self.ecosystems:
+            return f"{self.components} ecosystems={self.ecosystems}"
         return str(self.components)
 
 

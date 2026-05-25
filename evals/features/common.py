@@ -231,6 +231,8 @@ def _format_suggest_affected_components_output(val: Any) -> str:
     parts: list[str] = []
     if hasattr(val, "components") and val.components is not None:
         parts.append(str(val.components))
+    if hasattr(val, "ecosystems") and val.ecosystems:
+        parts.append(f"ecosystems={val.ecosystems}")
     if hasattr(val, "data_quality"):
         parts.append(f"data_quality={val.data_quality}")
     if hasattr(val, "confidence"):
