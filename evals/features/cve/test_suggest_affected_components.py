@@ -134,15 +134,10 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 # assertion failures if the individual score is low
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-5991",  # got ['qt6'], expected ['qt']
-    "CVE-2025-6052",  # got ['glib2'], expected ['glib']
-    "CVE-2025-14087",  # got ['glib2'], expected ['glib']
     "CVE-2025-23050",  # got ['qt5-qtconnectivity', 'qt6-qtconnectivity'], expected ['qt', 'qt5', 'qt6']
     "CVE-2025-58190",  # got ['golang.org/x/net'], expected ['golang.org/x/net/html']
     "CVE-2025-62718",  # got ['nodejs-axios'], expected ['axios']
     "CVE-2025-64329",  # Aegis occasionally suggests 'containerd' while 'github.com/containerd/containerd' is expected
-    "CVE-2026-0988",  # got ['glib2'], expected ['glib']
-    "CVE-2026-1484",  # got ['glib2'], expected ['Glib']
-    "CVE-2026-1485",  # got ['glib2'], expected ['Glib']
     "CVE-2026-22815",  # got ['python-aiohttp'], expected ['aiohttp']
     "CVE-2026-23950",  # got ['nodejs-tar'], expected ['node-tar', 'tar']
     "CVE-2026-26962",  # got ['rubygem-rack'], expected ['rack']
