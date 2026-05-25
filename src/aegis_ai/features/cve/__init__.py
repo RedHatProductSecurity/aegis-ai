@@ -640,7 +640,10 @@ class SuggestStatementText(Feature):
     """Based on current CVE information and context suggest a statement and mitigation."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=["statement", "mitigation"])
+        deps = feature_deps(
+            exclude_osidb_fields=["statement", "mitigation"],
+            static_context=static_context,
+        )
         NO_MITIGATION_TEXT = (
             "Mitigation for this issue is either not available or the currently available "
             "options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, "
