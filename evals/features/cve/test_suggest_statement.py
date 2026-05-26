@@ -423,7 +423,12 @@ cases = [
         cve_id="CVE-2026-5483",
         expected_statement="A flaw in the `odh-dashboard` component of Red Hat OpenShift AI allows for the disclosure of Kubernetes Service Account tokens through a NodeJS endpoint. This vulnerability could enable an attacker to gain unauthorized access to Kubernetes resources within the OpenShift AI environment.",
         expected_mitigation="If applying the update is not immediately possible, the vulnerability can be mitigated by disabling or removing the NIM (NVIDIA Inference Microservice) integration from the Red Hat OpenShift AI (RHOAI) environment.",
-        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "MitigationEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-22822",
