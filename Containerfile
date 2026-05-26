@@ -14,6 +14,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 9000
 
+# enable CentOS repos temporarily to work around [unable to install gcc](https://redhat.atlassian.net/browse/RHEL-178735)
+# FIXME: Drop this when the above issue is resolved!
+RUN rpm -i https://mirror.stream.centos.org/10-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-10.0-21.el10.noarch.rpm \
+    && rpm -i https://mirror.stream.centos.org/10-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-10.0-21.el10.noarch.rpm
+
 # install dependencies and updates
 RUN microdnf --nodocs --setopt install_weak_deps=0 -y install \
     gcc \
@@ -26,7 +31,6 @@ RUN microdnf --nodocs --setopt install_weak_deps=0 -y install \
     python3-pip \
     redhat-rpm-config \
     tar \
-    && microdnf --nodocs --setopt install_weak_deps=0 -y upgrade \
     && microdnf clean all
 
 # create a non-privileged user
