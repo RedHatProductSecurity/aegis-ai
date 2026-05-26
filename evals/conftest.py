@@ -23,6 +23,11 @@ from evals.utils.kernel_patch_cache import (
     patch_cache_misses,
     write_patch_cache_misses_report,
 )
+from evals.utils.ghsa_cache import (
+    cache_misses as ghsa_cache_misses,
+    ghsa_cache_retrieve,
+    write_misses_report as write_ghsa_misses_report,
+)
 from evals.utils.osidb_cache import osidb_cache_retrieve
 
 
@@ -35,6 +40,27 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
         ctx.deps.exclude_osidb_fields,
         strip_component_prefix_for_osidb_cache=True,
     )
+
+
+@Tool
+async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
+    """wrapper around osv_dev_ghsa that caches OSV.dev responses"""
+    ghsa_ids = extract_ghsa_ids(input.references)
+    if not ghsa_ids:
+        return []
+    results = []
+    for ghsa_id in ghsa_ids:
+        raw = await ghsa_cache_retrieve(ghsa_id)
+        filtered = _filter_osv_response(raw)
+        if filtered:
+            results.append(filtered)
+    return results
+
+
+@Tool
+async def osv_dev_cve_tool(ctx: RunContext, input: OSVCVEToolInput):
+    """wrapper around osv_dev_cve that caches OSV.dev responses"""
+    return await ghsa_cache_retrieve(str(input.cve_id))
 
 
 # pytest's built-in monkeypatch fixture is function-scoped, so session-scoped
@@ -130,6 +156,14 @@ def override_osidb_toolset():
         wrapped.toolsets[0] = cached  # type:ignore
 
 
+@pytest.fixture(scope="session", autouse=True)
+def override_public_cve_toolset():
+    cached = FunctionToolset(tools=[osv_dev_cve_tool, osv_dev_ghsa_tool])
+    wrapped = ts.public_cve_toolset.wrapped
+    if isinstance(wrapped, CombinedToolset):
+        wrapped.toolsets[0] = cached  # type:ignore
+
+
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
 def pytest_sessionfinish(session, exitstatus):
     # print evaluation summary for each feature
@@ -184,6 +218,15 @@ def pytest_sessionfinish(session, exitstatus):
             "run populate_kernel_cve_cache.py to fill them",
             total,
             patch_misses_file,
+        )
+
+    ghsa_misses_file = write_ghsa_misses_report()
+    if ghsa_misses_file:
+        logging.warning(
+            "[ghsa_cache] %d cache miss(es) written to %s — "
+            "commit the new evals/ghsa_cache/*.json files",
+            len(ghsa_cache_misses),
+            ghsa_misses_file,
         )
 
     logging.info(f"[pytest] exit status: {session.exitstatus}")
