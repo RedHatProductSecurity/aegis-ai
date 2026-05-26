@@ -68,6 +68,7 @@ async def _canned_exec_feature(feature, flaw_data):
     if name == "SuggestAffectedComponents":
         return SimpleNamespace(
             components=["kernel", "curl"],
+            ecosystems=["upstream"],
             explanation=explanation,
         )
     if name == "SuggestDescriptionText":
