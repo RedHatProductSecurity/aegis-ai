@@ -207,6 +207,13 @@ KNOWN_FAILURES: dict[str, dict] = {
             "run had I:L (matching OSIDB) and passed; subsequent runs flip to I:N."
         ),
     },
+    "CVE-2025-40248": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": (
+            "LLM underestimates vsock connect() race fix "
+            "(predicted MODERATE vs expected IMPORTANT)."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
