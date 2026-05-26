@@ -1,0 +1,300 @@
+{
+    "id": "GHSA-h2jq-g4cq-5ppq",
+    "summary": "Rack::Static prefix matching can expose unintended files under the static root",
+    "details": "## Summary\n\n`Rack::Static` determines whether a request should be served as a static file using a simple string prefix check. When configured with URL prefixes such as `\"/css\"`, it matches any request path that begins with that string, including unrelated paths such as `\"/css-config.env\"` or `\"/css-backup.sql\"`.\n\nAs a result, files under the static root whose names merely share the configured prefix may be served unintentionally, leading to information disclosure.\n\n## Details\n\n`Rack::Static#route_file` performs static-route matching using logic equivalent to:\n\n```ruby\n@urls.any? { |url| path.index(url) == 0 }\n```\n\nThis checks only whether the request path starts with the configured prefix string. It does not require a path segment boundary after the prefix.\n\nFor example, with:\n\n```ruby\nuse Rack::Static, urls: [\"/css\", \"/js\"], root: \"public\"\n```\n\nthe following path is matched as intended:\n\n```text\n/css/style.css\n```\n\nbut these paths are also matched:\n\n```text\n/css-config.env\n/css-backup.sql\n/csssecrets.yml\n```\n\nIf such files exist under the configured static root, Rack forwards the request to the file server and serves them as static content.\n\nThis means a configuration intended to expose only directory trees such as `/css/...` and `/js/...` may also expose sibling files whose names begin with those same strings.\n\n## Impact\n\nAn attacker can request files under the configured static root whose names share a configured URL prefix and obtain their contents.\n\nIn affected deployments, this may expose configuration files, secrets, backups, environment files, or other unintended static content located under the same root directory.\n\n## Mitigation\n\n* Update to a patched version of Rack that enforces a path boundary when matching configured static URL prefixes.\n* Match only paths that are either exactly equal to the configured prefix or begin with `prefix + \"/\"`.\n* Avoid placing sensitive files under the `Rack::Static` root directory.\n* Prefer static URL mappings that cannot overlap with sensitive filenames.",
+    "aliases": [
+        "CVE-2026-34785"
+    ],
+    "modified": "2026-05-13T15:33:56.731118Z",
+    "published": "2026-04-02T18:44:25Z",
+    "related": [
+        "CGA-rpv3-fm9f-r9pq"
+    ],
+    "database_specific": {
+        "github_reviewed_at": "2026-04-02T18:44:25Z",
+        "github_reviewed": true,
+        "cwe_ids": [
+            "CWE-187",
+            "CWE-200"
+        ],
+        "severity": "HIGH",
+        "nvd_published_at": "2026-04-02T17:16:24Z"
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/rack/rack/security/advisories/GHSA-h2jq-g4cq-5ppq"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-34785"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/rack/rack"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/rubysec/ruby-advisory-db/blob/master/gems/rack/CVE-2026-34785.yml"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "rack",
+                "ecosystem": "RubyGems",
+                "purl": "pkg:gem/rack"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "2.2.23"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "0.1.0",
+                "0.2.0",
+                "0.3.0",
+                "0.4.0",
+                "0.9.0",
+                "0.9.1",
+                "1.0.0",
+                "1.0.1",
+                "1.1.0",
+                "1.1.1",
+                "1.1.1.pre",
+                "1.1.2",
+                "1.1.3",
+                "1.1.4",
+                "1.1.5",
+                "1.1.6",
+                "1.2.0",
+                "1.2.1",
+                "1.2.2",
+                "1.2.3",
+                "1.2.4",
+                "1.2.5",
+                "1.2.6",
+                "1.2.7",
+                "1.2.8",
+                "1.3.0",
+                "1.3.0.beta",
+                "1.3.0.beta2",
+                "1.3.1",
+                "1.3.10",
+                "1.3.2",
+                "1.3.3",
+                "1.3.4",
+                "1.3.5",
+                "1.3.6",
+                "1.3.7",
+                "1.3.8",
+                "1.3.9",
+                "1.4.0",
+                "1.4.1",
+                "1.4.2",
+                "1.4.3",
+                "1.4.4",
+                "1.4.5",
+                "1.4.6",
+                "1.4.7",
+                "1.5.0",
+                "1.5.0.beta.1",
+                "1.5.0.beta.2",
+                "1.5.1",
+                "1.5.2",
+                "1.5.3",
+                "1.5.4",
+                "1.5.5",
+                "1.6.0",
+                "1.6.0.beta",
+                "1.6.0.beta2",
+                "1.6.1",
+                "1.6.10",
+                "1.6.11",
+                "1.6.12",
+                "1.6.13",
+                "1.6.2",
+                "1.6.3",
+                "1.6.4",
+                "1.6.5",
+                "1.6.6",
+                "1.6.7",
+                "1.6.8",
+                "1.6.9",
+                "2.0.0.alpha",
+                "2.0.0.rc1",
+                "2.0.1",
+                "2.0.2",
+                "2.0.3",
+                "2.0.4",
+                "2.0.5",
+                "2.0.6",
+                "2.0.7",
+                "2.0.8",
+                "2.0.9",
+                "2.0.9.1",
+                "2.0.9.2",
+                "2.0.9.3",
+                "2.0.9.4",
+                "2.1.0",
+                "2.1.1",
+                "2.1.2",
+                "2.1.3",
+                "2.1.4",
+                "2.1.4.1",
+                "2.1.4.2",
+                "2.1.4.3",
+                "2.1.4.4",
+                "2.2.0",
+                "2.2.1",
+                "2.2.10",
+                "2.2.11",
+                "2.2.12",
+                "2.2.13",
+                "2.2.14",
+                "2.2.15",
+                "2.2.16",
+                "2.2.17",
+                "2.2.18",
+                "2.2.19",
+                "2.2.2",
+                "2.2.20",
+                "2.2.21",
+                "2.2.22",
+                "2.2.3",
+                "2.2.3.1",
+                "2.2.4",
+                "2.2.5",
+                "2.2.6",
+                "2.2.6.1",
+                "2.2.6.2",
+                "2.2.6.3",
+                "2.2.6.4",
+                "2.2.7",
+                "2.2.8",
+                "2.2.8.1",
+                "2.2.9"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-h2jq-g4cq-5ppq/GHSA-h2jq-g4cq-5ppq.json"
+            }
+        },
+        {
+            "package": {
+                "name": "rack",
+                "ecosystem": "RubyGems",
+                "purl": "pkg:gem/rack"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "3.0.0.beta1"
+                        },
+                        {
+                            "fixed": "3.1.21"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "3.0.0",
+                "3.0.0.beta1",
+                "3.0.0.rc1",
+                "3.0.1",
+                "3.0.10",
+                "3.0.11",
+                "3.0.12",
+                "3.0.13",
+                "3.0.14",
+                "3.0.15",
+                "3.0.16",
+                "3.0.17",
+                "3.0.18",
+                "3.0.2",
+                "3.0.3",
+                "3.0.4",
+                "3.0.4.1",
+                "3.0.4.2",
+                "3.0.5",
+                "3.0.6",
+                "3.0.6.1",
+                "3.0.7",
+                "3.0.8",
+                "3.0.9",
+                "3.0.9.1",
+                "3.1.0",
+                "3.1.1",
+                "3.1.10",
+                "3.1.11",
+                "3.1.12",
+                "3.1.13",
+                "3.1.14",
+                "3.1.15",
+                "3.1.16",
+                "3.1.17",
+                "3.1.18",
+                "3.1.19",
+                "3.1.2",
+                "3.1.20",
+                "3.1.3",
+                "3.1.4",
+                "3.1.5",
+                "3.1.6",
+                "3.1.7",
+                "3.1.8",
+                "3.1.9"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-h2jq-g4cq-5ppq/GHSA-h2jq-g4cq-5ppq.json"
+            }
+        },
+        {
+            "package": {
+                "name": "rack",
+                "ecosystem": "RubyGems",
+                "purl": "pkg:gem/rack"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "3.2.0"
+                        },
+                        {
+                            "fixed": "3.2.6"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "3.2.0",
+                "3.2.1",
+                "3.2.2",
+                "3.2.3",
+                "3.2.4",
+                "3.2.5"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-h2jq-g4cq-5ppq/GHSA-h2jq-g4cq-5ppq.json"
+            }
+        }
+    ],
+    "schema_version": "1.7.5",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+        }
+    ]
+}

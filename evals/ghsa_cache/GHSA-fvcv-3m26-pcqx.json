@@ -1,0 +1,125 @@
+{
+    "id": "GHSA-fvcv-3m26-pcqx",
+    "summary": "Axios has Unrestricted Cloud Metadata Exfiltration via Header Injection Chain",
+    "details": "# Vulnerability Disclosure: Unrestricted Cloud Metadata Exfiltration via Header Injection Chain\n\n## Summary\nThe Axios library is vulnerable to a specific gadget-style attack chain in which **prototype pollution** in a third-party dependency may be leveraged to inject unsanitized header values into outbound requests.\n\nAxios can be used as a gadget after pollution occurs elsewhere because header values merged from attacker-controlled prototype properties are not sanitized for CRLF (`\\r\\n`) characters before being written to the request. In affected deployments, this may enable limited request manipulation or metadata access as part of a higher-complexity exploit chain.\n\n**Severity**: Moderate (CVSS 3.1 Base Score: 4.8)\n**Affected Versions**: All versions (v0.x - v1.x)\n**Vulnerable Component**: `lib/adapters/http.js` (Header Processing)\n\n## Usage of \\\"Helper\\\" Vulnerabilities\nThis issue requires a separate **prototype pollution** vulnerability in another library in the application stack (for example, `qs`, `minimist`, `ini`, or `body-parser`). If an attacker can pollute `Object.prototype`, Axios may pick up the polluted properties during config merge.\n\nBecause Axios does not sanitise these merged header values for CRLF (`\\r\\n`) characters, the polluted property can alter the structure of an outbound HTTP request.\n\n## Proof of Concept\n\n### 1. The Setup (Simulated Pollution)\nImagine a scenario where a known vulnerability exists in a query parser. The attacker sends a payload that sets:\n```javascript\nObject.prototype['x-amz-target'] = \\\"dummy\\r\\n\\r\\nPUT /latest/api/token HTTP/1.1\\r\\nHost: 169.254.169.254\\r\\nX-aws-ec2-metadata-token-ttl-seconds: 21600\\r\\n\\r\\nGET /ignore\\\";\n```\n\n### 2. The Gadget Trigger (Safe Code)\nThe application makes a completely safe, hardcoded request:\n```javascript\n// This looks safe to the developer\nawait axios.get('https://analytics.internal/pings'); \n```\n\n### 3. The Execution\nAxios merges the prototype property `x-amz-target` into the request headers. It then writes the header value directly to the socket without validation.\n\n**Resulting HTTP traffic:**\n```http\nGET /pings HTTP/1.1\nHost: analytics.internal\nx-amz-target: dummy\n\nPUT /latest/api/token HTTP/1.1\nHost: 169.254.169.254\nX-aws-ec2-metadata-token-ttl-seconds: 21600\n\nGET /ignore HTTP/1.1\n...\n```\n\n### 4. The Impact\nIn environments where requests can reach cloud metadata endpoints or sensitive internal services, the injected header content may help bypass expected request constraints and expose limited credentials or modify request semantics. This impact depends on application context and a separate prototype-pollution primitive.\n\n## Impact Analysis\n-   **Confidentiality**: May expose limited sensitive information in affected network environments.\n-   **Integrity**: May allow modification of outbound request structure or injected headers.\n-   **Attack Complexity**: Exploitation requires a separate prototype-pollution vulnerability and a reachable target service.\n\n## Recommended Fix\nValidate all header values in `lib/adapters/http.js` and `xhr.js` before passing them to the underlying request function.\n\n**Patch Suggestion:**\n```javascript\n// In lib/adapters/http.js\nutils.forEach(requestHeaders, function setRequestHeader(val, key) {\n  if (/[\\r\\n]/.test(val)) {\n    throw new Error('Security: Header value contains invalid characters');\n  }\n  // ... proceed to set header\n});\n```\n\n## References\n-   **OWASP**: CRLF Injection (CWE-113)\n\nThis report was generated as part of a security audit of the Axios library.",
+    "aliases": [
+        "CVE-2026-40175"
+    ],
+    "modified": "2026-05-20T00:30:10.353644780Z",
+    "published": "2026-04-10T19:47:16Z",
+    "related": [
+        "CGA-6c83-wc58-v79m"
+    ],
+    "database_specific": {
+        "github_reviewed": true,
+        "cwe_ids": [
+            "CWE-113",
+            "CWE-444",
+            "CWE-918"
+        ],
+        "nvd_published_at": "2026-04-10T20:16:22Z",
+        "severity": "MODERATE",
+        "github_reviewed_at": "2026-04-10T19:47:16Z"
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/security/advisories/GHSA-fvcv-3m26-pcqx"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-40175"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/pull/10660"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/pull/10660#issuecomment-4224168081"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/pull/10688"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/commit/03cdfc99e8db32a390e12128208b6778492cee9c"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/commit/363185461b90b1b78845dc8a99a1f103d9b122a1"
+        },
+        {
+            "type": "WEB",
+            "url": "https://cert-portal.siemens.com/productcert/html/ssa-876049.html"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/axios/axios"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/releases/tag/v0.31.0"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/axios/axios/releases/tag/v1.15.0"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "axios",
+                "ecosystem": "npm",
+                "purl": "pkg:npm/axios"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "1.0.0"
+                        },
+                        {
+                            "fixed": "1.15.0"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-fvcv-3m26-pcqx/GHSA-fvcv-3m26-pcqx.json"
+            }
+        },
+        {
+            "package": {
+                "name": "axios",
+                "ecosystem": "npm",
+                "purl": "pkg:npm/axios"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "0.31.0"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-fvcv-3m26-pcqx/GHSA-fvcv-3m26-pcqx.json"
+            }
+        }
+    ],
+    "schema_version": "1.7.5",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N"
+        }
+    ]
+}

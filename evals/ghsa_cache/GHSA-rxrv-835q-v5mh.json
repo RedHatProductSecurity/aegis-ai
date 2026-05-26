@@ -1,0 +1,69 @@
+{
+    "id": "GHSA-rxrv-835q-v5mh",
+    "summary": "locutus is vulnerable to Prototype Pollution",
+    "details": "### Summary\nA Prototype Pollution vulnerability exists in the the npm package locutus (>2.0.12). Despite a previous fix that attempted to mitigate Prototype Pollution by checking whether user input contained a forbidden key, it is still possible to pollute Object.prototype via a crafted input using String.prototype. This issue was fixed in version 2.0.39.\n\n### Details\nThe vulnerability resides in line 77 to 79 of https://github.com/locutusjs/locutus/blob/main/src/php/strings/parse_str.js where includes() function is used to check whether user provided input contain forbidden strings.\n\n### PoC\n\n#### Steps to reproduce\n1. Install latest version of locutus using npm install or cloning from git\n2. Run the following code snippet:\n\n```javascript\nString.prototype.includes = () => false;      \nconsole.log({}.polluted);\nconst locutus = require('locutus');\nlocutus.php.strings.parse_str('constructor[prototype][polluted]=yes');\nconsole.log({}.polluted);  // prints yes -> indicating that the patch was bypassed and Prototype Pollution occurred\n```\n\n#### Expected behavior\nPrototype Pollution should be prevented and {} should not gain new properties.\nThis should be printed on the console:\n```\nundefined\nundefined OR throw an Error\n```\n\n#### Actual behavior\nObject.prototype is polluted\nThis is printed on the console:\n```\nundefined \nyes\n```\n\n### Impact\nThis is a Prototype Pollution vulnerability, which can have severe security implications depending on how locutus is used by downstream applications. Any application that processes attacker-controlled input using this `locutus.php.strings.parse_str` may be affected. It could potentially lead to the following problems:\n1. Authentication bypass\n2. Denial of service\n3. Remote code execution (if polluted property is passed to sinks like eval or child_process)",
+    "aliases": [
+        "CVE-2026-25521"
+    ],
+    "modified": "2026-02-05T01:05:01.200231Z",
+    "published": "2026-02-02T22:21:54Z",
+    "database_specific": {
+        "nvd_published_at": "2026-02-04T22:15:59Z",
+        "github_reviewed_at": "2026-02-02T22:21:54Z",
+        "severity": "CRITICAL",
+        "github_reviewed": true,
+        "cwe_ids": [
+            "CWE-1321"
+        ]
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/locutusjs/locutus/security/advisories/GHSA-rxrv-835q-v5mh"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-25521"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/locutusjs/locutus/commit/042af9ca7fde2ff599120783e720a17f335bb01c"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/locutusjs/locutus"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "locutus",
+                "ecosystem": "npm",
+                "purl": "pkg:npm/locutus"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "2.0.12"
+                        },
+                        {
+                            "fixed": "2.0.39"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/02/GHSA-rxrv-835q-v5mh/GHSA-rxrv-835q-v5mh.json"
+            }
+        }
+    ],
+    "schema_version": "1.7.3",
+    "severity": [
+        {
+            "type": "CVSS_V4",
+            "score": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H"
+        }
+    ]
+}

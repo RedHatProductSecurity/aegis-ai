@@ -8,6 +8,12 @@ from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
 from aegis_ai import config_logging
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools.osidb import CVE, cve_exclude_fields, OSIDBToolInput
+from aegis_ai.toolsets.tools.osv_dev_cve import OSVToolInput as OSVCVEToolInput
+from aegis_ai.toolsets.tools.osv_dev_ghsa import (
+    GHSAToolInput,
+    extract_ghsa_ids,
+    _filter_osv_response,
+)
 import aegis_ai.toolsets as ts
 
 from evals.features.common import eval_metrics, eval_summary

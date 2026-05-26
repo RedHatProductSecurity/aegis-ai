@@ -1,0 +1,125 @@
+{
+    "id": "GHSA-hqmj-h5c6-369m",
+    "summary": "ONNX Untrusted Model Repository Warnings Suppressed by silent=True in onnx.hub.load() \u2014 Silent Supply-Chain Attack",
+    "details": "## What's the issue\nPassing `silent=True` to `onnx.hub.load()` kills all trust warnings and user prompts. This means a model can be downloaded from any unverified GitHub repo with zero user awareness.\n \n```python\nif not _verify_repo_ref(repo) and not silent:\n    # completely skipped when silent=True\n    print(\"The model repo... is not trusted\")\n    if input().lower() != \"y\":\n        return None\n```\n \nOn top of that, the SHA256 integrity check is useless here \u2014 it validates against a manifest that lives in the same repo the attacker controls, so the hash will always match.\n\n \n## Impact\nAny pipeline using `hub.load()` with `silent=True` and an external repo string is silently loading whatever the repo owner ships. If that model executes arbitrary code on load, the attacker has access to the machine.\n \n## Resolved by removing the feature \n## References\n \n- [Write-up](https://github.com/ZeroXJacks/CVEs/blob/main/2026/CVE-2026-28500.md)",
+    "aliases": [
+        "CVE-2026-28500",
+        "PYSEC-2026-103"
+    ],
+    "modified": "2026-05-20T08:11:14.041677253Z",
+    "published": "2026-03-16T16:23:28Z",
+    "related": [
+        "CGA-x7fc-8m86-jx94"
+    ],
+    "database_specific": {
+        "nvd_published_at": "2026-03-18T02:16:24Z",
+        "github_reviewed": true,
+        "severity": "HIGH",
+        "cwe_ids": [
+            "CWE-345",
+            "CWE-494",
+            "CWE-693"
+        ],
+        "github_reviewed_at": "2026-03-16T16:23:28Z"
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/onnx/onnx/security/advisories/GHSA-hqmj-h5c6-369m"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-28500"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/ZeroXJacks/CVEs/blob/main/2026/CVE-2026-28500.md"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/onnx/onnx"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "onnx",
+                "ecosystem": "PyPI",
+                "purl": "pkg:pypi/onnx"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "1.21.0"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "0.1",
+                "0.2",
+                "0.2.1",
+                "1.0.0",
+                "1.0.1",
+                "1.1.0",
+                "1.1.1",
+                "1.1.2",
+                "1.10.0",
+                "1.10.1",
+                "1.10.2",
+                "1.11.0",
+                "1.12.0",
+                "1.13.0",
+                "1.13.1",
+                "1.14.0",
+                "1.14.1",
+                "1.15.0",
+                "1.16.0",
+                "1.16.1",
+                "1.16.2",
+                "1.17.0",
+                "1.18.0",
+                "1.19.0",
+                "1.19.1",
+                "1.19.1rc1",
+                "1.2.1",
+                "1.2.2",
+                "1.2.3",
+                "1.20.0",
+                "1.20.0rc1",
+                "1.20.0rc2",
+                "1.20.1",
+                "1.20.1rc1",
+                "1.21.0rc1",
+                "1.21.0rc2",
+                "1.21.0rc3",
+                "1.21.0rc4",
+                "1.3.0",
+                "1.4.0",
+                "1.4.1",
+                "1.5.0",
+                "1.6.0",
+                "1.7.0",
+                "1.8.0",
+                "1.8.1",
+                "1.9.0"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/03/GHSA-hqmj-h5c6-369m/GHSA-hqmj-h5c6-369m.json",
+                "last_known_affected_version_range": "<= 1.20.1"
+            }
+        }
+    ],
+    "schema_version": "1.7.5",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N"
+        }
+    ]
+}
