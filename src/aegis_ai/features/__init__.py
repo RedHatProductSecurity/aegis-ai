@@ -100,7 +100,7 @@ PROMPT_INFO_PERIOD = 60
 _MAX_OUTPUT_ENFORCEMENT_RETRIES = 3
 
 # HTTP status codes for which LLM prompt should be retried on ModelHTTPError or ServerError
-HTTP_RETRY_CODES = (500, 503, 504)
+HTTP_RETRY_CODES = (500, 502, 503, 504)
 
 
 def id_from_context(context: BaseModel) -> str:
