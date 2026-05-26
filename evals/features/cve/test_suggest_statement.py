@@ -181,6 +181,7 @@ cases = [
                 "StatementEvaluator",
                 # Aegis mentions function name nf_conntrack_dccp_packet
                 "StatementNoCodeLevelDetails",
+                "StatementNoDuplicatedInfo",
             ]
         },
     ),
