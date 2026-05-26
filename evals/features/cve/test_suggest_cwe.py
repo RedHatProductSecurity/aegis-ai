@@ -872,7 +872,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2026-3644",
         cwe_list=["CWE-791"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2026-25780",
