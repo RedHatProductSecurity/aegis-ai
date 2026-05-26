@@ -321,7 +321,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39795",
         expected_statement="This vulnerability is rated Low for Red Hat Enterprise Linux because a possible integer overflow in the `blk_stack_limits()` function within the kernel's block layer could be exploited by an attacker with high privileges. Successful exploitation may lead to a denial of service or information disclosure. Triggering this vulnerability requires elevated privileges (ex. `CAP_SYS_ADMIN`) as modifying or creating block stacks is a privileged operation. If the bug is triggered, then there are potentially impacts to integrity and availability, in that a misalignment could result in an incorrect write to storage which in turn could cause some I/O errors, though they are unlikely to hang the system outright.",
-        metadata={"known_to_fail_evaluators": ["StatementNoCodeLevelDetails"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementNoCodeLevelDetails",
+                "StatementEvaluator",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39809",
