@@ -169,12 +169,18 @@ class DataQualityEvaluator(Evaluator[str, SuggestImpactModel]):
 
     _sigma = 0.1  # controls tolerance: ~0.61 at ±0.1, ~0.14 at ±0.2
 
-    def evaluate(self, ctx: EvaluatorContext[str, SuggestImpactModel]) -> float:
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestImpactModel]
+    ) -> EvaluationReason:
         assert ctx.expected_output is not None
-        diff = ctx.output.data_quality - ctx.expected_output.data_quality
+        got = ctx.output.data_quality
+        expected = ctx.expected_output.data_quality
+        diff = got - expected
 
         # Gaussian similarity
-        return math.exp(-(diff**2) / (2 * self._sigma**2))
+        score = math.exp(-(diff**2) / (2 * self._sigma**2))
+        reason = None if score >= 1.0 else f"got {got}, expected {expected}"
+        return EvaluationReason(value=score, reason=reason)
 
 
 # some evaluators are only applicable if the expected output for a specific field is provided
