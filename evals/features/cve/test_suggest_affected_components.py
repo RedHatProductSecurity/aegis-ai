@@ -144,10 +144,11 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 
 
 # Expected ecosystems for CVEs where ground-truth is known.
-# Allowed values: golang, npm, pypi, maven, gem, upstream, unknown.
+# Allowed values: cargo, golang, npm, pypi, maven, gem, upstream, unknown.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-24842": ["npm"],
     "CVE-2026-25243": ["upstream"],
+    "CVE-2026-33056": ["cargo"],
     "CVE-2026-33891": ["npm"],
 }
 
