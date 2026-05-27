@@ -155,6 +155,7 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-23950",  # got ['nodejs-tar'], expected ['node-tar', 'tar']
     "CVE-2026-27140",  # got ['golang'], expected ['cmd/go', 'golang']
     "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
+    "CVE-2026-40938",  # got ['pipeline'], expected ['tektoncd/pipeline']
 )
 
 
