@@ -152,7 +152,6 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-5991",  # got ['qt6'], expected ['qt']
     "CVE-2025-23050",  # got ['qt5-qtconnectivity', 'qt6-qtconnectivity'], expected ['qt', 'qt5', 'qt6']
     "CVE-2025-58190",  # got ['net'] or ['net/http'], expected ['net/html']
-    "CVE-2026-23950",  # got ['nodejs-tar'], expected ['node-tar', 'tar']
     "CVE-2026-27140",  # got ['golang'], expected ['cmd/go', 'golang']
     "CVE-2026-40193",  # got ['foxcpp/maddy'], expected ['maddy']
     "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
