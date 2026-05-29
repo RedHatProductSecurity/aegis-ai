@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import xml.etree.ElementTree as ET
 
 from math import log
 from pathlib import Path
@@ -33,6 +34,8 @@ CWE_URLS = [
     # "https://cwe.mitre.org/data/csv/1081.csv.zip",  # entries with maintenance notes
 ]
 
+CWE_XML_URL = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
+
 CACHE_DIR = Path(get_settings().config_dir) / "mitre_cwe"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 CWE_DEFS_FILE = CACHE_DIR / "cwe_full_defs.json"
@@ -56,7 +59,6 @@ KEYWORD_BOOSTS: List[Tuple[re.Pattern[str], str, float]] = [
     (re.compile(r"\bsession fixation\b"), "CWE-613", 0.25),
     (re.compile(r"\bcommand injection\b"), "CWE-78", 0.25),
     (re.compile(r"\bpath traversal\b"), "CWE-22", 0.2),
-    (re.compile(r"\bimproper input validation\b"), "CWE-20", 0.15),
     (re.compile(r"\bdouble free\b"), "CWE-415", 0.25),
     (re.compile(r"\brace (condition)?\b"), "CWE-366", 0.2),
     # CWE-825: Expired/Dangling Pointer Dereference
@@ -88,6 +90,34 @@ class CWEManager:
         self._lock = asyncio.Lock()
         self._is_initialized = False
         self._debug = False
+
+    async def _fetch_mapping_usage(self, client: httpx.AsyncClient) -> Dict[str, str]:
+        """Fetch CWE XML from MITRE and extract per-CWE mapping usage."""
+        try:
+            logger.info(f"Fetching CWE mapping usage from '{CWE_XML_URL}'...")
+            response = await client.get(CWE_XML_URL, timeout=30)
+            response.raise_for_status()
+
+            zip_file = ZipFile(io.BytesIO(response.content))
+            xml_name = zip_file.namelist()[0]
+            xml_bytes = zip_file.read(xml_name)
+
+            root = ET.fromstring(xml_bytes)
+            ns_match = re.match(r"\{(.+?)\}", root.tag)
+            ns = f"{{{ns_match.group(1)}}}" if ns_match else ""
+
+            usage_map: Dict[str, str] = {}
+            for weakness in root.iter(f"{ns}Weakness"):
+                cwe_id = f"CWE-{weakness.get('ID', '')}"
+                usage_el = weakness.find(f"{ns}Mapping_Notes/{ns}Usage")
+                if usage_el is not None and usage_el.text:
+                    usage_map[cwe_id] = usage_el.text
+
+            logger.info(f"Extracted mapping usage for {len(usage_map)} CWEs.")
+            return usage_map
+        except Exception as e:
+            logger.warning(f"Failed to fetch CWE mapping usage: {e}")
+            return {}
 
     async def _fetch_and_parse_cwe_data(self) -> Dict[str, Dict]:
         """Fetch CWE CSVs from MITRE, parse em, and return dict."""
@@ -121,6 +151,7 @@ class CWEManager:
                                     "affected_resources": line[19],
                                     "notes": line[22],
                                     "disallowed": not cwe_699_view,
+                                    "mapping_usage": None,
                                 }
                             elif cwe_699_view:
                                 logger.warning(
@@ -128,6 +159,14 @@ class CWEManager:
                                 )
                 except httpx.HTTPError as e:
                     logger.error(f"Failed to retrieve CWEs from {url}: {e}")
+
+            usage_map = await self._fetch_mapping_usage(client)
+            for cwe_id, details in defs.items():
+                usage = usage_map.get(cwe_id)
+                details["mapping_usage"] = usage
+                if usage in ("Prohibited", "Discouraged"):
+                    details["disallowed"] = True
+
         return defs
 
     @no_type_check
@@ -143,10 +182,12 @@ class CWEManager:
         def tokenize(text: str) -> List[str]:
             return re.findall(r"[a-z0-9]+", text)
 
-        # Compose corpus texts and ids
+        # Compose corpus texts and ids (skip disallowed CWEs)
         corpus_texts: List[str] = []
         cwe_ids: List[str] = []
         for cwe_id, details in cwe_data.items():
+            if details.get("disallowed"):
+                continue
             text = f"{cwe_id} {details.get('name', '')} {details.get('description', '')} {details.get('extended_description', '')}"
             corpus_texts.append(normalize(text))
             cwe_ids.append(cwe_id)
@@ -214,6 +255,17 @@ class CWEManager:
             if CWE_DEFS_FILE.exists():
                 logger.info(f"Loading CWE definitions from '{CWE_DEFS_FILE}'.")
                 self._definitions = await read_json_async(CWE_DEFS_FILE)
+                sample = next(iter(self._definitions.values()), {})
+                if "mapping_usage" not in sample:
+                    logger.info("CWE cache missing mapping_usage; regenerating.")
+                    self._definitions = await self._fetch_and_parse_cwe_data()
+                    await write_json_async(CWE_DEFS_FILE, self._definitions)
+                    for f in (
+                        CWE_TFIDF_MATRIX_FILE,
+                        CWE_VOCAB_FILE,
+                        CWE_INDEX_MAP_FILE,
+                    ):
+                        f.unlink(missing_ok=True)
             else:
                 logger.info("No CWE definitions file found. Fetching from MITRE.")
                 self._definitions = await self._fetch_and_parse_cwe_data()

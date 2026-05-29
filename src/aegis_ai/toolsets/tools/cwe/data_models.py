@@ -1,9 +1,11 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import Field
 
 from aegis_ai.data_models import CWEID
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
+
+MappingUsage = Literal["Allowed", "Allowed-with-Review", "Discouraged", "Prohibited"]
 
 
 class CWEToolInput(BaseToolInput):
@@ -62,6 +64,11 @@ class CWE(BaseToolOutput):
     disallowed: bool = Field(
         ...,
         description="True if the CWE is not available in the CWE-699 view.",
+    )
+
+    mapping_usage: Optional[MappingUsage] = Field(
+        default=None,
+        description="MITRE mapping usage guidance (Allowed, Allowed-with-Review, Discouraged, Prohibited).",
     )
 
     score: Optional[float] = Field(

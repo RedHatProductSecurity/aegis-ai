@@ -81,7 +81,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2022-48701",
-        cwe_list=["CWE-125", "CWE-20"],
+        cwe_list=["CWE-125"],
         metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
@@ -392,7 +392,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-5399",
-        cwe_list=["CWE-835", "CWE-400"],
+        cwe_list=["CWE-835", "CWE-770"],
     ),
     SuggestCweCase(
         cve_id="CVE-2025-6547",
