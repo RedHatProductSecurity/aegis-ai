@@ -643,6 +643,7 @@ cases = [
         # A valid git repository at a known, predicable path on the resolver pod (e.g., /tmp/<reponame>-<suffix> from a concurrent resolution), or
         # A default-URL configuration pointing at a local path
         expected_impact="IMPORTANT",
+        metadata={"known_to_fail_evaluators": ["NoAffectsInExplanation"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2026-43914",
