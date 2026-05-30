@@ -207,6 +207,17 @@ KNOWN_FAILURES: dict[str, dict] = {
             "run had I:L (matching OSIDB) and passed; subsequent runs flip to I:N."
         ),
     },
+    "CVE-2025-37803": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The CVSS vector uses PR:L but the explanation states the vulnerability "
+            "requires 'access to the udmabuf device'. Access to kernel device files "
+            "like /dev/udmabuf typically requires elevated privileges (e.g., root or "
+            "membership in a privileged group). The explanation does not describe any "
+            "plausible unprivileged alternative, making PR:L inconsistent with the "
+            "described trigger path."
+        ),
+    },
     "CVE-2025-38089": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
