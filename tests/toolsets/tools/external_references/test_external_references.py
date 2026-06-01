@@ -22,7 +22,9 @@ class TestValidateUrl:
         assert validate_url("https://www.cve.org/CVERecord?id=CVE-2025-0725")
 
     def test_allowed_github(self):
-        assert validate_url("https://github.com/tektoncd/pipeline/security/advisories/GHSA-94jr-7pqp-xhcq")
+        assert validate_url(
+            "https://github.com/tektoncd/pipeline/security/advisories/GHSA-94jr-7pqp-xhcq"
+        )
 
     def test_blocked_host(self):
         assert not validate_url("https://evil.example.com/malware")
@@ -44,13 +46,19 @@ class TestValidateUrl:
 class TestNormalizeCveOrgUrl:
     def test_standard_url(self):
         url = "https://www.cve.org/CVERecord?id=CVE-2025-0725"
-        assert _normalize_cve_org_url(url) == "https://cveawg.mitre.org/api/cve/CVE-2025-0725"
+        assert (
+            _normalize_cve_org_url(url)
+            == "https://cveawg.mitre.org/api/cve/CVE-2025-0725"
+        )
 
     def test_non_cve_org(self):
         assert _normalize_cve_org_url("https://github.com/foo/bar") is None
 
     def test_wrong_path(self):
-        assert _normalize_cve_org_url("https://www.cve.org/OtherPage?id=CVE-2025-0725") is None
+        assert (
+            _normalize_cve_org_url("https://www.cve.org/OtherPage?id=CVE-2025-0725")
+            is None
+        )
 
     def test_missing_id_param(self):
         assert _normalize_cve_org_url("https://www.cve.org/CVERecord") is None
@@ -66,10 +74,18 @@ class TestFilterCveOrgJson:
             }
         }
         result = _filter_cve_org_json(data)
-        assert result["descriptions"] == [{"lang": "en", "value": "A flaw was found..."}]
+        assert result["descriptions"] == [
+            {"lang": "en", "value": "A flaw was found..."}
+        ]
 
     def test_extracts_metrics(self):
-        metrics = [{"cvssV3_1": {"vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}}]
+        metrics = [
+            {
+                "cvssV3_1": {
+                    "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                }
+            }
+        ]
         data = {"containers": {"cna": {"metrics": metrics}}}
         result = _filter_cve_org_json(data)
         assert result["metrics"] == metrics
@@ -205,7 +221,9 @@ class TestCacheKeyForUrl:
         assert cache_key_for_url("https://a.com") != cache_key_for_url("https://b.com")
 
     def test_safe_for_filenames(self):
-        key = cache_key_for_url("https://www.cve.org/CVERecord?id=CVE-2025-0725&foo=bar")
+        key = cache_key_for_url(
+            "https://www.cve.org/CVERecord?id=CVE-2025-0725&foo=bar"
+        )
         assert all(c.isalnum() for c in key)
 
 

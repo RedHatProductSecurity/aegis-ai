@@ -77,9 +77,9 @@ class SuggestImpact(Feature):
                     - CIA: Set each based on realistic consequences: use A for availability-only DoS; use C/I when plausible user-visible confidentiality or integrity impact exists. For internal kernel object lifetime/corruption with no direct user data read/write, prefer C:N/I:N or low scores unless a credible path to disclosure or controlled modification of user data is described.
                     - Linux networking internals (tc, qdisc, net_sched, classifiers, queue discipline): flaws confined to internal queue/scheduling/state or buffer accounting for traffic shaping usually do not read or forge application payload data. Prefer C:N and I:N unless the advisory describes a concrete cross-boundary or user-data effect (e.g. leaking packet contents or socket buffers to userspace, forging another user's traffic, container-to-host data leak). Do not set C:H or I:H from generic "memory corruption" or "undefined behavior" alone; if you output C:H or I:H, the explanation must spell out that user-data impact path in one sentence.
                 - Consider Red Hat hardening defaults (SELinux enforcing, least privilege) only to inform AC and S, not AV.
-                - Retrieve and summarize additional context from vulnerability references:
-                    - Use github mcp and web search tools to resolve reference URLs.
-                    - If cisa_kev_tool is available, check for known exploits.
+                - After calling osidb_flaw_tool, you MUST pass the flaw's reference URLs to external_references_tool to retrieve upstream CVSS vectors, security advisories, and commit details. This is critical for accurate scoring.
+                - Use github mcp and web search tools for additional context if needed.
+                - If cisa_kev_tool is available, check for known exploits.
                 - Data quality:
                     - Set data_quality to reflect how much actionable technical detail the input (comment_zero / CVE description) provides for CVSS scoring.
                     - Reserve 0.9–1.0 only when the input spells out attack vector, privileges, user interaction, scope, and concrete CIA consequences.
@@ -523,6 +523,7 @@ class SuggestCWE(Feature):
                 - Retrieve and summarise additional context strictly from vulnerability reference URLs and CWE tool outputs.
                     - Prefer mitre_cwe tools (retrieve_allowed_cwe_ids, search_cwes, retrieve_cwes) for CWE selection and definitions.
                     - Use github mcp tool to resolve vulnerability reference URLs if present.
+                    - Do NOT call external_references_tool — it returns bulk content that is not needed for CWE classification.
                     - Avoid using general-purpose web search or encyclopedic tools for CWE selection unless references are insufficient.
                 - Identify set of candidate CWEs - always use the mitre cwe tool retrieve_allowed_cwe_ids to filter candidate CWE list.
                     - Analyze vulnerability, identify CWE that matches root cause of weakness, being careful about memory management and buffer overflows.
@@ -602,6 +603,7 @@ class SuggestDescriptionText(Feature):
                 - The title should briefly summarize the core issue in one line; keep headline-level detail only (do not mirror the full description).
             """,
             rules="""
+                - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve additional context about the vulnerability from upstream advisories.
                 'description': one short paragraph.
                 - Begin with: "A flaw was found in <component>."
                 - Clearly state: who can exploit the flaw (e.g., a remote attacker, a local user, a malicious server), how it can be exploited (method/conditions), and the concrete consequences.
@@ -659,6 +661,7 @@ class SuggestStatementText(Feature):
             - Keep outputs concise and consistent; avoid contradiction between fields.
             """,
             rules=f"""
+            - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve detailed impact context from upstream advisories and GHSAs.
             ### STATEMENT (suggested_statement)
             - Focus on impact and RH relevance (deployment model, defaults, hardening).
             - Start with a concise severity-and-why sentence tailored for Red Hat that is consistent with the provided 'impact' field if available:
