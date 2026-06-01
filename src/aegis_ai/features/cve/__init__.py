@@ -92,6 +92,11 @@ class SuggestImpact(Feature):
                     - Use 0.6–0.8 when most metrics are clear but one or two require assumptions (e.g., unclear scope or privilege level).
                     - Use 0.3–0.5 when significant guesswork is involved due to sparse or ambiguous input.
                     - Use below 0.3 when the suggestion is largely speculative.
+                - Mozilla/Firefox/Thunderbird CVEs with sparse input (e.g. "Undefined behavior in X component"):
+                    - The comment_zero is often just one generic sentence. Use external_references_tool to fetch the Mozilla security advisory — it contains an explicit impact label per CVE.
+                    - Map Mozilla's impact labels to Red Hat severity: critical → Critical, high → Important, moderate → Moderate, low → Low.
+                    - When the comment_zero is vague and Mozilla's advisory provides an impact label, treat that label as the primary impact signal and construct a CVSS vector whose score falls within the matching band (Critical > 9.0, Important 7.1–9.0, Moderate 4.0–7.0, Low 0.1–3.9). This ensures the impact is not overridden by post-processing reconciliation.
+                    - For these sparse-input CVEs, set data_quality to 0.3–0.5 and confidence to 0.3–0.5 to reflect the limited technical detail available.
                 - Explanation must match the vector (mandatory):
                     - Do not write that exploitation requires admin capabilities, mount privileges, or privileged syscalls and output PR:L; use PR:H when those are required to trigger the flaw.
                     - If you revise the narrative and it implies stricter privileges than your draft vector, update PR in the vector before finalizing.
