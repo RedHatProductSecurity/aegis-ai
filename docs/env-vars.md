@@ -49,6 +49,7 @@
 | `AEGIS_USE_PYPI_MCP_CONTEXT`           | Enable PyPI MCP tool                  | `false`                  |
 | `AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT` | Enable NVD MCP tool                   | `false`                  |
 | `NVD_API_KEY`                          | NVD API key (for NVD MCP tool)        |                          |
+| `AEGIS_USE_EXT_REFS_TOOL_CONTEXT`      | Enable external references tool (fetches content from CVE reference URLs on an allowlist of trusted domains) | `false` |
 | `AEGIS_USE_TAVILY_TOOL_CONTEXT`        | Enable Tavily web search tool         | `false`                  |
 | `TAVILY_API_KEY`                       | Tavily API key                        |                          |
 

@@ -168,6 +168,11 @@ if get_settings().use_wikipedia_mcp_tool:
 if get_settings().use_pypi_mcp_tool:
     public_toolset_list.append(pypi_stdio_server)
 
+if get_settings().use_external_references_tool:
+    from aegis_ai.toolsets.tools.external_references import external_references_toolset
+
+    public_toolset_list.append(external_references_toolset)
+
 public_toolset = CombinedToolset(public_toolset_list)
 
 

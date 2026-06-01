@@ -196,6 +196,9 @@ class AppSettings(BaseSettings):
     use_pypi_mcp_tool: bool = get_env_flag("AEGIS_USE_PYPI_MCP_CONTEXT", False)
     use_nvd_dev_tool: bool = get_env_flag("AEGIS_USE_MITRE_NVD_MCP_TOOL_CONTEXT", False)
     use_cisa_kev_tool: bool = get_env_flag("AEGIS_USE_CISA_KEV_TOOL_CONTEXT", False)
+    use_external_references_tool: bool = get_env_flag(
+        "AEGIS_USE_EXT_REFS_TOOL_CONTEXT", False
+    )
 
     # Enables the kernel-specific XGBoost impact classifier for Linux kernel CVEs.
     # When true, kernel CVEs are routed through the patch-feature pipeline before
