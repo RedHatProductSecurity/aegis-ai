@@ -29,6 +29,11 @@ from evals.utils.kernel_patch_cache import (
     patch_cache_misses,
     write_patch_cache_misses_report,
 )
+from evals.utils.external_references_cache import (
+    cache_misses as extref_cache_misses,
+    extref_cache_retrieve,
+    write_misses_report as write_extref_misses_report,
+)
 from evals.utils.ghsa_cache import (
     cache_misses as ghsa_cache_misses,
     ghsa_cache_retrieve,
@@ -125,6 +130,14 @@ def _patch_kernel_patch_fetch(_monkeypatch_session):
     _monkeypatch_session.setattr(
         KernelImpactClassifier, "_fetch_commit_html", cached_fetch_commit_html
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _patch_external_references(_monkeypatch_session):
+    """Route external reference fetches through disk cache during evals."""
+    import aegis_ai.toolsets.tools.external_references as extref_mod
+
+    _monkeypatch_session.setattr(extref_mod, "fetch_reference", extref_cache_retrieve)
 
 
 # enable logging to see progress
@@ -233,6 +246,15 @@ def pytest_sessionfinish(session, exitstatus):
             "commit the new evals/ghsa_cache/*.json files",
             len(ghsa_cache_misses),
             ghsa_misses_file,
+        )
+
+    extref_misses_file = write_extref_misses_report()
+    if extref_misses_file:
+        logging.warning(
+            "[external_references_cache] %d cache miss(es) written to %s — "
+            "commit the new evals/external_references_cache/*.json files",
+            len(extref_cache_misses),
+            extref_misses_file,
         )
 
     logging.info(f"[pytest] exit status: {session.exitstatus}")
