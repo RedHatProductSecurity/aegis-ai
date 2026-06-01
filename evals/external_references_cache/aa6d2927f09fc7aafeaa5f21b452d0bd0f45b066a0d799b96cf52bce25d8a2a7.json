@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-35537",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-35537",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An issue was discovered in Roundcube Webmail before 1.5.14 and 1.6.14. Unsafe deserialization in the redis/memcache session handler may lead to arbitrary file write operations by unauthenticated attackers via crafted session data.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"HIGH\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 3.7,\n        \"baseSeverity\": \"LOW\",\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N\",\n        \"version\": \"3.1\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"Webmail\",\n      \"vendor\": \"Roundcube\",\n      \"versions\": [\n        {\n          \"lessThan\": \"1.5.14\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"lessThan\": \"1.6.14\",\n          \"status\": \"affected\",\n          \"version\": \"1.6.0\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

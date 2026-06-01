@@ -1,0 +1,10 @@
+{
+    "url": "https://crates.io/crates/tokio-tar",
+    "result": {
+        "status": "error",
+        "error_message": "HTTP 404",
+        "url": "https://crates.io/crates/tokio-tar",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

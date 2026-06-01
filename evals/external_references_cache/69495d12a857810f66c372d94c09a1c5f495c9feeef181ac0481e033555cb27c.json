@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-9573",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-9573",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The ns_backup extension through 13.0.2 for TYPO3 allows command injection.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"Automatable\": \"NOT_DEFINED\",\n        \"Recovery\": \"NOT_DEFINED\",\n        \"Safety\": \"NOT_DEFINED\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"NONE\",\n        \"attackVector\": \"NETWORK\",\n        \"baseScore\": 8.6,\n        \"baseSeverity\": \"HIGH\",\n        \"privilegesRequired\": \"HIGH\",\n        \"providerUrgency\": \"NOT_DEFINED\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"valueDensity\": \"NOT_DEFINED\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N\",\n        \"version\": \"4.0\",\n        \"vulnAvailabilityImpact\": \"HIGH\",\n        \"vulnConfidentialityImpact\": \"HIGH\",\n        \"vulnIntegrityImpact\": \"HIGH\",\n        \"vulnerabilityResponseEffort\": \"NOT_DEFINED\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"Extension \\\"TYPO3 Backup Plus\\\"\",\n      \"vendor\": \"TYPO3\",\n      \"versions\": [\n        {\n          \"lessThanOrEqual\": \"13.0.2\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

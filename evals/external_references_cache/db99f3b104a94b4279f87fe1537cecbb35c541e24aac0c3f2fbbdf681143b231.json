@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/pjsip/pjproject/commit/c82123ea6f3c3652bbc9ebd5e9e658c301451687",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://github.com/pjsip/pjproject/commit/c82123ea6f3c3652bbc9ebd5e9e658c301451687",
+        "content_type": "text/html",
+        "extracted_text": "pjsip\n    \n    /\n    \n      pjproject\n    \n\n    Public\n  \n\n        \n\n        \n\n            \n    \n      \n\n  \n\n                Notifications\n\n  \n\n  \n\n              Fork\n    971\n\n  \n\n  \n\n        \n\n            \n          Star\n          2.6k\n\n  \n\n        \n      \n\n        \n\n          \n\n  \n  \n\n    \n\n    \n\n    \n      \n    \n\n  \n  \n  \n  \n\nFile tree\n\npjsip/src/pjsip\n\nsip_auth_client.c\n\n‎pjsip/src/pjsip/sip_auth_client.c‎Copy file name to clipboardExpand all lines: pjsip/src/pjsip/sip_auth_client.c\n\n@@ -382,7 +382,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,\n382382\n    } else {\n383383\n        AUTH_TRACE_((THIS_FILE, \" Using pre computed digest for %.*s digest\",\n384384\n                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));\n385-\n        pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );\n385+\n        pj_memcpy( ha1, cred_info->data.ptr, digest_strlen );\n386386\n    }\n387387\n\n388388\n    AUTH_TRACE_((THIS_FILE, \" ha1=%.*s\", algorithm->digest_str_length, ha1));\n\n0 commit comments\n\nComments0 (0)  \n\n  \n\n    \n  \n\n  \n\n          \n\n    \n\n  \n\n    \n    \n      \n    \n    You can’t perform that action at this time."
+    }
+}

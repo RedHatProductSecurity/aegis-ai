@@ -1,0 +1,10 @@
+{
+    "url": "https://security.gentoo.org/glsa/202311-02",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: security.gentoo.org",
+        "url": "https://security.gentoo.org/glsa/202311-02",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

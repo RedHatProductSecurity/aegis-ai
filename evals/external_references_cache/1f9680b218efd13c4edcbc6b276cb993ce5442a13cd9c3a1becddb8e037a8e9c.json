@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-4724",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-4724",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Undefined behavior in the Audio/Video component. This vulnerability was fixed in Firefox 149 and Thunderbird 149.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"product\": \"Firefox\",\n      \"vendor\": \"Mozilla\",\n      \"versions\": [\n        {\n          \"status\": \"unaffected\",\n          \"version\": \"149\",\n          \"lessThanOrEqual\": \"*\",\n          \"versionType\": \"rpm\"\n        }\n      ]\n    },\n    {\n      \"product\": \"Thunderbird\",\n      \"vendor\": \"Mozilla\",\n      \"versions\": [\n        {\n          \"status\": \"unaffected\",\n          \"version\": \"149\",\n          \"lessThanOrEqual\": \"*\",\n          \"versionType\": \"rpm\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

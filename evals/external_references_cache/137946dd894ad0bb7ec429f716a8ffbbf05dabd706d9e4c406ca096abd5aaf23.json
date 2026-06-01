@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-31973",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-31973",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"SAMtools is a program for reading, manipulating and writing bioinformatics file formats. Starting in version 1.17, in the cram-size command, used to write information about how well CRAM files are compressed, a check to see if the `cram_decode_compression_header()` was missing. If the function returned an error, this could lead to a NULL pointer dereference. Exploiting this bug causes a NULL pointer dereference. Typically this will cause the program to crash. Versions 1.23.1, 1.22.2 and 1.21.1 include fixes for this issue. There is no workaround for this issue.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"NONE\",\n        \"vulnIntegrityImpact\": \"LOW\",\n        \"vulnAvailabilityImpact\": \"LOW\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 6.9,\n        \"baseSeverity\": \"MEDIUM\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"samtools\",\n      \"product\": \"samtools\",\n      \"versions\": [\n        {\n          \"version\": \">= 1.17, < 1.21.1\",\n          \"status\": \"affected\"\n        },\n        {\n          \"version\": \">= 1.22, < 1.22.2\",\n          \"status\": \"affected\"\n        },\n        {\n          \"version\": \"= 1.23\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

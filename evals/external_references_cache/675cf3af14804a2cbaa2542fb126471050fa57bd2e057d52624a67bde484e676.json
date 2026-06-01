@@ -1,0 +1,10 @@
+{
+    "url": "https://edera.dev/stories/tarmageddon",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: edera.dev",
+        "url": "https://edera.dev/stories/tarmageddon",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

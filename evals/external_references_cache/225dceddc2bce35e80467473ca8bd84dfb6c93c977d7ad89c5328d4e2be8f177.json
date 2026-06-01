@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-27962",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-27962",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Authlib is a Python library which builds OAuth and OpenID Connect servers. Prior to version 1.6.9, a JWK Header Injection vulnerability in authlib's JWS implementation allows an unauthenticated attacker to forge arbitrary JWT tokens that pass signature verification. When key=None is passed to any JWS deserialization function, the library extracts and uses the cryptographic key embedded in the attacker-controlled JWT jwk header field. An attacker can sign a token with their own private key, embed the matching public key in the header, and have the server accept the forged token as cryptographically valid \u2014 bypassing authentication and authorization entirely. This issue has been patched in version 1.6.9.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 9.1,\n        \"baseSeverity\": \"CRITICAL\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"authlib\",\n      \"product\": \"authlib\",\n      \"versions\": [\n        {\n          \"version\": \"< 1.6.9\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

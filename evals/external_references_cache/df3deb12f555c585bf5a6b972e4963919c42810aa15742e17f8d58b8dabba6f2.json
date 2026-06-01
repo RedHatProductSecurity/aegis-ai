@@ -1,0 +1,10 @@
+{
+    "url": "https://www.imperva.com/blog/code-execution-in-jupyter-notebook-exports",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.imperva.com",
+        "url": "https://www.imperva.com/blog/code-execution-in-jupyter-notebook-exports",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

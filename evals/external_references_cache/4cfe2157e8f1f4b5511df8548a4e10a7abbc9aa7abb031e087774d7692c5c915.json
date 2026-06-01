@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-68469",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-68469",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"ImageMagick is free and open-source software used for editing and manipulating digital images. Prior to version 7.1.1-14, ImageMagick crashes when processing a crafted TIFF file. Version 7.1.1-14 fixes the issue.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"LOCAL\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"NONE\",\n        \"vulnIntegrityImpact\": \"NONE\",\n        \"vulnAvailabilityImpact\": \"LOW\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 2,\n        \"baseSeverity\": \"LOW\",\n        \"vectorString\": \"CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N/E:P\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"ImageMagick\",\n      \"product\": \"ImageMagick\",\n      \"versions\": [\n        {\n          \"version\": \"< 7.1.1-14\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.zerodayinitiative.com/advisories/ZDI-22-526/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.zerodayinitiative.com",
+        "url": "https://www.zerodayinitiative.com/advisories/ZDI-22-526/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

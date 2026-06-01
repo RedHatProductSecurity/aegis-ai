@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-32889",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-32889",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"tinytag is a Python library for reading audio file metadata. Version 2.2.0 allows an attacker who can supply MP3 files for parsing to trigger a non-terminating loop while the library parses an ID3v2 SYLT (synchronized lyrics) frame. In server-side deployments that automatically parse attacker-supplied files, a single 498-byte MP3 can cause the parsing operation to stop making progress and remain busy until the worker or process is terminated. The root cause is that _parse_synced_lyrics assumes _find_string_end_pos always returns a position greater than the current offset. That assumption is false when no string terminator is present in the remaining frame content. This issue has been fixed in version 2.2.1.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"HIGH\",\n        \"baseScore\": 6.5,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"tinytag\",\n      \"product\": \"tinytag\",\n      \"versions\": [\n        {\n          \"version\": \">= 2.2.0, < 2.2.1\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

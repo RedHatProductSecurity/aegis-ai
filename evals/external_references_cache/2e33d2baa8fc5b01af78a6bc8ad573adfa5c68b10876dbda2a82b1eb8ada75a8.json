@@ -1,0 +1,10 @@
+{
+    "url": "https://gist.github.com/subyumatest/41554af6a72aedaacaec026adc311092",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: gist.github.com",
+        "url": "https://gist.github.com/subyumatest/41554af6a72aedaacaec026adc311092",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

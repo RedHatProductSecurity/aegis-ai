@@ -1,0 +1,10 @@
+{
+    "url": "https://gitlab.com/gitlab-org/gitlab/-/issues/562561",
+    "result": {
+        "status": "error",
+        "error_message": "HTTP 404",
+        "url": "https://gitlab.com/gitlab-org/gitlab/-/issues/562561",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

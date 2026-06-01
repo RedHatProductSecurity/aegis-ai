@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/authlib/authlib/commit/a5d4b2d4c9e46bfa11c82f85fdc2bcc0b50ae681",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://github.com/authlib/authlib/commit/a5d4b2d4c9e46bfa11c82f85fdc2bcc0b50ae681",
+        "content_type": "text/html",
+        "extracted_text": "authlib\n    \n    /\n    \n      authlib\n    \n\n    Public\n  \n\n        \n\n        \n\n            \n    \n        \n\n          \n  \n  \n\n    \n\n  \n\n    \n\n      \n\n      \n\n      \n        \n\n  \n  \n\n        \n\n      \n\n  \n\n                Notifications\n\n  \n\n  \n\n              Fork\n    540\n\n  \n\n  \n\n        \n\n            \n          Star\n          5.3k\n\n  \n\n        \n      \n\n        \n\n          \n\n  \n  \n\n    \n\n    \n\n    \n      \n    \n\n  \n  \n  \n  \n\nFile tree\n\nauthlib/jose\n\nrfc7515\n\njws.py\n\nrfc7516\n\njwe.py\n\n‎authlib/jose/rfc7515/jws.py‎Copy file name to clipboardExpand all lines: authlib/jose/rfc7515/jws.py\n\n@@ -269,8 +269,6 @@ def _prepare_algorithm_key(self, header, payload, key):\n269269\n        algorithm = self.ALGORITHMS_REGISTRY[alg]\n270270\n        if callable(key):\n271271\n            key = key(header, payload)\n272-\n        elif key is None and \"jwk\" in header:\n273-\n            key = header[\"jwk\"]\n274272\n        key = algorithm.prepare_key(key)\n275273\n        return algorithm, key\n276274\n\n‎authlib/jose/rfc7516/jwe.py‎Copy file name to clipboardExpand all lines: authlib/jose/rfc7516/jwe.py\n\n@@ -754,6 +754,4 @@ def _validate_private_headers(self, header, alg):\n754754\ndef prepare_key(alg, header, key):\n755755\n    if callable(key):\n756756\n        key = key(header, None)\n757-\n    elif key is None and \"jwk\" in header:\n758-\n        key = header[\"jwk\"]\n759757\n    return alg.prepare_key(key)\n\n0 commit comments\n\nComments0 (0)  \n\n  \n\n    \n  \n\n  \n\n          \n\n    \n\n  \n\n    \n    \n      \n    \n    You can’t perform that action at this time."
+    }
+}

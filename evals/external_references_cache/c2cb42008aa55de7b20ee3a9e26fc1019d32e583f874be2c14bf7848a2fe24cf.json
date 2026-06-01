@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-33002",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-33002",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Jenkins 2.442 through 2.554 (both inclusive), LTS 2.426.3 through LTS 2.541.2 (both inclusive) performs origin validation of requests made through the CLI WebSocket endpoint by computing the expected origin for comparison using the Host or X-Forwarded-Host HTTP request headers, making it vulnerable to DNS rebinding attacks that allow bypassing origin validation.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Jenkins Project\",\n      \"product\": \"Jenkins\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"2.426.3\",\n          \"status\": \"unaffected\"\n        },\n        {\n          \"version\": \"2.427\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"2.442\",\n          \"status\": \"unaffected\"\n        },\n        {\n          \"version\": \"2.555\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"*\",\n          \"status\": \"unaffected\"\n        },\n        {\n          \"version\": \"2.541.3\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"2.541.*\",\n          \"status\": \"unaffected\"\n        }\n      ],\n      \"defaultStatus\": \"affected\"\n    }\n  ]\n}"
+    }
+}

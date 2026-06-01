@@ -1,0 +1,10 @@
+{
+    "url": "https://lists.debian.org/debian-lts-announce/2023/05/msg00018.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: lists.debian.org",
+        "url": "https://lists.debian.org/debian-lts-announce/2023/05/msg00018.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-40611",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-40611",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Let's Encrypt client and ACME library written in Go (Lego). Prior to 4.34.0, the webroot HTTP-01 challenge provider in lego is vulnerable to arbitrary file write and deletion via path traversal. A malicious ACME server can supply a crafted challenge token containing ../ sequences, causing lego to write attacker-influenced content to any path writable by the lego process. This vulnerability is fixed in 4.34.0.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"HIGH\",\n        \"baseScore\": 8.8,\n        \"baseSeverity\": \"HIGH\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"go-acme\",\n      \"product\": \"lego\",\n      \"versions\": [\n        {\n          \"version\": \"< 4.34.0\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

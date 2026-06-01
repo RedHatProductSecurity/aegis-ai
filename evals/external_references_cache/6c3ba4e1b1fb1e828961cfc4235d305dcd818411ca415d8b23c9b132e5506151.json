@@ -1,0 +1,10 @@
+{
+    "url": "https://www.oracle.com/security-alerts/cpuapr2025.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.oracle.com",
+        "url": "https://www.oracle.com/security-alerts/cpuapr2025.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

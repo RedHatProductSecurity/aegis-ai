@@ -1,0 +1,10 @@
+{
+    "url": "https://typo3.org/security/advisory/typo3-ext-sa-2025-011",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: typo3.org",
+        "url": "https://typo3.org/security/advisory/typo3-ext-sa-2025-011",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

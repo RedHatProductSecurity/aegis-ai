@@ -1,0 +1,10 @@
+{
+    "url": "https://issues.apache.org/jira/browse/WW-5252",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: issues.apache.org",
+        "url": "https://issues.apache.org/jira/browse/WW-5252",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

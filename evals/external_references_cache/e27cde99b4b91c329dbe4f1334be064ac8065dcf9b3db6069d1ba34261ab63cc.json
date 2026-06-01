@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-40892",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-40892",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"PJSIP is a free and open source multimedia communication library written in C. In 2.16 and earlier, a stack buffer overflow exists in pjsip_auth_create_digest2() in PJSIP when using pre-computed digest credentials (PJSIP_CRED_DATA_DIGEST). The function copies credential data using cred_info->data.slen as the length without an upper-bound check, which can overflow the fixed-size ha1 stack buffer (128 bytes) if data.slen exceeds the expected digest string length.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"HIGH\",\n        \"vulnIntegrityImpact\": \"HIGH\",\n        \"vulnAvailabilityImpact\": \"HIGH\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 8.1,\n        \"baseSeverity\": \"HIGH\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:U\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"pjsip\",\n      \"product\": \"pjproject\",\n      \"versions\": [\n        {\n          \"version\": \"<= 2.16\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

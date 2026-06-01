@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-50334",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-50334",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An issue in Technitium DNS Server v.13.5 allows a remote attacker to cause a denial of service via the rate-limiting component\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"n/a\",\n      \"product\": \"n/a\",\n      \"versions\": [\n        {\n          \"version\": \"n/a\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

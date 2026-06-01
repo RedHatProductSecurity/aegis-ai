@@ -1,0 +1,10 @@
+{
+    "url": "https://www.kb.cert.org/vuls/id/709991",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.kb.cert.org",
+        "url": "https://www.kb.cert.org/vuls/id/709991",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

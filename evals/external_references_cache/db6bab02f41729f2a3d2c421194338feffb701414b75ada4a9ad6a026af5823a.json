@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/samtools/htslib/commit/4a5ef25eb1fb3d64438103316fffe423b2c3f5f4",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://github.com/samtools/htslib/commit/4a5ef25eb1fb3d64438103316fffe423b2c3f5f4",
+        "content_type": "text/html",
+        "extracted_text": "samtools\n    \n    /\n    \n      htslib\n    \n\n    Public\n  \n\n        \n\n        \n\n            \n    \n      \n\n  \n\n                Notifications\n\n  \n\n  \n\n              Fork\n    469\n\n  \n\n  \n\n        \n\n            \n          Star\n          923\n\n  \n\n        \n      \n\n        \n\n          \n\n  \n  \n\n    \n\n    \n\n    \n      \n    \n\n  \n  \n  \n  \n\nFile tree\n\ncram\n\ncram_decode.c\n\n‎cram/cram_decode.c‎Copy file name to clipboardExpand all lines: cram/cram_decode.c\n\n@@ -2664,6 +2664,9 @@ int cram_decode_slice(cram_fd *fd, cram_container *c, cram_slice *s,\n26642664\n                cr->apos += s->last_apos;\n26652665\n            }\n26662666\n            s->last_apos=  cr->apos;\n2667+\n\n2668+\n            if (s->hdr->ref_seq_id >= 0 && cr->apos < s->hdr->ref_seq_start)\n2669+\n                goto block_err;\n26672670\n        } else {\n26682671\n            cr->apos = c->ref_seq_start;\n26692672\n        }\n\n0 commit comments\n\nComments0 (0)  \n\n  \n\n    \n  \n\n  \n\n          \n\n    \n\n  \n\n    \n    \n      \n    \n    You can’t perform that action at this time."
+    }
+}

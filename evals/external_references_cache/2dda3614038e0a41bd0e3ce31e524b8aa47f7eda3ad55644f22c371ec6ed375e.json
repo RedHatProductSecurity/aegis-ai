@@ -1,0 +1,10 @@
+{
+    "url": "https://cna.erlef.org/cves/CVE-2026-32144.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: cna.erlef.org",
+        "url": "https://cna.erlef.org/cves/CVE-2026-32144.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

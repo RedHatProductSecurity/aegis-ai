@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-35386",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-35386",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"In OpenSSH before 10.3, command execution can occur via shell metacharacters in a username within a command line. This requires a scenario where the username on the command line is untrusted, and also requires a non-default configurations of % in ssh_config.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"HIGH\",\n        \"attackVector\": \"LOCAL\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 3.6,\n        \"baseSeverity\": \"LOW\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"LOW\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:N\",\n        \"version\": \"3.1\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"OpenSSH\",\n      \"vendor\": \"OpenBSD\",\n      \"versions\": [\n        {\n          \"lessThan\": \"10.3\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

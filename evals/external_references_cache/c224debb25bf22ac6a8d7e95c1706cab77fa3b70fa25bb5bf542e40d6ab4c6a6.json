@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-40175",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-40175",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Axios is a promise based HTTP client for the browser and Node.js. Versions prior to 1.15.0 and 0.3.1 are vulnerable to a specific gadget-style attack chain in which prototype pollution in a third-party dependency may be leveraged to inject unsanitized header values into outbound requests. This vulnerability is fixed in 1.15.0 and 0.3.1.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"HIGH\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 4.8,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"axios\",\n      \"product\": \"axios\",\n      \"versions\": [\n        {\n          \"version\": \">= 1.0.0, < 1.15.0\",\n          \"status\": \"affected\"\n        },\n        {\n          \"version\": \"< 0.31.0\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

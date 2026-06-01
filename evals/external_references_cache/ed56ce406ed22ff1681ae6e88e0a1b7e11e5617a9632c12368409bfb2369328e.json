@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-60876",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-60876",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"BusyBox wget thru 1.3.7 accepted raw CR (0x0D)/LF (0x0A) and other C0 control bytes in the HTTP request-target (path/query), allowing the request line to be split and attacker-controlled headers to be injected. To preserve the HTTP/1.1 request-line shape METHOD SP request-target SP HTTP/1.1, a raw space (0x20) in the request-target must also be rejected (clients should use %20).\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"n/a\",\n      \"product\": \"n/a\",\n      \"versions\": [\n        {\n          \"version\": \"n/a\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

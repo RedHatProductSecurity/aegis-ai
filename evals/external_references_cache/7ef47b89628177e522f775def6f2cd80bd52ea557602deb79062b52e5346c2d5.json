@@ -1,0 +1,10 @@
+{
+    "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2393551",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: bugzilla.redhat.com",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2393551",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

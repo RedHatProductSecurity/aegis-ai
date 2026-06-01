@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-34444",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-34444",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Lupa integrates the runtimes of Lua or LuaJIT2 into CPython. In 2.6 and earlier, attribute_filter is not consistently applied when attributes are accessed through built-in functions like getattr and setattr. This allows an attacker to bypass the intended restrictions and eventually achieve arbitrary code execution.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"NONE\",\n        \"vulnIntegrityImpact\": \"NONE\",\n        \"vulnAvailabilityImpact\": \"NONE\",\n        \"subConfidentialityImpact\": \"HIGH\",\n        \"subIntegrityImpact\": \"HIGH\",\n        \"subAvailabilityImpact\": \"HIGH\",\n        \"baseScore\": 7.9,\n        \"baseSeverity\": \"HIGH\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:H/SI:H/SA:H\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"scoder\",\n      \"product\": \"lupa\",\n      \"versions\": [\n        {\n          \"version\": \"<= 2.6\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

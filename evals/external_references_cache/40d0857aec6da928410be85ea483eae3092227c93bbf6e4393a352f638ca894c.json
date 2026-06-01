@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-4705",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-4705",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Undefined behavior in the WebRTC: Signaling component. This vulnerability was fixed in Firefox 149, Firefox ESR 140.9, Thunderbird 149, and Thunderbird 140.9.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"product\": \"Firefox\",\n      \"vendor\": \"Mozilla\",\n      \"versions\": [\n        {\n          \"status\": \"unaffected\",\n          \"version\": \"140.9\",\n          \"lessThanOrEqual\": \"140.*\",\n          \"versionType\": \"rpm\"\n        },\n        {\n          \"status\": \"unaffected\",\n          \"version\": \"149\",\n          \"lessThanOrEqual\": \"*\",\n          \"versionType\": \"rpm\"\n        }\n      ]\n    },\n    {\n      \"product\": \"Thunderbird\",\n      \"vendor\": \"Mozilla\",\n      \"versions\": [\n        {\n          \"status\": \"unaffected\",\n          \"version\": \"140.9\",\n          \"lessThanOrEqual\": \"140.*\",\n          \"versionType\": \"rpm\"\n        },\n        {\n          \"status\": \"unaffected\",\n          \"version\": \"149\",\n          \"lessThanOrEqual\": \"*\",\n          \"versionType\": \"rpm\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

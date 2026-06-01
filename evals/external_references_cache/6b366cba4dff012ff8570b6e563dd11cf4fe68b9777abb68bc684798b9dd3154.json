@@ -1,0 +1,10 @@
+{
+    "url": "https://roundcube.net/news/2026/03/18/security-updates-1.7-rc5-1.6.14-1.5.14",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: roundcube.net",
+        "url": "https://roundcube.net/news/2026/03/18/security-updates-1.7-rc5-1.6.14-1.5.14",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

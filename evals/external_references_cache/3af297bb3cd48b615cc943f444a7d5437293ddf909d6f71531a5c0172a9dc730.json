@@ -1,0 +1,10 @@
+{
+    "url": "https://about.gitlab.com/releases/2026/01/07/patch-release-gitlab-18-7-1-released/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: about.gitlab.com",
+        "url": "https://about.gitlab.com/releases/2026/01/07/patch-release-gitlab-18-7-1-released/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

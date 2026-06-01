@@ -1,0 +1,10 @@
+{
+    "url": "https://kb.cert.org/vuls/id/521113",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: kb.cert.org",
+        "url": "https://kb.cert.org/vuls/id/521113",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

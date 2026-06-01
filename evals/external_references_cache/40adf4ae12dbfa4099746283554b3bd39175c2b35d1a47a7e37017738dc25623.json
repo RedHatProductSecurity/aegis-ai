@@ -1,0 +1,10 @@
+{
+    "url": "http://plesk.com",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: plesk.com",
+        "url": "http://plesk.com",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

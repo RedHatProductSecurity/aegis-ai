@@ -1,0 +1,10 @@
+{
+    "url": "https://docs.plesk.com/release-notes/obsidian/change-log/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: docs.plesk.com",
+        "url": "https://docs.plesk.com/release-notes/obsidian/change-log/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

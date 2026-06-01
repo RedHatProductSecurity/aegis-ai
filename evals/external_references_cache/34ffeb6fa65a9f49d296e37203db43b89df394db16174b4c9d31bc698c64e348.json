@@ -1,0 +1,10 @@
+{
+    "url": "https://hackerone.com/reports/3297483",
+    "result": {
+        "status": "error",
+        "error_message": "HTTP 403",
+        "url": "https://hackerone.com/reports/3297483",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

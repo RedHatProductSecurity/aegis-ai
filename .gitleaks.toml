@@ -1,0 +1,4 @@
+[allowlist]
+  paths = [
+    '''evals/external_references_cache/.*\.json$''',
+  ]

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-34073",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-34073",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"cryptography is a package designed to expose cryptographic primitives and recipes to Python developers. Prior to version 46.0.6, DNS name constraints were only validated against SANs within child certificates, and not the \\\"peer name\\\" presented during each validation. Consequently, cryptography would allow a peer named bar.example.com to validate against a wildcard leaf certificate for *.example.com, even if the leaf's parent certificate (or upwards) contained an excluded subtree constraint for bar.example.com. This issue has been patched in version 46.0.6.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"HIGH\",\n        \"attackRequirements\": \"PRESENT\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"NONE\",\n        \"vulnIntegrityImpact\": \"LOW\",\n        \"vulnAvailabilityImpact\": \"NONE\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 1.7,\n        \"baseSeverity\": \"LOW\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"pyca\",\n      \"product\": \"cryptography\",\n      \"versions\": [\n        {\n          \"version\": \"< 46.0.6\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

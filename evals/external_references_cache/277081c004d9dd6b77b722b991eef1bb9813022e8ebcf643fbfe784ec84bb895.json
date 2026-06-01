@@ -1,0 +1,10 @@
+{
+    "url": "https://git.kernel.org/stable/c/49a69f67f53518bdd9b7eeeb019a2da6cc0e954",
+    "result": {
+        "status": "error",
+        "error_message": "HTTP 400",
+        "url": "https://git.kernel.org/stable/c/49a69f67f53518bdd9b7eeeb019a2da6cc0e954",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

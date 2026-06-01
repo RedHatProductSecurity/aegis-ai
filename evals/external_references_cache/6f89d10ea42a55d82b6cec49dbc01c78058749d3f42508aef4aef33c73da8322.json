@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-39946",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-39946",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"OpenBao is an open source identity-based secrets management system. Prior to version 2.5.3, when OpenBao revoked privileges on a role in the PostgreSQL database secrets engine, OpenBao failed to use proper database quoting on schema names provided by PostgreSQL. This could lead to role revocation failures, or more rarely, SQL injection as the management user. This vulnerability was original from HashiCorp Vault. The vulnerability is addressed in v2.5.3. As a workaround, audit table schemas and ensure database users cannot create new schemas and grant privileges on them.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"PRESENT\",\n        \"privilegesRequired\": \"HIGH\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"NONE\",\n        \"vulnIntegrityImpact\": \"NONE\",\n        \"vulnAvailabilityImpact\": \"NONE\",\n        \"subConfidentialityImpact\": \"HIGH\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 4.6,\n        \"baseSeverity\": \"MEDIUM\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:L/AT:P/PR:H/UI:N/VC:N/VI:N/VA:N/SC:H/SI:N/SA:N\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"openbao\",\n      \"product\": \"openbao\",\n      \"versions\": [\n        {\n          \"version\": \"< 2.5.3\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

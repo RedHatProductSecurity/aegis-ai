@@ -1,0 +1,10 @@
+{
+    "url": "https://hackerone.com/reports/3168039",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://hackerone.com/reports/3168039",
+        "content_type": "text/html",
+        "extracted_text": ""
+    }
+}

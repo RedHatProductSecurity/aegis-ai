@@ -1,0 +1,10 @@
+{
+    "url": "https://webkitgtk.org/security/WSA-2024-0007.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: webkitgtk.org",
+        "url": "https://webkitgtk.org/security/WSA-2024-0007.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

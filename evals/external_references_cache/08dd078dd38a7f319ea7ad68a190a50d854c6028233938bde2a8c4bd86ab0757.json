@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/OpenPrinting/cups-filters/commit/50d94ca0f2fa6177613c97c59791bde568631865",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://github.com/OpenPrinting/cups-filters/commit/50d94ca0f2fa6177613c97c59791bde568631865",
+        "content_type": "text/html",
+        "extracted_text": "OpenPrinting\n    \n    /\n    \n      cups-filters\n    \n\n    Public\n  \n\n        \n\n        \n\n            \n    \n      \n\n  \n\n                Notifications\n\n  \n\n  \n\n              Fork\n    149\n\n  \n\n  \n\n        \n\n            \n          Star\n          194\n\n  \n\n        \n      \n\n        \n\n          \n\n  \n  \n\n    \n\n    \n\n    \n      \n    \n\n  \n  \n  \n  \n\nFile tree\n\nfilter\n\npdftoraster.cxx\n\n‎filter/pdftoraster.cxx‎Copy file name to clipboardExpand all lines: filter/pdftoraster.cxx\n\n@@ -1698,6 +1698,18 @@ static void outPage(poppler::document *doc, int pageNo,\n16981698\n    header.PageSize[0] = (unsigned)l;\n16991699\n  else\n17001700\n    header.PageSize[1] = (unsigned)l;\n1701+\n  /*\n1702+\n    Maximum allowed page size for PDF is 200x200 inches (~ 5x5 m), or 14400x14400 pt\n1703+\n    https://community.adobe.com/t5/indesign-discussions/maximum-width-of-a-pdf/td-p/9217372\n1704+\n  */\n1705+\n  if (header.PageSize[0] > 14400) {\n1706+\n    fprintf(stderr, \"ERROR: Page width is %dpt, too large, cropping to 14400pt\\n\", header.PageSize[0]);\n1707+\n    header.PageSize[0] = 14400;\n1708+\n  }\n1709+\n  if (header.PageSize[1] > 14400) {\n1710+\n    fprintf(stderr, \"ERROR: Page height is %dpt, too large, cropping to 14400pt\\n\", header.PageSize[1]);\n1711+\n    header.PageSize[1] = 14400;\n1712+\n  }\n17011713\n\n17021714\n  memset(paperdimensions, 0, sizeof(paperdimensions));\n17031715\n  memset(margins, 0, sizeof(margins));\n\n0 commit comments\n\nComments0 (0)  \n\n  \n\n    \n  \n\n  \n\n          \n\n    \n\n  \n\n    \n    \n      \n    \n    You can’t perform that action at this time."
+    }
+}

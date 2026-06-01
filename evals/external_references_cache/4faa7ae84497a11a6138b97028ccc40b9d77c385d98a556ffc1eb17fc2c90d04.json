@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/roundcube/roundcubemail/commit/618c5428edc69fb088e7ac6c89e506dd39df1620",
+    "result": {
+        "status": "error",
+        "error_message": "HTTP 404",
+        "url": "https://github.com/roundcube/roundcubemail/commit/618c5428edc69fb088e7ac6c89e506dd39df1620",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

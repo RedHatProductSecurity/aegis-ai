@@ -1,0 +1,10 @@
+{
+    "url": "https://groups.google.com/g/django-announce",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: groups.google.com",
+        "url": "https://groups.google.com/g/django-announce",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

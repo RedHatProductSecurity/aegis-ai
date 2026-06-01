@@ -1,0 +1,10 @@
+{
+    "url": "https://access.redhat.com/security/cve/CVE-2025-10044",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: access.redhat.com",
+        "url": "https://access.redhat.com/security/cve/CVE-2025-10044",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

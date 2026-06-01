@@ -1,0 +1,10 @@
+{
+    "url": "https://marc.info/?l=openssh-unix-dev&m=177513443901484&w=2",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: marc.info",
+        "url": "https://marc.info/?l=openssh-unix-dev&m=177513443901484&w=2",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

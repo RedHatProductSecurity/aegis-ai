@@ -1,0 +1,10 @@
+{
+    "url": "http://www.openwall.com/lists/oss-security/2025/11/12/2",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.openwall.com",
+        "url": "http://www.openwall.com/lists/oss-security/2025/11/12/2",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

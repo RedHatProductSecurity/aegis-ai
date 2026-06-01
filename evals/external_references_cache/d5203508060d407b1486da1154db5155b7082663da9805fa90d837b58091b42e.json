@@ -1,0 +1,10 @@
+{
+    "url": "https://security.openstack.org/ossa/OSSA-2025-002.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: security.openstack.org",
+        "url": "https://security.openstack.org/ossa/OSSA-2025-002.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

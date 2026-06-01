@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/tinytag/tinytag/commit/5cd321521ff097e41724b601d7e3d7adc7e53402",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://github.com/tinytag/tinytag/commit/5cd321521ff097e41724b601d7e3d7adc7e53402",
+        "content_type": "text/html",
+        "extracted_text": "tinytag\n    \n    /\n    \n      tinytag\n    \n\n    Public\n  \n\n        \n\n        \n\n            \n    \n      \n\n  \n\n                Notifications\n\n  \n\n  \n\n              Fork\n    103\n\n  \n\n  \n\n        \n\n            \n          Star\n          820\n\n  \n\n        \n      \n\n        \n\n          \n\n  \n  \n\n    \n\n    \n\n    \n      \n    \n\n  \n  \n  \n  \n\nFile tree\n\ntinytag\n\ntinytag.py\n\n‎tinytag/tinytag.py‎Copy file name to clipboardExpand all lines: tinytag/tinytag.py\n\n@@ -1343,13 +1343,14 @@ def _find_string_end_pos(content: bytes,\n13431343\n                             start_pos: int = 0) -> int:\n13441344\n        # latin1 and utf-8 are 1 byte\n13451345\n        if encoding in {b'\\x00', b'\\x03'}:\n1346-\n            return content.find(b'\\x00', start_pos) + 1\n1347-\n        end_pos = 0\n1346+\n            end_pos = content.find(b'\\x00', start_pos)\n1347+\n            return start_pos if end_pos < 0 else end_pos + 1\n1348+\n        end_pos = -1\n13481349\n        for i in range(start_pos, len(content), 2):\n13491350\n            if content[i:i + 2] == b'\\x00\\x00':\n13501351\n                end_pos = i + 2\n13511352\n                break\n1352-\n        return end_pos\n1353+\n        return start_pos if end_pos < 0 else end_pos\n13531354\n\n13541355\n    def _decode_string(self, value: bytes, language: bool = False) -> str:\n13551356\n        default_encoding = 'ISO-8859-1'\n\n0 commit comments\n\nComments0 (0)  \n\n  \n\n    \n  \n\n  \n\n          \n\n    \n\n  \n\n    \n    \n      \n    \n    You can’t perform that action at this time."
+    }
+}

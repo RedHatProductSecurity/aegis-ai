@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-53000",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-53000",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The nbconvert tool, jupyter nbconvert, converts Jupyter notebooks to various other formats via Jinja templates. Versions of nbconvert up to and including 7.16.6 on Windows have a vulnerability in which converting a notebook containing SVG output to a PDF results in unauthorized code execution. Specifically, a third party can create a `inkscape.bat` file that defines a Windows batch script, capable of arbitrary code execution. When a user runs `jupyter nbconvert --to pdf` on a notebook containing SVG output to a PDF on a Windows platform from this directory, the `inkscape.bat` file is run unexpectedly. This issue has been patched in version 7.17.0.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"LOCAL\",\n        \"attackComplexity\": \"LOW\",\n        \"attackRequirements\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"PASSIVE\",\n        \"vulnConfidentialityImpact\": \"HIGH\",\n        \"vulnIntegrityImpact\": \"HIGH\",\n        \"vulnAvailabilityImpact\": \"HIGH\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 8.5,\n        \"baseSeverity\": \"HIGH\",\n        \"vectorString\": \"CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:P/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"jupyter\",\n      \"product\": \"nbconvert\",\n      \"versions\": [\n        {\n          \"version\": \"< 7.17.0\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://talosintelligence.com/vulnerability_reports/TALOS-2026-2363",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: talosintelligence.com",
+        "url": "https://talosintelligence.com/vulnerability_reports/TALOS-2026-2363",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

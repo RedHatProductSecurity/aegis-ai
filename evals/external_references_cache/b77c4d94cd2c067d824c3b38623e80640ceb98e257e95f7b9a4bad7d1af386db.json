@@ -1,0 +1,10 @@
+{
+    "url": "https://www.erlang.org/doc/system/versions.html#order-of-versions",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.erlang.org",
+        "url": "https://www.erlang.org/doc/system/versions.html#order-of-versions",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

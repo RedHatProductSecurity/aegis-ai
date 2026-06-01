@@ -1,0 +1,10 @@
+{
+    "url": "https://securitylab.amnesty.org/latest/2025/02/cellebrite-zero-day-exploit-used-to-target-phone-of-serbian-student-activist/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: securitylab.amnesty.org",
+        "url": "https://securitylab.amnesty.org/latest/2025/02/cellebrite-zero-day-exploit-used-to-target-phone-of-serbian-student-activist/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

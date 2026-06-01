@@ -1,0 +1,10 @@
+{
+    "url": "https://www.stratascale.com/vulnerability-alert-CVE-2025-32463-sudo-chroot",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.stratascale.com",
+        "url": "https://www.stratascale.com/vulnerability-alert-CVE-2025-32463-sudo-chroot",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-33001",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-33001",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Jenkins 2.554 and earlier, LTS 2.541.2 and earlier does not safely handle symbolic links during the extraction of .tar and .tar.gz archives, allowing crafted archives to write files to arbitrary locations on the filesystem, restricted only by file system access permissions of the user running Jenkins.\\nThis can be exploited to deploy malicious scripts or plugins on the controller by attackers with Item/Configure permission, or able to control agent processes.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Jenkins Project\",\n      \"product\": \"Jenkins\",\n      \"versions\": [\n        {\n          \"version\": \"2.555\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"*\",\n          \"status\": \"unaffected\"\n        },\n        {\n          \"version\": \"2.541.3\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"2.541.*\",\n          \"status\": \"unaffected\"\n        }\n      ],\n      \"defaultStatus\": \"affected\"\n    }\n  ]\n}"
+    }
+}

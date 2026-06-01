@@ -1,0 +1,10 @@
+{
+    "url": "https://ubuntu.com/security/CVE-2026-3497",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: ubuntu.com",
+        "url": "https://ubuntu.com/security/CVE-2026-3497",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-56225",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-56225",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"fluidsynth-2.4.6 and earlier versions is vulnerable to Null pointer dereference in fluid_synth_monopoly.c, that can be triggered when loading an invalid midi file.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"n/a\",\n      \"product\": \"n/a\",\n      \"versions\": [\n        {\n          \"version\": \"n/a\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

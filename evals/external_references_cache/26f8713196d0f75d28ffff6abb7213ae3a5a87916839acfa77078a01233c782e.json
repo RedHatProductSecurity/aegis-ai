@@ -1,0 +1,10 @@
+{
+    "url": "https://bugzilla.suse.com/show_bug.cgi?id=CVE-2025-23395",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: bugzilla.suse.com",
+        "url": "https://bugzilla.suse.com/show_bug.cgi?id=CVE-2025-23395",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

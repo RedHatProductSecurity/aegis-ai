@@ -1,0 +1,10 @@
+{
+    "url": "https://terrapin-attack.com/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: terrapin-attack.com",
+        "url": "https://terrapin-attack.com/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

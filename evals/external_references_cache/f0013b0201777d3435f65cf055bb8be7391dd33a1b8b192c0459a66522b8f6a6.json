@@ -1,0 +1,10 @@
+{
+    "url": "https://www.debian.org/security/2023/dsa-5503",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: www.debian.org",
+        "url": "https://www.debian.org/security/2023/dsa-5503",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-31898",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-31898",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"jsPDF is a library to generate PDFs in JavaScript. Prior to version 4.2.1, user control of arguments of the `createAnnotation` method allows users to inject arbitrary PDF objects, such as JavaScript actions. If given the possibility to pass unsanitized input to the following method, a user can inject arbitrary PDF objects, such as JavaScript actions, which might trigger when the PDF is opened or interacted with the `createAnnotation`: `color` parameter. The vulnerability has been fixed in jsPDF@4.2.1. As a workaround, sanitize user input before passing it to the vulnerable API members.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 8.1,\n        \"baseSeverity\": \"HIGH\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"parallax\",\n      \"product\": \"jsPDF\",\n      \"versions\": [\n        {\n          \"version\": \"< 4.2.1\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

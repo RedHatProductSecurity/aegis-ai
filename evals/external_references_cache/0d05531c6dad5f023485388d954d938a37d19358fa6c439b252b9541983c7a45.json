@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-30706",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-30706",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en-US\",\n      \"value\": \"Vulnerability in the MySQL Connectors product of Oracle MySQL (component: Connector/J).  Supported versions that are affected are 9.0.0-9.2.0. Difficult to exploit vulnerability allows low privileged attacker with network access via multiple protocols to compromise MySQL Connectors.  Successful attacks of this vulnerability can result in takeover of MySQL Connectors. CVSS 3.1 Base Score 7.5 (Confidentiality, Integrity and Availability impacts).  CVSS Vector: (CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H).\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"HIGH\",\n        \"privilegesRequired\": \"LOW\",\n        \"userInteraction\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"availabilityImpact\": \"HIGH\",\n        \"version\": \"3.1\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H\",\n        \"baseScore\": 7.5,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Oracle Corporation\",\n      \"product\": \"MySQL Connectors\",\n      \"versions\": [\n        {\n          \"version\": \"9.0.0\",\n          \"status\": \"affected\",\n          \"lessThanOrEqual\": \"9.2.0\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

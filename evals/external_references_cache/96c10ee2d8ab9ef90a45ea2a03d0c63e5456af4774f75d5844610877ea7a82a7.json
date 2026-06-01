@@ -1,0 +1,10 @@
+{
+    "url": "https://lwn.net/Articles/910435/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: lwn.net",
+        "url": "https://lwn.net/Articles/910435/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

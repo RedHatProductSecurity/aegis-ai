@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-24450",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-24450",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An integer overflow vulnerability exists in the uncompressed_fp_dng_load_raw functionality of LibRaw Commit 8dc68e2. A specially crafted malicious file can lead to a heap buffer overflow. An attacker can provide a malicious file to trigger this vulnerability.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H\",\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"HIGH\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"availabilityImpact\": \"HIGH\",\n        \"baseScore\": 8.1,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"LibRaw\",\n      \"product\": \"LibRaw\",\n      \"versions\": [\n        {\n          \"version\": \"Commit 8dc68e2\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

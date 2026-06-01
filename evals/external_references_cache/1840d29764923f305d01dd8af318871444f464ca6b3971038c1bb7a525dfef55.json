@@ -1,0 +1,10 @@
+{
+    "url": "https://webkitgtk.org/security/WSA-2025-0010.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: webkitgtk.org",
+        "url": "https://webkitgtk.org/security/WSA-2025-0010.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

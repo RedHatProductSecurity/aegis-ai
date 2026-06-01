@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-5399",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-5399",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Due to a mistake in libcurl's WebSocket code, a malicious server can send a\\nparticularly crafted packet which makes libcurl get trapped in an endless\\nbusy-loop.\\n\\nThere is no other way for the application to escape or exit this loop other\\nthan killing the thread/process.\\n\\nThis might be used to DoS libcurl-using application.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"curl\",\n      \"product\": \"curl\",\n      \"versions\": [\n        {\n          \"version\": \"8.14.0\",\n          \"status\": \"affected\",\n          \"lessThanOrEqual\": \"8.14.0\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"8.13.0\",\n          \"status\": \"affected\",\n          \"lessThanOrEqual\": \"8.13.0\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://netatalk.sourceforge.io/3.1/ReleaseNotes3.1.13.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: netatalk.sourceforge.io",
+        "url": "https://netatalk.sourceforge.io/3.1/ReleaseNotes3.1.13.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-9222",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-9222",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"GitLab has remediated an issue in GitLab CE/EE affecting all versions from 18.2.2 before 18.5.5, 18.6 before 18.6.3, and 18.7 before 18.7.1 that could have allowed an authenticated user to achieve stored cross-site scripting by exploiting GitLab Flavored Markdown.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ],\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:H/I:H/A:N\",\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"privilegesRequired\": \"LOW\",\n        \"userInteraction\": \"REQUIRED\",\n        \"scope\": \"CHANGED\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 8.7,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"GitLab\",\n      \"product\": \"GitLab\",\n      \"versions\": [\n        {\n          \"version\": \"18.2.2\",\n          \"status\": \"affected\",\n          \"lessThan\": \"18.5.5\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"18.6\",\n          \"status\": \"affected\",\n          \"lessThan\": \"18.6.3\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"18.7\",\n          \"status\": \"affected\",\n          \"lessThan\": \"18.7.1\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-33298",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-33298",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"llama.cpp is an inference of several LLM models in C/C++. Prior to b7824, an integer overflow vulnerability in the `ggml_nbytes` function allows an attacker to bypass memory validation by crafting a GGUF file with specific tensor dimensions. This causes `ggml_nbytes` to return a significantly smaller size than required (e.g., 4MB instead of Exabytes), leading to a heap-based buffer overflow when the application subsequently processes the tensor. This vulnerability allows potential Remote Code Execution (RCE) via memory corruption. b7824 contains a fix.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"LOCAL\",\n        \"availabilityImpact\": \"HIGH\",\n        \"baseScore\": 7.8,\n        \"baseSeverity\": \"HIGH\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"ggml-org\",\n      \"product\": \"llama.cpp\",\n      \"versions\": [\n        {\n          \"version\": \"< b7824\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}
