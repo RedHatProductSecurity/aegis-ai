@@ -306,7 +306,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53555",
-        cwe_list=["CWE-824"],
+        cwe_list=["CWE-824", "CWE-476"],  # kdudka: added CWE-476
     ),
     SuggestCweCase(
         cve_id="CVE-2023-53590",
@@ -383,7 +383,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2024-56658",
-        cwe_list=["CWE-825"],
+        cwe_list=["CWE-825", "CWE-826"],  # kdudka: added CWE-826
     ),
     SuggestCweCase(
         cve_id="CVE-2025-5302",
@@ -631,7 +631,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39810",
-        cwe_list=["CWE-131"],
+        cwe_list=["CWE-131", "CWE-787"],  # kdudka: added CWE-787
     ),
     SuggestCweCase(
         cve_id="CVE-2025-39816",
@@ -943,7 +943,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2026-31970",
-        cwe_list=["CWE-190"],
+        cwe_list=["CWE-190", "CWE-131", "CWE-787"],  # kdudka: added CWE-131 and CWE-787
     ),
     SuggestCweCase(
         cve_id="CVE-2026-31971",

@@ -514,9 +514,10 @@ class SuggestCWE(Feature):
         )
 
         prompt = AegisPrompt(
-            user_instruction="From the CVE JSON, identify the most specific CWE that matches the root cause of software weakness. Ignore any pre-labeled CWE.",
+            user_instruction="From the CVE JSON, identify the most specific CWE that matches the directly exploitable software weakness. Ignore any pre-labeled CWE.",
             goals="""
                 - Prefer the most specific CWE over broad parents.
+                - Prefer the directly observable/exploitable weakness over abstract root causes. For example, if a missing return-value check leads to a NULL pointer dereference, prefer CWE-476 (NULL Pointer Dereference) over CWE-252 (Unchecked Return Value).
                 - Return a short explanation and confidence.
             """,
             rules="""
@@ -611,7 +612,7 @@ class SuggestDescriptionText(Feature):
                 - Highlight the most important consequence first. Prefer domain phrases such as "arbitrary code execution", "privilege escalation", "information disclosure", or "Denial of Service (DoS)".
                 - Use plain English; avoid deep implementation jargon. If a function or symbol name is central to exploitation, you may mention a single example and explain it briefly.
                 - If a term or acronym is needed, briefly define it and expand the acronym in parentheses on first use.
-                - Do not include product/version lists, package names, or mitigation/update guidance.
+                - Do not include product/version lists, package names, or mitigation/update guidance. Never copy version numbers or version ranges from the CVE input (e.g., "2.442 through 2.554", "prior to 0.5.6") into the description — describe the flaw generically.
                 - Do not mention exploit availability or public disclosure status (e.g., "The exploit has been publicly disclosed").
                 - Avoid generic CIA boilerplate; name the concrete impact (e.g., data disclosure, code execution, denial of service).
                 - When upstream or reference text in the CVE is well written, prefer clarity and professional advisory tone over adding redundant phrasing.
@@ -757,6 +758,7 @@ class SuggestAffectedComponents(Feature):
                 - When the CVE title or GitHub repository name differs from the actual package name in the ecosystem registry (npm, PyPI, crates.io, etc.), always use the registry name (e.g. GitHub repo 'node-tar' is published to npm as 'tar' → use 'tar'; GitHub repo 'forge' is published to npm as 'node-forge' → use 'node-forge'; GitHub repo 'tar-rs' is published to crates.io as 'tar' → use 'tar').
                 - For proprietary OS kernel vulnerabilities (macOS, iOS, Windows, etc.), use the OS name as the component (e.g. 'macOS', 'iOS', 'Windows'), not 'kernel'. Only use 'kernel' for the Linux kernel.
                 - When a vulnerability is in a product's own code (e.g. its shared certificate validation logic), list only the product itself as the affected component. Do not list services, protocols, or features that the product merely uses or integrates (e.g. RouterOS using OpenVPN/CAPsMAN/Dot1x → 'RouterOS' only).
+                - Use the bare package/project name, not a descriptive label from the CVE title. Examples: 'musl' not 'musl libc', 'glibc' not 'GNU C Library', 'openssl' not 'OpenSSL library'. This rule is about dropping informal suffixes like 'libc' or 'library' — it does NOT override the ecosystem prefix-stripping rules above (e.g. 'python-dotenv' → 'dotenv' still applies).
                 - Determine which package ecosystem(s) are impacted by the vulnerability. Many components are published to multiple ecosystems (e.g. Redis has pypi, npm, upstream); the vulnerability may only affect one. Populate the 'ecosystems' field with one or more of: cargo, golang, npm, pypi, maven, gem, upstream, unknown.
                 - Provide a concise explanation of the rationale.
             """,

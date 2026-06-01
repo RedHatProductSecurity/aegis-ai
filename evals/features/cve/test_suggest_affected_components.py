@@ -162,7 +162,6 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 # assertion failures if the individual score is low
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-25534",  # got ['io.spinnaker/clouddriver-artifacts', 'io.spinnaker/orca-core'], expected ['io.spinnaker.clouddriver/clouddriver-artifacts', 'io.spinnaker.orca/orca-core']
-    "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
 )
 
 
