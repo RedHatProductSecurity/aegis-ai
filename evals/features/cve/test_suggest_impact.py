@@ -650,6 +650,30 @@ cases = [
         cve_id="CVE-2026-43914",
         expected_impact="IMPORTANT",
     ),
+    # Analyst feedback (AEGIS-368): upstream CVSS from cve.org shows AV:N/PR:N/UI:N,
+    # but Aegis previously suggested AV:L/PR:L/UI:R without reading external references.
+    SuggestImpactCase(
+        cve_id="CVE-2026-31973",
+        expected_impact="MODERATE",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+    ),
+    # Analyst feedback (AEGIS-368): Moderate, as reported by upstream.
+    SuggestImpactCase(
+        cve_id="CVE-2026-32889",
+        expected_impact="MODERATE",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+    ),
+    # Analyst feedback (AEGIS-368): upstream reports AV:N but Aegis mistakenly believes AV:L.
+    SuggestImpactCase(
+        cve_id="CVE-2026-32946",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:N/A:N",
+    ),
+    # Analyst feedback (AEGIS-368): cve.org has the upstream CVSS.
+    SuggestImpactCase(
+        cve_id="CVE-2026-33298",
+        expected_impact="IMPORTANT",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+    ),
 ]
 
 # evaluators

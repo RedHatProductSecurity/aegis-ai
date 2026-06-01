@@ -487,6 +487,18 @@ cases = [
         expected_mitigation="This issue can be mitigated by changing the permission of the varsock file located at:\n~~~\n/run/systemd/io.systemd.Manager\n~~~\nto be accessible only by trusted or privileged users.",
         metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
+    # Analyst feedback (AEGIS-368): GHSA reference provides detailed impact insights
+    # that should enrich the statement beyond restating comment_zero.
+    SuggestStatementCase(
+        cve_id="CVE-2026-40938",
+        expected_statement=(
+            "This Important flaw in Tekton Pipelines allows an authenticated user to "
+            "achieve arbitrary code execution on the resolver pod by injecting malicious "
+            "commands into the git resolver's revision parameter. A successful exploitation "
+            "of the flaw can lead to the exfiltration of all cluster-wide secrets, posing a "
+            "significant risk to the integrity and confidentiality of the OpenShift environment."
+        ),
+    ),
 ]
 
 # evaluators
