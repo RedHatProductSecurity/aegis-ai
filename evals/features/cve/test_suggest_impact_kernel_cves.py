@@ -134,6 +134,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "the CVSS vector uses PR:L, which is inconsistent with the explanation."
         ),
     },
+    "CVE-2022-50865": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The explanation states 'requiring ... elevated privileges (PR:N)'. The phrase "
+            "'elevated privileges' contradicts the CVSS vector's PR:N (None), as PR:N "
+            "implies no privileges are required."
+        ),
+    },
     "CVE-2025-68742": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
