@@ -19,10 +19,31 @@ from typing import Any, Optional, Sequence, cast
 
 
 ELIGIBLE_FLAWS = {
-    # only flaws coming from collectors
+    # only flaws coming from the following sources
     "source": (
-        # TODO: extend the sequence
+        "APPLE",
+        "CERT",
+        "CUSTOMER",
+        "CVE",
         "CVEORG",
+        "DEBIAN",
+        "DISTROS",
+        "GENTOO",
+        "GOOGLE",
+        "HW_VENDOR",
+        "INTERNET",
+        "MAGEIA",
+        "MOZILLA",
+        "NVD",
+        "OPENSSL",
+        "OSSSECURITY",
+        "OSV",
+        "REDHAT",
+        "RESEARCHER",
+        "SECUNIA",
+        "SUSE",
+        "UBUNTU",
+        "UPSTREAM",
     ),
     # only flaws in the NEW/empty state
     "classification": (
