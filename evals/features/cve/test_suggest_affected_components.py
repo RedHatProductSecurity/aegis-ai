@@ -148,13 +148,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 
 # count the corresponding evaluation cases in overall score but do not trigger
 # assertion failures if the individual score is low
-KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
-    "CVE-2025-58190",  # got ['net'] or ['net/http'], expected ['net/html']
-    "CVE-2026-22822",  # got ['external-secrets-operator'], expected ['external-secrets']
-    "CVE-2026-32285",  # got ['buger/jsonparser'], expected ['jsonparser']
-    "CVE-2026-40193",  # got ['foxcpp/maddy'], expected ['maddy']
-    "CVE-2026-40938",  # got ['pipeline'], expected ['tektoncd/pipeline']
-)
+KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = ()
 
 
 # Expected ecosystems for CVEs where ground-truth is known.
