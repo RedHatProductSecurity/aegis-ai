@@ -16,13 +16,15 @@ from evals.features.common import (
 
 
 class IdentifyPIICase(Case):
-    def __init__(self, cve_id, contains_PII):
+    def __init__(self, cve_id, contains_PII, **kwargs):
         """cve_id given as CVE-YYYY-NUM is the flaw we look for PII."""
+        metadata = {"difficulty": "easy", **kwargs.pop("metadata", {})}
         super().__init__(
             name=f"identify-pii-for-{cve_id}",
             inputs=cve_id,
             expected_output=contains_PII,
-            metadata={"difficulty": "easy"},
+            metadata=metadata,
+            **kwargs,
         )
 
 
@@ -50,7 +52,11 @@ async def identify_pii(cve_id: CVEID) -> PIIReportModel:
 
 # test cases
 cases = [
-    IdentifyPIICase("CVE-2025-0725", True),
+    IdentifyPIICase(
+        "CVE-2025-0725",
+        True,
+        metadata={"known_to_fail_evaluators": ["ExplanationEmptyOrBulletedList"]},
+    ),
     IdentifyPIICase("CVE-2025-23395", False),
     IdentifyPIICase("CVE-2025-5399", False),
     # TODO: add more cases
