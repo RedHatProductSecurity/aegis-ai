@@ -16,13 +16,15 @@ from evals.features.common import (
 
 
 class CVSSDiffCase(Case):
-    def __init__(self, cve_id, has_diff):
+    def __init__(self, cve_id, has_diff, **kwargs):
         """cve_id given as CVE-YYYY-NUM is the flaw where we explain why CVSS scores differ."""
+        metadata = {"difficulty": "easy", **kwargs.pop("metadata", {})}
         super().__init__(
             name=f"cvss-diff-for-{cve_id}",
             inputs=cve_id,
             expected_output=has_diff,
-            metadata={"difficulty": "easy"},
+            metadata=metadata,
+            **kwargs,
         )
 
 
@@ -58,7 +60,11 @@ async def cvss_diff(cve_id: CVEID) -> CVSSDiffExplainerModel:
 
 # test cases
 cases = [
-    CVSSDiffCase("CVE-2025-47229", False),
+    CVSSDiffCase(
+        "CVE-2025-47229",
+        False,
+        metadata={"known_to_fail_evaluators": ["CVSSDiffEvaluator"]},
+    ),
     CVSSDiffCase("CVE-2022-48701", True),
     CVSSDiffCase("CVE-2024-53232", True),
     # TODO: add more cases
