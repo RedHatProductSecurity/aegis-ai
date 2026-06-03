@@ -425,7 +425,9 @@ async def test_eval_suggest_affected_components(suggest_affected_components_case
     for ecase in report.cases:
         expected = ecase.expected_output or []
         suggested = getattr(ecase.output, "components", None) or []
-        for result in ecase.scores.values():
+        for eval_name, result in ecase.scores.items():
+            if eval_name != "ComponentsOverlapEvaluator":
+                continue
             if (
                 result.reason
                 and "got " in result.reason
