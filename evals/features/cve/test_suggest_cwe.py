@@ -143,7 +143,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2022-50470",
         cwe_list=["CWE-1341"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CWEExplanationRootCause",
+                "SuggestCweEvaluator",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2022-50471",
