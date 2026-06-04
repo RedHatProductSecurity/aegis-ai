@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-06-05
+
+### Changed
+- `suggest-cwe` now filters out Prohibited and Discouraged CWEs from suggestions
+
+### Added
+- `suggest-affected-components` now suggests upstream `ecosystems` for affected components
+- `osidb-bot` now records suggested ecosystems in `aegis_meta`
+- added `osv_dev_ghsa` tool for GHSA lookups via OSV.dev
+- added evaluation cases with ecosystem ground-truth for `suggest-affected-components`
+- added GHSA cache for OSV.dev responses in the evaluation suite
+- show actual/expected output when `DataQualityEvaluator` fails
+
+### Fixed
+- use full Go module paths in `suggest-affected-components`
+- use bare package names without ecosystem prefixes in `suggest-affected-components`
+- corrected `glib` component mapping in `suggest-affected-components`
+- `osidb-bot` now covers all currently used CVE source types
+- retry LLM prompt on `ModelHTTPError: status_code: 502`
+
+
 ## [0.7.2] - 2026-05-25
 
 ### Changed
