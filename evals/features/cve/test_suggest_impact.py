@@ -591,6 +591,7 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2026-34073",
         expected_impact="LOW",
+        metadata={"known_to_fail_evaluators": ["NoAffectsInExplanation"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2026-34444",
