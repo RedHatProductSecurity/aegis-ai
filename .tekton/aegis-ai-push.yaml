@@ -25,6 +25,8 @@ spec:
     value: quay.io/redhat-user-workloads/aegis-tenant/aegis-ai:{{revision}}
   - name: dockerfile
     value: Containerfile
+  - name: apply-git-tag-labels
+    value: "true"
   # update the `:latest` tag on the container image only if it is built from the `main` branch
   - name: ADDITIONAL_TAGS
     value: [latest]

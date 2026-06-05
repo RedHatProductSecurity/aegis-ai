@@ -95,6 +95,10 @@ spec:
     default: 'true'
     description: Use the package registry proxy when prefetching dependencies
     type: string
+  - name: apply-git-tag-labels
+    type: string
+    default: "false"
+    description: Whether to generate image labels from git tags pointing at HEAD. Set to true on push pipelines only.
   - name: sast-target-dirs
     type: string
     default: docs,evals,scripts,src,tests
@@ -284,11 +288,13 @@ spec:
     params:
     - name: SOURCE_ARTIFACT
       value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
+    - name: APPLY_GIT_TAG_LABELS
+      value: $(params.apply-git-tag-labels)
     runAfter:
     - prefetch-dependencies
     taskSpec:
       description: Read git tags pointing at HEAD and generate image labels based on them.  Moreover, when the git tag pointing at HEAD is a version string (containing digits and dots only), generate the :stable image tag.
-      params: [name: SOURCE_ARTIFACT]
+      params: [{name: SOURCE_ARTIFACT}, {name: APPLY_GIT_TAG_LABELS}]
       results: [{name: IMAGE_LABELS, type: array, description: Image labels implied by git tags.}]
       volumes: [{name: workdir, emptyDir: {}}]
       stepTemplate: {volumeMounts: [{name: workdir, mountPath: /var/workdir}]}
@@ -299,9 +305,16 @@ spec:
       - name: git-tags-to-image-labels
         image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:79409346347d66647945b1d8030730b5a85273bb1cacd6b1f4bde3ca32c04200
         workingDir: /var/workdir/source
+        env:
+        - name: APPLY_GIT_TAG_LABELS
+          value: $(params.APPLY_GIT_TAG_LABELS)
         script: |
           #!/bin/bash -ex
           git describe --tags
+          if [[ "$APPLY_GIT_TAG_LABELS" != "true" ]]; then
+            echo "[]" > "$(results.IMAGE_LABELS.path)"
+            exit 0
+          fi
           tags="$(git tag --points-at HEAD | tr '\n' ,)"
           if [[ -z "$tags" ]]; then
             echo "[]" > "$(results.IMAGE_LABELS.path)"
