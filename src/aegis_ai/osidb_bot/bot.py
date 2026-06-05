@@ -110,6 +110,7 @@ class FlawFinder:
         # infer search predicates from ELIGIBLE_FLAWS
         kwargs: dict[str, Any] = {
             "include_fields": ["cve_id"],
+            "cve_id__isempty": False,  # only flaws with a CVE ID
             "order": ["created_dt"],
             "source_in": [s for s in ELIGIBLE_FLAWS["source"]],
             "workflow_state_in": [
