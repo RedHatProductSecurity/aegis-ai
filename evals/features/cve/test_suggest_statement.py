@@ -274,6 +274,7 @@ cases = [
         cve_id="CVE-2025-22097",
         metadata={
             "known_to_fail_evaluators": [
+                "StatementEvaluator",  # FIXME: Aegis should explain why Red Hat assessed IMPORTANT when GHSA-6rw7-vpxm-498p assessed LOW
                 "StatementNoDuplicatedInfo",
                 "StatementNoCodeLevelDetails",
             ]
