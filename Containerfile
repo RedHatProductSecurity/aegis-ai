@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_INDEX_URL="${PIP_INDEX_URL}" \
     UV_NO_CACHE=off \
-    UV_NATIVE_TLS=true \
+    UV_SYSTEM_CERTS=true \
     UV_PROJECT_ENVIRONMENT="/opt/app-root/.venv" \
     REQUESTS_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt"
 
