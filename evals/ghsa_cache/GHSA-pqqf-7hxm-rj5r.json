@@ -1,0 +1,95 @@
+{
+    "id": "GHSA-pqqf-7hxm-rj5r",
+    "summary": "Leaky JWTs in OpenMetadata exposing highly-privileged bot users",
+    "details": "### Summary\nCalls issued by the UI against `/api/v1/ingestionPipelines` leak JWTs used by `ingestion-bot` for certain services (Glue / Redshift / Postgres)\n\n### Details\nAny read-only user can gain access to a highly privileged account, typically which has the Ingestion Bot Role. This enables destructive changes in OpenMetadata instances, and potential data leakage (e.g. sample data, or service metadata which would be unavailable per roles/policies). \n\n\n### PoC\nI was able to extract the JWT used by the bot/agent populating [sample_athena.default](https://sandbox.open-metadata.org/database/sample_athena.default) in the Collate Sandbox. To prove this out, I mutated the description to this UUID: `fe2e4cc1-da72-4acf-8535-112a3cfa9c7e,` which you can see  @ https://sandbox.open-metadata.org/database/sample_athena.default.\n\n#### Steps to Reproduce\n\n* Create a Collate Sandbox account; these are non-admin accounts by default with minimal permissions.\n* Open the Developer Console\n* Go to the Services Page. In this case, [sample_athena](https://sandbox.open-metadata.org/service/databaseServices/sample_athena?showDeletedTables=false&currentPage=1), though other services \n* In the Network tab, introspect the request made to api/v1/services/ingestionPipelines, and find the jwtToken in the response:\n<img width=\"1329\" height=\"299\" alt=\"image\" src=\"https://github.com/user-attachments/assets/0c405776-159e-4188-9591-ed8cc71bc596\" />\n\n* Use the JWT to issue (potentially destructive) API calls\n<img width=\"3024\" height=\"1798\" alt=\"image\" src=\"https://github.com/user-attachments/assets/ab40b528-4d2b-404b-8f8a-482a1693e179\" />\n\n* Resulting mutated description:\n<img width=\"622\" height=\"399\" alt=\"image\" src=\"https://github.com/user-attachments/assets/3fa630ff-93b5-4b7d-8e3c-220f8a84a23a\" />\n\nNote that this is also the case for these services, among others:\n* [acme_nexus_redshift](https://sandbox.open-metadata.org/service/databaseServices/acme_nexus_redshift) \n* [sample_postgres](https://sandbox.open-metadata.org/service/databaseServices/sample_postgres)\n\n### Proposed Remediation\nRedact jwtToken in API payload.\nImplement role-based filtering - Only return JWT tokens to users with explicit admin/service account permissions\n(for Admins) Rotate Ingestion Bot Tokens in affected environments\n\n### Impact\n_What kind of vulnerability is it? Who is impacted?_\n\n* Vulnerability Type: Privilege Escalation\n* Risk: User impersonation, even for those with read-only access, can lead to destructive outcomes if malicious actors leverage the leaked JWT.",
+    "aliases": [
+        "CVE-2026-26010"
+    ],
+    "modified": "2026-02-18T23:43:46.795947Z",
+    "published": "2026-02-11T14:23:02Z",
+    "database_specific": {
+        "severity": "HIGH",
+        "github_reviewed": true,
+        "cwe_ids": [
+            "CWE-269"
+        ],
+        "nvd_published_at": "2026-02-11T21:16:21Z",
+        "github_reviewed_at": "2026-02-11T14:23:02Z"
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/open-metadata/OpenMetadata/security/advisories/GHSA-pqqf-7hxm-rj5r"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-26010"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/open-metadata/OpenMetadata"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/open-metadata/OpenMetadata/releases/tag/1.11.8-release"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "org.open-metadata:openmetadata-sdk",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/org.open-metadata/openmetadata-sdk"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "1.11.8"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "1.10.0",
+                "1.10.1",
+                "1.10.10",
+                "1.10.11",
+                "1.10.12",
+                "1.10.13",
+                "1.10.14",
+                "1.10.2",
+                "1.10.3",
+                "1.10.4",
+                "1.10.5",
+                "1.10.6",
+                "1.10.7",
+                "1.10.8",
+                "1.10.9",
+                "1.11.0",
+                "1.11.0-rc1",
+                "1.11.1",
+                "1.11.2",
+                "1.11.3",
+                "1.11.4",
+                "1.11.5",
+                "1.11.6",
+                "1.11.7"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/02/GHSA-pqqf-7hxm-rj5r/GHSA-pqqf-7hxm-rj5r.json"
+            }
+        }
+    ],
+    "schema_version": "1.7.3",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:H/A:L"
+        }
+    ]
+}

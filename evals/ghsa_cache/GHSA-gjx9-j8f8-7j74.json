@@ -1,0 +1,207 @@
+{
+    "id": "GHSA-gjx9-j8f8-7j74",
+    "summary": "JinJava Bypass through ForTag leads to Arbitrary Java Execution",
+    "details": "## Impact\n\n**Vulnerability Type**: Sandbox Bypass / Remote Code Execution\n\n**Affected Component**: Jinjava\n\n**Affected Users**:\n- Organizations using HubSpot's Jinjava template rendering engine for user-provided template content\n- Any system that renders untrusted Jinja templates using HubSpot's Jinjava implementation\n- Users with the ability to create or edit custom code templates\n\n**Severity**: **Critical** - allows arbitrary Java class instantiation and file access bypassing built-in sandbox restrictions\n\n**Root Cause**: Multiple security bypass vulnerabilities in Jinjava's sandbox mechanism:\n\n1. **ForTag Property Access Bypass**: The `ForTag` class does not enforce `JinjavaBeanELResolver` restrictions when iterating over object properties using `Introspector.getBeanInfo()` and invoking getter methods via `PropertyDescriptor.getReadMethod()`\n\n2. **Restricted Class Instantiation**: The sandbox's type allowlist can be bypassed by using ObjectMapper to instantiate classes through JSON deserialization, including creating new `JinjavaELContext` and `JinjavaConfig` instances\n\n**Attack Vector**: An attacker with the ability to create or edit Jinja templates can:\n- Access arbitrary getter methods on objects in the template context\n- Instantiate `ObjectMapper` to enable default typing\n- Create arbitrary Java classes by bypassing type allowlists\n- Read files from the server filesystem (demonstrated with `/etc/passwd`)\n- Potentially execute arbitrary code\n\n## Patches\n\n**Status**: Patched - CVE-2026-25526\n\nUsers should upgrade to one of the following versions which contain fixes for this vulnerability:\n\n- **JinJava 2.8.3** or later\n- **JinJava 2.7.6** or later\n\n**Fix Components**:\n\n1. **ForTag Security Hardening**\n   - Added security checks to `ForTag.renderForCollection()` to enforce `JinjavaBeanELResolver` restrictions\n   - Implemented property access validation against restricted properties/methods before invoking getter methods\n   - Added checks for restricted class types before introspection\n\n2. **Enhanced Type Validation**\n   - Improved validation in `JinjavaBeanELResolver.isRestrictedClass()` to prevent instantiation of sensitive types\n   - Added additional restricted types to the denylist\n   - Implemented deeper validation for types created via ObjectMapper deserialization\n\n3. **Configuration Protection**\n   - Added checks to prevent creation of new `JinjavaConfig` or `JinjavaELContext` instances via ObjectMapper\n   - Prevented modification of `readOnlyResolver` configuration from untrusted templates\n   - Implemented additional safeguards around ELResolver configuration\n\n4. **Collection Type Validation**\n   - Implemented proper type validation in `HubLELResolver` to prevent collection type wrapping bypasses\n   - Added checks for wrapped types in collection deserialization\n   - Implemented validation for all types within collections against allowlists\n\n5. **ObjectMapper Restrictions**\n   - Added additional restrictions on `ObjectMapper.enableDefaultTyping()` to prevent enabling via less restrictive ELResolver\n   - Ensured default typing cannot be enabled without proper authorization\n\n**Information for Users**: Upgrade to version 2.8.3 or 2.7.6 or later to address this vulnerability.\n\n## References\n\n### Project Resources\n- **Jinjava Source Code**: [github.com/HubSpot/jinjava](https://github.com/HubSpot/jinjava)\n- **Jinjava Releases**: [github.com/HubSpot/jinjava/releases](https://github.com/HubSpot/jinjava/releases)\n\n### Security Standards & Classifications\n- **CWE-502**: Deserialization of Untrusted Data\n- **CWE-913**: Improper Control of Dynamically-Managed Code Resources\n- **CWE-94**: Improper Control of Generation of Code ('Code Injection')\n- **CVSS v3.1**: Common Vulnerability Scoring System\n\n### Additional Resources\n- [OWASP Template Injection](https://owasp.org/www-community/attacks/Server_Side_Template_Injection)\n- [Java Deserialization Security](https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html)\n- [CVE Standards and Procedures](https://cve.mitre.org/)",
+    "aliases": [
+        "CVE-2026-25526"
+    ],
+    "modified": "2026-02-05T16:58:45.666424Z",
+    "published": "2026-02-03T17:52:55Z",
+    "related": [
+        "CGA-j6p7-gqq3-chmm"
+    ],
+    "database_specific": {
+        "severity": "CRITICAL",
+        "cwe_ids": [
+            "CWE-1336"
+        ],
+        "nvd_published_at": "2026-02-04T22:15:59Z",
+        "github_reviewed_at": "2026-02-03T17:52:55Z",
+        "github_reviewed": true
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/HubSpot/jinjava/security/advisories/GHSA-gjx9-j8f8-7j74"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-25526"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/HubSpot/jinjava/commit/3d02e504d8bbb13bf3fe019e9ca7b51dfce7a998"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/HubSpot/jinjava/commit/c7328dce6030ac718f88974196035edafef24441"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/HubSpot/jinjava"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/HubSpot/jinjava/releases/tag/jinjava-2.7.6"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/HubSpot/jinjava/releases/tag/jinjava-2.8.3"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "com.hubspot.jinjava:jinjava",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/com.hubspot.jinjava/jinjava"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "2.8.0"
+                        },
+                        {
+                            "fixed": "2.8.3"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "2.8.0",
+                "2.8.1",
+                "2.8.2"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/02/GHSA-gjx9-j8f8-7j74/GHSA-gjx9-j8f8-7j74.json"
+            }
+        },
+        {
+            "package": {
+                "name": "com.hubspot.jinjava:jinjava",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/com.hubspot.jinjava/jinjava"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "2.7.6"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "1.0.0",
+                "1.0.1",
+                "1.0.2",
+                "1.0.3",
+                "1.0.4",
+                "1.0.5",
+                "1.0.6",
+                "1.0.7",
+                "1.0.8",
+                "1.0.9",
+                "2.0.0",
+                "2.0.1",
+                "2.0.10",
+                "2.0.11-java7",
+                "2.0.2",
+                "2.0.3",
+                "2.0.4",
+                "2.0.5",
+                "2.0.6",
+                "2.0.7",
+                "2.0.8",
+                "2.0.9",
+                "2.1.0",
+                "2.1.1",
+                "2.1.10",
+                "2.1.11",
+                "2.1.12",
+                "2.1.13",
+                "2.1.14",
+                "2.1.15",
+                "2.1.16",
+                "2.1.17",
+                "2.1.18",
+                "2.1.19",
+                "2.1.2",
+                "2.1.3",
+                "2.1.4",
+                "2.1.5",
+                "2.1.6",
+                "2.1.7",
+                "2.1.8",
+                "2.1.9",
+                "2.2.0",
+                "2.2.1",
+                "2.2.10",
+                "2.2.2",
+                "2.2.3",
+                "2.2.4",
+                "2.2.5",
+                "2.2.6",
+                "2.2.7",
+                "2.2.8",
+                "2.2.9",
+                "2.3.0",
+                "2.3.1",
+                "2.3.3",
+                "2.3.4",
+                "2.3.5",
+                "2.3.6",
+                "2.4.0",
+                "2.4.1",
+                "2.4.10",
+                "2.4.11",
+                "2.4.12",
+                "2.4.13",
+                "2.4.14",
+                "2.4.15",
+                "2.4.2",
+                "2.4.3",
+                "2.4.4",
+                "2.4.5",
+                "2.4.6",
+                "2.4.7",
+                "2.4.8",
+                "2.4.9",
+                "2.5.0",
+                "2.5.1",
+                "2.5.10",
+                "2.5.2",
+                "2.5.3",
+                "2.5.4",
+                "2.5.5",
+                "2.5.6",
+                "2.5.7",
+                "2.5.8",
+                "2.5.9",
+                "2.6.0",
+                "2.7.0",
+                "2.7.1",
+                "2.7.2",
+                "2.7.3",
+                "2.7.4",
+                "2.7.5"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/02/GHSA-gjx9-j8f8-7j74/GHSA-gjx9-j8f8-7j74.json"
+            }
+        }
+    ],
+    "schema_version": "1.7.3",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+        }
+    ]
+}

