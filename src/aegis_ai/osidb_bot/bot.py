@@ -45,11 +45,8 @@ ELIGIBLE_FLAWS = {
         "UBUNTU",
         "UPSTREAM",
     ),
-    # only flaws in the NEW/empty state
-    "classification": (
-        {"workflow": "DEFAULT", "state": "NEW"},
-        {"workflow": "DEFAULT", "state": ""},
-    ),
+    # only flaws in the NEW state
+    "classification": ({"workflow": "DEFAULT", "state": "NEW"},),
     # only flaws where Aegis has not been used yet
     "aegis_meta": ({},),
     # only flaws with no affects
