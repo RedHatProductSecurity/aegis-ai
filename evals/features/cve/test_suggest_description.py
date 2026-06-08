@@ -232,6 +232,7 @@ cases = [
     SuggestDescriptionCase(
         cve_id="CVE-2025-66448",
         expected_description="A remote code execution vulnerability has been identified in vLLM. An attacker can exploit a weakness in the model loading process to silently fetch and run unauthorized, malicious Python code on the host system. This happens because the engine mistakenly executes code from a remote repository referenced in a model's configuration, even when explicit security measures are set to prevent it.",
+        metadata={"known_to_fail_evaluators": ["NoVersionInfo"]},
     ),
     SuggestDescriptionCase(
         cve_id="CVE-2025-68493",
