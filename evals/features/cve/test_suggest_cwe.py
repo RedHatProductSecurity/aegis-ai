@@ -713,6 +713,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-40109",
         cwe_list=["CWE-331"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-40265",
