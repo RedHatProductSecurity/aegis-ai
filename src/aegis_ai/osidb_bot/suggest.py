@@ -1,4 +1,4 @@
-from aegis_ai.osidb_bot.util import FlawData, logger
+from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
 from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
@@ -40,13 +40,17 @@ def check_metrics(feat_name: str, cve_id: CVEID, output: AegisFeatureModel) -> b
 
 
 async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
+    feat_name = feature.__class__.__name__
+    cve_id_raw = flaw_data.get("cve_id", "?")
     try:
-        cve_id: CVEID = cveid_validator.validate_python(flaw_data["cve_id"])
+        cve_id: CVEID = cveid_validator.validate_python(cve_id_raw)
+        log_memory(f"{feat_name}_start({cve_id})")
         result = await feature.exec(cve_id, static_context=flaw_data)
+        log_memory(f"{feat_name}_end({cve_id})")
         output = result.output
         if not isinstance(output, AegisFeatureModel):
             return None
-        if check_metrics(feature.__class__.__name__, cve_id, output):
+        if check_metrics(feat_name, cve_id, output):
             return output
         else:
             return None

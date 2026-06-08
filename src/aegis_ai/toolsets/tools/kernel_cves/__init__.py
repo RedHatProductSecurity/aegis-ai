@@ -100,11 +100,14 @@ class KernelVulnsRepo:
         Ensures the repository is cloned and up-to-date.
         This method should be safe to call from multiple threads/processes.
         """
+        from aegis_ai.osidb_bot.util import log_memory
+
         with REPO_LOCK:
             if not self.repo_path.exists():
                 logger.info(
                     "Cloning Linux security vulnerabilities repo for the first time..."
                 )
+                log_memory("pre_clone")
                 try:
                     subprocess.run(
                         [
@@ -121,6 +124,7 @@ class KernelVulnsRepo:
                 except subprocess.CalledProcessError as e:
                     logger.error(f"Failed to clone vulns repo: {e.stderr}")
                     raise
+                log_memory("post_clone")
                 return
 
             # If repo exists, check if it needs an update

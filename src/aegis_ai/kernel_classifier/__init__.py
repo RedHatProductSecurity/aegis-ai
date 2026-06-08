@@ -577,16 +577,28 @@ class KernelImpactClassifier:
             logger.info("No commit hashes for %s, skipping kernel classifier", cve_id)
             return None
 
+        from aegis_ai.osidb_bot.util import log_memory
+
+        log_memory(f"classify_start({cve_id}, {len(commit_hashes)}_commits)")
         patches = await self._fetch_patches(commit_hashes)
         if not patches:
             logger.warning("No patches retrieved for %s", cve_id)
             return None
+
+        patch_bytes = sum(len(c) for _, c in patches)
+        log_memory(
+            f"patches_fetched({cve_id}, {len(patches)}_patches, {patch_bytes}_bytes)"
+        )
 
         patch_features = self._extract_features(patches, cve_id)
 
         html_supplemented_flags: list[str] = []
         html_pages = await self._fetch_commit_html(commit_hashes)
         if html_pages:
+            html_bytes = sum(len(h) for _, h in html_pages)
+            log_memory(
+                f"html_fetched({cve_id}, {len(html_pages)}_pages, {html_bytes}_bytes)"
+            )
             html_features = extract_html_features(html_pages)
             for flag, val in html_features.items():
                 if val and not patch_features.get(flag):
