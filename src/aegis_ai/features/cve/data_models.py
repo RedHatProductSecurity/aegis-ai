@@ -1,6 +1,7 @@
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import Field, BaseModel, PrivateAttr
+from pydantic import Field, BaseModel, PrivateAttr, model_validator
 
 from aegis_ai.data_models import CVEID, CVSS3Vector, CWEID
 from aegis_ai.features.data_models import AegisFeatureModel
@@ -346,3 +347,140 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
         Explain the difference between Red Hat and NVD(NIST) CVSS scores for this CVE.
         """,
     )
+
+
+# ---------------------------------------------------------------------------
+# Quality Review models
+# ---------------------------------------------------------------------------
+
+
+class QualityRating(str, Enum):
+    """Overall quality rating derived from the 60-point rubric score."""
+
+    EXCELLENT = "Excellent"
+    GOOD = "Good"
+    NEEDS_IMPROVEMENT = "Needs Improvement"
+    FAILS_STANDARDS = "Fails Standards"
+
+
+class CriterionScore(BaseModel):
+    """Score for a single rubric criterion (0-2 points)."""
+
+    category: str = Field(
+        ...,
+        description="Name of the rubric category this criterion belongs to.",
+    )
+    criterion_id: str = Field(
+        ...,
+        description="Short identifier for the criterion being scored.",
+    )
+    score: int = Field(
+        ...,
+        ge=0,
+        le=2,
+        description="Score for this criterion: 0 (missing/wrong), 1 (partial), 2 (fully met).",
+    )
+    justification: str = Field(
+        ...,
+        description="Brief rationale for the assigned score.",
+    )
+
+
+class CustomerLensAssessment(BaseModel):
+    """Assessment of whether CVE content addresses the three core customer questions."""
+
+    customer_can_decide: List[str] = Field(
+        ...,
+        description="What a customer CAN decide from the current content.",
+    )
+    remains_unclear: List[str] = Field(
+        ...,
+        description="What REMAINS UNCLEAR from the current content.",
+    )
+    manual_context_needed: List[str] = Field(
+        ...,
+        description="What additional context an analyst would need to add MANUALLY.",
+    )
+
+
+class QualityReviewModel(AegisFeatureModel):
+    """
+    Quality review of CVE flaw content scored against a 60-point rubric
+    with 6 categories, evaluated through a Customer Lens framework.
+    """
+
+    cve_id: CVEID = Field(
+        ...,
+        description="The CVE identifier for the reviewed flaw.",
+    )
+
+    overall_score: int = Field(
+        default=0,
+        ge=0,
+        le=60,
+        description="Total score across all categories (auto-computed).",
+    )
+
+    rating: QualityRating = Field(
+        default=QualityRating.FAILS_STANDARDS,
+        description="Quality rating derived from overall_score (auto-computed).",
+    )
+
+    scores: List[CriterionScore] = Field(
+        ...,
+        description="Flat list of all criterion scores across all 6 rubric categories. "
+        "Each entry includes its category name, criterion id, score (0-2), and justification.",
+    )
+
+    customer_lens: CustomerLensAssessment = Field(
+        ...,
+        description="Customer Lens assessment of the flaw content.",
+    )
+
+    strengths: List[str] = Field(
+        ...,
+        description="Notable strengths of the flaw content.",
+    )
+
+    critical_gaps: List[str] = Field(
+        ...,
+        description="Critical gaps that must be addressed.",
+    )
+
+    recommendations: List[str] = Field(
+        ...,
+        description="Actionable recommendations to improve the content.",
+    )
+
+    suggested_statement: Optional[str] = Field(
+        default=None,
+        description="Suggested rewrite of the statement when current content scores poorly.",
+    )
+
+    suggested_mitigation: Optional[str] = Field(
+        default=None,
+        description="Suggested rewrite of the mitigation when current content scores poorly.",
+    )
+
+    value_add: str = Field(
+        ...,
+        description="Whether this assessment provides information customers cannot find elsewhere.",
+    )
+
+    @model_validator(mode="after")
+    def compute_overall_score_and_rating(self) -> "QualityReviewModel":
+        """Auto-compute overall_score and rating from criterion scores."""
+        self.overall_score = sum(c.score for c in self.scores)
+        if self.overall_score >= 48:
+            self.rating = QualityRating.EXCELLENT
+        elif self.overall_score >= 36:
+            self.rating = QualityRating.GOOD
+        elif self.overall_score >= 24:
+            self.rating = QualityRating.NEEDS_IMPROVEMENT
+        else:
+            self.rating = QualityRating.FAILS_STANDARDS
+        return self
+
+    def printable_outcome(self) -> str:
+        """Override the logging hook to print the quality score and rating."""
+        return f"score={self.overall_score}/60 ({self.rating.value})"

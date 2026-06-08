@@ -8,6 +8,7 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
     CVSSDiffExplainerModel,
+    QualityReviewModel,
     RevisedExplanationModel,
     SuggestAffectedComponentsModel,
     SuggestImpactModel,
@@ -798,4 +799,177 @@ class CVSSDiffExplainer(Feature):
         )
         return await self.guarded_run(
             prompt, deps=deps, output_type=CVSSDiffExplainerModel
+        )
+
+
+class QualityReview(Feature):
+    """Score CVE flaw content against a 60-point quality rubric evaluated through a Customer Lens framework."""
+
+    _REQUIRED_CATEGORIES = {
+        "Description — Technical Clarity",
+        "Statement — Technical Clarity",
+        "Mitigation",
+        "Grammar & Style",
+        "Content Ambiguity",
+        "Technical Value — Customer Lens",
+    }
+
+    def _check_output(self, result, deps) -> str | None:
+        """Enforce that all 6 rubric categories are represented in scores."""
+        found = {s.category for s in result.output.scores}
+        missing = self._REQUIRED_CATEGORIES - found
+        if missing:
+            return (
+                f"Missing scores for categories: {', '.join(sorted(missing))}. "
+                "You must include criterion scores for all 6 rubric categories."
+            )
+        return None
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(
+            exclude_osidb_fields=[],
+            static_context=static_context,
+        )
+
+        prompt = AegisPrompt(
+            user_instruction=(
+                f"Review the quality of CVE flaw content for {cve_id}. "
+                "Score it against the 60-point rubric and evaluate through the Customer Lens framework. "
+                "Use the OSIDB tool to retrieve all flaw data. "
+                "Assess the existing content — do not generate new descriptions or statements unless scoring reveals critical gaps. "
+                "Return your response as a single JSON object matching the output schema."
+            ),
+            goals="""\
+- Score the flaw content against a structured 60-point rubric with 6 categories (5 criteria x 2 points each = 10 points per category).
+- Evaluate content through the Customer Lens: determine whether three customer personas (Ops/Sysadmin, Security/CISO, Compliance/Auditor) can answer their core questions from the existing content.
+- Identify strengths, critical gaps, and actionable recommendations.
+- When statement or mitigation content scores poorly, provide suggested rewrites.
+- Assess whether the flaw content adds value beyond what customers can find in public CVE databases.
+""",
+            rules="""\
+### RUBRIC CATEGORIES
+
+Score each criterion 0 (missing/wrong), 1 (partial), or 2 (fully met). Provide a brief justification for each score.
+
+**Category 1: Description — Technical Clarity** (up to 10 points)
+Criteria:
+- component_identification: Vulnerable component is clearly named
+- vulnerability_type: Vulnerability type/mechanism is described (e.g., buffer overflow, use-after-free, injection)
+- trigger_conditions: Trigger conditions or attack prerequisites are stated
+- cia_impact: Confidentiality, integrity, or availability impact is sketched
+- clarity_for_non_experts: A non-security reader can grasp the core issue
+
+**Category 2: Statement — Technical Clarity** (up to 10 points)
+Criteria:
+- statement_presence: Statement exists when required (see STATEMENT RULES below)
+- structured_formula: Statement follows structured formula: component + location + type + trigger + impact
+- cvss_context: Statement provides CVSS context or severity rationale
+- cia_impacts: Statement addresses relevant CIA impacts
+- threat_nature_scope: Statement describes threat nature and scope
+
+**Category 3: Mitigation** (up to 10 points)
+Criteria:
+- mitigation_exists: A mitigation section exists (or is appropriately absent for rejected flaws)
+- fix_version_specifics: Fix or version-specific details are provided
+- actionable_steps: Steps are actionable (commands, config changes, operational controls)
+- references_linked: Relevant references or documentation are linked
+- risk_reduction_rationale: Rationale for why the mitigation reduces risk is provided
+
+**Category 4: Grammar & Style** (up to 10 points)
+Criteria:
+- spelling_punctuation: Free of spelling and punctuation errors
+- sentence_clarity: Sentences are clear and well-structured
+- consistent_terminology: Terminology is used consistently throughout
+- professional_tone: Tone is professional and appropriate for security advisories
+- acronyms_defined: Acronyms and abbreviations are defined on first use
+
+**Category 5: Content Ambiguity** (up to 10 points)
+Criteria:
+- description_statement_match: Description and statement are consistent (no contradictions)
+- products_versions_align: Product and version references align across fields
+- no_version_impact_conflicts: No conflicting version or impact claims
+- terminology_consistent: Terminology is consistent across description, statement, and mitigation
+- scope_limits_clear: Scope and limitations are clearly stated
+
+**Category 6: Technical Value — Customer Lens** (up to 10 points)
+Criteria:
+- original_non_vague: Content is original and specific (not boilerplate or vague)
+- root_cause_depth: Root cause is described with sufficient technical depth
+- attack_scenario: A realistic attack scenario or exploitation path is described
+- customer_relevance: Content is relevant to customer environments and deployment contexts
+- standards_mapping: Relevant standards (CWE, CVSS, STRIDE) are referenced or mappable
+
+### STATEMENT RULES
+
+- If ANY available CVSS base score (Red Hat or NVD) is >= 7.0, a statement MUST exist. If it is absent, this MUST appear in critical_gaps.
+- If ALL available CVSS base scores are < 7.0, statement absence is NOT a critical gap.
+- Statement quality is evaluated against the structured formula: component + location + type + trigger + impact.
+
+### REJECTED FLAW EXCEPTION
+
+- For rejected flaws (flaw state indicates rejection), do NOT require the 5-part structured formula for the statement.
+- Instead, the statement must explain the rationale for rejection. Award full points if the rejection rationale is clear.
+- Mitigation MAY be empty or state "No mitigation required." Award full points for mitigation criteria on rejected flaws.
+
+### BOILERPLATE AWARENESS
+
+- Detect and penalize boilerplate content: generic statements that could apply to any CVE without modification.
+- Examples of boilerplate: "This vulnerability could allow an attacker to execute arbitrary code", "Users should update to the latest version" without specifics.
+- Content that merely restates the CVE description from NVD without adding Red Hat context should score lower on originality.
+
+### CUSTOMER LENS FRAMEWORK
+
+Evaluate whether the content helps three customer personas answer their core questions:
+
+**Ops / Sysadmin** needs:
+- Package, service, or configuration names
+- Affected and fixed versions
+- Executable mitigations
+- Operational next steps
+
+**Security / CISO** needs:
+- Business risk assessment
+- Severity rationale
+- Exploit prerequisites
+- Exposure likelihood
+- Data classes at risk
+
+**Compliance / Auditor** needs:
+- CVSS score and vector
+- CWE classification
+- CIA impact assessment
+- STRIDE mapping
+- Affected and fixed versions
+- Remediation status
+- Citeable decision logic
+
+For each review, determine what customers CAN decide, what REMAINS UNCLEAR, and what needs MANUAL context from an analyst.
+
+The three core questions every review must address:
+1. Am I exposed?
+2. How bad is it for me?
+3. What should I do next?
+
+### SUGGESTED REWRITES
+
+- If the statement scores below 6/10 in Category 2, provide a suggested_statement rewrite.
+- If the mitigation scores below 6/10 in Category 3, provide a suggested_mitigation rewrite.
+- Rewrites should follow the structured formula and address identified gaps.
+
+### OUTPUT RULES
+
+- Return a flat list of criterion scores in the "scores" field. Each entry must include: category (the rubric category name), criterion_id, score (0-2), and justification.
+- Include all 30 criteria (5 per category x 6 categories) in the scores list. Each criterion's "category" field must exactly match one of the 6 category names above.
+- Do NOT compute overall_score or rating — these are auto-computed from your criterion scores.
+- Provide the customer_lens assessment with all three lists populated.
+- List concrete strengths, critical_gaps, and recommendations (not generic advice).
+- The value_add field should assess whether this flaw's content provides information customers cannot find in public CVE databases alone.
+- The disclaimer field MUST be exactly: "This response was generated by Aegis AI (https://github.com/RedHatProductSecurity/aegis-ai) using generative AI for informational purposes. All findings should be validated by a human expert."
+""",
+            context=CVEFeatureInput(cve_id=cve_id),
+            output_schema=QualityReviewModel.model_json_schema(),
+        )
+
+        return await self.guarded_run(
+            prompt, deps=deps, output_type=QualityReviewModel
         )

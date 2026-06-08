@@ -139,6 +139,22 @@ async def test_component_intelligence_test_model():
     assert componentintelligence.confidence == 0.95
 
 
+async def test_quality_review_with_test_model():
+    test_name = "test_quality_review_with_test_model"
+
+    result = get_cached_response(test_name)
+
+    if not result:
+        llm_result = await cve.QualityReview(rh_feature_agent).exec("CVE-2026-5767")
+        result = llm_result.output.model_dump_json(indent=4)
+        cache_response(test_name, result)
+
+    quality_review = cve.QualityReviewModel.model_validate_json(result)
+    assert isinstance(quality_review, cve.QualityReviewModel)
+    assert len(quality_review.scores) >= 6  # at least one criterion per category
+    assert 0 <= quality_review.overall_score <= 60
+
+
 async def test_suggest_impact_with_bad_cve_test_model():
     with pytest.raises(ValidationError) as excinfo:
         await cve.SuggestImpact(rh_feature_agent).exec("BAD-CVE-ID")
