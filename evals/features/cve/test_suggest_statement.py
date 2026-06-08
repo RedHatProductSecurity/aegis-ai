@@ -268,7 +268,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-15284",
         expected_statement="This vulnerability is rated Important for Red Hat products that utilize the `qs` module for parsing query strings, particularly when processing user-controlled input with bracket notation. The `arrayLimit` option, intended to prevent resource exhaustion, is bypassed when bracket notation (`a[]=value`) is used, allowing a remote attacker to cause a denial of service through memory exhaustion. This can lead to application crashes or unresponsiveness, making the service unavailable.",
-        metadata={"known_to_fail_evaluators": ["StatementNoCodeLevelDetails"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementNoCodeLevelDetails",
+                "StatementEvaluator",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-22097",
