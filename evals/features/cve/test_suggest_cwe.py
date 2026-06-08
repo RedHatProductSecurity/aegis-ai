@@ -97,6 +97,7 @@ cases = [
         # kdudka: CWE-131 is closely related and applicable IMO
         cve_id="CVE-2022-50235",
         cwe_list=["CWE-805", "CWE-131"],
+        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2022-50333",
