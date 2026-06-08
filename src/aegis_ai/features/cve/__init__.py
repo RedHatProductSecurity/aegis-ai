@@ -849,7 +849,9 @@ class QualityReview(Feature):
             rules="""\
 ### RUBRIC CATEGORIES
 
-Score each criterion 0 (missing/wrong), 1 (partial), or 2 (fully met). Provide a brief justification for each score.
+IMPORTANT: You MUST score ALL 30 criteria below (5 per category x 6 categories). Do not skip any category or criterion. Keep each justification to one sentence.
+
+Score each criterion 0 (missing/wrong), 1 (partial), or 2 (fully met).
 
 **Category 1: Description — Technical Clarity** (up to 10 points)
 Criteria:
@@ -958,8 +960,8 @@ The three core questions every review must address:
 
 ### OUTPUT RULES
 
-- Return a flat list of criterion scores in the "scores" field. Each entry must include: category (the rubric category name), criterion_id, score (0-2), and justification.
-- Include all 30 criteria (5 per category x 6 categories) in the scores list. Each criterion's "category" field must exactly match one of the 6 category names above.
+- Return ALL 30 criterion scores in the "scores" field as a flat list. Each entry must include: category (exact category name from above), criterion_id, score (0-2), and justification (one sentence).
+- Do NOT omit any category or criterion. The scores list must contain exactly 30 entries.
 - Do NOT compute overall_score or rating — these are auto-computed from your criterion scores.
 - Provide the customer_lens assessment with all three lists populated.
 - List concrete strengths, critical_gaps, and recommendations (not generic advice).
