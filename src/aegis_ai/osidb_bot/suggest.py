@@ -60,6 +60,24 @@ async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
         raise RuntimeError(f"{msg}: {e.__class__.__name__}")
 
 
+def record_aegis_meta(
+    flaw_data: FlawData,
+    timestamp: datetime,
+    dst: str,
+    output: AegisFeatureModel,
+    **extra: Any,
+) -> None:
+    aegis_meta = flaw_data.setdefault("aegis_meta", {})
+    dst_field = aegis_meta.setdefault(dst, [])
+    entry: dict[str, Any] = {
+        "timestamp": timestamp.isoformat(),
+        "data_quality": output.data_quality,
+        "confidence": output.confidence,
+        **extra,
+    }
+    dst_field.append(entry)
+
+
 def update_field(
     flaw_data: FlawData,
     timestamp: datetime,
@@ -97,17 +115,14 @@ def update_field(
     flaw_data[dst] = value
 
     # record Aegis metadata
-    aegis_meta = flaw_data.setdefault("aegis_meta", {})
-    dst_field = aegis_meta.setdefault(dst, [])
-    dst_field.append(
-        {
-            "type": "AI-Bot",
-            "value": value,
-            "explanation": output.explanation,
-            "timestamp": timestamp.isoformat(),
-            "data_quality": output.data_quality,
-            "confidence": output.confidence,
-        }
+    record_aegis_meta(
+        flaw_data,
+        timestamp,
+        dst,
+        output,
+        type="AI-Bot",
+        value=value,
+        explanation=output.explanation,
     )
 
     return set([dst])
