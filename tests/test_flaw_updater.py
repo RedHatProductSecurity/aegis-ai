@@ -184,3 +184,38 @@ async def test_flaw_updater_do_sets_processed_in_aegis_meta(mock_exec_feature):
 
     aegis_meta = flaw_data["aegis_meta"]
     assert aegis_meta.get("processed") is True
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_flaw_updater_force_skips_validation(mock_exec_feature):
+    """FlawUpdater.do() with force=True processes flaws that would fail validation."""
+    mock_exec_feature.side_effect = _canned_exec_feature
+
+    flaw_data = _minimal_flaw_data()
+    flaw_data["owner"] = "someone@example.com"
+
+    session = _mock_session(flaw_data)
+    agent = MagicMock()
+
+    updater = FlawUpdater(session, agent, CVE_ID, force=True)
+    await updater.do()
+
+    session.flaws.update.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_flaw_updater_no_force_raises_on_ineligible(mock_exec_feature):
+    """FlawUpdater.do() without force raises RuntimeError on ineligible flaw."""
+    mock_exec_feature.side_effect = _canned_exec_feature
+
+    flaw_data = _minimal_flaw_data()
+    flaw_data["owner"] = "someone@example.com"
+
+    session = _mock_session(flaw_data)
+    agent = MagicMock()
+
+    updater = FlawUpdater(session, agent, CVE_ID)
+    with pytest.raises(RuntimeError, match="skipped because owner="):
+        await updater.do()

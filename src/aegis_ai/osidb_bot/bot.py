@@ -161,6 +161,7 @@ class FlawUpdater:
     osidb: Session
     agent: Agent
     cve: CVEID
+    force: bool
 
     # OSIDB flaw from session.flaws.retrieve()
     flaw_data: Optional[FlawData]
@@ -168,10 +169,13 @@ class FlawUpdater:
     # list of fields updated by the agent
     updated_fields: set[str]
 
-    def __init__(self, osidb: Session, agent: Agent, cve: CVEID):
+    def __init__(
+        self, osidb: Session, agent: Agent, cve: CVEID, *, force: bool = False
+    ):
         self.osidb = osidb
         self.agent = agent
         self.cve = cve
+        self.force = force
         self.updated_fields = set()
 
         try:
@@ -225,7 +229,13 @@ class FlawUpdater:
         assert self.flaw_data
 
         # validate eligibility on the fresh flaw data to avoid TOCTOU
-        FlawFinder.validate(self.flaw_data)
+        try:
+            FlawFinder.validate(self.flaw_data)
+        except RuntimeError as e:
+            if self.force:
+                self._warn(f"bypassing flaw eligibility check: {str(e)}")
+            else:
+                raise
 
         # apply suggestions
         await self.apply_suggestions()
@@ -284,10 +294,18 @@ class Bot:
     osidb: Session
     total: int
     pending: dict[BotState, bool]
+    force: bool
 
-    def __init__(self, state_file_handler: StateFileHandler, agent: Agent):
+    def __init__(
+        self,
+        state_file_handler: StateFileHandler,
+        agent: Agent,
+        *,
+        force: bool = False,
+    ):
         self.sfh = state_file_handler
         self.agent = agent
+        self.force = force
         self.total = 0
         self.pending = {}
         try:
@@ -308,7 +326,7 @@ class Bot:
         flaw_updater: Optional[FlawUpdater] = None
 
         try:
-            flaw_updater = FlawUpdater(self.osidb, self.agent, cve)
+            flaw_updater = FlawUpdater(self.osidb, self.agent, cve, force=self.force)
             self.pending[flaw_updater.state()] = True  # mark as pending
             await flaw_updater.do()
 
