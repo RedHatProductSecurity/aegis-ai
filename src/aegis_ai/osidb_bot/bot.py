@@ -162,6 +162,7 @@ class FlawUpdater:
     agent: Agent
     cve: CVEID
     force: bool
+    read_only: bool
 
     # OSIDB flaw from session.flaws.retrieve()
     flaw_data: Optional[FlawData]
@@ -170,12 +171,19 @@ class FlawUpdater:
     updated_fields: set[str]
 
     def __init__(
-        self, osidb: Session, agent: Agent, cve: CVEID, *, force: bool = False
+        self,
+        osidb: Session,
+        agent: Agent,
+        cve: CVEID,
+        *,
+        force: bool = False,
+        read_only: bool = False,
     ):
         self.osidb = osidb
         self.agent = agent
         self.cve = cve
         self.force = force
+        self.read_only = read_only
         self.updated_fields = set()
 
         try:
@@ -240,6 +248,11 @@ class FlawUpdater:
         # apply suggestions
         await self.apply_suggestions()
 
+        if self.read_only:
+            msg = f"read-only mode, skipping OSIDB update of {self.updated_fields}"
+            self._warn(msg)
+            return
+
         # mark the flaw as processed by Aegis/osidb-bot
         aegis_meta = self.flaw_data.setdefault("aegis_meta", {})
         aegis_meta["processed"] = True
@@ -295,6 +308,7 @@ class Bot:
     total: int
     pending: dict[BotState, bool]
     force: bool
+    read_only: bool
 
     def __init__(
         self,
@@ -302,10 +316,12 @@ class Bot:
         agent: Agent,
         *,
         force: bool = False,
+        read_only: bool = False,
     ):
         self.sfh = state_file_handler
         self.agent = agent
         self.force = force
+        self.read_only = read_only
         self.total = 0
         self.pending = {}
         try:
@@ -326,7 +342,13 @@ class Bot:
         flaw_updater: Optional[FlawUpdater] = None
 
         try:
-            flaw_updater = FlawUpdater(self.osidb, self.agent, cve, force=self.force)
+            flaw_updater = FlawUpdater(
+                self.osidb,
+                self.agent,
+                cve,
+                force=self.force,
+                read_only=self.read_only,
+            )
             self.pending[flaw_updater.state()] = True  # mark as pending
             await flaw_updater.do()
 
@@ -350,7 +372,7 @@ class Bot:
                 del self.pending[state]
 
             # do not update state file if the CVE with lowest created_dt is still being processed
-            if state:
+            if not self.read_only and state:
                 # update state file
                 self.sfh.write_state(state)
 

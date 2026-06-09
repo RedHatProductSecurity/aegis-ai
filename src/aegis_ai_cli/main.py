@@ -402,8 +402,14 @@ def component_intelligence(component_name):
     default=False,
     help="Skip flaw eligibility validation.",
 )
+@click.option(
+    "--read-only",
+    is_flag=True,
+    default=False,
+    help="Skip OSIDB data updates (dry run).",
+)
 @click.argument("cve_ids", nargs=-1, type=CVEID)
-def osidb_bot(state_file, force, cve_ids):
+def osidb_bot(state_file, force, read_only, cve_ids):
     """
     OSIDB bot: process CVE IDs (optional) with optional state file.
     """
@@ -420,7 +426,7 @@ def osidb_bot(state_file, force, cve_ids):
         # this prevents multiple processes running in parallel on a single state file
         # (if state_file is not None)
         with StateFileHandler(state_file) as sfh:
-            osidb_bot = Bot(sfh, cli_agent, force=force)
+            osidb_bot = Bot(sfh, cli_agent, force=force, read_only=read_only)
             log_memory("bot_created")
             runner = osidb_bot.process(cve_ids)
             asyncio.run(runner)

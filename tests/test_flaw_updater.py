@@ -219,3 +219,21 @@ async def test_flaw_updater_no_force_raises_on_ineligible(mock_exec_feature):
     updater = FlawUpdater(session, agent, CVE_ID)
     with pytest.raises(RuntimeError, match="skipped because owner="):
         await updater.do()
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_flaw_updater_read_only_skips_osidb_writes(mock_exec_feature):
+    """FlawUpdater.do() with read_only=True runs suggestions but skips OSIDB writes."""
+    mock_exec_feature.side_effect = _canned_exec_feature
+
+    flaw_data = _minimal_flaw_data()
+    session = _mock_session(flaw_data)
+    agent = MagicMock()
+
+    updater = FlawUpdater(session, agent, CVE_ID, read_only=True)
+    await updater.do()
+
+    assert updater.updated_fields
+    session.flaws.update.assert_not_called()
+    assert "processed" not in flaw_data.get("aegis_meta", {})
