@@ -22,21 +22,24 @@ METRICS_THR = {
 }
 
 
-def check_metrics(feat_name: str, cve_id: CVEID, output: AegisFeatureModel) -> bool:
-    """return True if both data_quality and confidence are above skip_thr"""
-    skip = False
+def check_metrics(
+    feat_name: str, cve_id: str | CVEID, output: AegisFeatureModel
+) -> Optional[str]:
+    """Return None if metrics are acceptable, or the name of the failing metric.
+
+    `cve_id` may be a `CVEID` or a raw string (including an empty string if the ID is missing)."""
+    skip_reason: Optional[str] = None
     for field, thr_map in METRICS_THR.items():
         value = getattr(output, field)
         if value <= thr_map["info_thr"]:
             logger.info(f"{cve_id}: {feat_name}: too low {field}: {value}")
         if value <= thr_map["skip_thr"]:
-            skip = True
+            skip_reason = field
 
-    if skip:
+    if skip_reason:
         logger.warning(f"{cve_id}: {feat_name}: discarding suggestion")
-        return False
 
-    return True
+    return skip_reason
 
 
 async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
@@ -48,12 +51,8 @@ async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
         result = await feature.exec(cve_id, static_context=flaw_data)
         log_memory(f"{feat_name}_end({cve_id})")
         output = result.output
-        if not isinstance(output, AegisFeatureModel):
-            return None
-        if check_metrics(feat_name, cve_id, output):
+        if isinstance(output, AegisFeatureModel):
             return output
-        else:
-            return None
 
     except Exception as e:
         msg = "exec_feature() terminated with Exception"
@@ -73,6 +72,11 @@ def update_field(
     assert (not src) or (not value)
     if only_if_missing and flaw_data.get(dst):
         # do not override existing field
+        return set()
+
+    cve_id = flaw_data.get("cve_id", "")
+    skip_reason = check_metrics(dst, cve_id, output)
+    if skip_reason:
         return set()
 
     # get source value
@@ -198,6 +202,13 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     # pick the "impact" field
     changed = update_field(flaw_data, ts, "impact", output)
 
+    # record aegis_meta for RH CVSS (in the format used by OSIM)
+    if not update_field(
+        flaw_data, ts, "_cvss3_vector", output, value=output.cvss3_vector
+    ):
+        # do not update CVSS when check_metrics() decides to skip the update
+        return changed
+
     # RH CVSS is a subresource in OSIDB (flaws.cvss_scores), not part of flaw update.
     # Store pending data for the bot to apply via osidb.flaws.cvss_scores create/update.
     rh_cvss = {
@@ -209,10 +220,6 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     }
     flaw_data["cvss_scores"] = [rh_cvss]
     changed.add("cvss_scores")
-
-    # record aegis_meta for RH CVSS (in the format used by OSIM)
-    update_field(flaw_data, ts, "_cvss3_vector", output, value=output.cvss3_vector)
-
     return changed
 
 
