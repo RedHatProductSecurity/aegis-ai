@@ -62,6 +62,10 @@ source = "vcs"
 [tool.hatch.build.hooks.vcs]
 version-file = "src/aegis_ai/_version.py"
 
+[tool.ty.environment]
+# match pytest's `pythonpath = ["."]` so ty can resolve `tests.*` imports
+extra-paths = ["."]
+
 [tool.ty.analysis]
 # xgboost is optional (`classifier_deps`); CI/default installs omit it
 allowed-unresolved-imports = ["xgboost.**"]

@@ -25,7 +25,7 @@ def disable_model_requests():
     if test_allow_recapture:
         models.ALLOW_MODEL_REQUESTS = True
     else:
-        models.ALLOW_MODEL_REQUESTS = False  # type: ignore
+        models.ALLOW_MODEL_REQUESTS = False
 
 
 @pytest.fixture
