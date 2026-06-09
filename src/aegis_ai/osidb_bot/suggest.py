@@ -95,6 +95,19 @@ def update_field(
     cve_id = flaw_data.get("cve_id", "")
     skip_reason = check_metrics(dst, cve_id, output)
     if skip_reason:
+        skip_value = getattr(output, skip_reason)
+        record_aegis_meta(
+            flaw_data,
+            timestamp,
+            dst,
+            output,
+            type="AI-Bot-Skipped",
+            skip_reason=skip_reason,
+            skip_description=(
+                f"{dst} suggestion discarded: {skip_reason}={skip_value}"
+                f" is below threshold {METRICS_THR[skip_reason]['skip_thr']}"
+            ),
+        )
         return set()
 
     # get source value
