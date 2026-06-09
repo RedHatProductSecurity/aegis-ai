@@ -101,6 +101,8 @@ def update_field(
             "value": value,
             "explanation": output.explanation,
             "timestamp": timestamp.isoformat(),
+            "data_quality": output.data_quality,
+            "confidence": output.confidence,
         }
     )
 

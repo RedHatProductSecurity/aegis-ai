@@ -65,22 +65,27 @@ async def _canned_exec_feature(feature, flaw_data):
     cve_id = flaw_data["cve_id"]
     explanation = f"Canned explanation for {name} ({cve_id})"
 
+    metrics = dict(data_quality=1.0, confidence=1.0)
+
     if name == "SuggestAffectedComponents":
         return SimpleNamespace(
             components=["kernel", "curl"],
             ecosystems=["upstream"],
             explanation=explanation,
+            **metrics,
         )
     if name == "SuggestDescriptionText":
         return SimpleNamespace(
             suggested_title="Canned title",
             suggested_description="Canned description text.",
             explanation=explanation,
+            **metrics,
         )
     if name == "SuggestCWE":
         return SimpleNamespace(
             cwe=["CWE-79"],
             explanation=explanation,
+            **metrics,
         )
     if name == "SuggestImpact":
         return SimpleNamespace(
@@ -88,6 +93,7 @@ async def _canned_exec_feature(feature, flaw_data):
             cvss3_score="3.7",
             cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
             explanation=explanation,
+            **metrics,
         )
     raise ValueError(f"Unknown feature: {name}")
 
