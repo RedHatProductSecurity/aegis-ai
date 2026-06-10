@@ -4,6 +4,7 @@ from pydantic_core import ValidationError
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.features import component, cve
+from aegis_ai.features.cve.data_models import QualityRating
 from tests.utils.llm_cache import get_cached_response, cache_response
 
 pytestmark = pytest.mark.asyncio
@@ -145,14 +146,28 @@ async def test_quality_review_with_test_model():
     result = get_cached_response(test_name)
 
     if not result:
-        llm_result = await cve.QualityReview(rh_feature_agent).exec("CVE-2026-5767")
+        llm_result = await cve.QualityReview(rh_feature_agent).exec("CVE-2025-0725")
         result = llm_result.output.model_dump_json(indent=4)
         cache_response(test_name, result)
 
     quality_review = cve.QualityReviewModel.model_validate_json(result)
     assert isinstance(quality_review, cve.QualityReviewModel)
-    assert len(quality_review.scores) >= 6  # at least one criterion per category
-    assert 0 <= quality_review.overall_score <= 60
+
+    # Enforce exact rubric shape: 30 criteria across 6 categories
+    assert len(quality_review.scores) == 30
+    categories = {s.category for s in quality_review.scores}
+    assert len(categories) == 6
+
+    # Verify overall_score bounds and rating alignment
+    assert 0.0 <= quality_review.overall_score <= 10.0
+    if quality_review.overall_score >= 8.0:
+        assert quality_review.rating == QualityRating.EXCELLENT
+    elif quality_review.overall_score >= 6.0:
+        assert quality_review.rating == QualityRating.GOOD
+    elif quality_review.overall_score >= 4.0:
+        assert quality_review.rating == QualityRating.NEEDS_IMPROVEMENT
+    else:
+        assert quality_review.rating == QualityRating.FAILS_STANDARDS
 
 
 async def test_suggest_impact_with_bad_cve_test_model():

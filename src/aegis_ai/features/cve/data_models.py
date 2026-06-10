@@ -354,8 +354,21 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
 # ---------------------------------------------------------------------------
 
 
+# Category weights from the FQI rubric specification.
+# Each category has 5 criteria scored 0-2 (max 10 raw points).
+# The weighted final score is on a 0.0-10.0 scale.
+CATEGORY_WEIGHTS: dict[str, float] = {
+    "Description \u2014 Technical Clarity": 0.20,
+    "Statement \u2014 Technical Clarity": 0.25,
+    "Mitigation": 0.10,
+    "Grammar & Style": 0.15,
+    "Content Ambiguity": 0.15,
+    "Technical Value": 0.15,
+}
+
+
 class QualityRating(str, Enum):
-    """Overall quality rating derived from the 60-point rubric score."""
+    """Overall quality rating derived from the weighted 0-10 score."""
 
     EXCELLENT = "Excellent"
     GOOD = "Good"
@@ -405,8 +418,9 @@ class CustomerLensAssessment(BaseModel):
 
 class QualityReviewModel(AegisFeatureModel):
     """
-    Quality review of CVE flaw content scored against a 60-point rubric
-    with 6 categories, evaluated through a Customer Lens framework.
+    Quality review of CVE flaw content scored against a weighted rubric
+    with 6 categories (30 criteria), evaluated through a Customer Lens framework.
+    Final score is on a 0.0-10.0 weighted scale per the FQI specification.
     """
 
     cve_id: CVEID = Field(
@@ -414,11 +428,11 @@ class QualityReviewModel(AegisFeatureModel):
         description="The CVE identifier for the reviewed flaw.",
     )
 
-    overall_score: int = Field(
-        default=0,
-        ge=0,
-        le=60,
-        description="Total score across all categories (auto-computed).",
+    overall_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=10.0,
+        description="Weighted score on a 0.0-10.0 scale (auto-computed from criterion scores).",
     )
 
     rating: QualityRating = Field(
@@ -469,13 +483,29 @@ class QualityReviewModel(AegisFeatureModel):
 
     @model_validator(mode="after")
     def compute_overall_score_and_rating(self) -> "QualityReviewModel":
-        """Auto-compute overall_score and rating from criterion scores."""
-        self.overall_score = sum(c.score for c in self.scores)
-        if self.overall_score >= 48:
+        """Auto-compute weighted overall_score and rating from criterion scores.
+
+        Groups criterion scores by category, sums each category's raw points
+        (0-10), then applies FQI category weights to produce a 0.0-10.0 score.
+        """
+        # Sum raw points per category
+        cat_raw: dict[str, int] = {}
+        for c in self.scores:
+            cat_raw[c.category] = cat_raw.get(c.category, 0) + c.score
+
+        # Compute weighted score: sum(category_raw / 10.0 * weight) * 10.0
+        weighted = 0.0
+        for cat_name, weight in CATEGORY_WEIGHTS.items():
+            raw = min(cat_raw.get(cat_name, 0), 10)  # clamp to max 10 per category
+            weighted += (raw / 10.0) * weight
+        self.overall_score = round(weighted * 10.0, 1)
+
+        # Derive rating from weighted score
+        if self.overall_score >= 8.0:
             self.rating = QualityRating.EXCELLENT
-        elif self.overall_score >= 36:
+        elif self.overall_score >= 6.0:
             self.rating = QualityRating.GOOD
-        elif self.overall_score >= 24:
+        elif self.overall_score >= 4.0:
             self.rating = QualityRating.NEEDS_IMPROVEMENT
         else:
             self.rating = QualityRating.FAILS_STANDARDS
@@ -483,4 +513,4 @@ class QualityReviewModel(AegisFeatureModel):
 
     def printable_outcome(self) -> str:
         """Override the logging hook to print the quality score and rating."""
-        return f"score={self.overall_score}/60 ({self.rating.value})"
+        return f"score={self.overall_score}/10.0 ({self.rating.value})"

@@ -341,7 +341,7 @@ def cvss_diff(cve_id):
 @click.argument("cve_id", type=CVEID)
 def quality_review(cve_id):
     """
-    Review quality of CVE flaw content against a 60-point rubric.
+    Review quality of CVE flaw content against a weighted quality rubric (0-10 scale).
     """
 
     async def _doit():

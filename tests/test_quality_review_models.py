@@ -3,6 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from aegis_ai.features.cve.data_models import (
+    CATEGORY_WEIGHTS,
     CriterionScore,
     CustomerLensAssessment,
     QualityRating,
@@ -17,12 +18,12 @@ DISCLAIMER = (
 )
 
 _CATEGORY_NAMES = [
-    "Description — Technical Clarity",
-    "Statement — Technical Clarity",
+    "Description \u2014 Technical Clarity",
+    "Statement \u2014 Technical Clarity",
     "Mitigation",
     "Grammar & Style",
     "Content Ambiguity",
-    "Technical Value — Customer Lens",
+    "Technical Value",
 ]
 
 _CRITERION_IDS = [
@@ -71,6 +72,23 @@ def _make_review_model(category_scores: list[list[int]]) -> QualityReviewModel:
     )
 
 
+# --- CATEGORY_WEIGHTS ---
+
+
+def test_category_weights_sum_to_one():
+    assert round(sum(CATEGORY_WEIGHTS.values()), 2) == 1.0
+
+
+def test_category_weights_match_spec():
+    """Verify weights match the FQI specification."""
+    assert CATEGORY_WEIGHTS["Description \u2014 Technical Clarity"] == 0.20
+    assert CATEGORY_WEIGHTS["Statement \u2014 Technical Clarity"] == 0.25
+    assert CATEGORY_WEIGHTS["Mitigation"] == 0.10
+    assert CATEGORY_WEIGHTS["Grammar & Style"] == 0.15
+    assert CATEGORY_WEIGHTS["Content Ambiguity"] == 0.15
+    assert CATEGORY_WEIGHTS["Technical Value"] == 0.15
+
+
 # --- QualityRating enum ---
 
 
@@ -105,34 +123,34 @@ def test_criterion_score_bounds_high():
         )
 
 
-# --- QualityReviewModel score and rating ---
+# --- QualityReviewModel weighted score and rating ---
 
 
 def test_quality_review_excellent():
-    # 6 categories x [2,2,2,2,2] = 60 points
+    # All categories score 10/10 raw -> weighted 10.0
     model = _make_review_model([[2, 2, 2, 2, 2]] * 6)
-    assert model.overall_score == 60
+    assert model.overall_score == 10.0
     assert model.rating == QualityRating.EXCELLENT
 
 
 def test_quality_review_good():
-    # 42 points: 6 categories x [2,1,1,1,2] = 7 each = 42
+    # All categories 7/10 raw -> weighted 7.0
     model = _make_review_model([[2, 1, 1, 1, 2]] * 6)
-    assert model.overall_score == 42
+    assert model.overall_score == 7.0
     assert model.rating == QualityRating.GOOD
 
 
 def test_quality_review_needs_improvement():
-    # 30 points: 6 categories x [1,1,1,1,1] = 5 each = 30
+    # All categories 5/10 raw -> weighted 5.0
     model = _make_review_model([[1, 1, 1, 1, 1]] * 6)
-    assert model.overall_score == 30
+    assert model.overall_score == 5.0
     assert model.rating == QualityRating.NEEDS_IMPROVEMENT
 
 
 def test_quality_review_fails_standards():
-    # 18 points: 6 categories x [1,1,1,0,0] = 3 each = 18
+    # All categories 3/10 raw -> weighted 3.0
     model = _make_review_model([[1, 1, 1, 0, 0]] * 6)
-    assert model.overall_score == 18
+    assert model.overall_score == 3.0
     assert model.rating == QualityRating.FAILS_STANDARDS
 
 
@@ -141,12 +159,12 @@ def test_quality_review_fails_standards():
 
 def test_printable_outcome():
     model = _make_review_model([[2, 2, 2, 2, 2]] * 6)
-    assert model.printable_outcome() == "score=60/60 (Excellent)"
+    assert model.printable_outcome() == "score=10.0/10.0 (Excellent)"
 
 
 def test_printable_outcome_low_score():
     model = _make_review_model([[0, 0, 0, 0, 0]] * 6)
-    assert model.printable_outcome() == "score=0/60 (Fails Standards)"
+    assert model.printable_outcome() == "score=0.0/10.0 (Fails Standards)"
 
 
 # --- Auto-computation ignores LLM-provided values ---
@@ -156,11 +174,11 @@ def test_overall_score_ignores_llm_provided_value():
     """overall_score and rating must be auto-computed, ignoring any values the LLM provides."""
     scores = _make_scores([[2, 2, 2, 2, 2]] * 6)
 
-    # Pass wrong overall_score and rating — they should be overridden
+    # Pass wrong overall_score and rating -- they should be overridden
     model = QualityReviewModel(
         cve_id="CVE-2025-0001",
-        overall_score=5,  # wrong — should be auto-computed to 60
-        rating=QualityRating.FAILS_STANDARDS,  # wrong — should be Excellent
+        overall_score=1.0,  # wrong -- should be auto-computed to 10.0
+        rating=QualityRating.FAILS_STANDARDS,  # wrong -- should be Excellent
         scores=scores,
         customer_lens=CustomerLensAssessment(
             customer_can_decide=["test"],
@@ -176,50 +194,82 @@ def test_overall_score_ignores_llm_provided_value():
         tools_used=["osidb_tool"],
         disclaimer=DISCLAIMER,
     )
-    assert model.overall_score == 60
+    assert model.overall_score == 10.0
     assert model.rating == QualityRating.EXCELLENT
 
 
 # --- Rating boundary tests ---
 
 
-def test_rating_boundary_48():
-    """Score of exactly 48 should be Excellent."""
-    # 48 = 6 categories x 8 each = [2,2,2,2,0] per category
+def test_rating_boundary_excellent():
+    """All categories at 8/10 raw -> weighted 8.0 = Excellent threshold."""
     model = _make_review_model([[2, 2, 2, 2, 0]] * 6)
-    assert model.overall_score == 48
+    assert model.overall_score == 8.0
     assert model.rating == QualityRating.EXCELLENT
 
 
-def test_rating_boundary_47():
-    """Score of 47 should be Good (just below Excellent threshold)."""
-    # 47 = 5 categories x 8 + 1 category x 7
+def test_rating_boundary_just_below_excellent():
+    """5 categories at 8/10, last (Technical Value, 15%) at 7/10 -> 7.9 = Good."""
     cats = [[2, 2, 2, 2, 0]] * 5 + [[2, 2, 2, 1, 0]]
     model = _make_review_model(cats)
-    assert model.overall_score == 47
+    assert model.overall_score == 7.9
     assert model.rating == QualityRating.GOOD
 
 
-def test_rating_boundary_36():
-    """Score of exactly 36 should be Good."""
-    # 36 = 6 categories x 6 each = [2,2,2,0,0] per category
+def test_rating_boundary_good():
+    """All categories at 6/10 raw -> weighted 6.0 = Good threshold."""
     model = _make_review_model([[2, 2, 2, 0, 0]] * 6)
-    assert model.overall_score == 36
+    assert model.overall_score == 6.0
     assert model.rating == QualityRating.GOOD
 
 
-def test_rating_boundary_24():
-    """Score of exactly 24 should be Needs Improvement."""
-    # 24 = 6 categories x 4 each = [2,2,0,0,0] per category
+def test_rating_boundary_needs_improvement():
+    """All categories at 4/10 raw -> weighted 4.0 = Needs Improvement threshold."""
     model = _make_review_model([[2, 2, 0, 0, 0]] * 6)
-    assert model.overall_score == 24
+    assert model.overall_score == 4.0
     assert model.rating == QualityRating.NEEDS_IMPROVEMENT
 
 
-def test_rating_boundary_23():
-    """Score of 23 should be Fails Standards."""
-    # 23 = 5 categories x 4 + 1 category x 3
+def test_rating_boundary_just_below_needs_improvement():
+    """5 categories at 4/10, last (Technical Value, 15%) at 3/10 -> 3.9 = Fails Standards."""
     cats = [[2, 2, 0, 0, 0]] * 5 + [[2, 1, 0, 0, 0]]
     model = _make_review_model(cats)
-    assert model.overall_score == 23
+    assert model.overall_score == 3.9
     assert model.rating == QualityRating.FAILS_STANDARDS
+
+
+# --- Weighting verification ---
+
+
+def test_statement_weight_exceeds_mitigation():
+    """Statement (25%) should contribute more than Mitigation (10%) to the final score.
+
+    Two scenarios with identical total raw points but different distributions:
+    - A: Statement=10, Mitigation=0 (rest at 5) -> 5.8
+    - B: Statement=0, Mitigation=10 (rest at 5) -> 4.2
+    """
+    # Great statement, no mitigation
+    score_a = _make_review_model(
+        [
+            [1, 1, 1, 1, 1],
+            [2, 2, 2, 2, 2],
+            [0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+        ]
+    )
+    # No statement, great mitigation
+    score_b = _make_review_model(
+        [
+            [1, 1, 1, 1, 1],
+            [0, 0, 0, 0, 0],
+            [2, 2, 2, 2, 2],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+        ]
+    )
+    assert score_a.overall_score == 5.8
+    assert score_b.overall_score == 4.2
+    assert score_a.overall_score > score_b.overall_score
