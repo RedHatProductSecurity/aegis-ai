@@ -139,6 +139,8 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float, st
 
 
 _PATCH_SIZE_LIMIT = 1_000_000
+_HTML_SIZE_LIMIT = 5_000_000
+_MAX_COMMIT_HASHES = 20
 
 _BACKPORT_SIMILARITY_THRESHOLD = 0.75
 
@@ -400,7 +402,10 @@ class KernelImpactClassifier:
         """Fetch raw patches from git.kernel.org for given commit hashes.
 
         Tries torvalds, stable, linux-next, and the gregkh/linux GitHub
-        fallback in order.
+        fallback in order.  Responses exceeding ``_PATCH_SIZE_LIMIT`` are
+        rejected early via ``Content-Length`` or a streaming byte cap so
+        pathological commits never sit fully buffered in memory.
+
         Returns list of (commit_hash, patch_content) tuples.
         """
         patches = []
@@ -412,8 +417,31 @@ class KernelImpactClassifier:
                     url = tmpl.format(hash=commit_hash)
                     try:
                         resp = await client.get(url, follow_redirects=True)
-                        if resp.status_code == 200 and len(resp.text) > 100:
-                            patches.append((commit_hash, resp.text))
+                        if resp.status_code != 200:
+                            continue
+
+                        content_length = resp.headers.get("content-length")
+                        if content_length and int(content_length) > _PATCH_SIZE_LIMIT:
+                            logger.warning(
+                                "Skipping oversized patch %s from %s "
+                                "(%s bytes via Content-Length)",
+                                commit_hash[:12],
+                                tmpl.split("/")[2],
+                                content_length,
+                            )
+                            continue
+
+                        text = resp.text
+                        if len(text) > _PATCH_SIZE_LIMIT:
+                            logger.warning(
+                                "Dropping oversized patch %s (%d chars)",
+                                commit_hash[:12],
+                                len(text),
+                            )
+                            continue
+
+                        if len(text) > 100:
+                            patches.append((commit_hash, text))
                             logger.debug("Fetched patch for %s", commit_hash[:12])
                             fetched = True
                             used_template = tmpl
@@ -444,7 +472,8 @@ class KernelImpactClassifier:
         The al-kernel daemon analyses GitHub commit pages which contain crash
         reports, call stacks, and rendered diffs that raw git patches lack.
         We replicate that by fetching from GitHub (primary) with a
-        git.kernel.org fallback.
+        git.kernel.org fallback.  Responses exceeding ``_HTML_SIZE_LIMIT``
+        are rejected early to prevent large commits from bloating memory.
 
         Returns list of (commit_hash, html_content) tuples.
         """
@@ -456,8 +485,31 @@ class KernelImpactClassifier:
                     url = tmpl.format(hash=commit_hash)
                     try:
                         resp = await client.get(url, follow_redirects=True)
-                        if resp.status_code == 200 and len(resp.text) > 200:
-                            pages.append((commit_hash, resp.text))
+                        if resp.status_code != 200:
+                            continue
+
+                        content_length = resp.headers.get("content-length")
+                        if content_length and int(content_length) > _HTML_SIZE_LIMIT:
+                            logger.warning(
+                                "Skipping oversized commit HTML %s from %s "
+                                "(%s bytes via Content-Length)",
+                                commit_hash[:12],
+                                tmpl.split("/")[2],
+                                content_length,
+                            )
+                            continue
+
+                        text = resp.text
+                        if len(text) > _HTML_SIZE_LIMIT:
+                            logger.warning(
+                                "Dropping oversized commit HTML %s (%d chars)",
+                                commit_hash[:12],
+                                len(text),
+                            )
+                            continue
+
+                        if len(text) > 200:
+                            pages.append((commit_hash, text))
                             logger.debug("Fetched commit HTML for %s", commit_hash[:12])
                             fetched = True
                             break
@@ -576,6 +628,15 @@ class KernelImpactClassifier:
         if not commit_hashes:
             logger.info("No commit hashes for %s, skipping kernel classifier", cve_id)
             return None
+
+        if len(commit_hashes) > _MAX_COMMIT_HASHES:
+            logger.warning(
+                "Capping commit hashes for %s from %d to %d",
+                cve_id,
+                len(commit_hashes),
+                _MAX_COMMIT_HASHES,
+            )
+            commit_hashes = commit_hashes[:_MAX_COMMIT_HASHES]
 
         from aegis_ai.osidb_bot.util import log_memory
 
