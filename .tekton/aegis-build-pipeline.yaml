@@ -99,10 +99,6 @@ spec:
     type: string
     default: "false"
     description: Whether to generate image labels from git tags pointing at HEAD. Set to true on push pipelines only.
-  - name: sast-target-dirs
-    type: string
-    default: docs,evals,scripts,src,tests
-    description: Target directories to scan with SAST tools. Multiple values should be separated with commas.
   results:
   - description: ""
     name: IMAGE_URL
@@ -490,8 +486,6 @@ spec:
       value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
     - name: CACHI2_ARTIFACT
       value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-    - name: TARGET_DIRS
-      value: $(params.sast-target-dirs)
     runAfter:
     - build-image-index
     taskRef:
@@ -542,8 +536,8 @@ spec:
       value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
     - name: IMP_FINDINGS_ONLY
       value: "false"
-    - name: TARGET_DIRS
-      value: $(params.sast-target-dirs)
+    - name: TARGET_DIRS  # avoid scanning .git and .venv
+      value: docs,evals,scripts,src,tests
     runAfter:
     - build-image-index
     taskRef:
@@ -570,8 +564,6 @@ spec:
       value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
     - name: CACHI2_ARTIFACT
       value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
-    - name: TARGET_DIRS
-      value: $(params.sast-target-dirs)
     runAfter:
     - build-image-index
     taskRef:
