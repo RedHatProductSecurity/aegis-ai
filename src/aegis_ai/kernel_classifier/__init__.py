@@ -398,6 +398,58 @@ class KernelImpactClassifier:
     def available(self) -> bool:
         return self.model is not None and self._feature_extractor is not None
 
+    @staticmethod
+    async def _fetch_with_limit(
+        client: "httpx.AsyncClient",
+        url: str,
+        commit_hash: str,
+        size_limit: int,
+        content_type: str,
+    ) -> str | None:
+        """Stream-fetch a URL, aborting before buffering if oversized.
+
+        Returns the response text if it's within *size_limit*, or ``None``
+        if the response was too large, non-200, or failed.
+        """
+        async with client.stream("GET", url, follow_redirects=True) as resp:
+            if resp.status_code != 200:
+                return None
+
+            content_length = resp.headers.get("content-length")
+            if content_length:
+                try:
+                    if int(content_length) > size_limit:
+                        logger.warning(
+                            "Skipping oversized %s %s (%s bytes via Content-Length)",
+                            content_type,
+                            commit_hash[:12],
+                            content_length,
+                        )
+                        return None
+                except ValueError:
+                    logger.warning(
+                        "Malformed Content-Length for %s %s: %r",
+                        content_type,
+                        commit_hash[:12],
+                        content_length,
+                    )
+
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in resp.aiter_bytes():
+                total += len(chunk)
+                if total > size_limit:
+                    logger.warning(
+                        "Dropping oversized %s %s (%d bytes streamed)",
+                        content_type,
+                        commit_hash[:12],
+                        total,
+                    )
+                    return None
+                chunks.append(chunk)
+
+        return b"".join(chunks).decode("utf-8", errors="replace")
+
     async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
         """Fetch raw patches from git.kernel.org for given commit hashes.
 
@@ -416,30 +468,13 @@ class KernelImpactClassifier:
                 for tmpl in PATCH_URL_TEMPLATES:
                     url = tmpl.format(hash=commit_hash)
                     try:
-                        resp = await client.get(url, follow_redirects=True)
-                        if resp.status_code != 200:
+                        text = await self._fetch_with_limit(
+                            client, url, commit_hash, _PATCH_SIZE_LIMIT, "patch"
+                        )
+                        if text is None:
                             continue
 
-                        content_length = resp.headers.get("content-length")
-                        if content_length and int(content_length) > _PATCH_SIZE_LIMIT:
-                            logger.warning(
-                                "Skipping oversized patch %s from %s "
-                                "(%s bytes via Content-Length)",
-                                commit_hash[:12],
-                                tmpl.split("/")[2],
-                                content_length,
-                            )
-                            continue
-
-                        text = resp.text
-                        if len(text) > _PATCH_SIZE_LIMIT:
-                            logger.warning(
-                                "Dropping oversized patch %s (%d chars)",
-                                commit_hash[:12],
-                                len(text),
-                            )
-                            continue
-
+                        # Reject trivially small responses (error pages, empty diffs)
                         if len(text) > 100:
                             patches.append((commit_hash, text))
                             logger.debug("Fetched patch for %s", commit_hash[:12])
@@ -484,30 +519,14 @@ class KernelImpactClassifier:
                 for tmpl in HTML_COMMIT_URL_TEMPLATES:
                     url = tmpl.format(hash=commit_hash)
                     try:
-                        resp = await client.get(url, follow_redirects=True)
-                        if resp.status_code != 200:
+                        text = await self._fetch_with_limit(
+                            client, url, commit_hash, _HTML_SIZE_LIMIT, "commit HTML"
+                        )
+                        if text is None:
                             continue
 
-                        content_length = resp.headers.get("content-length")
-                        if content_length and int(content_length) > _HTML_SIZE_LIMIT:
-                            logger.warning(
-                                "Skipping oversized commit HTML %s from %s "
-                                "(%s bytes via Content-Length)",
-                                commit_hash[:12],
-                                tmpl.split("/")[2],
-                                content_length,
-                            )
-                            continue
-
-                        text = resp.text
-                        if len(text) > _HTML_SIZE_LIMIT:
-                            logger.warning(
-                                "Dropping oversized commit HTML %s (%d chars)",
-                                commit_hash[:12],
-                                len(text),
-                            )
-                            continue
-
+                        # Reject trivially small responses (error pages, empty content);
+                        # HTML pages have more boilerplate overhead than raw patches
                         if len(text) > 200:
                             pages.append((commit_hash, text))
                             logger.debug("Fetched commit HTML for %s", commit_hash[:12])

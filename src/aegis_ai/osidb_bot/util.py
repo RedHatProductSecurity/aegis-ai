@@ -40,4 +40,4 @@ def log_memory(label: str) -> None:
             break
         except (OSError, ValueError):
             continue
-    logger.info(" ".join(parts))
+    logger.debug(" ".join(parts))
