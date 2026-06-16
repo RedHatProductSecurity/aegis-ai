@@ -345,6 +345,7 @@ def quality_review(cve_id):
     """
 
     async def _doit():
+        """Execute the quality review feature asynchronously."""
         feature = cve.QualityReview(cli_agent)
         return await feature.exec(cve_id)
 

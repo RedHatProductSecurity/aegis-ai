@@ -820,6 +820,7 @@ class QualityReview(Feature):
         return None
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        """Run the quality review rubric against the given CVE flaw content."""
         deps = feature_deps(
             exclude_osidb_fields=[],
             static_context=static_context,
