@@ -848,37 +848,44 @@ class QualityReview(Feature):
     }
 
     def _check_output(self, result, deps) -> str | None:
-        """Enforce that all 30 rubric criteria across 6 categories are present and unique."""
+        """Enforce that all rubric criteria across all categories are present and unique."""
         scores = result.output.scores
+        expected_count = len(self._REQUIRED_CRITERIA)
 
         # Check total count
-        if len(scores) != 30:
+        if len(scores) != expected_count:
             return (
-                f"Expected exactly 30 criterion scores, got {len(scores)}. "
-                "QualityReviewModel requires all 30 rubric criteria for a valid overall_score."
+                f"Expected exactly {expected_count} criterion scores, got {len(scores)}. "
+                f"QualityReviewModel requires all {expected_count} rubric criteria for a valid overall_score."
             )
 
-        # Check all 6 categories present
+        # Check all categories present and no unexpected categories
         found_categories = {s.category for s in scores}
         missing_categories = self._REQUIRED_CATEGORIES - found_categories
         if missing_categories:
             return (
                 f"Missing scores for categories: {', '.join(sorted(missing_categories))}. "
-                "You must include criterion scores for all 6 rubric categories."
+                f"You must include criterion scores for all {len(self._REQUIRED_CATEGORIES)} rubric categories."
+            )
+        unexpected_categories = found_categories - self._REQUIRED_CATEGORIES
+        if unexpected_categories:
+            return (
+                f"Unexpected categories: {', '.join(sorted(unexpected_categories))}. "
+                f"Only these categories are valid: {', '.join(sorted(self._REQUIRED_CATEGORIES))}."
             )
 
-        # Check all 30 criterion IDs present and unique
+        # Check all criterion IDs present and unique
         found_criteria = {s.criterion_id for s in scores}
-        if len(found_criteria) != 30:
+        if len(found_criteria) != expected_count:
             return (
-                f"Found {len(found_criteria)} unique criterion IDs but expected 30. "
+                f"Found {len(found_criteria)} unique criterion IDs but expected {expected_count}. "
                 "Each criterion must appear exactly once."
             )
         missing_criteria = self._REQUIRED_CRITERIA - found_criteria
         if missing_criteria:
             return (
                 f"Missing criterion IDs: {', '.join(sorted(missing_criteria))}. "
-                "You must score all 30 rubric criteria."
+                f"You must score all {expected_count} rubric criteria."
             )
 
         return None

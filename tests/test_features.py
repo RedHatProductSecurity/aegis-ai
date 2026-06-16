@@ -4,6 +4,7 @@ from pydantic_core import ValidationError
 
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.features import component, cve
+from aegis_ai.features.cve import QualityReview
 from aegis_ai.features.cve.data_models import CATEGORY_WEIGHTS, QualityRating
 from tests.utils.llm_cache import get_cached_response, cache_response
 
@@ -162,10 +163,12 @@ async def test_quality_review_with_test_model():
         f"Categories mismatch: {categories}"
     )
 
-    # Verify all 30 criterion IDs are unique
-    criterion_ids = [s.criterion_id for s in quality_review.scores]
-    assert len(set(criterion_ids)) == 30, (
-        f"Expected 30 unique criterion IDs, got {len(set(criterion_ids))}"
+    # Verify all criterion IDs are unique and match the required rubric set
+    criterion_ids = {s.criterion_id for s in quality_review.scores}
+    assert criterion_ids == QualityReview._REQUIRED_CRITERIA, (
+        f"Criterion ID mismatch.\n"
+        f"Missing: {QualityReview._REQUIRED_CRITERIA - criterion_ids}\n"
+        f"Unexpected: {criterion_ids - QualityReview._REQUIRED_CRITERIA}"
     )
 
     # Verify overall_score bounds and rating alignment

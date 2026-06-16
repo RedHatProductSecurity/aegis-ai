@@ -273,3 +273,58 @@ def test_statement_weight_exceeds_mitigation():
     assert score_a.overall_score == 0.57
     assert score_b.overall_score == 0.43
     assert score_a.overall_score > score_b.overall_score
+
+
+# --- Clamping verification ---
+
+
+def test_category_raw_scores_clamped_to_10():
+    """If a category accumulates >10 raw points, the validator clamps to 10.
+
+    Build 6 criteria (12 raw points) for the first category, 5 criteria (0 points)
+    for the rest. The first category should contribute as if it scored 10/10.
+    """
+    first_cat = _CATEGORY_NAMES[0]
+    first_cat_weight = CATEGORY_WEIGHTS[first_cat]
+
+    # 6 criteria at score=2 -> 12 raw points, should clamp to 10
+    scores = [
+        CriterionScore(
+            category=first_cat,
+            criterion_id=f"extra_{i}",
+            score=2,
+            justification="test",
+        )
+        for i in range(6)
+    ]
+    # Remaining 5 categories with 5 criteria each at score=0
+    for cat_name in _CATEGORY_NAMES[1:]:
+        for crit_id in _CRITERION_IDS:
+            scores.append(
+                CriterionScore(
+                    category=cat_name,
+                    criterion_id=f"{cat_name}_{crit_id}",
+                    score=0,
+                    justification="test",
+                )
+            )
+
+    model = QualityReviewModel(
+        cve_id="CVE-2025-0001",
+        scores=scores,
+        customer_lens=CustomerLensAssessment(
+            customer_can_decide=["test"],
+            remains_unclear=["test"],
+            manual_context_needed=["test"],
+        ),
+        strengths=["test"],
+        critical_gaps=["test"],
+        recommendations=["test"],
+        value_add="test",
+        data_quality=0.8,
+        confidence=0.7,
+        tools_used=["osidb_tool"],
+        disclaimer=DISCLAIMER,
+    )
+    # Clamped: (10/10) * first_cat_weight = first_cat_weight
+    assert model.overall_score == round(first_cat_weight, 2)
