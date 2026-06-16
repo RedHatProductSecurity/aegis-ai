@@ -808,15 +808,79 @@ class QualityReview(Feature):
 
     _REQUIRED_CATEGORIES = set(CATEGORY_WEIGHTS.keys())
 
+    _REQUIRED_CRITERIA: set[str] = {
+        # Description — Technical Clarity
+        "component_location",
+        "vuln_type_mechanics",
+        "trigger_conditions",
+        "impact_sketch_cia",
+        "clarity_for_non_experts",
+        # Statement — Technical Clarity
+        "presence_per_cvss_rule",
+        "structured_formula_present",
+        "cvss_context_mentioned",
+        "cia_impacts_called_out",
+        "threat_nature_scope",
+        # Mitigation
+        "mitigation_section_exists",
+        "fix_version_specifics",
+        "actionable_steps",
+        "references_linked",
+        "risk_reduction_rationale",
+        # Grammar & Style
+        "spelling_punctuation",
+        "sentence_clarity",
+        "consistent_terminology",
+        "professional_tone",
+        "acronyms_defined",
+        # Content Ambiguity
+        "desc_stmt_match",
+        "products_versions_align",
+        "no_version_impact_conflicts",
+        "terminology_consistent",
+        "scope_limits_clear",
+        # Technical Value
+        "original_non_vague",
+        "root_cause_depth",
+        "attack_scenario_example",
+        "customer_relevance",
+        "standards_mapping",
+    }
+
     def _check_output(self, result, deps) -> str | None:
-        """Enforce that all 6 rubric categories are represented in scores."""
-        found = {s.category for s in result.output.scores}
-        missing = self._REQUIRED_CATEGORIES - found
-        if missing:
+        """Enforce that all 30 rubric criteria across 6 categories are present and unique."""
+        scores = result.output.scores
+
+        # Check total count
+        if len(scores) != 30:
             return (
-                f"Missing scores for categories: {', '.join(sorted(missing))}. "
+                f"Expected exactly 30 criterion scores, got {len(scores)}. "
+                "QualityReviewModel requires all 30 rubric criteria for a valid overall_score."
+            )
+
+        # Check all 6 categories present
+        found_categories = {s.category for s in scores}
+        missing_categories = self._REQUIRED_CATEGORIES - found_categories
+        if missing_categories:
+            return (
+                f"Missing scores for categories: {', '.join(sorted(missing_categories))}. "
                 "You must include criterion scores for all 6 rubric categories."
             )
+
+        # Check all 30 criterion IDs present and unique
+        found_criteria = {s.criterion_id for s in scores}
+        if len(found_criteria) != 30:
+            return (
+                f"Found {len(found_criteria)} unique criterion IDs but expected 30. "
+                "Each criterion must appear exactly once."
+            )
+        missing_criteria = self._REQUIRED_CRITERIA - found_criteria
+        if missing_criteria:
+            return (
+                f"Missing criterion IDs: {', '.join(sorted(missing_criteria))}. "
+                "You must score all 30 rubric criteria."
+            )
+
         return None
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
