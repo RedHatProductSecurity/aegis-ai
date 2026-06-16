@@ -804,7 +804,7 @@ class CVSSDiffExplainer(Feature):
 
 
 class QualityReview(Feature):
-    """Score CVE flaw content against a weighted quality rubric (0-10 scale) evaluated through a Customer Lens framework."""
+    """Score CVE flaw content against a weighted quality rubric (0.0-1.0 scale) evaluated through a Customer Lens framework."""
 
     _REQUIRED_CATEGORIES = set(CATEGORY_WEIGHTS.keys())
 
@@ -834,7 +834,7 @@ class QualityReview(Feature):
                 "Return your response as a single JSON object matching the output schema."
             ),
             goals="""\
-- Score the flaw content against a weighted rubric with 6 categories (5 criteria x 2 points each = 10 raw points per category, weighted to a 0-10 final score).
+- Score the flaw content against a weighted rubric with 6 categories (5 criteria x 2 points each = 10 raw points per category, weighted to a 0.0-1.0 final score).
 - Category weights: Description 20%, Statement 25%, Mitigation 10%, Grammar 15%, Content Ambiguity 15%, Technical Value 15%.
 - Evaluate content through the Customer Lens: determine whether three customer personas (Ops/Sysadmin, Security/CISO, Compliance/Auditor) can answer their core questions from the existing content.
 - Identify strengths, critical gaps, and actionable recommendations.

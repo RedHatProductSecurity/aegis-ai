@@ -159,12 +159,12 @@ async def test_quality_review_with_test_model():
     assert len(categories) == 6
 
     # Verify overall_score bounds and rating alignment
-    assert 0.0 <= quality_review.overall_score <= 10.0
-    if quality_review.overall_score >= 8.0:
+    assert 0.0 <= quality_review.overall_score <= 1.0
+    if quality_review.overall_score >= 0.8:
         assert quality_review.rating == QualityRating.EXCELLENT
-    elif quality_review.overall_score >= 6.0:
+    elif quality_review.overall_score >= 0.6:
         assert quality_review.rating == QualityRating.GOOD
-    elif quality_review.overall_score >= 4.0:
+    elif quality_review.overall_score >= 0.4:
         assert quality_review.rating == QualityRating.NEEDS_IMPROVEMENT
     else:
         assert quality_review.rating == QualityRating.FAILS_STANDARDS
