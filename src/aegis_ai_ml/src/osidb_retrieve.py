@@ -643,7 +643,8 @@ def main() -> int:
 
             deficient = [MINORITY_CLASS] if minority_count < args.max_per_impact else []
             deficient += [
-                imp for imp in majority_classes
+                imp
+                for imp in majority_classes
                 if per_class.get(imp, 0) < majority_target
             ]
             if not deficient:
@@ -652,9 +653,7 @@ def main() -> int:
             made_progress = False
             for impact in deficient:
                 target = (
-                    args.max_per_impact
-                    if impact == MINORITY_CLASS
-                    else majority_target
+                    args.max_per_impact if impact == MINORITY_CLASS else majority_target
                 )
                 shortfall = target - per_class.get(impact, 0)
                 if shortfall <= 0:
@@ -749,11 +748,12 @@ def main() -> int:
             train_records,
             test_records,
         )
-        train_records, test_records = _trim_to_budget(
-            train_records,
-            test_records,
-            args.max_total,
-        )
+
+    train_records, test_records = _trim_to_budget(
+        train_records,
+        test_records,
+        args.max_total,
+    )
 
     new_ids = {r["cve_id"] for r in train_records + test_records}
     lost_count = _warn_lost_cves(existing_ids, new_ids, skipped_cves)
