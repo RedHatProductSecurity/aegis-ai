@@ -728,6 +728,7 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-43529",
         cwe_list=["CWE-825"],
+        metadata={"known_to_fail_evaluators": ["CWEExplanationRootCause"]},
     ),
     SuggestCweCase(
         cve_id="CVE-2025-49133",

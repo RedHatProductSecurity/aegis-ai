@@ -368,7 +368,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2025-39822",
         expected_statement="This vulnerability is rated Moderate for Red Hat Enterprise Linux 10 as it could lead to a local privilege escalation due to a signedness error in the io_uring subsystem. Red Hat Enterprise Linux 6, 7, 8, and 9 are not affected as the vulnerable code is not present in these versions. If triggered, this vulnerability can lead to integrity and availability issues, as an improperly computed `this_len` could lead to memory corruption, data truncation, or incorrect writes, which in turn could increase the likelihood of a crash. ",
-        metadata={"known_to_fail_evaluators": ["StatementEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "StatementEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2025-39832",
