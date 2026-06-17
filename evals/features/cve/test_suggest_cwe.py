@@ -141,6 +141,10 @@ cases = [
         },
     ),
     # FIXME: Aegis occasionally ends up with an empty list when CWE-416 and CWE-415 are filtered out
+    # LLM judge hallucinated CWE-1341 as "Use of Externally-Controlled Input to Select Object from a
+    # Cache" and CWE-825 as "Expansive Allocation of Resources in a Loop"; both names are wrong.
+    # CWE-1341 is actually "Multiple Releases of Same Resource or Handle" (double-free) and CWE-825
+    # is "Expired Pointer Dereference" (use-after-free) — both plausibly match the explained flaw.
     SuggestCweCase(
         cve_id="CVE-2022-50470",
         cwe_list=["CWE-1341"],
@@ -776,7 +780,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2025-54771",
         cwe_list=["CWE-825"],
-        metadata={"known_to_fail_evaluators": ["CWEExplanationRootCause"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-55559",

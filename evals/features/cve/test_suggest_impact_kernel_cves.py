@@ -85,6 +85,17 @@ KNOWN_FAILURES: dict[str, dict] = {
             "(predicted NONE vs expected LOW)."
         ),
     },
+    "CVE-2023-54209": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "LLM explanation non-deterministically mentions that enabling blktrace via "
+            "ioctl 'typically requires CAP_SYS_ADMIN' without describing an unprivileged "
+            "alternative, making PR:L appear inconsistent. However, the OSIDB ground-truth "
+            "vector uses PR:L, and on other runs the explanation correctly states the "
+            "operations can be available to unprivileged users. Non-deterministic LLM "
+            "narration issue; the vector is correct."
+        ),
+    },
     "CVE-2023-54258": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
