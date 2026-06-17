@@ -65,8 +65,10 @@ dependencies = [
 [package.optional-dependencies]
 classifier-deps = [
     { name = "imbalanced-learn" },
+    { name = "matplotlib" },
     { name = "pandas" },
     { name = "scikit-learn" },
+    { name = "seaborn" },
     { name = "xgboost" },
 ]
 ml-deps = [
@@ -131,6 +133,7 @@ requires-dist = [
     { name = "imbalanced-learn", marker = "extra == 'ml-deps'", specifier = ">=0.13.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "logfire", extras = ["fastapi", "httpx", "sqlite3"] },
+    { name = "matplotlib", marker = "extra == 'classifier-deps'", specifier = ">=3.10.5" },
     { name = "matplotlib", marker = "extra == 'ml-deps'", specifier = ">=3.10.5" },
     { name = "mcp-nvd", specifier = ">=0.0.1" },
     { name = "mcp-pypi", specifier = ">=2.7.1" },
@@ -149,6 +152,7 @@ requires-dist = [
     { name = "rich", specifier = ">=14.0.0" },
     { name = "scikit-learn", marker = "extra == 'classifier-deps'", specifier = ">=1.1.0" },
     { name = "scikit-learn", marker = "extra == 'ml-deps'", specifier = ">=1.1.0" },
+    { name = "seaborn", marker = "extra == 'classifier-deps'", specifier = ">=0.13.2" },
     { name = "seaborn", marker = "extra == 'ml-deps'", specifier = ">=0.13.2" },
     { name = "torch", marker = "extra == 'ml-deps'", specifier = ">=1.9.0" },
     { name = "tqdm", marker = "extra == 'ml-deps'", specifier = ">=4.60.0" },

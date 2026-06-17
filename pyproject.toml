@@ -137,8 +137,10 @@ Issues = "https://github.com/RedHatProductSecurity/aegis-ai/issues"
 [project.optional-dependencies]
 classifier_deps = [
     "imbalanced-learn>=0.13.0",
+    "matplotlib>=3.10.5",
     "pandas>=1.5.0",
     "scikit-learn>=1.1.0",
+    "seaborn>=0.13.2",
     "xgboost>=1.7.0",
 ]
 ml_deps = [
@@ -146,9 +148,7 @@ ml_deps = [
     "accelerate>=0.20.0",
     "datasets>=2.0.0",
     "huggingface-hub>=0.8.0",
-    "matplotlib>=3.10.5",
     "numpy>=2.3.2",
-    "seaborn>=0.13.2",
     "torch>=1.9.0",
     "tqdm>=4.60.0",
     "transformers>=4.20.0",
