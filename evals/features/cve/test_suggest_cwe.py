@@ -418,7 +418,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-9390",
-        cwe_list=["CWE-120", "CWE-131"],  # kdudka: added CWE-131
+        cwe_list=["CWE-120", "CWE-131", "CWE-787"],  # kdudka: added CWE-131 and CWE-787
     ),
     SuggestCweCase(
         cve_id="CVE-2025-9394",
