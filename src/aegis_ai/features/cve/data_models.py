@@ -358,8 +358,8 @@ class CVSSDiffExplainerModel(AegisFeatureModel):
 # Each category has 5 criteria scored 0-2 (max 10 raw points).
 # The weighted final score is on a 0.0-1.0 scale.
 CATEGORY_WEIGHTS: dict[str, float] = {
-    "Description \u2014 Technical Clarity": 0.20,
-    "Statement \u2014 Technical Clarity": 0.25,
+    "Description - Technical Clarity": 0.20,
+    "Statement - Technical Clarity": 0.25,
     "Mitigation": 0.10,
     "Grammar & Style": 0.15,
     "Content Ambiguity": 0.15,
@@ -479,6 +479,11 @@ class QualityReviewModel(AegisFeatureModel):
     value_add: str = Field(
         ...,
         description="Whether this assessment provides information customers cannot find elsewhere.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Brief summary of the quality review findings, highlighting the most significant strengths and gaps.",
     )
 
     @model_validator(mode="after")

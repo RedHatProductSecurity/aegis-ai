@@ -10,61 +10,61 @@
     "rating": "Needs Improvement",
     "scores": [
         {
-            "category": "Description — Technical Clarity",
+            "category": "Description - Technical Clarity",
             "criterion_id": "component_location",
             "score": 1,
             "justification": "The affected component 'libcurl' is identified, but a precise code location is not provided."
         },
         {
-            "category": "Description — Technical Clarity",
+            "category": "Description - Technical Clarity",
             "criterion_id": "vuln_type_mechanics",
             "score": 2,
             "justification": "The vulnerability type 'buffer overflow via an integer overflow' and its mechanics are clearly explained."
         },
         {
-            "category": "Description — Technical Clarity",
+            "category": "Description - Technical Clarity",
             "criterion_id": "trigger_conditions",
             "score": 2,
             "justification": "The trigger conditions involving 'automatic gzip decompression' and 'zlib 1.2.0.3 or older' are clearly stated."
         },
         {
-            "category": "Description — Technical Clarity",
+            "category": "Description - Technical Clarity",
             "criterion_id": "impact_sketch_cia",
             "score": 1,
             "justification": "The impact of 'buffer overflow' is mentioned, but not explicitly mapped to confidentiality, integrity, or availability."
         },
         {
-            "category": "Description — Technical Clarity",
+            "category": "Description - Technical Clarity",
             "criterion_id": "clarity_for_non_experts",
             "score": 2,
             "justification": "The description uses clear and concise language, making it understandable for a broad audience."
         },
         {
-            "category": "Statement — Technical Clarity",
+            "category": "Statement - Technical Clarity",
             "criterion_id": "presence_per_cvss_rule",
             "score": 1,
             "justification": "A statement is present, but its content is contradictory to the affected products list, reducing its value."
         },
         {
-            "category": "Statement — Technical Clarity",
+            "category": "Statement - Technical Clarity",
             "criterion_id": "structured_formula_present",
             "score": 0,
             "justification": "The statement does not follow the structured formula and provides an inaccurate applicability assessment."
         },
         {
-            "category": "Statement — Technical Clarity",
+            "category": "Statement - Technical Clarity",
             "criterion_id": "cvss_context_mentioned",
             "score": 0,
             "justification": "The statement does not mention any CVSS context such as Attack Vector, Privileges Required, or Attack Complexity."
         },
         {
-            "category": "Statement — Technical Clarity",
+            "category": "Statement - Technical Clarity",
             "criterion_id": "cia_impacts_called_out",
             "score": 0,
             "justification": "The statement does not explicitly call out any CIA impacts."
         },
         {
-            "category": "Statement — Technical Clarity",
+            "category": "Statement - Technical Clarity",
             "criterion_id": "threat_nature_scope",
             "score": 0,
             "justification": "The statement's scope regarding RHEL non-applicability is contradicted by the affected products list, making it misleading."
@@ -239,5 +239,6 @@
     ],
     "suggested_statement": "A buffer overflow flaw in libcurl, triggered by an attacker-controlled integer overflow in zlib versions 1.2.0.3 or older during automatic gzip decompression, affects specific Red Hat products including Ansible Services (netshoot), Hosted OpenShift (ocm/golangci-lint, ocm/ocm-acceptance-tests, ocm/selenium-standalone-chrome-debug, ocm/selenium-standalone-firefox-debug), and cloud.redhat.com (rhsm/wiremock). This issue could lead to a denial of service or other unspecified impacts.",
     "suggested_mitigation": "Customers using affected Red Hat products should monitor for updates that address this vulnerability. Ensure that `libcurl` and `zlib` packages are kept up-to-date to mitigate potential buffer overflow risks.",
-    "value_add": "This assessment provides value by highlighting critical contradictions in the flaw content, offering a structured rubric-based evaluation, and providing actionable recommendations and suggested rewrites that customers cannot derive from public CVE databases alone."
+    "value_add": "This assessment provides value by highlighting critical contradictions in the flaw content, offering a structured rubric-based evaluation, and providing actionable recommendations and suggested rewrites that customers cannot derive from public CVE databases alone.",
+    "explanation": "The flaw content for CVE-2025-0725 provides good technical detail in the description but has critical gaps in the statement and mitigation sections. The statement contradicts the affected products list regarding RHEL applicability, and no actionable mitigation steps or fix versions are provided. Grammar and terminology are consistent, but the overall quality is undermined by the statement-affects contradiction."
 }

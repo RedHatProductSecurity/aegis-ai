@@ -190,6 +190,9 @@ async def test_quality_review_with_test_model():
         "All findings should be validated by a human expert."
     )
 
+    # Verify explanation is present and non-empty
+    assert quality_review.explanation, "explanation field must be non-empty"
+
     # Verify customer_lens fields are populated
     assert quality_review.customer_lens is not None
     assert len(quality_review.customer_lens.customer_can_decide) > 0

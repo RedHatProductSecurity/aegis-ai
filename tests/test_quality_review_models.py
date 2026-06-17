@@ -18,8 +18,8 @@ DISCLAIMER = (
 )
 
 _CATEGORY_NAMES = [
-    "Description \u2014 Technical Clarity",
-    "Statement \u2014 Technical Clarity",
+    "Description - Technical Clarity",
+    "Statement - Technical Clarity",
     "Mitigation",
     "Grammar & Style",
     "Content Ambiguity",
@@ -65,6 +65,7 @@ def _make_review_model(category_scores: list[list[int]]) -> QualityReviewModel:
         critical_gaps=["Missing statement"],
         recommendations=["Add a statement"],
         value_add="Provides Red Hat context not available in NVD",
+        explanation="Quality review summary for testing.",
         data_quality=0.8,
         confidence=0.7,
         tools_used=["osidb_tool"],
@@ -81,8 +82,8 @@ def test_category_weights_sum_to_one():
 
 def test_category_weights_match_spec():
     """Verify weights match the FQI specification."""
-    assert CATEGORY_WEIGHTS["Description \u2014 Technical Clarity"] == 0.20
-    assert CATEGORY_WEIGHTS["Statement \u2014 Technical Clarity"] == 0.25
+    assert CATEGORY_WEIGHTS["Description - Technical Clarity"] == 0.20
+    assert CATEGORY_WEIGHTS["Statement - Technical Clarity"] == 0.25
     assert CATEGORY_WEIGHTS["Mitigation"] == 0.10
     assert CATEGORY_WEIGHTS["Grammar & Style"] == 0.15
     assert CATEGORY_WEIGHTS["Content Ambiguity"] == 0.15
@@ -189,6 +190,7 @@ def test_overall_score_ignores_llm_provided_value():
         critical_gaps=["test"],
         recommendations=["test"],
         value_add="test",
+        explanation="test",
         data_quality=0.8,
         confidence=0.7,
         tools_used=["osidb_tool"],
@@ -321,6 +323,7 @@ def test_category_raw_scores_clamped_to_10():
         critical_gaps=["test"],
         recommendations=["test"],
         value_add="test",
+        explanation="test",
         data_quality=0.8,
         confidence=0.7,
         tools_used=["osidb_tool"],
