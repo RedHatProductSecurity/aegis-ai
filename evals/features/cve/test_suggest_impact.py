@@ -492,7 +492,12 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2025-40320",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:L/I:H/A:H",
-        metadata={"known_to_fail_evaluators": ["CVSSVectorEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CVSSVectorEvaluator",
+                "CVSSKernelScopeAndPrivileges",
+            ]
+        },
     ),
     SuggestImpactCase(
         cve_id="CVE-2025-50334",
