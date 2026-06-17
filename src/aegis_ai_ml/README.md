@@ -47,12 +47,21 @@ The experiment has been extended to train a classifier for each of the basic CVS
 
 1. Install the ML dependencies as described in the `setup` section.
 
-2. To download training/evaluation data from OSIDB, run the following command in the top-level directory:
+2. To fetch raw flaws from OSIDB and generate classifier-ready train/test JSON inputs, run the following command in the top-level directory:
 
 ```commandline
 export AEGIS_OSIDB_SERVER_URL="https://osidb.prodsec.redhat.com/"
-export AEGIS_ML_CVE_DATA_DIR="${PWD}/src/aegis_ai_ml/cve_data"
 uv run python src/aegis_ai_ml/src/osidb_retrieve.py
+```
+
+This writes the curated kernel classifier inputs under
+`src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/data/` and also
+emits a generation report for manual review.
+
+If you already have a local flaw export, pass it in directly:
+
+```commandline
+uv run python src/aegis_ai_ml/src/osidb_retrieve.py --input-flaws-json /path/to/flaws_raw.json
 ```
 
 3. Run the training and evaluation:

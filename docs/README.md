@@ -44,6 +44,7 @@ See the [OpenAPI Specification](openapi.yml) for detailed API documentation incl
 
 - **[Kerberos Delegation](kerberos-delegation.md)** - Pass-through auth to OSIDB via browser or Python; delegation requirements, Firefox/Chrome config, and curl limitations
 - **[Configuration Reference](env-vars.md)** - Complete environment variable reference
+- **[Kernel Classifier Sample And Retraining](kernel-classifier-sample-and-training.md)** - Maintainer guide for curating `train_kernel_cves.json` / `test_kernel_cves.json` and retraining the kernel severity classifier
 - **[Changelog](CHANGELOG.md)** - Version history
 - **[Architecture Decision Records](adrs/)** - Design decisions
 - **[OpenAPI Specification](openapi.yml)** - API documentation
@@ -56,6 +57,7 @@ docs/
 ├── USER_GUIDE.md          # Main user and admin documentation
 ├── TRANSPARENCY.md        # AI transparency, training, and agent architecture
 ├── kerberos-delegation.md # Kerberos delegation for OSIDB pass-through auth
+├── kernel-classifier-sample-and-training.md # Kernel classifier maintainer runbook
 ├── env-vars.md            # Configuration reference
 ├── CHANGELOG.md            # Version history
 ├── otel.md                 # OpenTelemetry guide

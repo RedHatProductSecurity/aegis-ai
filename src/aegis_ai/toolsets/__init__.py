@@ -37,7 +37,6 @@ class LoggingToolset(WrapperToolset[AgentDepsT]):
         ctx: RunContext[AgentDepsT],
         tool: ToolsetTool[AgentDepsT],
     ) -> Any:
-        # log tool call entry
         args = ""
         if isinstance(tool_args, dict):
             for field in ("input", "inputs"):
@@ -45,16 +44,13 @@ class LoggingToolset(WrapperToolset[AgentDepsT]):
                 if value is not None:
                     args = str(value)
                     break
-
-        prefix = f"[tool call] {name}({args})"
         start = time.time()
-        logger.info(f"{prefix} started")
+        logger.info("[tool call] %s(%s) started", name, args)
 
         result = await self.wrapped.call_tool(name, tool_args, ctx, tool)
 
-        # log tool call finish
         elapsed = time.time() - start
-        logger.info(f"{prefix} finished after {elapsed:.4f}s")
+        logger.info("[tool call] %s(%s) finished after %.4fs", name, args, elapsed)
 
         return result
 
