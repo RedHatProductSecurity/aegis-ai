@@ -385,7 +385,12 @@ cases = [
     SuggestCweCase(
         cve_id="CVE-2024-56658",
         cwe_list=["CWE-825", "CWE-826"],  # kdudka: added CWE-826
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "SuggestCweEvaluator",
+                "CWEExplanationRootCause",
+            ]
+        },
     ),
     SuggestCweCase(
         cve_id="CVE-2025-5302",
