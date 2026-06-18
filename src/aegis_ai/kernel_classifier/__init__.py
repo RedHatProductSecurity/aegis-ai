@@ -139,6 +139,8 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float, st
 
 
 _PATCH_SIZE_LIMIT = 1_000_000
+_HTML_SIZE_LIMIT = 5_000_000
+_MAX_COMMIT_HASHES = 20
 
 _BACKPORT_SIMILARITY_THRESHOLD = 0.75
 
@@ -396,11 +398,66 @@ class KernelImpactClassifier:
     def available(self) -> bool:
         return self.model is not None and self._feature_extractor is not None
 
+    @staticmethod
+    async def _fetch_with_limit(
+        client: "httpx.AsyncClient",
+        url: str,
+        commit_hash: str,
+        size_limit: int,
+        content_type: str,
+    ) -> str | None:
+        """Stream-fetch a URL, aborting before buffering if oversized.
+
+        Returns the response text if it's within *size_limit*, or ``None``
+        if the response was too large, non-200, or failed.
+        """
+        async with client.stream("GET", url, follow_redirects=True) as resp:
+            if resp.status_code != 200:
+                return None
+
+            content_length = resp.headers.get("content-length")
+            if content_length:
+                try:
+                    if int(content_length) > size_limit:
+                        logger.warning(
+                            "Skipping oversized %s %s (%s bytes via Content-Length)",
+                            content_type,
+                            commit_hash[:12],
+                            content_length,
+                        )
+                        return None
+                except ValueError:
+                    logger.warning(
+                        "Malformed Content-Length for %s %s: %r",
+                        content_type,
+                        commit_hash[:12],
+                        content_length,
+                    )
+
+            chunks: list[bytes] = []
+            total = 0
+            async for chunk in resp.aiter_bytes():
+                total += len(chunk)
+                if total > size_limit:
+                    logger.warning(
+                        "Dropping oversized %s %s (%d bytes streamed)",
+                        content_type,
+                        commit_hash[:12],
+                        total,
+                    )
+                    return None
+                chunks.append(chunk)
+
+        return b"".join(chunks).decode("utf-8", errors="replace")
+
     async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
         """Fetch raw patches from git.kernel.org for given commit hashes.
 
         Tries torvalds, stable, linux-next, and the gregkh/linux GitHub
-        fallback in order.
+        fallback in order.  Responses exceeding ``_PATCH_SIZE_LIMIT`` are
+        rejected early via ``Content-Length`` or a streaming byte cap so
+        pathological commits never sit fully buffered in memory.
+
         Returns list of (commit_hash, patch_content) tuples.
         """
         patches = []
@@ -411,9 +468,15 @@ class KernelImpactClassifier:
                 for tmpl in PATCH_URL_TEMPLATES:
                     url = tmpl.format(hash=commit_hash)
                     try:
-                        resp = await client.get(url, follow_redirects=True)
-                        if resp.status_code == 200 and len(resp.text) > 100:
-                            patches.append((commit_hash, resp.text))
+                        text = await self._fetch_with_limit(
+                            client, url, commit_hash, _PATCH_SIZE_LIMIT, "patch"
+                        )
+                        if text is None:
+                            continue
+
+                        # Reject trivially small responses (error pages, empty diffs)
+                        if len(text) > 100:
+                            patches.append((commit_hash, text))
                             logger.debug("Fetched patch for %s", commit_hash[:12])
                             fetched = True
                             used_template = tmpl
@@ -444,7 +507,8 @@ class KernelImpactClassifier:
         The al-kernel daemon analyses GitHub commit pages which contain crash
         reports, call stacks, and rendered diffs that raw git patches lack.
         We replicate that by fetching from GitHub (primary) with a
-        git.kernel.org fallback.
+        git.kernel.org fallback.  Responses exceeding ``_HTML_SIZE_LIMIT``
+        are rejected early to prevent large commits from bloating memory.
 
         Returns list of (commit_hash, html_content) tuples.
         """
@@ -455,9 +519,16 @@ class KernelImpactClassifier:
                 for tmpl in HTML_COMMIT_URL_TEMPLATES:
                     url = tmpl.format(hash=commit_hash)
                     try:
-                        resp = await client.get(url, follow_redirects=True)
-                        if resp.status_code == 200 and len(resp.text) > 200:
-                            pages.append((commit_hash, resp.text))
+                        text = await self._fetch_with_limit(
+                            client, url, commit_hash, _HTML_SIZE_LIMIT, "commit HTML"
+                        )
+                        if text is None:
+                            continue
+
+                        # Reject trivially small responses (error pages, empty content);
+                        # HTML pages have more boilerplate overhead than raw patches
+                        if len(text) > 200:
+                            pages.append((commit_hash, text))
                             logger.debug("Fetched commit HTML for %s", commit_hash[:12])
                             fetched = True
                             break
@@ -577,16 +648,37 @@ class KernelImpactClassifier:
             logger.info("No commit hashes for %s, skipping kernel classifier", cve_id)
             return None
 
+        if len(commit_hashes) > _MAX_COMMIT_HASHES:
+            logger.warning(
+                "Capping commit hashes for %s from %d to %d",
+                cve_id,
+                len(commit_hashes),
+                _MAX_COMMIT_HASHES,
+            )
+            commit_hashes = commit_hashes[:_MAX_COMMIT_HASHES]
+
+        from aegis_ai.osidb_bot.util import log_memory
+
+        log_memory(f"classify_start({cve_id}, {len(commit_hashes)}_commits)")
         patches = await self._fetch_patches(commit_hashes)
         if not patches:
             logger.warning("No patches retrieved for %s", cve_id)
             return None
+
+        patch_bytes = sum(len(c) for _, c in patches)
+        log_memory(
+            f"patches_fetched({cve_id}, {len(patches)}_patches, {patch_bytes}_bytes)"
+        )
 
         patch_features = self._extract_features(patches, cve_id)
 
         html_supplemented_flags: list[str] = []
         html_pages = await self._fetch_commit_html(commit_hashes)
         if html_pages:
+            html_bytes = sum(len(h) for _, h in html_pages)
+            log_memory(
+                f"html_fetched({cve_id}, {len(html_pages)}_pages, {html_bytes}_bytes)"
+            )
             html_features = extract_html_features(html_pages)
             for flag, val in html_features.items():
                 if val and not patch_features.get(flag):

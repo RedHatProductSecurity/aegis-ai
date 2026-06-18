@@ -1,7 +1,7 @@
 from aegis_ai import get_settings
 from aegis_ai.osidb_bot.state import BotState, StateFileHandler
 from aegis_ai.osidb_bot.suggest import DEFAULT_SUGGESTION_LIST
-from aegis_ai.osidb_bot.util import FlawData, logger
+from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 from aegis_ai.data_models import CVEID
 
 from pydantic_ai import Agent
@@ -339,7 +339,9 @@ class Bot:
     async def process_cve_bounded(self, i: int, cve: CVEID) -> None:
         async with max_jobs_sem:
             logger.info(f"[{i}/{self.total}] processing {cve}")
+            log_memory(f"cve_start({cve})")
             await self.process_cve(cve)
+            log_memory(f"cve_end({cve})")
 
     async def process(self, cve_ids: Sequence[CVEID] = ()) -> None:
         if not cve_ids:
@@ -351,6 +353,8 @@ class Bot:
             logger.info("nothing to do")
             return
 
+        log_memory(f"batch_start({self.total}_cves)")
         await asyncio.gather(
             *[self.process_cve_bounded(*job) for job in enumerate(cve_ids, start=1)]
         )
+        log_memory("batch_end")
