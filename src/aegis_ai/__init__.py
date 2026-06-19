@@ -11,7 +11,7 @@ import warnings
 from urllib.parse import urlparse
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional, TypedDict
+from typing import Dict, List, Any, Optional, TypedDict, TypeIs
 
 from platformdirs import user_config_dir
 from functools import lru_cache
@@ -50,12 +50,16 @@ config_dir = Path(user_config_dir(appname=APP_NAME))
 config_dir.mkdir(parents=True, exist_ok=True)
 
 
+def _is_env_set(value: Optional[str]) -> TypeIs[str]:
+    return bool(value and value.strip())
+
+
 def get_env_flag(key: str, default: bool) -> bool:
     """Return True if the value of env var "key" is interpreted as True.
-    Return "default" if env var "key" is not defined.
+    Return "default" if env var "key" is not defined, empty, or whitespace-only.
     Otherwise return False."""
     value = os.getenv(key)
-    if value is None:
+    if not _is_env_set(value):
         return default
 
     truthy = (
@@ -71,18 +75,18 @@ def get_env_flag(key: str, default: bool) -> bool:
 
 def get_env_float(key: str, default: float) -> float:
     """Return a float if the value of env var "key" can be interpreted as float.
-    Return "default" if env var "key" is not defined.
+    Return "default" if env var "key" is not defined, empty, or whitespace-only.
     Otherwise throw a ValueError exception."""
     value = os.getenv(key)
-    return default if value is None else float(value)
+    return float(value) if _is_env_set(value) else default
 
 
 def get_env_int(key: str, default: int) -> int:
     """Return an int if the value of env var "key" can be interpreted as int.
-    Return "default" if env var "key" is not defined.
+    Return "default" if env var "key" is not defined, empty, or whitespace-only.
     Otherwise throw a ValueError exception."""
     value = os.getenv(key)
-    return default if value is None else int(value)
+    return int(value) if _is_env_set(value) else default
 
 
 def _llm_base_url_hostname(host: str) -> Optional[str]:
