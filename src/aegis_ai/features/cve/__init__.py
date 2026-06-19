@@ -772,7 +772,8 @@ class SuggestAffectedComponents(Feature):
             rules="""
                 - Use the osidb_tool with the provided cve_id to retrieve CVE flaw data.
                 - Leverage title, description (or comment_zero), statement, references, affects, comments, and any other fields to infer affected components.
-                - Use github mcp tool to resolve vulnerability reference URLs if present (e.g. to confirm repo/component names).
+                - Use github mcp tool to resolve vulnerability reference URLs if present (e.g. to confirm repo/component names, inspect commit diffs to identify which specific submodules or artifacts are affected).
+                - When a CVE mentions an umbrella project (e.g. 'Spring Framework', 'Apache Commons'), do not return the umbrella name — use tools to identify the specific affected Maven artifacts or submodules (e.g. 'org.springframework/spring-webmvc' not 'Spring Framework').
                 - If GHSA reference URLs are present in the flaw data, pass them to the osv_dev_ghsa tool to get structured affected-package data (package names, ecosystems, PURLs, version ranges) for component identification.
                 - Use osv_dev_ghsa_tool responses to determine impacted ecosystems — the affected[].package.ecosystem field is the most authoritative ecosystem signal.
                 - When osv_dev_ghsa_tool returns an affected package name, prefer it over names derived from the CVE title or description — the GHSA package name is the canonical registry identifier.
