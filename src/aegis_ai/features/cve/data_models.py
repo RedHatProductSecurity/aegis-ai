@@ -252,6 +252,52 @@ class SuggestStatementModel(AegisFeatureModel):
     )
 
 
+class ExploitationPlanModel(AegisFeatureModel):
+    """
+    Structured exploitation plan for a CVE — models the realistic attack
+    path an adversary would follow to exploit the vulnerability.
+    """
+
+    cve_id: CVEID = Field(
+        ...,
+        description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
+    )
+
+    attack_surface: str = Field(
+        ...,
+        description="The exposed component, interface, or entry point an attacker targets (e.g. 'network-facing HTTP parser', 'local sysfs interface', 'container runtime exec path').",
+    )
+
+    preconditions: List[str] = Field(
+        ...,
+        description="Required conditions before exploitation is possible (privileges, configuration, network position, feature enablement).",
+    )
+
+    exploitation_steps: List[str] = Field(
+        ...,
+        description="Ordered sequence of attacker actions from initial access to achieving impact. Each step should be concrete and specific.",
+    )
+
+    achievable_impact: str = Field(
+        ...,
+        description="Concrete outcome the attacker achieves upon successful exploitation (e.g. 'arbitrary code execution as root', 'read arbitrary host files', 'denial of service of the control plane').",
+    )
+
+    exploitation_complexity: Optional[Literal["LOW", "MEDIUM", "HIGH"]] = Field(
+        description="Overall difficulty of executing the exploitation chain end-to-end, considering all preconditions and steps.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Brief narrative connecting the attack surface, steps, and impact into a coherent exploitation scenario.",
+    )
+
+    def printable_outcome(self) -> str:
+        """Override the logging hook to print a compact summary."""
+        n_steps = len(self.exploitation_steps)
+        return f"complexity={self.exploitation_complexity} steps={n_steps} impact={self.achievable_impact[:60]}"
+
+
 class CVSSDiffExplainerModel(AegisFeatureModel):
     """
     Model to explain differences between rh and nvd CVSS scores.

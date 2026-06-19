@@ -8,6 +8,7 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
     CVSSDiffExplainerModel,
+    ExploitationPlanModel,
     RevisedExplanationModel,
     SuggestAffectedComponentsModel,
     SuggestImpactModel,
@@ -644,10 +645,93 @@ class SuggestDescriptionText(Feature):
         )
 
 
+class SuggestExploitationPlan(Feature):
+    """Reason about the realistic exploitation path before generating statement/mitigation."""
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(
+            exclude_osidb_fields=[],
+            static_context=static_context,
+        )
+        prompt = AegisPrompt(
+            user_instruction=f"Analyze the CVE ({cve_id}) and construct a realistic exploitation plan from the perspective of an attacker targeting Red Hat deployments.",
+            goals="""
+            - Identify the attack surface (exposed component/interface/entry point).
+            - List preconditions required for exploitation (privileges, config, network position).
+            - Enumerate concrete, ordered exploitation steps an attacker would follow.
+            - State the achievable impact upon successful exploitation.
+            - Assess overall exploitation complexity (LOW/MEDIUM/HIGH).
+            - Ground the plan in realistic Red Hat deployment defaults (SELinux, namespace isolation, service exposure).
+            """,
+            rules="""
+            - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve upstream advisories, commit details, and PoC references.
+            - Use github mcp and web search tools for additional exploit context if needed.
+            - If cisa_kev_tool is available, check for known exploits.
+
+            ### ATTACK SURFACE
+            - Identify the specific interface, protocol, or code path that is exposed to the attacker.
+            - Be precise: "unauthenticated HTTP endpoint on port 8080" not "network service".
+            - Consider Red Hat defaults: is the surface exposed by default or requires explicit enablement?
+
+            ### PRECONDITIONS
+            - List ALL requirements: authentication level, network position, feature flags, kernel modules loaded, non-default configuration.
+            - Each precondition should be independently verifiable.
+            - Include Red Hat-specific context (e.g., "SELinux must be in permissive mode" or "feature enabled by default since RHEL 9").
+
+            ### EXPLOITATION STEPS
+            - Ordered sequence from initial attacker action to achieved impact.
+            - Each step must be concrete and actionable (not abstract concepts).
+            - Include the trigger mechanism (crafted input, race condition timing, specific syscall sequence).
+            - If multiple exploitation paths exist, describe the most probable/simplest one.
+
+            ### ACHIEVABLE IMPACT
+            - State the concrete worst-case outcome: code execution, data exfiltration, privilege escalation, DoS.
+            - Scope the impact: per-process, per-container, per-host, per-cluster.
+            - Note blast radius constraints from Red Hat hardening (SELinux confinement, namespace isolation).
+
+            ### COMPLEXITY
+            - LOW: single request/action, no timing, no special knowledge required.
+            - MEDIUM: requires specific conditions, multi-step interaction, or moderate preparation.
+            - HIGH: race conditions, precise timing, deep system knowledge, or unlikely configurations.
+
+            ### CONSTRAINTS
+            - Do NOT invent exploitation details unsupported by the CVE data or references.
+            - If exploitation path is unclear, state assumptions explicitly and reduce confidence.
+            - Do NOT include remediation or mitigation steps — this is purely attacker-perspective analysis.
+            - Keep the explanation concise but technically precise.
+            """,
+            context=CVEFeatureInput(cve_id=cve_id),
+            output_schema=ExploitationPlanModel.model_json_schema(),
+        )
+        return await self.guarded_run(
+            prompt, deps=deps, output_type=ExploitationPlanModel
+        )
+
+
 class SuggestStatementText(Feature):
     """Based on current CVE information and context suggest a statement and mitigation."""
 
-    async def exec(self, cve_id: CVEID, static_context: Any = None):
+    async def exec(
+        self,
+        cve_id: CVEID,
+        static_context: Any = None,
+        exploitation_plan: Any = None,
+    ):
+        # Run exploitation plan as pre-step if not already provided
+        if exploitation_plan is None:
+            try:
+                plan_feature = SuggestExploitationPlan(self.agent)
+                plan_result = await plan_feature.exec(
+                    cve_id, static_context=static_context
+                )
+                exploitation_plan = plan_result.output
+            except Exception as exc:
+                logger.warning(
+                    "SuggestStatementText(%s): exploitation plan pre-step failed: %s",
+                    cve_id,
+                    exc,
+                )
+
         deps = feature_deps(
             exclude_osidb_fields=["statement", "mitigation"],
             static_context=static_context,
@@ -658,8 +742,55 @@ class SuggestStatementText(Feature):
             "applicability to widespread installation base, or stability."
         )
 
+        # Build exploitation plan context block for the prompt
+        exploitation_context = ""
+        if exploitation_plan is not None:
+            plan_parts = []
+            if (
+                hasattr(exploitation_plan, "attack_surface")
+                and exploitation_plan.attack_surface
+            ):
+                plan_parts.append(f"Attack Surface: {exploitation_plan.attack_surface}")
+            if (
+                hasattr(exploitation_plan, "preconditions")
+                and exploitation_plan.preconditions
+            ):
+                plan_parts.append(
+                    f"Preconditions: {'; '.join(exploitation_plan.preconditions)}"
+                )
+            if (
+                hasattr(exploitation_plan, "exploitation_steps")
+                and exploitation_plan.exploitation_steps
+            ):
+                steps = "; ".join(
+                    f"{i + 1}) {s}"
+                    for i, s in enumerate(exploitation_plan.exploitation_steps)
+                )
+                plan_parts.append(f"Exploitation Steps: {steps}")
+            if (
+                hasattr(exploitation_plan, "achievable_impact")
+                and exploitation_plan.achievable_impact
+            ):
+                plan_parts.append(
+                    f"Achievable Impact: {exploitation_plan.achievable_impact}"
+                )
+            if (
+                hasattr(exploitation_plan, "exploitation_complexity")
+                and exploitation_plan.exploitation_complexity
+            ):
+                plan_parts.append(
+                    f"Complexity: {exploitation_plan.exploitation_complexity}"
+                )
+            if plan_parts:
+                exploitation_context = (
+                    "\n\n### EXPLOITATION PLAN (pre-computed attacker perspective)\n"
+                    + "\n".join(f"- {p}" for p in plan_parts)
+                    + "\n\nUse this exploitation plan to inform both the statement (why the severity fits) "
+                    "and the mitigation (which step in the chain can be disrupted)."
+                )
+
         prompt = AegisPrompt(
-            user_instruction=f"Analyze the provided CVE context ({cve_id}) and generate a Red Hat specific Statement and Mitigation.",
+            user_instruction=f"Analyze the provided CVE context ({cve_id}) and generate a Red Hat specific Statement and Mitigation.{exploitation_context}",
             goals="""
             - Provide two fields tailored for Red Hat products:
               1) Suggested Statement: brief rationale of impact in RH context
