@@ -284,6 +284,7 @@ class ExploitationPlanModel(AegisFeatureModel):
     )
 
     exploitation_complexity: Optional[Literal["LOW", "MEDIUM", "HIGH"]] = Field(
+        default=None,
         description="Overall difficulty of executing the exploitation chain end-to-end, considering all preconditions and steps.",
     )
 
