@@ -339,6 +339,24 @@ def cvss_diff(cve_id):
 
 @aegis_cli.command()
 @click.argument("cve_id", type=CVEID)
+def quality_review(cve_id):
+    """
+    Review quality of CVE flaw content against a weighted quality rubric (0.0-1.0 scale).
+    """
+
+    async def _doit():
+        """Execute the quality review feature asynchronously."""
+        feature = cve.QualityReview(cli_agent)
+        return await feature.exec(cve_id)
+
+    result = asyncio.run(_doit())
+    if result:
+        console.print(Rule())
+        console.print(result.output.model_dump_json(indent=2))
+
+
+@aegis_cli.command()
+@click.argument("cve_id", type=CVEID)
 def suggest_affected_components(cve_id):
     """
     Suggest affected components for a CVE.

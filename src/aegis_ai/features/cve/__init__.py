@@ -7,7 +7,9 @@ from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
 from aegis_ai.features import Feature
 from aegis_ai.features.cve.data_models import (
+    CATEGORY_WEIGHTS,
     CVSSDiffExplainerModel,
+    QualityReviewModel,
     RevisedExplanationModel,
     SuggestAffectedComponentsModel,
     SuggestImpactModel,
@@ -809,3 +811,384 @@ class CVSSDiffExplainer(Feature):
         return await self.guarded_run(
             prompt, deps=deps, output_type=CVSSDiffExplainerModel
         )
+
+
+class QualityReview(Feature):
+    """Score CVE flaw content against a weighted quality rubric (0.0-1.0 scale) evaluated through a Customer Lens framework."""
+
+    _REQUIRED_CATEGORIES = set(CATEGORY_WEIGHTS.keys())
+
+    _REQUIRED_CRITERIA: set[str] = {
+        # Description - Technical Clarity
+        "component_location",
+        "vuln_type_mechanics",
+        "trigger_conditions",
+        "impact_sketch_cia",
+        "clarity_for_non_experts",
+        # Statement - Technical Clarity
+        "presence_per_cvss_rule",
+        "structured_formula_present",
+        "cvss_context_mentioned",
+        "cia_impacts_called_out",
+        "threat_nature_scope",
+        # Mitigation
+        "mitigation_section_exists",
+        "fix_version_specifics",
+        "actionable_steps",
+        "references_linked",
+        "risk_reduction_rationale",
+        # Grammar & Style
+        "spelling_punctuation",
+        "sentence_clarity",
+        "consistent_terminology",
+        "professional_tone",
+        "acronyms_defined",
+        # Content Ambiguity
+        "desc_stmt_match",
+        "products_versions_align",
+        "no_version_impact_conflicts",
+        "terminology_consistent",
+        "scope_limits_clear",
+        # Technical Value
+        "original_non_vague",
+        "root_cause_depth",
+        "attack_scenario_example",
+        "customer_relevance",
+        "standards_mapping",
+    }
+
+    def _check_output(self, result, deps) -> str | None:
+        """Enforce that all rubric criteria across all categories are present and unique."""
+        scores = result.output.scores
+        expected_count = len(self._REQUIRED_CRITERIA)
+
+        # Check total count
+        if len(scores) != expected_count:
+            return (
+                f"Expected exactly {expected_count} criterion scores, got {len(scores)}. "
+                f"QualityReviewModel requires all {expected_count} rubric criteria for a valid overall_score."
+            )
+
+        # Check all categories present and no unexpected categories
+        found_categories = {s.category for s in scores}
+        missing_categories = self._REQUIRED_CATEGORIES - found_categories
+        if missing_categories:
+            return (
+                f"Missing scores for categories: {', '.join(sorted(missing_categories))}. "
+                f"You must include criterion scores for all {len(self._REQUIRED_CATEGORIES)} rubric categories."
+            )
+        unexpected_categories = found_categories - self._REQUIRED_CATEGORIES
+        if unexpected_categories:
+            return (
+                f"Unexpected categories: {', '.join(sorted(unexpected_categories))}. "
+                f"Only these categories are valid: {', '.join(sorted(self._REQUIRED_CATEGORIES))}."
+            )
+
+        # Check all criterion IDs present and unique
+        found_criteria = {s.criterion_id for s in scores}
+        if len(found_criteria) != expected_count:
+            return (
+                f"Found {len(found_criteria)} unique criterion IDs but expected {expected_count}. "
+                "Each criterion must appear exactly once."
+            )
+        missing_criteria = self._REQUIRED_CRITERIA - found_criteria
+        if missing_criteria:
+            return (
+                f"Missing criterion IDs: {', '.join(sorted(missing_criteria))}. "
+                f"You must score all {expected_count} rubric criteria."
+            )
+
+        return None
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        """Run the quality review rubric against the given CVE flaw content."""
+        deps = feature_deps(
+            exclude_osidb_fields=[],
+            static_context=static_context,
+        )
+
+        prompt = AegisPrompt(
+            user_instruction=(
+                f"Review the quality of CVE flaw content for {cve_id}. "
+                "Score it against the quality rubric and evaluate through the Customer Lens framework. "
+                "Use the OSIDB tool to retrieve all flaw data. "
+                "Assess the existing content — do not generate new descriptions or statements unless scoring reveals critical gaps. "
+                "Return your response as a single JSON object matching the output schema."
+            ),
+            goals="""\
+- Score the flaw content against a weighted rubric with 6 categories (5 criteria x 2 points each = 10 raw points per category, weighted to a 0.0-1.0 final score).
+- Category weights: Description 20%, Statement 25%, Mitigation 10%, Grammar 15%, Content Ambiguity 15%, Technical Value 15%.
+- Evaluate content through the Customer Lens: determine whether three customer personas (Ops/Sysadmin, Security/CISO, Compliance/Auditor) can answer their core questions from the existing content.
+- Identify strengths, critical gaps, and actionable recommendations.
+- When statement or mitigation content scores poorly, provide suggested rewrites.
+- Assess whether the flaw content adds value beyond what customers can find in public CVE databases.
+""",
+            rules="""\
+### RUBRIC CATEGORIES
+
+IMPORTANT: You MUST score ALL 30 criteria below (5 per category x 6 categories). Do not skip any category or criterion. Keep each justification to one sentence. Use the exact criterion_id values shown below.
+
+Score each criterion 0 (missing/wrong), 1 (partial), or 2 (fully met).
+
+**Category 1: Description - Technical Clarity** (up to 10 points)
+Evidence fields: description, affected_components, source_refs, cvss_vector, attack_scenario
+
+- component_location: Component & Location Identified
+  2 = Names the affected component AND precise code location (file and/or function).
+  1 = Component identified but no precise code location OR only a module path.
+  0 = No clear component or location identified.
+  Look for: file/function names (e.g., foo.c:bar()), package/module identifiers (e.g., org.apache.cxf...)
+
+- vuln_type_mechanics: Vulnerability Type & Mechanics
+  2 = States the type (e.g., use-after-free) AND explains why/how it occurs.
+  1 = States the type but not the mechanics (only labels).
+  0 = No type or incorrect type.
+  Look for: named class (buffer overflow, UAF, SQLi), short cause explanation.
+  Example: "Use-after-free due to double kfree on tcx_entry after clsact detach."
+
+- trigger_conditions: Trigger Conditions
+  2 = Explains the inputs/state that trigger the flaw (e.g., malformed header, specific qdisc sequence).
+  1 = Hints at a trigger but lacks specifics.
+  0 = No trigger described.
+  Look for: specific input patterns, preconditions (auth, config, feature flag).
+
+- impact_sketch_cia: Impact Sketch (CIA)
+  2 = Links to confidentiality, integrity, or availability clearly (e.g., info leak, code exec, DoS).
+  1 = Mentions impact but not mapped to CIA explicitly.
+  0 = No impact described.
+  Look for: CIA words or synonyms, RCE/DoS/data exposure mapping.
+
+- clarity_for_non_experts: Clarity for Non-Experts
+  2 = Uses simple language/analogy or example without losing accuracy.
+  1 = Mostly clear but heavy jargon or long sentences.
+  0 = Confusing/overly technical.
+  Look for: plain language explanation, short sentences, limited jargon.
+
+**Category 2: Statement - Technical Clarity** (up to 10 points)
+Evidence fields: statement, cvss_base, cvss_vector, affected_versions
+
+- presence_per_cvss_rule: Presence per CVSS Rule
+  2 = Statement present when required (CVSS>=7) or justified absence when <7.
+  1 = Statement present but incomplete or too generic.
+  0 = Missing when required.
+  Rule: If NVD/Red Hat CVSS >= 7.0, a succinct Statement must exist; if <7.0, absence may be acceptable.
+
+- structured_formula_present: Structured Formula Present
+  2 = Includes all five elements in a single, concise sentence/paragraph.
+  1 = Includes 3-4 elements.
+  0 = Includes <=2 elements.
+  Formula: component + location + type + trigger + impact.
+
+- cvss_context_mentioned: CVSS Context Mentioned
+  2 = Mentions AV/PR/AC (or their plain-language equivalents).
+  1 = Hints at context without clarity.
+  0 = No context.
+
+- cia_impacts_called_out: CIA Impacts Called Out
+  2 = Explicitly maps to C/I/A in statement.
+  1 = Impact present but not mapped to CIA.
+  0 = No impact.
+
+- threat_nature_scope: Threat Nature/Scope
+  2 = Names STRIDE category or explains scope/version differences (e.g., only 1.4-1.6).
+  1 = Mentions scope without clarity.
+  0 = No scope.
+
+**Category 3: Mitigation** (up to 10 points)
+Evidence fields: mitigation, fixed_in, references
+
+- mitigation_section_exists: Mitigation Section Exists
+  2 = A clearly labeled Mitigation/Workaround section exists.
+  1 = Mitigation is mixed into other text without a clear section.
+  0 = No mitigation content.
+
+- fix_version_specifics: Fix/Version Specifics
+  2 = Lists patched versions or explicitly states none exist yet.
+  1 = Mentions 'update' without versions.
+  0 = No fix/version info.
+
+- actionable_steps: Actionable Steps
+  2 = Concrete steps (config flags, commands, policy changes).
+  1 = High-level advice only.
+  0 = No steps.
+
+- references_linked: References Linked
+  2 = Links to vendor advisories/KBs/patch notes.
+  1 = Mentions external guidance without links/IDs.
+  0 = No references.
+
+- risk_reduction_rationale: Risk-Reduction Rationale
+  2 = Explains how the step reduces C/I/A impact.
+  1 = Implies benefit but not explicit.
+  0 = No rationale.
+
+**Category 4: Grammar & Style** (up to 10 points)
+Evidence fields: description, statement, mitigation
+
+- spelling_punctuation: Spelling/Punctuation
+  2 = No or minor errors; none impede understanding.
+  1 = Some errors but mostly understandable.
+  0 = Frequent errors impede understanding.
+
+- sentence_clarity: Sentence Clarity
+  2 = Clear, concise sentences; avoids run-ons.
+  1 = Partly clear but verbose.
+  0 = Confusing sentences/run-ons.
+
+- consistent_terminology: Consistent Terminology
+  2 = Terminology is consistent across sections.
+  1 = Minor inconsistencies.
+  0 = Conflicting terms.
+
+- professional_tone: Professional Tone
+  2 = Formal, precise tone throughout.
+  1 = Occasional informal phrasing.
+  0 = Informal/unprofessional tone.
+
+- acronyms_defined: Acronyms Defined
+  2 = Acronyms (CVSS, CIA, STRIDE) defined on first use.
+  1 = Some acronyms undefined.
+  0 = Acronyms not defined.
+
+**Category 5: Content Ambiguity** (up to 10 points)
+Evidence fields: description, statement, affected_products, affected_versions
+
+- desc_stmt_match: Description <-> Statement Match
+  2 = No contradictions between sections.
+  1 = Minor discrepancies.
+  0 = Contradictions exist.
+
+- products_versions_align: Products/Versions Align
+  2 = Listed products/versions align with described components.
+  1 = Partial alignment.
+  0 = Misaligned/contradictory.
+
+- no_version_impact_conflicts: No Version/Impact Conflicts
+  2 = Version ranges and impacts are consistent.
+  1 = Minor inconsistencies.
+  0 = Conflicts present.
+
+- terminology_consistent: Terminology Consistent
+  2 = Terms (e.g., 'DoS' vs 'hang') used consistently.
+  1 = Minor terminology drift.
+  0 = Inconsistent terminology.
+
+- scope_limits_clear: Scope & Limits Clear
+  2 = States preconditions/limits (auth level, config, platform).
+  1 = Implied but not explicit.
+  0 = No scope/limits provided.
+
+**Category 6: Technical Value** (up to 10 points)
+Evidence fields: description, statement, attack_scenario, cvss_vector
+
+- original_non_vague: Original & Non-Vague
+  2 = Original content; avoids boilerplate.
+  1 = Some boilerplate.
+  0 = Mostly generic.
+
+- root_cause_depth: Root-Cause Depth
+  2 = Explains why the flaw occurs (lifecycle/logic/bounds).
+  1 = Surface-level cause only.
+  0 = No cause explained.
+
+- attack_scenario_example: Attack Scenario/Example
+  2 = Provides realistic exploitation scenario or PoC shape.
+  1 = Vague scenario.
+  0 = No scenario.
+
+- customer_relevance: Customer Relevance
+  2 = Connects to user/system risk (e.g., multi-tenant exposure, data class).
+  1 = Generic risk.
+  0 = No customer angle.
+
+- standards_mapping: Standards Mapping
+  2 = Maps to CVSS, CIA, or STRIDE appropriately.
+  1 = Partial/implicit mapping.
+  0 = No mapping.
+
+### STATEMENT RULES
+
+- If ANY available CVSS base score (Red Hat or NVD) is >= 7.0, a statement MUST exist. If it is absent, this MUST appear in critical_gaps.
+- If ALL available CVSS base scores are < 7.0, statement absence is NOT a critical gap.
+- Statement quality is evaluated against the structured formula: component + location + type + trigger + impact.
+
+### REJECTED FLAW EXCEPTION
+
+- For rejected flaws (flaw state indicates rejection), do NOT require the 5-part structured formula for the statement.
+- Instead, the statement must explain the rationale for rejection. Award full points if the rejection rationale is clear.
+- Mitigation MAY be empty or state "No mitigation required." Award full points for mitigation criteria on rejected flaws.
+
+### BOILERPLATE AWARENESS
+
+- Detect and penalize boilerplate content: generic statements that could apply to any CVE without modification.
+- Examples of boilerplate: "This vulnerability could allow an attacker to execute arbitrary code", "Users should update to the latest version" without specifics.
+- Content that merely restates the CVE description from NVD without adding Red Hat context should score lower on originality.
+
+### CUSTOMER LENS FRAMEWORK
+
+Evaluate whether the content helps three customer personas answer their core questions:
+
+**Ops / Sysadmin** needs:
+- Package, service, or configuration names
+- Affected and fixed versions
+- Executable mitigations
+- Operational next steps
+
+**Security / CISO** needs:
+- Business risk assessment
+- Severity rationale
+- Exploit prerequisites
+- Exposure likelihood
+- Data classes at risk
+
+**Compliance / Auditor** needs:
+- CVSS score and vector
+- CWE classification
+- CIA impact assessment
+- STRIDE mapping
+- Affected and fixed versions
+- Remediation status
+- Citeable decision logic
+
+For each review, determine what customers CAN decide, what REMAINS UNCLEAR, and what needs MANUAL context from an analyst.
+
+The three core questions every review must address:
+1. Am I exposed?
+2. How bad is it for me?
+3. What should I do next?
+
+### SUGGESTED REWRITES
+
+- If the statement scores below 6/10 in Category 2, provide a suggested_statement rewrite.
+- If the mitigation scores below 6/10 in Category 3, provide a suggested_mitigation rewrite.
+- Rewrites should follow the structured formula and address identified gaps.
+
+**Statement rewrite rules:**
+- The suggested_statement MUST NOT duplicate the description — it should provide complementary context (severity rationale, scope, prerequisites), not restate the same technical details.
+- The suggested_statement MUST NOT mention mitigation steps, software updates, or patching.
+- Lead with severity narrative, not upstream component version strings.
+- Style: 2-4 concise sentences, < 1000 characters total.
+
+**Mitigation rewrite rules:**
+- The suggested_mitigation MUST describe a configuration or operational control that reduces exposure WITHOUT patching (e.g., config flags, sysctl, service disable, firewall rules, removing optional packages).
+- NEVER suggest updating, upgrading, or patching software in the mitigation.
+- NEVER use the term "update" in the mitigation.
+- NEVER invent config flags or commands — only suggest documented, supported controls.
+- If no safe, documented mitigation exists, set suggested_mitigation to null rather than providing generic upgrade advice.
+
+### OUTPUT RULES
+
+- Return ALL 30 criterion scores in the "scores" field as a flat list. Each entry must include: category (exact category name from above), criterion_id, score (0-2), and justification (one sentence).
+- Do NOT omit any category or criterion. The scores list must contain exactly 30 entries.
+- Do NOT compute overall_score or rating — these are auto-computed from your criterion scores.
+- Provide the customer_lens assessment with all three lists populated.
+- List concrete strengths, critical_gaps, and recommendations (not generic advice).
+- The value_add field should assess whether this flaw's content provides information customers cannot find in public CVE databases alone.
+- The explanation field should provide a brief summary of the quality review findings, highlighting the most significant strengths and gaps.
+- The disclaimer field MUST be exactly: "This response was generated by Aegis AI (https://github.com/RedHatProductSecurity/aegis-ai) using generative AI for informational purposes. All findings should be validated by a human expert."
+""",
+            context=CVEFeatureInput(cve_id=cve_id),
+            output_schema=QualityReviewModel.model_json_schema(),
+        )
+
+        return await self.guarded_run(prompt, deps=deps, output_type=QualityReviewModel)

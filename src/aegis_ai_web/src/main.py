@@ -313,6 +313,7 @@ cve_feature_registry: Dict[str, Type] = {
     "suggest-affected-components": cve.SuggestAffectedComponents,
     "identify-pii": cve.IdentifyPII,
     "cvss-diff-explainer": cve.CVSSDiffExplainer,
+    "quality-review": cve.QualityReview,
 }
 CVEFeatureName = Enum(
     "CVEFeatureName",
