@@ -94,6 +94,24 @@ We enforce code quality using **`ruff`** for linting and formatting. These check
     uvx ruff format .
     ```
 
+### Pre-commit Hooks
+
+The same linting and formatting checks can run automatically on every commit via [pre-commit](https://pre-commit.com/). To enable:
+
+```bash
+uv run pre-commit install
+```
+
+From that point on, each `git commit` will run ruff (lint + format), gitleaks (secret scanning), and a handful of file-hygiene checks (trailing whitespace, YAML/TOML validation, merge-conflict markers).
+
+> **Caution:** When a file-modifying hook fires, pre-commit will fail the commit and leave the fixed files as unstaged changes in the working tree. The developer then needs to review, `git add`, and commit again. So nothing lands in a commit without the developer seeing it, but **files on disk do get rewritten**.
+
+To run all hooks against the entire codebase (useful before opening a PR):
+
+```bash
+uv run pre-commit run --all-files
+```
+
 -----
 
 ## Configuration
