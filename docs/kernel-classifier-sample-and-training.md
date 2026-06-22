@@ -25,7 +25,7 @@ export AEGIS_OSIDB_SERVER_URL=URL
 ### 3. Generate training inputs from OSIDB
 
 ```bash
-uv run python src/aegis_ai_ml/src/osidb_retrieve.py
+uv run python src/aegis_ai_ml/src/osidb_retrieve.py --owners user1@example.com,user2@example.com
 ```
 
 This fetches kernel flaws from OSIDB, normalizes them, auto-resolves
@@ -38,6 +38,14 @@ sample-set files:
 The fetch filters server-side by OSIDB component (`kernel`,
 `Linux kernel`) and deduplicates across component queries by UUID.
 Only flaws in the `DONE` workflow state are fetched by default.
+
+Use `--owners` to restrict the fetch to flaws owned by specific analysts
+(comma-separated emails). Owner emails can be found in the raw OSIDB
+flaw data (`owner` field). Filtering by owner selects for
+reference-quality CVEs triaged by subject matter experts, which
+improves model accuracy — especially for the IMPORTANT class, where
+the total population in OSIDB is small and noisy labels have outsized
+impact on recall.
 
 If the initial fetch does not fill every severity class, the script
 retries up to 3 times, targeting only the under-represented classes.
@@ -214,6 +222,24 @@ swings recall by ~3.6 pp, so a tighter floor would cause noisy failures.
 
 Underestimation is the critical failure mode. Overestimation is tolerated
 if it buys safety.
+
+#### Handling regression gate failures
+
+The no-regression check compares underestimation counts against the
+previous `test-results/test_summary.json`. When a retrain fails this
+gate (e.g. IMPORTANT underestimations 5 > 4), first try retuning:
+
+```bash
+make retrain-kernel RETUNE=1
+```
+
+If the regression persists after tuning, inspect the new
+underestimations in `test-results/predictions.txt` to determine whether
+they reflect genuine model degradation or are noise from a changed
+sample set. When the regression is acceptable (e.g. the sample set grew
+and the new miss is borderline), bump the baseline by committing the
+current `test-results/test_summary.json` before re-running the
+pipeline — the next retrain will compare against the updated counts.
 
 ### Feature Set
 
