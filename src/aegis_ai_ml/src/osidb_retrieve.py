@@ -254,6 +254,7 @@ def fetch_flaws_from_osidb(
                     max_results=per_impact,
                     include_fields=FLAWS_FIELDS,
                     order=FLAWS_ORDER,
+                    owner_isempty="false",
                     **owner_kwargs,
                 )
                 for flaw in flaw_iter:
