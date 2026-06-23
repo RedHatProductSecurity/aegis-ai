@@ -598,6 +598,174 @@ spec:
       operator: in
       values:
       - "false"
+  - name: sast-report
+    params:
+    - name: image-url
+      value: $(tasks.build-image-index.results.IMAGE_URL)
+    - name: image-digest
+      value: $(tasks.build-image-index.results.IMAGE_DIGEST)
+    runAfter:
+    - sast-snyk-check
+    - sast-shell-check
+    - sast-unicode-check
+    when:
+    - input: $(params.skip-checks)
+      operator: in
+      values:
+      - "false"
+    taskSpec:
+      description: >-
+        Discover SARIF artifacts attached to the built image by the SAST tasks,
+        pull them, parse findings, log a human-readable summary, and fail the
+        pipeline when error-level findings are present.
+      params:
+      - name: image-url
+        type: string
+      - name: image-digest
+        type: string
+      steps:
+      - name: report
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:470ce04569ca7219f30dfdccdd282ed4f47201b344b05c67a3497ddcd967e2b3
+        env:
+        - name: IMAGE_URL
+          value: $(params.image-url)
+        - name: IMAGE_DIGEST
+          value: $(params.image-digest)
+        script: |
+          #!/bin/bash
+          set -euo pipefail
+
+          command -v oras >/dev/null || { echo "ERROR: oras not found in image"; exit 1; }
+          command -v jq >/dev/null || { echo "ERROR: jq not found in image"; exit 1; }
+          HAS_CSGREP=false
+          command -v csgrep >/dev/null && HAS_CSGREP=true
+
+          [ -n "$IMAGE_URL" ] && [ -n "$IMAGE_DIGEST" ] || {
+            echo "ERROR: IMAGE_URL or IMAGE_DIGEST is empty"; exit 1
+          }
+          IMAGE_REF="${IMAGE_URL}@${IMAGE_DIGEST}"
+          echo "=========================================="
+          echo "SAST Report for ${IMAGE_REF}"
+          echo "=========================================="
+
+          DISCOVER_ERR=$(mktemp)
+          DISCOVER_JSON=$(oras discover --format json "$IMAGE_REF" 2>"$DISCOVER_ERR") || {
+            echo "ERROR: oras discover failed."
+            cat "$DISCOVER_ERR"
+            rm -f "$DISCOVER_ERR"
+            exit 1
+          }
+          rm -f "$DISCOVER_ERR"
+
+          if ! SARIF_REFS=$(echo "$DISCOVER_JSON" | jq -r --arg base "$IMAGE_URL" '
+            [(.referrers // .manifests // [])[]
+             | select(.artifactType == "application/sarif+json")
+             | (.reference // ($base + "@" + .digest))]
+            | .[]
+          '); then
+            echo "ERROR: Failed to parse oras discover output."
+            echo "Raw output:"
+            echo "$DISCOVER_JSON"
+            exit 1
+          fi
+
+          if [ -z "$SARIF_REFS" ]; then
+            echo "No SARIF artifacts found attached to the image."
+            echo "SAST tasks may have been skipped or produced no output."
+            exit 0
+          fi
+
+          SARIF_COUNT=$(echo "$SARIF_REFS" | wc -l)
+          echo "Found ${SARIF_COUNT} SARIF artifact(s)."
+          echo ""
+
+          WORKDIR=$(mktemp -d)
+          trap 'rm -rf "$WORKDIR"' EXIT
+          TOTAL_ERRORS=0
+          TOTAL_WARNINGS=0
+          TOTAL_NOTES=0
+          PULL_FAILURES=0
+
+          while IFS= read -r ref; do
+            [ -n "$ref" ] || continue
+            PULL_DIR=$(mktemp -d "${WORKDIR}/sarif-XXXXXX")
+            echo "------------------------------------------"
+            echo "Pulling: ${ref}"
+            if ! oras pull -o "$PULL_DIR" "$ref" 2>&1; then
+              echo "ERROR: Failed to pull ${ref}."
+              PULL_FAILURES=$((PULL_FAILURES + 1))
+              continue
+            fi
+
+            for sarif_file in "$PULL_DIR"/*; do
+              [ -f "$sarif_file" ] || continue
+              jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
+              FILENAME=$(basename "$sarif_file")
+              TOOL_NAME=$(jq -r '.runs[0].tool.driver.name // "unknown"' "$sarif_file" 2>/dev/null) || TOOL_NAME="unknown"
+              ERRORS=$(jq '[.runs[] | (.results // [])[] | select(.level == "error")] | length' "$sarif_file" 2>/dev/null) || ERRORS=0
+              WARNINGS=$(jq '[.runs[] | (.results // [])[] | select(.level == "warning" or .level == null)] | length' "$sarif_file" 2>/dev/null) || WARNINGS=0
+              NOTES=$(jq '[.runs[] | (.results // [])[] | select(.level == "note" or .level == "none")] | length' "$sarif_file" 2>/dev/null) || NOTES=0
+              TOTAL_RESULTS=$(jq '[.runs[] | (.results // [])[]] | length' "$sarif_file" 2>/dev/null) || TOTAL_RESULTS=0
+
+              echo ""
+              echo "  File: ${FILENAME}"
+              echo "  Tool: ${TOOL_NAME}"
+              echo "  Total findings: ${TOTAL_RESULTS}"
+              echo "    Errors:   ${ERRORS}"
+              echo "    Warnings: ${WARNINGS}"
+              echo "    Notes:    ${NOTES}"
+
+              if [ "$TOTAL_RESULTS" -gt 0 ]; then
+                echo ""
+                CSGREP_OK=false
+                if [ "$HAS_CSGREP" = true ]; then
+                  echo "  Findings:"
+                  if ! csgrep --mode=sarif "$sarif_file" 2>/dev/null | sed 's/^/    /'; then
+                    echo "    (csgrep failed, falling back to jq)"
+                    CSGREP_OK=false
+                  else
+                    CSGREP_OK=true
+                  fi
+                fi
+                if [ "$CSGREP_OK" = false ]; then
+                  [ "$HAS_CSGREP" = true ] || echo "  Findings:"
+                  jq -r '.runs[] | (.results // [])[] |
+                    "    \(.level // "warning"): [\(.ruleId // "no-rule")] \(.locations[0].physicalLocation.artifactLocation.uri // "unknown-file"):\(.locations[0].physicalLocation.region.startLine // "?") \(.message.text // "no message" | split("\n") | .[0])"
+                  ' "$sarif_file" 2>/dev/null || true
+                fi
+              fi
+
+              TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
+              TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
+              TOTAL_NOTES=$((TOTAL_NOTES + NOTES))
+            done
+          done <<< "$SARIF_REFS"
+
+          echo ""
+          echo "=========================================="
+          echo "SAST Summary"
+          echo "=========================================="
+          echo "  Total errors:   ${TOTAL_ERRORS}"
+          echo "  Total warnings: ${TOTAL_WARNINGS}"
+          echo "  Total notes:    ${TOTAL_NOTES}"
+          echo "=========================================="
+
+          if [ "$PULL_FAILURES" -gt 0 ]; then
+            echo ""
+            echo "FAILED: ${PULL_FAILURES} SARIF artifact(s) could not be retrieved."
+            exit 1
+          fi
+
+          if [ "$TOTAL_ERRORS" -gt 0 ]; then
+            echo ""
+            echo "FAILED: ${TOTAL_ERRORS} error-level SAST finding(s) detected."
+            echo "Review the findings above and fix them before merging."
+            exit 1
+          fi
+
+          echo ""
+          echo "PASSED: No error-level SAST findings."
+          exit 0
   - name: apply-tags
     params:
     - name: IMAGE_URL
