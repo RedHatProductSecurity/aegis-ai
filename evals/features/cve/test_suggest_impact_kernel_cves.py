@@ -240,6 +240,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "(predicted MODERATE vs expected IMPORTANT)."
         ),
     },
+    "CVE-2026-23074": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "Explanation for S:C describes privilege escalation to elevated system "
+            "access but the CVSS vector uses S:U. Scope narration inconsistent "
+            "with vector."
+        ),
+    },
 }
 
 # Without the kernel classifier the LLM alone underestimates these
@@ -253,8 +261,11 @@ if not get_settings().use_kernel_classifier:
             "requires kernel classifier to reach correct impact."
         ),
     }
-    for _cve in ("CVE-2025-38590", "CVE-2023-53186", "CVE-2026-23074"):
+    for _cve in ("CVE-2025-38590", "CVE-2023-53186"):
         KNOWN_FAILURES[_cve] = _NO_CLF_WAIVER
+    KNOWN_FAILURES["CVE-2026-23074"]["known_to_fail_evaluators"].append(
+        "UnderestimationEvaluator"
+    )
 
 
 def _normalize_impact(raw: str) -> str:
