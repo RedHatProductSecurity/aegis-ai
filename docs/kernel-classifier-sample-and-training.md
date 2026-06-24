@@ -160,7 +160,7 @@ It currently enforces:
   - IMPORTANT ≥ 80% (`CVE_MODEL_MIN_RECALL_IMPORTANT`)
   - MODERATE ≥ 50% (`CVE_MODEL_MIN_RECALL_MODERATE`)
   - LOW ≥ 50% (`CVE_MODEL_MIN_RECALL_LOW`)
-- maximum IMPORTANT underestimations via `CVE_MODEL_MAX_IMPORTANT_UNDERESTIMATIONS` (default `8`, ~25% of the IMPORTANT test set)
+- maximum IMPORTANT underestimations via `CVE_MODEL_MAX_IMPORTANT_UNDERESTIMATIONS` (default `5`)
 - maximum MODERATE underestimations via `CVE_MODEL_MAX_MODERATE_UNDERESTIMATIONS` (default `8`)
 - no regression in IMPORTANT or MODERATE underestimation counts versus
   the previous `test-results/test_summary.json`, when one exists
