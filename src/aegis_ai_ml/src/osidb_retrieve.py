@@ -45,7 +45,8 @@ FLAWS_FIELDS = [
 ]
 FLAWS_ORDER = ["-created_dt"]
 KERNEL_COMPONENTS = ["kernel", "Linux kernel"]
-DEFAULT_MAX_TOTAL = 720
+# Initial fetch cap per severity; retry loop widens if needed to fill MAJORITY_RATIO.
+DEFAULT_MAX_PER_IMPACT = 500
 MINORITY_CLASS = "IMPORTANT"
 MAJORITY_RATIO = 3
 FETCH_MAX_RETRIES = 3
@@ -168,20 +169,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-per-impact",
         type=int,
-        default=None,
-        help=(
-            "Maximum number of flaws to fetch per impact. "
-            "Defaults to ceil(max_total / number of impacts) when not set."
-        ),
-    )
-    parser.add_argument(
-        "--max-total",
-        type=int,
-        default=DEFAULT_MAX_TOTAL,
-        help=(
-            "Maximum combined train+test CVE count. When exceeded, the oldest "
-            "CVEs are dropped (stratified by severity) to stay within budget."
-        ),
+        default=DEFAULT_MAX_PER_IMPACT,
+        help="Maximum number of flaws to fetch per impact level.",
     )
     parser.add_argument(
         "--owners",
@@ -194,8 +183,6 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.owners is not None:
         args.owners = [o.strip() for o in args.owners.split(",") if o.strip()]
-    if args.max_total < 1:
-        parser.error("--max-total must be at least 1")
     return args
 
 
@@ -505,79 +492,6 @@ def _cap_per_class(
     return capped
 
 
-def _trim_to_budget(
-    train_records: list[dict[str, Any]],
-    test_records: list[dict[str, Any]],
-    max_total: int,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Drop the oldest CVEs (stratified by severity) to stay within *max_total*.
-
-    Eviction prefers dropping from the train split so the test set remains
-    stable for regression tracking.  Within each severity class the oldest
-    records (by ``created_date``) are removed first.
-    """
-    total = len(train_records) + len(test_records)
-    if total <= max_total:
-        return train_records, test_records
-
-    excess = total - max_total
-    logger.info(
-        "trimming %d CVE(s) to stay within --max-total %d (had %d)",
-        excess,
-        max_total,
-        total,
-    )
-
-    severity_counts: Counter[str] = Counter()
-    for r in train_records:
-        severity_counts[r.get("severity", "")] += 1
-    for r in test_records:
-        severity_counts[r.get("severity", "")] += 1
-
-    # Distribute drops proportionally (largest-remainder method).
-    severities = sorted(severity_counts)
-    raw_shares = {sev: excess * severity_counts[sev] / total for sev in severities}
-    drops_per_sev = {sev: math.floor(share) for sev, share in raw_shares.items()}
-    remainder = excess - sum(drops_per_sev.values())
-    by_fractional = sorted(
-        severities, key=lambda s: raw_shares[s] - drops_per_sev[s], reverse=True
-    )
-    for sev in by_fractional[:remainder]:
-        drops_per_sev[sev] += 1
-
-    def _sort_key(record: dict[str, Any]) -> tuple[str, str]:
-        return (record.get("created_date", ""), record["cve_id"])
-
-    evict_ids: set[str] = set()
-
-    for sev, to_drop in drops_per_sev.items():
-        if to_drop <= 0:
-            continue
-        sev_train = sorted(
-            (r for r in train_records if r.get("severity") == sev),
-            key=_sort_key,
-        )
-        sev_test = sorted(
-            (r for r in test_records if r.get("severity") == sev),
-            key=_sort_key,
-        )
-        # Train records come first: eviction prefers dropping from train
-        # so the test set stays stable for regression tracking.
-        candidates = sev_train + sev_test
-        for record in candidates[:to_drop]:
-            cve_id = record["cve_id"]
-            evict_ids.add(cve_id)
-            logger.info(
-                "evicting %s (severity=%s, created_date=%s) to meet budget",
-                cve_id,
-                sev,
-                record.get("created_date", "?"),
-            )
-
-    trimmed_train = [r for r in train_records if r["cve_id"] not in evict_ids]
-    trimmed_test = [r for r in test_records if r["cve_id"] not in evict_ids]
-    return trimmed_train, trimmed_test
-
 
 def _warn_lost_cves(
     existing_ids: set[str],
@@ -594,9 +508,6 @@ def _warn_lost_cves(
 def main() -> int:
     args = parse_args()
     use_osidb = not args.cve_ids and not args.input_flaws_json
-
-    if args.max_per_impact is None:
-        args.max_per_impact = math.ceil(args.max_total / len(args.impacts))
 
     if args.cve_ids:
         flaws = fetch_flaws_by_cve_ids(args)
@@ -749,12 +660,6 @@ def main() -> int:
             train_records,
             test_records,
         )
-
-    train_records, test_records = _trim_to_budget(
-        train_records,
-        test_records,
-        args.max_total,
-    )
 
     new_ids = {r["cve_id"] for r in train_records + test_records}
     lost_count = _warn_lost_cves(existing_ids, new_ids, skipped_cves)

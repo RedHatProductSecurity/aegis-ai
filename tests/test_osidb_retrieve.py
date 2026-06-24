@@ -14,7 +14,6 @@ from aegis_ai_ml.src.osidb_retrieve import (
     _cap_per_class,
     _load_existing_cve_ids,
     _merge_records,
-    _trim_to_budget,
     _warn_lost_cves,
     main,
     normalize_flaws,
@@ -285,137 +284,6 @@ def test_merge_records_updates_existing_and_adds_new() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _trim_to_budget
-# ---------------------------------------------------------------------------
-
-
-def _record(cve_id: str, severity: str, created_date: str) -> dict:
-    return {"cve_id": cve_id, "severity": severity, "created_date": created_date}
-
-
-def test_trim_to_budget_noop_when_under_budget() -> None:
-    train = [_record("CVE-0001", "IMPORTANT", "2024-01-01")]
-    test = [_record("CVE-0002", "IMPORTANT", "2024-02-01")]
-
-    result_train, result_test = _trim_to_budget(train, test, max_total=5)
-
-    assert result_train == train
-    assert result_test == test
-
-
-def test_trim_to_budget_noop_when_exactly_at_budget() -> None:
-    train = [_record("CVE-0001", "LOW", "2024-01-01")]
-    test = [_record("CVE-0002", "LOW", "2024-02-01")]
-
-    result_train, result_test = _trim_to_budget(train, test, max_total=2)
-
-    assert len(result_train) + len(result_test) == 2
-
-
-def test_trim_to_budget_drops_oldest_cves() -> None:
-    train = [
-        _record("CVE-OLD-1", "IMPORTANT", "2020-01-01"),
-        _record("CVE-MID-1", "IMPORTANT", "2022-06-01"),
-        _record("CVE-NEW-1", "IMPORTANT", "2024-01-01"),
-    ]
-    test = [
-        _record("CVE-NEW-2", "IMPORTANT", "2024-06-01"),
-    ]
-
-    result_train, result_test = _trim_to_budget(train, test, max_total=2)
-
-    all_ids = {r["cve_id"] for r in result_train + result_test}
-    assert len(all_ids) == 2
-    assert "CVE-OLD-1" not in all_ids
-    assert "CVE-MID-1" not in all_ids
-    assert "CVE-NEW-1" in all_ids
-    assert "CVE-NEW-2" in all_ids
-
-
-def test_trim_to_budget_preserves_severity_proportions() -> None:
-    train = [
-        _record("CVE-I-1", "IMPORTANT", "2020-01-01"),
-        _record("CVE-I-2", "IMPORTANT", "2021-01-01"),
-        _record("CVE-I-3", "IMPORTANT", "2022-01-01"),
-        _record("CVE-I-4", "IMPORTANT", "2023-01-01"),
-        _record("CVE-M-1", "MODERATE", "2020-06-01"),
-        _record("CVE-M-2", "MODERATE", "2021-06-01"),
-        _record("CVE-M-3", "MODERATE", "2022-06-01"),
-        _record("CVE-M-4", "MODERATE", "2023-06-01"),
-        _record("CVE-L-1", "LOW", "2020-03-01"),
-        _record("CVE-L-2", "LOW", "2021-03-01"),
-        _record("CVE-L-3", "LOW", "2022-03-01"),
-        _record("CVE-L-4", "LOW", "2023-03-01"),
-    ]
-    test: list[dict] = []
-
-    result_train, result_test = _trim_to_budget(train, test, max_total=6)
-
-    all_records = result_train + result_test
-    assert len(all_records) == 6
-
-    sev_counts = Counter(r["severity"] for r in all_records)
-    assert sev_counts["IMPORTANT"] == 2
-    assert sev_counts["MODERATE"] == 2
-    assert sev_counts["LOW"] == 2
-
-
-def test_trim_to_budget_prefers_dropping_train_over_test() -> None:
-    train = [
-        _record("CVE-TRAIN-OLD", "IMPORTANT", "2020-01-01"),
-        _record("CVE-TRAIN-NEW", "IMPORTANT", "2024-01-01"),
-    ]
-    test = [
-        _record("CVE-TEST-OLD", "IMPORTANT", "2020-01-02"),
-        _record("CVE-TEST-NEW", "IMPORTANT", "2024-06-01"),
-    ]
-
-    result_train, result_test = _trim_to_budget(train, test, max_total=3)
-
-    all_ids = {r["cve_id"] for r in result_train + result_test}
-    assert len(all_ids) == 3
-    # The oldest train record should be evicted, not the oldest test record,
-    # because train candidates come before test candidates.
-    assert "CVE-TRAIN-OLD" not in all_ids
-    assert "CVE-TEST-OLD" in all_ids
-
-
-def test_trim_to_budget_handles_single_severity() -> None:
-    train = [_record(f"CVE-{i:04d}", "MODERATE", f"20{20 + i}-01-01") for i in range(5)]
-    test = [_record("CVE-TEST", "MODERATE", "2026-01-01")]
-
-    result_train, result_test = _trim_to_budget(train, test, max_total=3)
-
-    all_records = result_train + result_test
-    assert len(all_records) == 3
-    all_ids = {r["cve_id"] for r in all_records}
-    assert "CVE-TEST" in all_ids
-
-
-# ---------------------------------------------------------------------------
-# parse_args — validation
-# ---------------------------------------------------------------------------
-
-
-def test_max_total_zero_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    from aegis_ai_ml.src.osidb_retrieve import parse_args
-
-    monkeypatch.setattr("sys.argv", ["osidb_retrieve.py", "--max-total", "0"])
-    with pytest.raises(SystemExit) as exc_info:
-        parse_args()
-    assert exc_info.value.code == 2
-
-
-def test_max_total_negative_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
-    from aegis_ai_ml.src.osidb_retrieve import parse_args
-
-    monkeypatch.setattr("sys.argv", ["osidb_retrieve.py", "--max-total", "-5"])
-    with pytest.raises(SystemExit) as exc_info:
-        parse_args()
-    assert exc_info.value.code == 2
-
-
-# ---------------------------------------------------------------------------
 # Incremental normalization equivalence
 # ---------------------------------------------------------------------------
 
@@ -496,7 +364,6 @@ class TestMainRetryLoop:
         self,
         tmp_path: Path,
         fetch_side_effect: list[list[dict[str, Any]]],
-        max_total: int = 10,
     ) -> int:
         """Run main() with mocked fetch and file outputs in tmp_path."""
         train_out = tmp_path / "train.json"
@@ -513,8 +380,6 @@ class TestMainRetryLoop:
             str(test_out),
             "--report-output",
             str(report_out),
-            "--max-total",
-            str(max_total),
             "--skip-patch-resolution",
             "--osidb-url",
             "https://fake.example",
@@ -557,7 +422,7 @@ class TestMainRetryLoop:
         initial_batch = _make_kernel_flaws("A", 1, 3)
         retry_batch = _make_kernel_flaws("B", 1, 10)
 
-        rc = self._run_main(tmp_path, [initial_batch, retry_batch], max_total=10)
+        rc = self._run_main(tmp_path, [initial_batch, retry_batch])
 
         assert rc == 0
         train = json.loads((tmp_path / "train.json").read_text())
@@ -568,7 +433,7 @@ class TestMainRetryLoop:
     def test_retry_exits_early_when_no_new_flaws(self, tmp_path: Path) -> None:
         initial_batch = _make_kernel_flaws("A", 1, 3)
 
-        rc = self._run_main(tmp_path, [initial_batch, []], max_total=10)
+        rc = self._run_main(tmp_path, [initial_batch, []])
 
         assert rc == 0
         train = json.loads((tmp_path / "train.json").read_text())
@@ -581,7 +446,7 @@ class TestMainRetryLoop:
         # Second batch has overlap with first + some new
         retry_batch = initial_batch[:2] + _make_kernel_flaws("B", 1, 8)
 
-        rc = self._run_main(tmp_path, [initial_batch, retry_batch], max_total=10)
+        rc = self._run_main(tmp_path, [initial_batch, retry_batch])
 
         assert rc == 0
         train = json.loads((tmp_path / "train.json").read_text())
@@ -591,21 +456,25 @@ class TestMainRetryLoop:
         assert len(all_ids) == len(set(all_ids))
         assert len(all_ids) >= 10
 
-    def test_no_retry_when_initial_batch_meets_budget(self, tmp_path: Path) -> None:
+    def test_no_retry_when_initial_batch_sufficient(self, tmp_path: Path) -> None:
         initial_batch = _make_kernel_flaws("A", 1, 12)
 
-        rc = self._run_main(tmp_path, [initial_batch], max_total=10)
+        rc = self._run_main(tmp_path, [initial_batch])
 
         assert rc == 0
         train = json.loads((tmp_path / "train.json").read_text())
         test = json.loads((tmp_path / "test.json").read_text())
         all_ids = {r["cve_id"] for r in train + test}
-        assert len(all_ids) <= 10
+        assert len(all_ids) == 12
 
 
 # ---------------------------------------------------------------------------
 # _cap_per_class
 # ---------------------------------------------------------------------------
+
+
+def _record(cve_id: str, severity: str, created_date: str) -> dict:
+    return {"cve_id": cve_id, "severity": severity, "created_date": created_date}
 
 
 def test_cap_per_class_noop_when_under_target() -> None:
@@ -663,7 +532,6 @@ class TestMultiImpactRetryBalance:
         self,
         tmp_path: Path,
         fetch_side_effect: list[list[dict[str, Any]]],
-        max_total: int = 30,
     ) -> tuple[int, list[dict[str, Any]], list[dict[str, Any]]]:
         train_out = tmp_path / "train.json"
         test_out = tmp_path / "test.json"
@@ -679,8 +547,6 @@ class TestMultiImpactRetryBalance:
             str(test_out),
             "--report-output",
             str(report_out),
-            "--max-total",
-            str(max_total),
             "--skip-patch-resolution",
             "--osidb-url",
             "https://fake.example",
@@ -724,7 +590,7 @@ class TestMultiImpactRetryBalance:
 
     def test_imbalanced_initial_fetch_gets_capped(self, tmp_path: Path) -> None:
         """When initial fetch returns far more LOW/MODERATE than IMPORTANT,
-        the per-class cap prevents the result from exceeding per_class_target."""
+        the per-class cap limits majority classes to MAJORITY_RATIO × minority."""
         initial_batch = (
             _make_kernel_flaws("I", 1, 2, impact="IMPORTANT")
             + _make_kernel_flaws("M", 1, 50, impact="MODERATE")
@@ -732,28 +598,13 @@ class TestMultiImpactRetryBalance:
         )
 
         rc, train, test = self._run_main_multi_impact(
-            tmp_path, [initial_batch, []], max_total=30
+            tmp_path, [initial_batch, []]
         )
 
         assert rc == 0
         all_records = train + test
         sev_counts = Counter(r["severity"] for r in all_records)
-        per_class_target = 30 // 3
-        assert sev_counts.get("MODERATE", 0) <= per_class_target
-        assert sev_counts.get("LOW", 0) <= per_class_target
-        assert len(all_records) <= 30
-
-    def test_total_output_respects_max_total(self, tmp_path: Path) -> None:
-        """Even when OSIDB returns plenty of CVEs, output never exceeds max_total."""
-        initial_batch = (
-            _make_kernel_flaws("I", 1, 20, impact="IMPORTANT")
-            + _make_kernel_flaws("M", 1, 20, impact="MODERATE")
-            + _make_kernel_flaws("L", 1, 20, impact="LOW")
-        )
-
-        rc, train, test = self._run_main_multi_impact(
-            tmp_path, [initial_batch], max_total=30
-        )
-
-        assert rc == 0
-        assert len(train) + len(test) <= 30
+        important_count = sev_counts.get("IMPORTANT", 0)
+        majority_cap = important_count * 3
+        assert sev_counts.get("MODERATE", 0) <= majority_cap
+        assert sev_counts.get("LOW", 0) <= majority_cap
