@@ -95,11 +95,11 @@ def test_split_records_by_severity_is_deterministic_and_stratified() -> None:
     assert report_one == report_two
     assert report_one["per_severity"]["IMPORTANT"] == {
         "input": 4,
-        "train": 3,
-        "test": 1,
+        "train": 2,
+        "test": 2,
     }
     assert report_one["per_severity"]["MODERATE"] == {"input": 4, "train": 3, "test": 1}
-    assert report_one["per_severity"]["LOW"] == {"input": 4, "train": 3, "test": 1}
+    assert report_one["per_severity"]["LOW"] == {"input": 4, "train": 2, "test": 2}
 
 
 def test_split_records_by_severity_handles_singletons_and_missing_severities() -> None:

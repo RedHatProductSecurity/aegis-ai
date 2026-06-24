@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-import random
+import hashlib
 import re
 import subprocess
 from collections import Counter
@@ -275,7 +275,6 @@ def split_records_by_severity(
     for record in records:
         by_severity.setdefault(str(record["severity"]), []).append(record)
 
-    rng = random.Random(seed)
     train: list[dict[str, Any]] = []
     test: list[dict[str, Any]] = []
     report: dict[str, Any] = {
@@ -284,22 +283,31 @@ def split_records_by_severity(
         "per_severity": {},
     }
 
+    threshold = int(test_ratio * 100)
+
     for severity, group in by_severity.items():
         if not group:
             report["per_severity"][severity] = {"input": 0, "train": 0, "test": 0}
             continue
 
-        shuffled = sorted(group, key=lambda row: row["cve_id"])
-        rng.shuffle(shuffled)
+        if len(group) == 1:
+            train.extend(group)
+            report["per_severity"][severity] = {
+                "input": 1,
+                "train": 1,
+                "test": 0,
+            }
+            continue
 
-        if len(shuffled) == 1:
-            test_count = 0
-        else:
-            test_count = max(1, round(len(shuffled) * test_ratio))
-            test_count = min(test_count, len(shuffled) - 1)
+        train_group: list[dict[str, Any]] = []
+        test_group: list[dict[str, Any]] = []
+        for record in group:
+            bucket = _hash_to_bucket(record["cve_id"], seed)
+            if bucket < threshold:
+                test_group.append(record)
+            else:
+                train_group.append(record)
 
-        test_group = shuffled[:test_count]
-        train_group = shuffled[test_count:]
         train.extend(train_group)
         test.extend(test_group)
         report["per_severity"][severity] = {
@@ -311,6 +319,12 @@ def split_records_by_severity(
     train = sorted(train, key=lambda row: (row.get("created_date", ""), row["cve_id"]))
     test = sorted(test, key=lambda row: (row.get("created_date", ""), row["cve_id"]))
     return train, test, report
+
+
+def _hash_to_bucket(cve_id: str, seed: int) -> int:
+    """Map a CVE ID to a stable 0–99 bucket using the seed as salt."""
+    digest = hashlib.sha256(f"{seed}:{cve_id}".encode()).hexdigest()
+    return int(digest, 16) % 100
 
 
 class LinuxVulnsResolver:
