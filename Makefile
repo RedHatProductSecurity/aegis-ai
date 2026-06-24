@@ -84,7 +84,15 @@ publish-dist:
 KERNEL_CLF_DIR = src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier
 
 retrain-kernel:
-	$(MAKE) -C $(KERNEL_CLF_DIR) retrain $(if $(RETUNE),RETUNE=1)
+	$(MAKE) -C $(KERNEL_CLF_DIR) train $(if $(RETUNE),RETUNE=1)
+
+fetch-kernel:
+	uv run python src/aegis_ai_ml/src/osidb_retrieve.py $(if $(OWNERS),--owners=$(OWNERS))
+	$(MAKE) -C $(KERNEL_CLF_DIR) scrape
+
+retrain-kernel-full:
+	$(MAKE) fetch-kernel $(if $(OWNERS),OWNERS=$(OWNERS))
+	$(MAKE) retrain-kernel RETUNE=1
 
 test-kernel:
 	$(MAKE) -C $(KERNEL_CLF_DIR) test

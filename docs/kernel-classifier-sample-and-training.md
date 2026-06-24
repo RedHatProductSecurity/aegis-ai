@@ -7,100 +7,50 @@ and retraining the XGBoost model.
 
 ## Regular Retraining Workflow
 
-Follow these steps in order from the repository root.
-
-### 1. Install dependencies
-
-```bash
-make fetch-deps
-```
-
-### 2. Authenticate and configure
-
 ```bash
 kinit
 export AEGIS_OSIDB_SERVER_URL=URL
+make retrain-kernel-full
 ```
 
-### 3. Generate training inputs from OSIDB
+This fetches all owned, `DONE` kernel flaws from OSIDB (via
+`osidb_retrieve.py`), generates training inputs, and runs the full
+7-step pipeline with hyperparameter tuning (`RETUNE=1`). Data selection
+uses ratio-based capping anchored to the minority class (IMPORTANT);
+MODERATE and LOW are each capped at 3× the IMPORTANT count. CRITICAL
+is excluded.
+
+To restrict the fetch to specific analysts, pass the `OWNERS` argument:
 
 ```bash
-uv run python src/aegis_ai_ml/src/osidb_retrieve.py --owners user1@example.com,user2@example.com
+make retrain-kernel-full OWNERS=user1@example.com,user2@example.com
 ```
 
-This fetches kernel flaws from OSIDB, normalizes them, auto-resolves
-patch IDs via `linux-security-vulns`, and writes the git-tracked
-sample-set files:
-
-- `src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/data/train_kernel_cves.json`
-- `src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/data/test_kernel_cves.json`
-
-The fetch filters server-side by OSIDB component (`kernel`,
-`Linux kernel`) and deduplicates across component queries by UUID.
-Only flaws in the `DONE` workflow state are fetched by default.
-
-Use `--owners` to restrict the fetch to flaws owned by specific analysts
-(comma-separated emails). Owner emails can be found in the raw OSIDB
-flaw data (`owner` field). Filtering by owner selects for
-reference-quality CVEs triaged by subject matter experts, which
-improves model accuracy — especially for the IMPORTANT class, where
-the total population in OSIDB is small and noisy labels have outsized
-impact on recall.
-
-If the initial fetch does not fill every severity class, the script
-retries up to 3 times, targeting only the under-represented classes.
-
-The data selection uses **ratio-based capping** anchored to the minority
-class (IMPORTANT). All IMPORTANT CVEs are kept uncapped; MODERATE and
-LOW are each capped at `MAJORITY_RATIO` × the IMPORTANT count (default
-3×). With ~112 IMPORTANT CVEs in OSIDB, this produces ~112 IMPORTANT /
-~336 MODERATE / ~336 LOW ≈ 784 total. This reflects the real-world
-severity distribution where IMPORTANT is ~3% of kernel CVEs while
-preserving enough majority-class examples for the model to learn
-decision boundaries. The cap keeps the newest CVEs by `created_date`
-and runs before train/test splitting.
-
-CRITICAL severity is excluded from the default fetch because too few
-kernel CVEs carry that rating to form a useful training class; their
-characteristics overlap with IMPORTANT in practice.
-
-Review the generation report for duplicate CVEs, unsupported severities,
-unresolved patch lists, train/test split balance, and CVEs flagged for
-manual review before continuing.
-
-### 4. Retrain the model
+To run the fetch and scrape steps separately from training:
 
 ```bash
-make retrain-kernel
+make fetch-kernel                    # OSIDB fetch + patch scraping
+make retrain-kernel RETUNE=1         # feature extraction through testing
 ```
 
-### 5. Verify the retrain
-
-After `make retrain-kernel`, check at least:
-
-1. Scraper warnings — `skipped_no_strategy`, CVEs with no commits or HTML.
-2. Split output from `split_datasets_for_train_test.py` — train/test
-   overlap is a **fatal error** (the splitter raises `SystemExit` and
-   the pipeline aborts; fix the overlap in the JSON files before
-   re-running). CVEs absent from `cve_dataset.csv` are warnings only.
-3. SMOTE output — class balancing looks sane.
-4. `models/model_metadata.json` — feature count, training dataset path,
-   class weights or tuned params.
-5. `test-results/test_summary.json` — accuracy, underestimations,
-   per-class recall.
-6. `test-results/predictions.txt` — whether misses cluster around a
-   specific pattern.
-7. `models/feature_importance.csv` — whether the learned signal still
-   looks plausible.
-
-If the retrain passes only because there was no prior
-`test-results/test_summary.json`, commit the new summary with the model
-update so the next retrain has a regression baseline.
-
-### 6. Commit
-
-Review the diff on the sample-set JSON files, model artifacts, and test
+Review the diff on sample-set JSON files, model artifacts, and test
 results, then commit.
+
+### Pipeline Breakdown
+
+`make retrain-kernel-full` runs these steps in order:
+
+| Phase | Step | Script | Description |
+|-------|------|--------|-------------|
+| fetch | 1 | `osidb_retrieve.py` | Fetches flaws from OSIDB, auto-resolves patch IDs via `linux-security-vulns`, writes `train_kernel_cves.json` and `test_kernel_cves.json` |
+| fetch | 2 | `cve_data_scraper.py` | Scrapes commit HTML and patches for each CVE |
+| train | 3 | `cve_feature_extraction.py` | Extracts binary patch flags into `cve_dataset.csv` |
+| train | 4 | `fetch_cvss_cwe.py` | Merges CVSS score features into `cve_dataset.csv` |
+| train | 5 | `split_datasets_for_train_test.py` | Splits into training and testing CSVs using hash-based assignment |
+| train | 6 | `cve_smote_balancer.py` | Applies SMOTE to balance the training set |
+| train | 7 | `tune_hyperparameters.py` | Grid search with 3-fold stratified CV |
+| train | 8 | `xgboost_train.py` | Trains the model with the tuned parameters |
+| train | 9 | `test_cve_model.py` | Evaluates and reports quality gate warnings |
 
 ## Refreshing Specific CVEs
 
@@ -127,9 +77,8 @@ This mode is rarely what you want with `--cve-ids`; prefer `--merge`.
 **With `--merge`**, the fetched CVEs are folded into the existing
 `train_kernel_cves.json` and `test_kernel_cves.json`, updating any CVE
 that already exists and appending new ones. The combined result is
-trimmed to stay within `--max-total` (default 720) by evicting the
-oldest CVEs, stratified by severity, preferring to drop from the train
-split so the test set stays stable.
+deduplicated by CVE ID. MODERATE and LOW classes are capped at 3× the
+IMPORTANT count so the minority class is never diluted.
 
 Both modes write to the git-tracked sample-set files; review the diff
 and commit the result.
@@ -140,7 +89,7 @@ and commit the result.
 make retrain-kernel RETUNE=1
 ```
 
-This runs the same 7-step pipeline as `make retrain-kernel`, but injects
+This runs the same train pipeline as `make retrain-kernel`, but injects
 `tune_hyperparameters.py` immediately before `xgboost_train.py`. The
 tuner performs a grid search over XGBoost hyperparameters and class
 weights using **3-fold stratified cross-validation**. SMOTE is applied
@@ -152,9 +101,10 @@ The tuner selects configs that meet **per-class recall floors**
 (IMPORTANT ≥ 80%, MODERATE ≥ 50%, LOW ≥ 50%) first, then maximises
 accuracy, breaking ties by fewest underestimations. Class weights
 express the asymmetric misclassification cost — underestimating an
-IMPORTANT CVE is worse than overestimating a LOW one. The grid includes
-a neutral baseline (1.0) so CV can determine whether SMOTE alone is
-sufficient without additional weighting.
+IMPORTANT CVE is worse than overestimating a LOW one. Neutral weights
+({0:1.0}) are excluded from the grid because with ~32 IMPORTANT test
+CVEs, the tuner can meet the 80% CV recall floor by chance then fail
+the held-out gate by a single CVE.
 
 The winning configuration is written to `models/tuned_params.json`
 (creating or overwriting the file). `xgboost_train.py` checks for that
@@ -189,8 +139,7 @@ compare across retrains.
 | `--raw-output-dir` | — | Write one raw flaw JSON file per CVE to a directory |
 | `--raw-only` | off | Fetch/load flaws and write raw output only; skip train/test generation |
 | `--dry-run` | off | Generate and validate in memory, write only the report; skip train/test output |
-| `--max-total` | `720` | Maximum combined train+test CVE count |
-| `--max-per-impact` | `ceil(max_total / n_impacts)` | Maximum flaws to fetch per impact from OSIDB |
+| `--max-per-impact` | `500` | Maximum flaws to fetch per impact level from OSIDB |
 | `--impacts` | `IMPORTANT MODERATE LOW` | Impact values to fetch |
 | `--states` | `DONE` | OSIDB workflow states to fetch |
 | `--test-ratio` | `0.25` | Fraction of records placed in the test split |
@@ -211,7 +160,7 @@ It currently enforces:
   - IMPORTANT ≥ 80% (`CVE_MODEL_MIN_RECALL_IMPORTANT`)
   - MODERATE ≥ 50% (`CVE_MODEL_MIN_RECALL_MODERATE`)
   - LOW ≥ 50% (`CVE_MODEL_MIN_RECALL_LOW`)
-- maximum IMPORTANT underestimations via `CVE_MODEL_MAX_IMPORTANT_UNDERESTIMATIONS` (default `6`)
+- maximum IMPORTANT underestimations via `CVE_MODEL_MAX_IMPORTANT_UNDERESTIMATIONS` (default `8`, ~25% of the IMPORTANT test set)
 - maximum MODERATE underestimations via `CVE_MODEL_MAX_MODERATE_UNDERESTIMATIONS` (default `8`)
 - no regression in IMPORTANT or MODERATE underestimation counts versus
   the previous `test-results/test_summary.json`, when one exists
@@ -222,24 +171,6 @@ swings recall by ~3.6 pp, so a tighter floor would cause noisy failures.
 
 Underestimation is the critical failure mode. Overestimation is tolerated
 if it buys safety.
-
-#### Handling regression gate failures
-
-The no-regression check compares underestimation counts against the
-previous `test-results/test_summary.json`. When a retrain fails this
-gate (e.g. IMPORTANT underestimations 5 > 4), first try retuning:
-
-```bash
-make retrain-kernel RETUNE=1
-```
-
-If the regression persists after tuning, inspect the new
-underestimations in `test-results/predictions.txt` to determine whether
-they reflect genuine model degradation or are noise from a changed
-sample set. When the regression is acceptable (e.g. the sample set grew
-and the new miss is borderline), bump the baseline by committing the
-current `test-results/test_summary.json` before re-running the
-pipeline — the next retrain will compare against the updated counts.
 
 ### Feature Set
 
@@ -378,15 +309,9 @@ without exposing the tree to class-imbalanced pattern splits.
 
 ### Pipeline Steps
 
-`make retrain-kernel` runs these steps in order:
-
-1. `cve_data_scraper.py`
-2. `cve_feature_extraction.py`
-3. `fetch_cvss_cwe.py`
-4. `split_datasets_for_train_test.py`
-5. `cve_smote_balancer.py`
-6. `xgboost_train.py`
-7. `test_cve_model.py`
+`make retrain-kernel` runs the train phase (steps 3–9 in the table above).
+`make fetch-kernel` runs the fetch phase (steps 1–2).
+`make retrain-kernel-full` runs both.
 
 Each step reads only files produced by earlier steps in the same run
 (or the curated JSON inputs). Intermediate CSVs from a previous run
@@ -513,6 +438,45 @@ Revisit the curated JSON files when:
 
 If the sample set changes, rerun the full retrain pipeline. Do not patch
 the derived CSVs or model files by hand.
+
+### Troubleshooting
+
+#### Verifying a retrain
+
+After a retrain, check at least:
+
+1. Scraper warnings — `skipped_no_strategy`, CVEs with no commits or HTML.
+2. Split output — train/test overlap is a **fatal error** (the splitter
+   raises `SystemExit`; fix the overlap in the JSON files before
+   re-running). CVEs absent from `cve_dataset.csv` are warnings only.
+3. `test-results/test_summary.json` — accuracy, underestimations,
+   per-class recall.
+4. `test-results/predictions.txt` — whether misses cluster around a
+   specific pattern.
+5. `models/feature_importance.csv` — whether the learned signal still
+   looks plausible.
+
+If the retrain passes only because there was no prior
+`test-results/test_summary.json`, commit the new summary with the model
+update so the next retrain has a regression baseline.
+
+#### Regression gate failures
+
+The no-regression check compares underestimation counts against the
+previous `test-results/test_summary.json`. When a retrain fails this
+gate (e.g. IMPORTANT underestimations 5 > 4), first try retuning:
+
+```bash
+make retrain-kernel RETUNE=1
+```
+
+If the regression persists after tuning, inspect the new
+underestimations in `test-results/predictions.txt` to determine whether
+they reflect genuine model degradation or are noise from a changed
+sample set. When the regression is acceptable (e.g. the sample set grew
+and the new miss is borderline), bump the baseline by committing the
+current `test-results/test_summary.json` before re-running the
+pipeline — the next retrain will compare against the updated counts.
 
 ### Related Docs
 
