@@ -57,6 +57,7 @@ DEFAULT_TEST_JSON = DATA_DIR / "test_kernel_cves.json"
 DEFAULT_REPORT_JSON = DATA_DIR / "generation_report.json"
 DEFAULT_VULNS_REPO = DATA_DIR / "linux_security_vulns"
 OSIDB_URL = os.getenv("AEGIS_OSIDB_SERVER_URL", "https://localhost:8000")
+DEFAULT_SPLIT_SEED = 42
 
 logging.basicConfig(
     stream=sys.stderr,
@@ -64,6 +65,22 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _read_previous_seed(report_path: Path | None) -> int | None:
+    """Read the split seed from an existing generation report, or None."""
+    if report_path is None or not report_path.exists():
+        return None
+    try:
+        with report_path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        seed = data.get("split_report", {}).get("seed")
+        if isinstance(seed, int):
+            logger.info("Reusing seed %d from %s", seed, report_path)
+            return seed
+    except (OSError, ValueError, KeyError):
+        pass
+    return None
 
 
 def parse_args() -> argparse.Namespace:
@@ -131,12 +148,6 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.25,
         help="Fraction of normalized records to place in the test split.",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Deterministic seed for stratified splitting.",
     )
     parser.add_argument(
         "--vulns-repo",
@@ -492,7 +503,6 @@ def _cap_per_class(
     return capped
 
 
-
 def _warn_lost_cves(
     existing_ids: set[str],
     new_ids: set[str],
@@ -632,10 +642,11 @@ def main() -> int:
         normalized, majority_cap, uncapped_classes={MINORITY_CLASS}
     )
 
+    seed = _read_previous_seed(args.report_output) or DEFAULT_SPLIT_SEED
     train_records, test_records, split_report = split_records_by_severity(
         normalized,
         test_ratio=args.test_ratio,
-        seed=args.seed,
+        seed=seed,
     )
     report = build_generation_report(
         raw_total=len(flaws),

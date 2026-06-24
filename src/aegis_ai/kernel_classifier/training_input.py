@@ -260,6 +260,105 @@ def normalize_classifier_record(
     return normalized, None
 
 
+def _ks_statistic(a: list[float], b: list[float]) -> float:
+    """Two-sample Kolmogorov-Smirnov statistic (no scipy dependency)."""
+    if not a or not b:
+        return 0.0
+    n_a, n_b = len(a), len(b)
+    tagged = [(v, 0) for v in a] + [(v, 1) for v in b]
+    tagged.sort(key=lambda t: t[0])
+    cdf_a = cdf_b = 0.0
+    max_diff = 0.0
+    for _, source in tagged:
+        if source == 0:
+            cdf_a += 1.0 / n_a
+        else:
+            cdf_b += 1.0 / n_b
+        diff = abs(cdf_a - cdf_b)
+        if diff > max_diff:
+            max_diff = diff
+    return max_diff
+
+
+def _date_to_ordinal(date_str: str) -> float | None:
+    if not date_str:
+        return None
+    try:
+        return float(datetime.strptime(date_str, "%Y-%m-%d").toordinal())
+    except ValueError:
+        return None
+
+
+def _cvss_bucket(cvss_score: float | None) -> str:
+    if not cvss_score:
+        return "low"
+    if cvss_score < 4.0:
+        return "low"
+    if cvss_score < 7.0:
+        return "medium"
+    return "high"
+
+
+def _date_year_bucket(created_date: str) -> str:
+    if not created_date:
+        return "unknown"
+    try:
+        return str(datetime.strptime(created_date, "%Y-%m-%d").year)
+    except ValueError:
+        return "unknown"
+
+
+def _stratum_key(record: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(record["severity"]),
+        _cvss_bucket(float(record.get("cvss_score") or 0)),
+        _date_year_bucket(record.get("created_date", "")),
+    )
+
+
+def _score_split(
+    train: list[dict[str, Any]],
+    test: list[dict[str, Any]],
+    test_ratio: float,
+) -> dict[str, Any]:
+    """Measure split quality — lower ``score`` is better."""
+    by_sev_train: dict[str, int] = Counter(str(r["severity"]) for r in train)
+    by_sev_test: dict[str, int] = Counter(str(r["severity"]) for r in test)
+    max_class_dev = 0.0
+    for sev in SUPPORTED_SEVERITIES:
+        total = by_sev_train.get(sev, 0) + by_sev_test.get(sev, 0)
+        if total == 0:
+            continue
+        actual = by_sev_test.get(sev, 0) / total
+        dev = abs(actual - test_ratio)
+        if dev > max_class_dev:
+            max_class_dev = dev
+
+    train_cvss = [float(r.get("cvss_score") or 0) for r in train]
+    test_cvss = [float(r.get("cvss_score") or 0) for r in test]
+    ks_cvss = _ks_statistic(train_cvss, test_cvss)
+
+    train_dates = [
+        d
+        for r in train
+        if (d := _date_to_ordinal(r.get("created_date", ""))) is not None
+    ]
+    test_dates = [
+        d
+        for r in test
+        if (d := _date_to_ordinal(r.get("created_date", ""))) is not None
+    ]
+    ks_date = _ks_statistic(train_dates, test_dates)
+
+    score = max_class_dev + ks_cvss + ks_date
+    return {
+        "score": round(score, 4),
+        "max_class_deviation": round(max_class_dev, 4),
+        "ks_cvss": round(ks_cvss, 4),
+        "ks_date": round(ks_date, 4),
+    }
+
+
 def split_records_by_severity(
     records: list[dict[str, Any]],
     *,
@@ -269,55 +368,58 @@ def split_records_by_severity(
     if not 0.0 < test_ratio < 1.0:
         raise ValueError("test_ratio must be between 0 and 1.")
 
-    by_severity: dict[str, list[dict[str, Any]]] = {
-        label: [] for label in SUPPORTED_SEVERITIES
-    }
+    by_stratum: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
     for record in records:
-        by_severity.setdefault(str(record["severity"]), []).append(record)
+        key = _stratum_key(record)
+        by_stratum.setdefault(key, []).append(record)
 
     train: list[dict[str, Any]] = []
     test: list[dict[str, Any]] = []
-    report: dict[str, Any] = {
-        "seed": seed,
-        "test_ratio": test_ratio,
-        "per_severity": {},
-    }
-
     threshold = int(test_ratio * 100)
+    singleton_strata = 0
+    records_in_singletons = 0
 
-    for severity, group in by_severity.items():
-        if not group:
-            report["per_severity"][severity] = {"input": 0, "train": 0, "test": 0}
-            continue
-
+    for _key, group in sorted(by_stratum.items()):
         if len(group) == 1:
             train.extend(group)
-            report["per_severity"][severity] = {
-                "input": 1,
-                "train": 1,
-                "test": 0,
-            }
+            singleton_strata += 1
+            records_in_singletons += len(group)
             continue
 
-        train_group: list[dict[str, Any]] = []
-        test_group: list[dict[str, Any]] = []
         for record in group:
             bucket = _hash_to_bucket(record["cve_id"], seed)
             if bucket < threshold:
-                test_group.append(record)
+                test.append(record)
             else:
-                train_group.append(record)
+                train.append(record)
 
-        train.extend(train_group)
-        test.extend(test_group)
-        report["per_severity"][severity] = {
-            "input": len(group),
-            "train": len(train_group),
-            "test": len(test_group),
+    per_severity_input = Counter(str(r["severity"]) for r in records)
+    per_severity_train = Counter(str(r["severity"]) for r in train)
+    per_severity_test = Counter(str(r["severity"]) for r in test)
+    per_severity: dict[str, dict[str, int]] = {}
+    for sev in SUPPORTED_SEVERITIES:
+        per_severity[sev] = {
+            "input": per_severity_input.get(sev, 0),
+            "train": per_severity_train.get(sev, 0),
+            "test": per_severity_test.get(sev, 0),
         }
+
+    total_strata = len(by_stratum)
+    report: dict[str, Any] = {
+        "seed": seed,
+        "test_ratio": test_ratio,
+        "per_severity": per_severity,
+        "strata_summary": {
+            "total_strata": total_strata,
+            "singleton_strata": singleton_strata,
+            "records_in_singletons": records_in_singletons,
+            "effective_strata": total_strata - singleton_strata,
+        },
+    }
 
     train = sorted(train, key=lambda row: (row.get("created_date", ""), row["cve_id"]))
     test = sorted(test, key=lambda row: (row.get("created_date", ""), row["cve_id"]))
+    report["quality"] = _score_split(train, test, test_ratio)
     return train, test, report
 
 

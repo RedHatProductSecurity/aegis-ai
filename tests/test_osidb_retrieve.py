@@ -597,9 +597,7 @@ class TestMultiImpactRetryBalance:
             + _make_kernel_flaws("L", 1, 50, impact="LOW")
         )
 
-        rc, train, test = self._run_main_multi_impact(
-            tmp_path, [initial_batch, []]
-        )
+        rc, train, test = self._run_main_multi_impact(tmp_path, [initial_batch, []])
 
         assert rc == 0
         all_records = train + test

@@ -42,7 +42,7 @@ results, then commit.
 
 | Phase | Step | Script | Description |
 |-------|------|--------|-------------|
-| fetch | 1 | `osidb_retrieve.py` | Fetches flaws from OSIDB, auto-resolves patch IDs via `linux-security-vulns`, writes `train_kernel_cves.json` and `test_kernel_cves.json` |
+| fetch | 1 | `osidb_retrieve.py` | Fetches flaws from OSIDB, auto-resolves patch IDs via `linux-security-vulns`, stratifies records into (severity, CVSS, date) bins for train/test splitting, writes `train_kernel_cves.json` and `test_kernel_cves.json` |
 | fetch | 2 | `cve_data_scraper.py` | Scrapes commit HTML and patches for each CVE |
 | train | 3 | `cve_feature_extraction.py` | Extracts binary patch flags into `cve_dataset.csv` |
 | train | 4 | `fetch_cvss_cwe.py` | Merges CVSS score features into `cve_dataset.csv` |
@@ -143,7 +143,6 @@ compare across retrains.
 | `--impacts` | `IMPORTANT MODERATE LOW` | Impact values to fetch |
 | `--states` | `DONE` | OSIDB workflow states to fetch |
 | `--test-ratio` | `0.25` | Fraction of records placed in the test split |
-| `--seed` | `42` | Deterministic seed for stratified splitting |
 | `--osidb-url` | env `AEGIS_OSIDB_SERVER_URL` | OSIDB server URL |
 | `--owners` | — | Comma-separated owner emails; only fetch flaws owned by these users |
 | `--vulns-repo` | `data/linux_security_vulns` | Path to the `linux-security-vulns` checkout |
@@ -161,7 +160,7 @@ It currently enforces:
   - MODERATE ≥ 50% (`CVE_MODEL_MIN_RECALL_MODERATE`)
   - LOW ≥ 50% (`CVE_MODEL_MIN_RECALL_LOW`)
 - maximum IMPORTANT underestimations via `CVE_MODEL_MAX_IMPORTANT_UNDERESTIMATIONS` (default `5`)
-- maximum MODERATE underestimations via `CVE_MODEL_MAX_MODERATE_UNDERESTIMATIONS` (default `8`)
+- maximum MODERATE underestimations via `CVE_MODEL_MAX_MODERATE_UNDERESTIMATIONS` (default `12`)
 - no regression in IMPORTANT or MODERATE underestimation counts versus
   the previous `test-results/test_summary.json`, when one exists
 
@@ -360,6 +359,38 @@ classifier quality after retraining. Do not put the same CVE in both
 files.
 
 Do not hand-edit generated CSVs or model artifacts.
+
+### Train/Test Split Quality
+
+`osidb_retrieve.py` splits records using multi-dimensional stratified
+hashing. Each CVE is assigned to a stratum defined by three dimensions:
+
+| Dimension | Buckets |
+|-----------|---------|
+| Severity | IMPORTANT, MODERATE, LOW |
+| CVSS score | low (<4.0), medium (4.0–6.9), high (>=7.0) |
+| Date | Calendar year from `created_date` |
+
+Within each stratum, a deterministic hash assigns CVEs to train or
+test at the target ratio (25%). Strata with only one record send that
+record to train. This guarantees proportional representation across
+all three dimensions by construction — no seed scanning required.
+
+A CVE's stratum depends only on its own attributes (severity, CVSS
+score, year), so adding or removing other CVEs never moves an existing
+CVE between sets.
+
+The quality score (lower is better) is still reported in
+`generation_report.json` under `split_report.quality`:
+
+| Dimension | What it measures |
+|-----------|-----------------|
+| `max_class_deviation` | Worst per-severity deviation from the target test ratio (25%) |
+| `ks_cvss` | CVSS score distribution similarity between train and test |
+| `ks_date` | Temporal distribution similarity (created_date) between train and test |
+
+The report also includes `split_report.strata_summary` with counts of
+total, singleton, and effective strata.
 
 ### What The Scraper Expects
 

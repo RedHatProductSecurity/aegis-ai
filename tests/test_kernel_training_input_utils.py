@@ -100,6 +100,9 @@ def test_split_records_by_severity_is_deterministic_and_stratified() -> None:
     }
     assert report_one["per_severity"]["MODERATE"] == {"input": 4, "train": 3, "test": 1}
     assert report_one["per_severity"]["LOW"] == {"input": 4, "train": 2, "test": 2}
+    quality = report_one["quality"]
+    assert set(quality) == {"score", "max_class_deviation", "ks_cvss", "ks_date"}
+    assert all(isinstance(v, float) for v in quality.values())
 
 
 def test_split_records_by_severity_handles_singletons_and_missing_severities() -> None:
@@ -132,6 +135,120 @@ def test_split_records_by_severity_handles_singletons_and_missing_severities() -
     assert report["per_severity"]["IMPORTANT"] == {"input": 1, "train": 1, "test": 0}
     assert report["per_severity"]["MODERATE"] == {"input": 0, "train": 0, "test": 0}
     assert report["per_severity"]["LOW"] == {"input": 2, "train": 1, "test": 1}
+
+
+def test_split_records_stratifies_across_cvss_and_date_dimensions() -> None:
+    records = (
+        [
+            {
+                "cve_id": f"CVE-2024-00{i:02d}",
+                "severity": "IMPORTANT",
+                "created_date": "2024-06-01",
+                "cvss_score": 7.5,
+            }
+            for i in range(1, 11)
+        ]
+        + [
+            {
+                "cve_id": f"CVE-2025-10{i:02d}",
+                "severity": "MODERATE",
+                "created_date": "2025-03-01",
+                "cvss_score": 5.5,
+            }
+            for i in range(1, 21)
+        ]
+        + [
+            {
+                "cve_id": f"CVE-2026-20{i:02d}",
+                "severity": "LOW",
+                "created_date": "2026-01-01",
+                "cvss_score": 3.0,
+            }
+            for i in range(1, 21)
+        ]
+        + [
+            {
+                "cve_id": f"CVE-2025-30{i:02d}",
+                "severity": "IMPORTANT",
+                "created_date": "2025-09-01",
+                "cvss_score": 5.0,
+            }
+            for i in range(1, 11)
+        ]
+    )
+
+    train_a, test_a, report_a = split_records_by_severity(
+        records,
+        test_ratio=0.25,
+        seed=42,
+    )
+    train_b, test_b, report_b = split_records_by_severity(
+        records,
+        test_ratio=0.25,
+        seed=42,
+    )
+
+    assert train_a == train_b
+    assert test_a == test_b
+    assert report_a == report_b
+    assert {r["cve_id"] for r in train_a + test_a} == {r["cve_id"] for r in records}
+
+    strata = report_a["strata_summary"]
+    assert strata["total_strata"] >= 4
+    assert (
+        strata["effective_strata"]
+        == strata["total_strata"] - strata["singleton_strata"]
+    )
+
+    quality = report_a["quality"]
+    assert set(quality) == {"score", "max_class_deviation", "ks_cvss", "ks_date"}
+    assert all(isinstance(v, float) for v in quality.values())
+
+
+def test_split_records_handles_missing_cvss_and_date() -> None:
+    records = [
+        {
+            "cve_id": f"CVE-2025-00{i:02d}",
+            "severity": "MODERATE",
+            "created_date": "",
+            "cvss_score": 0.0,
+        }
+        for i in range(1, 5)
+    ]
+
+    train, test, report = split_records_by_severity(records, test_ratio=0.25, seed=42)
+
+    assert {r["cve_id"] for r in train + test} == {r["cve_id"] for r in records}
+    assert report["per_severity"]["MODERATE"]["input"] == 4
+
+
+def test_split_records_singleton_stratum_goes_to_train() -> None:
+    records = [
+        {
+            "cve_id": "CVE-2024-0001",
+            "severity": "IMPORTANT",
+            "created_date": "2024-01-01",
+            "cvss_score": 8.0,
+        },
+        {
+            "cve_id": "CVE-2025-0001",
+            "severity": "IMPORTANT",
+            "created_date": "2025-01-01",
+            "cvss_score": 5.0,
+        },
+        {
+            "cve_id": "CVE-2025-0002",
+            "severity": "IMPORTANT",
+            "created_date": "2025-01-01",
+            "cvss_score": 5.0,
+        },
+    ]
+
+    train, test, _report = split_records_by_severity(records, test_ratio=0.25, seed=42)
+
+    train_ids = {r["cve_id"] for r in train}
+    assert "CVE-2024-0001" in train_ids
+    assert _report["strata_summary"]["singleton_strata"] >= 1
 
 
 @pytest.mark.parametrize("test_ratio", [0.0, -0.1, 1.0, 1.1])
