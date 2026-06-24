@@ -190,8 +190,7 @@
             "justification": "CVSS and CWE IDs are appropriately mapped and provided."
         }
     ],
-    "customer_lens": {
-        "customer_can_decide": [
+    "customer_can_decide": [
             "The CVE ID and CWE ID for the flaw.",
             "The general type of vulnerability (buffer overflow via integer overflow).",
             "The affected component (libcurl) and the vulnerable dependency (zlib 1.2.0.3 or older).",
@@ -214,8 +213,7 @@
             "Comprehensive upgrade paths and workarounds for affected products.",
             "Confirmation of remediation status for all affected products.",
             "Clear justification for non-applicability to RHEL despite other Red Hat products being affected."
-        ]
-    },
+    ],
     "strengths": [
         "The description and comment_zero provide good technical detail about the vulnerability type, mechanics, and trigger conditions.",
         "The flaw content clearly identifies the affected component (libcurl) and the vulnerable dependency (zlib version).",

@@ -1,12 +1,9 @@
-import pytest
-
-from pydantic import ValidationError
-
 from aegis_ai.features.cve.data_models import (
     CATEGORY_WEIGHTS,
-    CriterionScore,
-    CustomerLensAssessment,
-    QualityRating,
+    RATING_EXCELLENT,
+    RATING_FAILS_STANDARDS,
+    RATING_GOOD,
+    RATING_NEEDS_IMPROVEMENT,
     QualityReviewModel,
 )
 
@@ -35,18 +32,24 @@ _CRITERION_IDS = [
 ]
 
 
-def _make_scores(category_scores: list[list[int]]) -> list[CriterionScore]:
-    """Build a flat list of CriterionScore from 6 lists of criterion scores (one per category)."""
+def _make_scores(category_scores: list[list[int]]) -> list[dict]:
+    """Build a flat list of criterion score dicts from 6 lists of scores (one per category)."""
+    assert len(category_scores) == len(_CATEGORY_NAMES), (
+        f"Expected {len(_CATEGORY_NAMES)} categories, got {len(category_scores)}"
+    )
     scores = []
     for cat_name, cat_scores in zip(_CATEGORY_NAMES, category_scores):
+        assert len(cat_scores) == len(_CRITERION_IDS), (
+            f"Category '{cat_name}' expected {len(_CRITERION_IDS)} criteria, got {len(cat_scores)}"
+        )
         for crit_id, s in zip(_CRITERION_IDS, cat_scores):
             scores.append(
-                CriterionScore(
-                    category=cat_name,
-                    criterion_id=crit_id,
-                    score=s,
-                    justification=f"Justification for {crit_id} in {cat_name}",
-                )
+                {
+                    "category": cat_name,
+                    "criterion_id": crit_id,
+                    "score": s,
+                    "justification": f"Justification for {crit_id} in {cat_name}",
+                }
             )
     return scores
 
@@ -56,11 +59,9 @@ def _make_review_model(category_scores: list[list[int]]) -> QualityReviewModel:
     return QualityReviewModel(
         cve_id="CVE-2025-0001",
         scores=_make_scores(category_scores),
-        customer_lens=CustomerLensAssessment(
-            customer_can_decide=["Exposure scope"],
-            remains_unclear=["Exploit likelihood"],
-            manual_context_needed=["Deployment context"],
-        ),
+        customer_can_decide=["Exposure scope"],
+        remains_unclear=["Exploit likelihood"],
+        manual_context_needed=["Deployment context"],
         strengths=["Clear description"],
         critical_gaps=["Missing statement"],
         recommendations=["Add a statement"],
@@ -90,38 +91,23 @@ def test_category_weights_match_spec():
     assert CATEGORY_WEIGHTS["Technical Value"] == 0.15
 
 
-# --- QualityRating enum ---
+# --- QualityRating constants ---
 
 
 def test_quality_rating_values():
-    assert QualityRating.EXCELLENT.value == "Excellent"
-    assert QualityRating.GOOD.value == "Good"
-    assert QualityRating.NEEDS_IMPROVEMENT.value == "Needs Improvement"
-    assert QualityRating.FAILS_STANDARDS.value == "Fails Standards"
+    assert RATING_EXCELLENT == "Excellent"
+    assert RATING_GOOD == "Good"
+    assert RATING_NEEDS_IMPROVEMENT == "Needs Improvement"
+    assert RATING_FAILS_STANDARDS == "Fails Standards"
 
 
-# --- CriterionScore validation ---
+# --- Criterion score dict shape ---
 
 
 def test_criterion_score_valid():
-    cs = CriterionScore(
-        category="Test", criterion_id="test", score=1, justification="ok"
-    )
-    assert cs.score == 1
-
-
-def test_criterion_score_bounds_low():
-    with pytest.raises(ValidationError):
-        CriterionScore(
-            category="Test", criterion_id="test", score=-1, justification="bad"
-        )
-
-
-def test_criterion_score_bounds_high():
-    with pytest.raises(ValidationError):
-        CriterionScore(
-            category="Test", criterion_id="test", score=3, justification="bad"
-        )
+    """A valid criterion score dict is accepted by the model."""
+    model = _make_review_model([[1, 0, 0, 0, 0]] + [[0, 0, 0, 0, 0]] * 5)
+    assert model.scores[0]["score"] == 1
 
 
 # --- QualityReviewModel weighted score and rating ---
@@ -131,28 +117,28 @@ def test_quality_review_excellent():
     # All categories score 10/10 raw -> weighted 1.0
     model = _make_review_model([[2, 2, 2, 2, 2]] * 6)
     assert model.overall_score == 1.0
-    assert model.rating == QualityRating.EXCELLENT
+    assert model.rating == RATING_EXCELLENT
 
 
 def test_quality_review_good():
     # All categories 7/10 raw -> weighted 0.7
     model = _make_review_model([[2, 1, 1, 1, 2]] * 6)
     assert model.overall_score == 0.7
-    assert model.rating == QualityRating.GOOD
+    assert model.rating == RATING_GOOD
 
 
 def test_quality_review_needs_improvement():
     # All categories 5/10 raw -> weighted 0.5
     model = _make_review_model([[1, 1, 1, 1, 1]] * 6)
     assert model.overall_score == 0.5
-    assert model.rating == QualityRating.NEEDS_IMPROVEMENT
+    assert model.rating == RATING_NEEDS_IMPROVEMENT
 
 
 def test_quality_review_fails_standards():
     # All categories 3/10 raw -> weighted 0.3
     model = _make_review_model([[1, 1, 1, 0, 0]] * 6)
     assert model.overall_score == 0.3
-    assert model.rating == QualityRating.FAILS_STANDARDS
+    assert model.rating == RATING_FAILS_STANDARDS
 
 
 # --- printable_outcome ---
@@ -179,13 +165,11 @@ def test_overall_score_ignores_llm_provided_value():
     model = QualityReviewModel(
         cve_id="CVE-2025-0001",
         overall_score=0.1,  # wrong -- should be auto-computed to 1.0
-        rating=QualityRating.FAILS_STANDARDS,  # wrong -- should be Excellent
+        rating=RATING_FAILS_STANDARDS,  # wrong -- should be Excellent
         scores=scores,
-        customer_lens=CustomerLensAssessment(
-            customer_can_decide=["test"],
-            remains_unclear=["test"],
-            manual_context_needed=["test"],
-        ),
+        customer_can_decide=["test"],
+        remains_unclear=["test"],
+        manual_context_needed=["test"],
         strengths=["test"],
         critical_gaps=["test"],
         recommendations=["test"],
@@ -197,7 +181,7 @@ def test_overall_score_ignores_llm_provided_value():
         disclaimer=DISCLAIMER,
     )
     assert model.overall_score == 1.0
-    assert model.rating == QualityRating.EXCELLENT
+    assert model.rating == RATING_EXCELLENT
 
 
 # --- Rating boundary tests ---
@@ -207,7 +191,7 @@ def test_rating_boundary_excellent():
     """All categories at 8/10 raw -> weighted 0.8 = Excellent threshold."""
     model = _make_review_model([[2, 2, 2, 2, 0]] * 6)
     assert model.overall_score == 0.8
-    assert model.rating == QualityRating.EXCELLENT
+    assert model.rating == RATING_EXCELLENT
 
 
 def test_rating_boundary_just_below_excellent():
@@ -215,21 +199,21 @@ def test_rating_boundary_just_below_excellent():
     cats = [[2, 2, 2, 2, 0]] * 5 + [[2, 2, 2, 1, 0]]
     model = _make_review_model(cats)
     assert model.overall_score == 0.79
-    assert model.rating == QualityRating.GOOD
+    assert model.rating == RATING_GOOD
 
 
 def test_rating_boundary_good():
     """All categories at 6/10 raw -> weighted 0.6 = Good threshold."""
     model = _make_review_model([[2, 2, 2, 0, 0]] * 6)
     assert model.overall_score == 0.6
-    assert model.rating == QualityRating.GOOD
+    assert model.rating == RATING_GOOD
 
 
 def test_rating_boundary_needs_improvement():
     """All categories at 4/10 raw -> weighted 0.4 = Needs Improvement threshold."""
     model = _make_review_model([[2, 2, 0, 0, 0]] * 6)
     assert model.overall_score == 0.4
-    assert model.rating == QualityRating.NEEDS_IMPROVEMENT
+    assert model.rating == RATING_NEEDS_IMPROVEMENT
 
 
 def test_rating_boundary_just_below_needs_improvement():
@@ -237,7 +221,7 @@ def test_rating_boundary_just_below_needs_improvement():
     cats = [[2, 2, 0, 0, 0]] * 5 + [[2, 1, 0, 0, 0]]
     model = _make_review_model(cats)
     assert model.overall_score == 0.39
-    assert model.rating == QualityRating.FAILS_STANDARDS
+    assert model.rating == RATING_FAILS_STANDARDS
 
 
 # --- Weighting verification ---
@@ -291,34 +275,32 @@ def test_category_raw_scores_clamped_to_10():
 
     # 6 criteria at score=2 -> 12 raw points, should clamp to 10
     scores = [
-        CriterionScore(
-            category=first_cat,
-            criterion_id=f"extra_{i}",
-            score=2,
-            justification="test",
-        )
+        {
+            "category": first_cat,
+            "criterion_id": f"extra_{i}",
+            "score": 2,
+            "justification": "test",
+        }
         for i in range(6)
     ]
     # Remaining 5 categories with 5 criteria each at score=0
     for cat_name in _CATEGORY_NAMES[1:]:
         for crit_id in _CRITERION_IDS:
             scores.append(
-                CriterionScore(
-                    category=cat_name,
-                    criterion_id=f"{cat_name}_{crit_id}",
-                    score=0,
-                    justification="test",
-                )
+                {
+                    "category": cat_name,
+                    "criterion_id": f"{cat_name}_{crit_id}",
+                    "score": 0,
+                    "justification": "test",
+                }
             )
 
     model = QualityReviewModel(
         cve_id="CVE-2025-0001",
         scores=scores,
-        customer_lens=CustomerLensAssessment(
-            customer_can_decide=["test"],
-            remains_unclear=["test"],
-            manual_context_needed=["test"],
-        ),
+        customer_can_decide=["test"],
+        remains_unclear=["test"],
+        manual_context_needed=["test"],
         strengths=["test"],
         critical_gaps=["test"],
         recommendations=["test"],
