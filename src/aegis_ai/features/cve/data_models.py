@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import Field, BaseModel, PrivateAttr, model_validator
@@ -367,53 +366,15 @@ CATEGORY_WEIGHTS: dict[str, float] = {
 }
 
 
-class QualityRating(str, Enum):
-    """Overall quality rating derived from the weighted 0.0-1.0 score."""
+# Quality rating constants and type for the weighted 0.0-1.0 score.
+# Using Literal instead of Enum to avoid $defs in JSON schema, which
+# causes 400 errors with Mistral's grammar-based structured output.
+QualityRating = Literal["Excellent", "Good", "Needs Improvement", "Fails Standards"]
 
-    EXCELLENT = "Excellent"
-    GOOD = "Good"
-    NEEDS_IMPROVEMENT = "Needs Improvement"
-    FAILS_STANDARDS = "Fails Standards"
-
-
-class CriterionScore(BaseModel):
-    """Score for a single rubric criterion (0-2 points)."""
-
-    category: str = Field(
-        ...,
-        description="Name of the rubric category this criterion belongs to.",
-    )
-    criterion_id: str = Field(
-        ...,
-        description="Short identifier for the criterion being scored.",
-    )
-    score: int = Field(
-        ...,
-        ge=0,
-        le=2,
-        description="Score for this criterion: 0 (missing/wrong), 1 (partial), 2 (fully met).",
-    )
-    justification: str = Field(
-        ...,
-        description="Brief rationale for the assigned score.",
-    )
-
-
-class CustomerLensAssessment(BaseModel):
-    """Assessment of whether CVE content addresses the three core customer questions."""
-
-    customer_can_decide: List[str] = Field(
-        ...,
-        description="What a customer CAN decide from the current content.",
-    )
-    remains_unclear: List[str] = Field(
-        ...,
-        description="What REMAINS UNCLEAR from the current content.",
-    )
-    manual_context_needed: List[str] = Field(
-        ...,
-        description="What additional context an analyst would need to add MANUALLY.",
-    )
+RATING_EXCELLENT: QualityRating = "Excellent"
+RATING_GOOD: QualityRating = "Good"
+RATING_NEEDS_IMPROVEMENT: QualityRating = "Needs Improvement"
+RATING_FAILS_STANDARDS: QualityRating = "Fails Standards"
 
 
 class QualityReviewModel(AegisFeatureModel):
@@ -421,6 +382,10 @@ class QualityReviewModel(AegisFeatureModel):
     Quality review of CVE flaw content scored against a weighted rubric
     with 6 categories (30 criteria), evaluated through a Customer Lens framework.
     Final score is on a 0.0-1.0 weighted scale per the FQI specification.
+
+    Note: All fields use primitive types (no nested BaseModel classes) to avoid
+    $defs/$ref in the JSON schema, which Mistral's grammar-based structured
+    output cannot resolve.
     """
 
     cve_id: CVEID = Field(
@@ -436,19 +401,28 @@ class QualityReviewModel(AegisFeatureModel):
     )
 
     rating: QualityRating = Field(
-        default=QualityRating.FAILS_STANDARDS,
+        default=RATING_FAILS_STANDARDS,
         description="Quality rating derived from overall_score (auto-computed).",
     )
 
-    scores: List[CriterionScore] = Field(
+    scores: List[Dict[str, Any]] = Field(
         ...,
         description="Flat list of all criterion scores across all 6 rubric categories. "
-        "Each entry includes its category name, criterion id, score (0-2), and justification.",
+        "Each entry is an object with: category (string), criterion_id (string), "
+        "score (integer 0-2), and justification (string).",
     )
 
-    customer_lens: CustomerLensAssessment = Field(
+    customer_can_decide: List[str] = Field(
         ...,
-        description="Customer Lens assessment of the flaw content.",
+        description="What a customer CAN decide from the current content.",
+    )
+    remains_unclear: List[str] = Field(
+        ...,
+        description="What REMAINS UNCLEAR from the current content.",
+    )
+    manual_context_needed: List[str] = Field(
+        ...,
+        description="What additional context an analyst would need to add MANUALLY.",
     )
 
     strengths: List[str] = Field(
@@ -496,7 +470,7 @@ class QualityReviewModel(AegisFeatureModel):
         # Sum raw points per category
         cat_raw: dict[str, int] = {}
         for c in self.scores:
-            cat_raw[c.category] = cat_raw.get(c.category, 0) + c.score
+            cat_raw[c["category"]] = cat_raw.get(c["category"], 0) + c["score"]
 
         # Compute weighted score: sum(category_raw / 10.0 * weight)
         weighted = 0.0
@@ -507,15 +481,15 @@ class QualityReviewModel(AegisFeatureModel):
 
         # Derive rating from weighted score
         if self.overall_score >= 0.8:
-            self.rating = QualityRating.EXCELLENT
+            self.rating = RATING_EXCELLENT
         elif self.overall_score >= 0.6:
-            self.rating = QualityRating.GOOD
+            self.rating = RATING_GOOD
         elif self.overall_score >= 0.4:
-            self.rating = QualityRating.NEEDS_IMPROVEMENT
+            self.rating = RATING_NEEDS_IMPROVEMENT
         else:
-            self.rating = QualityRating.FAILS_STANDARDS
+            self.rating = RATING_FAILS_STANDARDS
         return self
 
     def printable_outcome(self) -> str:
         """Override the logging hook to print the quality score and rating."""
-        return f"score={self.overall_score}/1.0 ({self.rating.value})"
+        return f"score={self.overall_score}/1.0 ({self.rating})"

@@ -5,7 +5,13 @@ from pydantic_core import ValidationError
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.features import component, cve
 from aegis_ai.features.cve import QualityReview
-from aegis_ai.features.cve.data_models import CATEGORY_WEIGHTS, QualityRating
+from aegis_ai.features.cve.data_models import (
+    CATEGORY_WEIGHTS,
+    RATING_EXCELLENT,
+    RATING_FAILS_STANDARDS,
+    RATING_GOOD,
+    RATING_NEEDS_IMPROVEMENT,
+)
 from tests.utils.llm_cache import get_cached_response, cache_response
 
 pytestmark = pytest.mark.asyncio
@@ -158,13 +164,13 @@ async def test_quality_review_with_test_model():
     assert len(quality_review.scores) == 30, (
         f"Expected 30 criterion scores, got {len(quality_review.scores)}"
     )
-    categories = {s.category for s in quality_review.scores}
+    categories = {s["category"] for s in quality_review.scores}
     assert categories == set(CATEGORY_WEIGHTS.keys()), (
         f"Categories mismatch: {categories}"
     )
 
     # Verify all criterion IDs are unique and match the required rubric set
-    criterion_ids = {s.criterion_id for s in quality_review.scores}
+    criterion_ids = {s["criterion_id"] for s in quality_review.scores}
     assert criterion_ids == QualityReview._REQUIRED_CRITERIA, (
         f"Criterion ID mismatch.\n"
         f"Missing: {QualityReview._REQUIRED_CRITERIA - criterion_ids}\n"
@@ -174,13 +180,13 @@ async def test_quality_review_with_test_model():
     # Verify overall_score bounds and rating alignment
     assert 0.0 <= quality_review.overall_score <= 1.0
     if quality_review.overall_score >= 0.8:
-        assert quality_review.rating == QualityRating.EXCELLENT
+        assert quality_review.rating == RATING_EXCELLENT
     elif quality_review.overall_score >= 0.6:
-        assert quality_review.rating == QualityRating.GOOD
+        assert quality_review.rating == RATING_GOOD
     elif quality_review.overall_score >= 0.4:
-        assert quality_review.rating == QualityRating.NEEDS_IMPROVEMENT
+        assert quality_review.rating == RATING_NEEDS_IMPROVEMENT
     else:
-        assert quality_review.rating == QualityRating.FAILS_STANDARDS
+        assert quality_review.rating == RATING_FAILS_STANDARDS
 
     # Verify disclaimer matches the mandated text
     assert quality_review.disclaimer == (
@@ -193,11 +199,10 @@ async def test_quality_review_with_test_model():
     # Verify explanation is present and non-empty
     assert quality_review.explanation, "explanation field must be non-empty"
 
-    # Verify customer_lens fields are populated
-    assert quality_review.customer_lens is not None
-    assert len(quality_review.customer_lens.customer_can_decide) > 0
-    assert len(quality_review.customer_lens.remains_unclear) > 0
-    assert len(quality_review.customer_lens.manual_context_needed) > 0
+    # Verify customer lens fields are populated
+    assert len(quality_review.customer_can_decide) > 0
+    assert len(quality_review.remains_unclear) > 0
+    assert len(quality_review.manual_context_needed) > 0
 
 
 async def test_suggest_impact_with_bad_cve_test_model():

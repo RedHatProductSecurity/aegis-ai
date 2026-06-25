@@ -871,7 +871,7 @@ class QualityReview(Feature):
             )
 
         # Check all categories present and no unexpected categories
-        found_categories = {s.category for s in scores}
+        found_categories = {s["category"] for s in scores}
         missing_categories = self._REQUIRED_CATEGORIES - found_categories
         if missing_categories:
             return (
@@ -886,7 +886,7 @@ class QualityReview(Feature):
             )
 
         # Check all criterion IDs present and unique
-        found_criteria = {s.criterion_id for s in scores}
+        found_criteria = {s["criterion_id"] for s in scores}
         if len(found_criteria) != expected_count:
             return (
                 f"Found {len(found_criteria)} unique criterion IDs but expected {expected_count}. "
