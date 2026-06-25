@@ -15,16 +15,14 @@ make retrain-kernel-full
 
 This fetches all owned, `DONE` kernel flaws from OSIDB (via
 `osidb_retrieve.py`), generates training inputs, and runs the full
-7-step pipeline with hyperparameter tuning (`RETUNE=1`). Data selection
+9-step pipeline with hyperparameter tuning (`RETUNE=1`). Data selection
 uses ratio-based capping anchored to the minority class (IMPORTANT);
 MODERATE and LOW are each capped at 3× the IMPORTANT count. CRITICAL
 is excluded.
 
-To restrict the fetch to specific analysts, pass the `OWNERS` argument:
-
-```bash
-make retrain-kernel-full OWNERS=user1@example.com,user2@example.com
-```
+To restrict the fetch to specific analysts, set `AEGIS_KERNEL_OWNERS_TRAIN`
+in `.env` (comma-separated owner emails). When set, only flaws owned by
+these users are fetched from OSIDB. See ops repo for value.
 
 To run the fetch and scrape steps separately from training:
 
@@ -125,6 +123,13 @@ compare across retrains.
 
 ## Reference
 
+### `osidb_retrieve.py` Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AEGIS_OSIDB_SERVER_URL` | OSIDB server URL (default: `https://localhost:8000`) |
+| `AEGIS_KERNEL_OWNERS_TRAIN` | Comma-separated owner emails; only fetch flaws owned by these users |
+
 ### `osidb_retrieve.py` CLI Flags
 
 | Flag | Default | Description |
@@ -144,7 +149,6 @@ compare across retrains.
 | `--states` | `DONE` | OSIDB workflow states to fetch |
 | `--test-ratio` | `0.25` | Fraction of records placed in the test split |
 | `--osidb-url` | env `AEGIS_OSIDB_SERVER_URL` | OSIDB server URL |
-| `--owners` | — | Comma-separated owner emails; only fetch flaws owned by these users |
 | `--vulns-repo` | `data/linux_security_vulns` | Path to the `linux-security-vulns` checkout |
 | `--skip-patch-resolution` | off | Skip automatic patch resolution from `linux-security-vulns` |
 
@@ -165,27 +169,28 @@ It currently enforces:
   the previous `test-results/test_summary.json`, when one exists
 
 The IMPORTANT floor is deliberately set below the tuner's CV target
-because the held-out test set is small (~28 IMPORTANT CVEs); each miss
-swings recall by ~3.6 pp, so a tighter floor would cause noisy failures.
+because the held-out test set is small (~32 IMPORTANT CVEs); each miss
+swings recall by ~3.1 pp, so a tighter floor would cause noisy failures.
 
 Underestimation is the critical failure mode. Overestimation is tolerated
 if it buys safety.
 
 ### Feature Set
 
-The model uses **52 features**: 49 patch flags + 3 CVSS score features.
+The model uses **53 features**: 49 patch flags + 4 CVSS score features.
 
 **Patch flags (49)** — binary indicators extracted from the commit diff
 and HTML (e.g. `kernel_panic`, `netfilter`, `race`, `virt`). These are
 produced by `cve_feature_extraction.py`.
 
-**CVSS score features (3):**
+**CVSS score features (4):**
 
 | Feature | Type | Description |
 |---------|------|-------------|
 | `has_cvss` | binary | Whether a CVSS v3 score exists for the CVE |
 | `cvss_score` | continuous | Raw CVSS v3 score (0.0–10.0) |
 | `cvss_score_bucket` | ordinal | 0=low (<4.0), 1=medium (<7.0), 2=high (<9.0), 3=critical (≥9.0) |
+| `cvss_impact_high_count` | ordinal | Count of C/I/A impact components rated High (0–3) |
 
 **Excluded — decomposed CVSS vector components (22 one-hot features):**
 `cvss_cwe_features.py` produces 22 one-hot features from the CVSS v3.1
@@ -209,7 +214,15 @@ assignments are inconsistent and the categories are too coarse to
 distinguish severity. These also hurt IMPORTANT recall in ablation
 testing.
 
-CVSS features are produced by `fetch_cvss_cwe.py` (step 3), which
+`cvss_impact_high_count` was added after the ablation rounds below as a
+single ordinal feature that captures the discriminative part of the
+impact triad (how many of C/I/A are High) without exposing the tree to
+the correlated one-hot splits that hurt IMPORTANT recall. Unlike the
+full 9-feature triad, it compresses the signal into one dimension —
+analogous to how the aggregate CVSS score avoids the one-hot problem
+for the full vector.
+
+CVSS features are produced by `fetch_cvss_cwe.py` (step 4), which
 fetches CVSS vectors from the cache (`data/cvss_cwe_cache.json`) and
 merges the encoded columns into `cve_dataset.csv`. The encoding logic
 lives in `cvss_cwe_features.py`.
@@ -316,10 +329,10 @@ Each step reads only files produced by earlier steps in the same run
 (or the curated JSON inputs). Intermediate CSVs from a previous run
 must not affect the current pipeline — `cve_feature_extraction.py`
 filters stale checkpoint rows against the current ground truth,
-`fetch_cvss_cwe.py` reads `cve_dataset.csv` (step 2) rather than the
-split CSVs (step 4), and `tune_hyperparameters.py` derives its feature
+`fetch_cvss_cwe.py` reads `cve_dataset.csv` (step 3) rather than the
+split CSVs (step 5), and `tune_hyperparameters.py` derives its feature
 list from the freshly generated training data rather than from
-`model_metadata.json` (step 6).
+`model_metadata.json` (step 8).
 
 `osidb_retrieve.py` is the canonical entrypoint for generating
 `train_kernel_cves.json` and `test_kernel_cves.json` from raw flaw data.
@@ -344,13 +357,14 @@ when a specific set of patches needs to be pinned.
 The pipeline flow is:
 
 1. `cve_feature_extraction.py` builds `data/cve_dataset.csv`
-2. `split_datasets_for_train_test.py` reads `data/cve_dataset.csv`,
+2. `fetch_cvss_cwe.py` merges CVSS score features into `data/cve_dataset.csv`
+3. `split_datasets_for_train_test.py` reads `data/cve_dataset.csv`,
    `data/train_kernel_cves.json`, and `data/test_kernel_cves.json`
-3. That step writes `data/cve_training_dataset.csv` and
+4. That step writes `data/cve_training_dataset.csv` and
    `data/cve_testing_dataset.csv`
-4. `cve_smote_balancer.py` reads `data/cve_training_dataset.csv` and
+5. `cve_smote_balancer.py` reads `data/cve_training_dataset.csv` and
    writes `data/balanced-training-dataset-through-smote.csv`
-5. `xgboost_train.py` trains from
+6. `xgboost_train.py` trains from
    `data/balanced-training-dataset-through-smote.csv`
 
 Use `train_kernel_cves.json` for samples the model is allowed to learn
@@ -441,6 +455,7 @@ outdated cases when analyst practice has changed.
 - `data/cve_testing_dataset.csv`
 - `data/balanced-training-dataset-through-smote.csv`
 - `data/cvss_cwe_cache.json`
+- `data/generation_report.json`
 
 #### Model artifacts
 

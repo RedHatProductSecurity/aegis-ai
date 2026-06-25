@@ -87,11 +87,11 @@ retrain-kernel:
 	$(MAKE) -C $(KERNEL_CLF_DIR) train $(if $(RETUNE),RETUNE=1)
 
 fetch-kernel:
-	uv run python src/aegis_ai_ml/src/osidb_retrieve.py $(if $(OWNERS),--owners=$(OWNERS))
+	uv run python src/aegis_ai_ml/src/osidb_retrieve.py
 	$(MAKE) -C $(KERNEL_CLF_DIR) scrape
 
 retrain-kernel-full:
-	$(MAKE) fetch-kernel $(if $(OWNERS),OWNERS=$(OWNERS))
+	$(MAKE) fetch-kernel
 	$(MAKE) retrain-kernel RETUNE=1
 
 test-kernel:

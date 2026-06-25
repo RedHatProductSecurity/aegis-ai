@@ -183,17 +183,11 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_MAX_PER_IMPACT,
         help="Maximum number of flaws to fetch per impact level.",
     )
-    parser.add_argument(
-        "--owners",
-        default=None,
-        help=(
-            "Comma-separated list of owner emails to filter by. "
-            "When set, only flaws owned by these users are fetched from OSIDB."
-        ),
-    )
     args = parser.parse_args()
-    if args.owners is not None:
-        args.owners = [o.strip() for o in args.owners.split(",") if o.strip()]
+    raw_owners = os.getenv("AEGIS_KERNEL_OWNERS_TRAIN")
+    args.owners = (
+        [o.strip() for o in raw_owners.split(",") if o.strip()] if raw_owners else None
+    )
     return args
 
 
