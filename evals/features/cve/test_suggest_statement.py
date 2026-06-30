@@ -477,6 +477,7 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-27962",
         expected_statement="This critical vulnerability in Authlib's JWS implementation allows unauthenticated attackers to forge JWTs by embedding their own cryptographic key in the token header. Impact is high to confidentiality and integrity as attackers can bypass authentication.\n\nRed Hat Quay is not affected, as it imports authlib solely as a JWK parsing utility and performs all JWT signature verification through PyJWT, so the vulnerable jws.deserialize_compact() code path is never called.\n\nRed Hat OpenShift AI is not affected, since authlib is only present as a transitive dependency in the dev dependency group and is not included in production image builds, so the vulnerable code is not present in the shipped product.\n\nRed Hat Satellite is not affected, as authlib is only present as a dependency of fastmcp. In Satellite, fastmcp only invokes authlib using jwt.decode() which isn't able to reach the vulnerability condition even with key=none.",
+        metadata={"known_to_fail_evaluators": ["StatementNoCodeLevelDetails"]},
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-31402",
