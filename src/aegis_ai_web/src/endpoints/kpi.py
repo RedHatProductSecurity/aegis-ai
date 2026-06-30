@@ -14,6 +14,7 @@ from aegis_ai_web.src.feedback_logger import (
     feedback_logger,
     programmatic_feedback_logger,
 )
+from aegis_ai_web.src.semantic_scoring import parse_json_list
 
 
 class SortOrder(str, Enum):
@@ -21,6 +22,24 @@ class SortOrder(str, Enum):
 
     ASC = "asc"
     DESC = "desc"
+
+
+# The manual API and the programmatic osidb-bot log a few features under
+# different keys. Map each raw log key to its canonical public feature name so
+# the two sources unify under a single key (e.g. under feature="all").
+FEATURE_ALIASES = {
+    "cve_description": "suggest-description",
+    "source_component": "suggest-affected-components",
+}
+
+# Component features (canonical names) that support the source_component /
+# multiple_source_components filters.
+COMPONENT_FEATURE_KEYS = frozenset({"suggest-affected-components"})
+
+
+def canonical_feature(feature: str) -> str:
+    """Map a raw feedback-log feature key to its canonical public name."""
+    return FEATURE_ALIASES.get(feature, feature)
 
 
 def _parse_datetime_str(dt_str: str) -> datetime:
@@ -34,30 +53,27 @@ def _parse_datetime_str(dt_str: str) -> datetime:
             return datetime.fromtimestamp(0)  # noqa: DTZ006
 
 
-def _standard_entry_to_kpi(entry: dict[str, Any]) -> KPIEntry:
-    """Convert standard feedback log entry to KPIEntry."""
-    accept_value = entry.get("accept", "")
-    return KPIEntry(
-        datetime=entry.get("datetime", ""),
-        accepted=accept_value == "true",
-        aegis_version=entry.get("version", ""),
-    )
+def parse_components(value: str) -> list[str]:
+    """Parse a JSON component list from feedback CSV values."""
+    parsed = parse_json_list(value or "")
+    return parsed or []
 
 
-def _programmatic_entry_to_kpi(entry: dict[str, Any]) -> KPIEntry | None:
-    """Convert programmatic feedback entry to KPIEntry, or None if no valid score."""
-    score_str = entry.get("acceptance_score", "")
-    if not score_str:
-        return None
-    try:
-        score = float(score_str)
-    except ValueError:
-        return None
-    return KPIEntry(
-        datetime=entry.get("datetime", ""),
-        accepted=score == 1.0,
-        aegis_version=entry.get("version", ""),
-    )
+def clean_components(components: list[str]) -> list[str]:
+    """Trim entries, drop empty/whitespace values, and de-duplicate.
+
+    Order is preserved (first-seen wins) so component sequences from the
+    feedback logs are not reshuffled.
+    """
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for component in components:
+        value = component.strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        cleaned.append(value)
+    return cleaned
 
 
 def _deduplicate_programmatic_feedback(
@@ -75,7 +91,6 @@ def _deduplicate_programmatic_feedback(
     deduped: dict[tuple[str, str], dict[str, Any]] = {}
 
     for entry in entries:
-        # Always overwrite the entry with the most recent one
         cve_id = entry.get("cve_id", "")
         feature = entry.get("feature", "")
         key = (cve_id, feature)
@@ -84,43 +99,177 @@ def _deduplicate_programmatic_feedback(
     return list(deduped.values())
 
 
-def _compute_kpi(entries: list[KPIEntry], order: SortOrder) -> FeatureKPI:
-    """Compute KPI metrics from a list of KPIEntry objects."""
-    if not entries:
+def matches_entry_filters(
+    entry: dict[str, Any],
+    *,
+    cve_id: str | None,
+    source_component: str | None,
+    multiple_source_components: bool,
+) -> bool:
+    """Apply optional CVE and component filters to a normalized feedback entry."""
+    if cve_id and entry.get("cve_id") != cve_id:
+        return False
+
+    # Skip component parsing entirely on the default (no component filter) path.
+    if not (source_component or multiple_source_components):
+        return True
+
+    # Component filters only make sense for component features. Under
+    # feature="all" this excludes non-component features rather than filtering
+    # them on scalar values parsed as empty component lists.
+    if entry.get("feature") not in COMPONENT_FEATURE_KEYS:
+        return False
+
+    suggested = clean_components(parse_components(entry.get("suggested_raw", "")))
+    if source_component:
+        needle = source_component.strip()
+        if needle and needle not in suggested:
+            return False
+
+    return not (multiple_source_components and len(suggested) < 2)
+
+
+def normalize_manual_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a manual feedback CSV row for KPI processing."""
+    return {
+        "datetime": entry.get("datetime", ""),
+        "accepted": entry.get("accept", "") == "true",
+        "aegis_version": entry.get("version", ""),
+        "cve_id": entry.get("cve_id", ""),
+        "feedback_source": "manual",
+        "suggested_raw": entry.get("actual", ""),
+        "submitted_raw": entry.get("expected", ""),
+        "feature": canonical_feature(entry.get("feature", "")),
+    }
+
+
+def normalize_programmatic_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """Normalize a programmatic feedback CSV row, or None if unscored."""
+    score_str = entry.get("acceptance_score", "")
+    if not score_str:
+        return None
+    try:
+        score = float(score_str)
+    except ValueError:
+        return None
+
+    return {
+        "datetime": entry.get("datetime", ""),
+        "accepted": score == 1.0,
+        "aegis_version": entry.get("version", ""),
+        "cve_id": entry.get("cve_id", ""),
+        "feedback_source": "programmatic",
+        "suggested_raw": entry.get("suggested_value", ""),
+        "submitted_raw": entry.get("submitted_value", ""),
+        "feature": canonical_feature(entry.get("feature", "")),
+    }
+
+
+def collect_normalized_entries(
+    feature: str,
+    *,
+    cve_id: str | None = None,
+    source_component: str | None = None,
+    multiple_source_components: bool = False,
+) -> list[dict[str, Any]]:
+    """Read and filter feedback log entries for a feature query.
+
+    ``feature`` may be a canonical name, a raw log key (resolved via
+    :func:`canonical_feature`), or ``"all"`` to collect every feature. Manual
+    and programmatic entries are normalized to canonical feature names so the
+    two sources unify under a single key.
+    """
+    target = None if feature == "all" else canonical_feature(feature)
+
+    entries: list[dict[str, Any]] = []
+
+    for raw in feedback_logger.read():
+        if not raw.get("feature"):
+            continue
+        normalized = normalize_manual_entry(raw)
+        if target is not None and normalized["feature"] != target:
+            continue
+        if matches_entry_filters(
+            normalized,
+            cve_id=cve_id,
+            source_component=source_component,
+            multiple_source_components=multiple_source_components,
+        ):
+            entries.append(normalized)
+
+    deduped_programmatic = _deduplicate_programmatic_feedback(
+        programmatic_feedback_logger.read()
+    )
+    for raw in deduped_programmatic:
+        if not raw.get("feature"):
+            continue
+        normalized = normalize_programmatic_entry(raw)
+        if normalized is None:
+            continue
+        if target is not None and normalized["feature"] != target:
+            continue
+        if matches_entry_filters(
+            normalized,
+            cve_id=cve_id,
+            source_component=source_component,
+            multiple_source_components=multiple_source_components,
+        ):
+            entries.append(normalized)
+
+    return entries
+
+
+def to_kpi_entry(entry: dict[str, Any]) -> KPIEntry:
+    """Convert a normalized feedback entry to a KPIEntry response object."""
+    return KPIEntry(
+        datetime=entry["datetime"],
+        accepted=entry["accepted"],
+        aegis_version=entry["aegis_version"],
+    )
+
+
+def _compute_kpi(
+    normalized_entries: list[dict[str, Any]],
+    order: SortOrder,
+) -> FeatureKPI:
+    """Compute KPI metrics from normalized feedback entries."""
+    kpi_entries = [to_kpi_entry(entry) for entry in normalized_entries]
+    if not kpi_entries:
         return FeatureKPI(acceptance_percentage=0.0, entries=[])
 
-    entries.sort(
+    kpi_entries.sort(
         key=lambda e: _parse_datetime_str(e.datetime),
         reverse=(order == SortOrder.DESC),
     )
 
-    accepted_count = sum(1 for e in entries if e.accepted)
-    acceptance_percentage = round((accepted_count / len(entries)) * 100, 1)
+    accepted_count = sum(1 for e in kpi_entries if e.accepted)
+    acceptance_percentage = round((accepted_count / len(kpi_entries)) * 100, 1)
 
-    return FeatureKPI(acceptance_percentage=acceptance_percentage, entries=entries)
+    return FeatureKPI(
+        acceptance_percentage=acceptance_percentage,
+        entries=kpi_entries,
+    )
 
 
-def _get_all_features_kpi(order: SortOrder = SortOrder.ASC) -> dict[str, FeatureKPI]:
+def _get_all_features_kpi(
+    order: SortOrder = SortOrder.ASC,
+    *,
+    cve_id: str | None = None,
+    source_component: str | None = None,
+    multiple_source_components: bool = False,
+) -> dict[str, FeatureKPI]:
     """Get KPI metrics for all features in a single pass over log data."""
-    entries_by_feature: dict[str, list[KPIEntry]] = {}
+    entries_by_feature: dict[str, list[dict[str, Any]]] = {}
 
-    # Process standard feedback
-    for entry in feedback_logger.read():
-        feature = entry.get("feature")
-        if feature:
-            entries_by_feature.setdefault(feature, []).append(
-                _standard_entry_to_kpi(entry)
-            )
-
-    # Process programmatic feedback with deduplication
-    programmatic_entries = programmatic_feedback_logger.read()
-    deduped_programmatic = _deduplicate_programmatic_feedback(programmatic_entries)
-    for entry in deduped_programmatic:
-        feature = entry.get("feature")
-        if feature:
-            kpi_entry = _programmatic_entry_to_kpi(entry)
-            if kpi_entry:
-                entries_by_feature.setdefault(feature, []).append(kpi_entry)
+    for entry in collect_normalized_entries(
+        "all",
+        cve_id=cve_id,
+        source_component=source_component,
+        multiple_source_components=multiple_source_components,
+    ):
+        feature_key = entry.get("feature", "")
+        if feature_key:
+            entries_by_feature.setdefault(feature_key, []).append(entry)
 
     return {
         feature: _compute_kpi(entries, order)
@@ -129,7 +278,12 @@ def _get_all_features_kpi(order: SortOrder = SortOrder.ASC) -> dict[str, Feature
 
 
 def get_cve_kpi(
-    feature: str, order: SortOrder = SortOrder.ASC
+    feature: str,
+    order: SortOrder = SortOrder.ASC,
+    *,
+    cve_id: str | None = None,
+    source_component: str | None = None,
+    multiple_source_components: bool = False,
 ) -> dict[str, FeatureKPI]:
     """
     Get KPI metrics for CVE analysis feedback filtered by feature.
@@ -137,13 +291,21 @@ def get_cve_kpi(
     Args:
         feature: Feature name to filter entries by, or "all" to get all features
         order: Sort order for datetime field (default: ASC)
+        cve_id: Optional exact CVE identifier filter
+        source_component: Optional filter for entries suggesting this component
+        multiple_source_components: When True, only entries with 2+ suggested components
 
     Returns:
         Dict[str, FeatureKPI] mapping feature names to their KPI responses.
     """
     if feature == "all":
         try:
-            return _get_all_features_kpi(order)
+            return _get_all_features_kpi(
+                order,
+                cve_id=cve_id,
+                source_component=source_component,
+                multiple_source_components=multiple_source_components,
+            )
         except Exception:
             logging.error(  # noqa: G201
                 "Error retrieving KPI data for all features",
@@ -155,23 +317,13 @@ def get_cve_kpi(
             )
 
     try:
-        entries: list[KPIEntry] = []
-
-        # Standard feedback
-        for entry in feedback_logger.read():
-            if entry.get("feature") == feature:
-                entries.append(_standard_entry_to_kpi(entry))
-
-        # Programmatic feedback with deduplication
-        programmatic_entries = programmatic_feedback_logger.read()
-        deduped_programmatic = _deduplicate_programmatic_feedback(programmatic_entries)
-        for entry in deduped_programmatic:
-            if entry.get("feature") == feature:
-                kpi_entry = _programmatic_entry_to_kpi(entry)
-                if kpi_entry:
-                    entries.append(kpi_entry)
-
-        return {feature: _compute_kpi(entries, order)}
+        normalized_entries = collect_normalized_entries(
+            feature,
+            cve_id=cve_id,
+            source_component=source_component,
+            multiple_source_components=multiple_source_components,
+        )
+        return {feature: _compute_kpi(normalized_entries, order)}
 
     except Exception:
         logging.error(  # noqa: G201
