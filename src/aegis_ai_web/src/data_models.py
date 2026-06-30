@@ -336,6 +336,8 @@ class KPIEntry(BaseModel):
     Individual KPI entry model.
 
     Contains datetime, acceptance status, and AEGIS version for a feedback entry.
+    When ``detail=true`` is passed to the KPI endpoint, optional fields are
+    populated with CVE and component feedback context.
     """
 
     datetime: str = Field(
@@ -346,6 +348,34 @@ class KPIEntry(BaseModel):
     aegis_version: str = Field(
         default="",
         description="AEGIS version at time of feedback (may be empty string if not available)",
+    )
+    cve_id: str | None = Field(
+        default=None,
+        description="CVE identifier (included when detail=true)",
+    )
+    feedback_source: str | None = Field(
+        default=None,
+        description="Feedback origin: manual or programmatic (included when detail=true)",
+    )
+    suggested_components: list[str] | None = Field(
+        default=None,
+        description="Components suggested by AEGIS (included when detail=true)",
+    )
+    submitted_components: list[str] | None = Field(
+        default=None,
+        description="Components submitted by the user (included when detail=true)",
+    )
+    accepted_components: list[str] | None = Field(
+        default=None,
+        description="Suggested components also present in submission (included when detail=true)",
+    )
+    rejected_suggestions: list[str] | None = Field(
+        default=None,
+        description="Suggested components not present in submission (included when detail=true)",
+    )
+    added_components: list[str] | None = Field(
+        default=None,
+        description="Submitted components not in the suggestion (included when detail=true)",
     )
 
 

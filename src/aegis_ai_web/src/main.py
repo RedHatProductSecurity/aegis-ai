@@ -632,6 +632,7 @@ async def component_analysis(
     summary="Get CVE Analysis KPI Metrics",
     description="Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns a dictionary mapping feature names to their KPI responses (acceptance score percentage and all matching log entries sorted by datetime). Use feature='all' to get KPIs for all features. For single feature queries, the dict contains one key-value pair.",
     response_model=dict[str, FeatureKPI],
+    response_model_exclude_none=True,
     responses={
         200: {
             "description": "Successful response with KPI metrics",
@@ -725,13 +726,37 @@ async def component_analysis(
 async def cve_kpi(
     feature: str = Query(
         ...,
-        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
-        examples=["suggest-impact", "suggest-cwe", "suggest-description", "all"],
+        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', 'source_component', 'suggest-affected-components', or 'all' to get KPIs for all features.",
+        examples=[
+            "suggest-impact",
+            "source_component",
+            "suggest-affected-components",
+            "all",
+        ],
     ),
     order: SortOrder = Query(  # noqa: B008
         default=SortOrder.ASC,
         description="Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'.",
         examples=["asc", "desc"],
+    ),
+    cve_id: str | None = Query(
+        default=None,
+        description="Optional exact CVE identifier filter (e.g. CVE-2025-1234).",
+        pattern=r"^CVE-[0-9]{4}-[0-9]{4,7}$",
+        examples=["CVE-2025-1234"],
+    ),
+    source_component: str | None = Query(
+        default=None,
+        description="Optional filter for entries where AEGIS suggested this component name.",
+        examples=["kernel"],
+    ),
+    multiple_source_components: bool = Query(
+        default=False,
+        description="When true, only include entries where AEGIS suggested two or more components.",
+    ),
+    detail: bool = Query(
+        default=False,
+        description="When true, include CVE and component fields on each KPI entry.",
     ),
 ) -> dict[str, FeatureKPI]:
     """
@@ -741,8 +766,12 @@ async def cve_kpi(
     for a specific feature and returns all matching log entries sorted by datetime.
 
     **Parameters:**
-    - **feature**: Required. The feature name to filter by (e.g., 'suggest-impact', 'suggest-cwe', or 'all' for all features)
+    - **feature**: Required. The feature name to filter by (e.g., 'source_component', 'suggest-impact', or 'all')
     - **order**: Optional. Sort order for entries by datetime ('asc' or 'desc'). Defaults to 'asc'.
+    - **cve_id**: Optional. Restrict results to a single CVE.
+    - **source_component**: Optional. Restrict results to entries suggesting this component.
+    - **multiple_source_components**: Optional. Restrict to multi-component suggestions.
+    - **detail**: Optional. Include CVE/component context on each entry.
 
     **Returns:**
     - Dict[str, FeatureKPI] mapping feature names to their KPI responses.
@@ -751,13 +780,20 @@ async def cve_kpi(
 
     **Example:**
     ```
-    GET /api/v1/analysis/kpi/cve?feature=suggest-impact&order=desc
+    GET /api/v1/analysis/kpi/cve?feature=source_component&order=desc
+    GET /api/v1/analysis/kpi/cve?feature=source_component&detail=true&source_component=kernel
+    GET /api/v1/analysis/kpi/cve?feature=source_component&cve_id=CVE-2025-1234&detail=true
     GET /api/v1/analysis/kpi/cve?feature=all
     ```
     """
-    result = get_cve_kpi(feature, order)
-    # Always return Dict[str, FeatureKPI] for consistent API structure
-    # FastAPI will automatically serialize using response_model
+    result = get_cve_kpi(
+        feature,
+        order,
+        cve_id=cve_id,
+        source_component=source_component,
+        multiple_source_components=multiple_source_components,
+        detail=detail,
+    )
     return result
 
 

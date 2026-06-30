@@ -272,12 +272,42 @@
         "type": "object"
       },
       "KPIEntry": {
-        "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry.",
+        "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry.\nWhen ``detail=true`` is passed to the KPI endpoint, optional fields are\npopulated with CVE and component feedback context.",
         "properties": {
           "accepted": {
             "description": "Whether the feedback was accepted",
             "title": "Accepted",
             "type": "boolean"
+          },
+          "accepted_components": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Suggested components also present in submission (included when detail=true)",
+            "title": "Accepted Components"
+          },
+          "added_components": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Submitted components not in the suggestion (included when detail=true)",
+            "title": "Added Components"
           },
           "aegis_version": {
             "default": "",
@@ -285,10 +315,79 @@
             "title": "Aegis Version",
             "type": "string"
           },
+          "cve_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CVE identifier (included when detail=true)",
+            "title": "Cve Id"
+          },
           "datetime": {
             "description": "Timestamp of the feedback entry (format: YYYY-MM-DD HH:MM:SS.mmm or YYYY-MM-DD HH:MM:SS)",
             "title": "Datetime",
             "type": "string"
+          },
+          "feedback_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Feedback origin: manual or programmatic (included when detail=true)",
+            "title": "Feedback Source"
+          },
+          "rejected_suggestions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Suggested components not present in submission (included when detail=true)",
+            "title": "Rejected Suggestions"
+          },
+          "submitted_components": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Components submitted by the user (included when detail=true)",
+            "title": "Submitted Components"
+          },
+          "suggested_components": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Components suggested by AEGIS (included when detail=true)",
+            "title": "Suggested Components"
           }
         },
         "required": [
@@ -758,16 +857,16 @@
         "operationId": "cve_kpi_api_v1_analysis_kpi_cve_get",
         "parameters": [
           {
-            "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
+            "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', 'source_component', 'suggest-affected-components', or 'all' to get KPIs for all features.",
             "in": "query",
             "name": "feature",
             "required": true,
             "schema": {
-              "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
+              "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', 'source_component', 'suggest-affected-components', or 'all' to get KPIs for all features.",
               "examples": [
                 "suggest-impact",
-                "suggest-cwe",
-                "suggest-description",
+                "source_component",
+                "suggest-affected-components",
                 "all"
               ],
               "title": "Feature",
@@ -787,6 +886,73 @@
                 "asc",
                 "desc"
               ]
+            }
+          },
+          {
+            "description": "Optional exact CVE identifier filter (e.g. CVE-2025-1234).",
+            "in": "query",
+            "name": "cve_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^CVE-[0-9]{4}-[0-9]{4,7}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional exact CVE identifier filter (e.g. CVE-2025-1234).",
+              "examples": [
+                "CVE-2025-1234"
+              ],
+              "title": "Cve Id"
+            }
+          },
+          {
+            "description": "Optional filter for entries where AEGIS suggested this component name.",
+            "in": "query",
+            "name": "source_component",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional filter for entries where AEGIS suggested this component name.",
+              "examples": [
+                "kernel"
+              ],
+              "title": "Source Component"
+            }
+          },
+          {
+            "description": "When true, only include entries where AEGIS suggested two or more components.",
+            "in": "query",
+            "name": "multiple_source_components",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "When true, only include entries where AEGIS suggested two or more components.",
+              "title": "Multiple Source Components",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "When true, include CVE and component fields on each KPI entry.",
+            "in": "query",
+            "name": "detail",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "When true, include CVE and component fields on each KPI entry.",
+              "title": "Detail",
+              "type": "boolean"
             }
           }
         ],
