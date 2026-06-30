@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- KPI endpoint filters for component feedback: `cve_id`, `source_component`, and `multiple_source_components` query parameters on `GET /api/v1/analysis/kpi/cve`
+- `detail=true` on the KPI endpoint returns CVE and component diff fields (`suggested_components`, `accepted_components`, `rejected_suggestions`, `added_components`)
+- `source_component` feature alias on the KPI endpoint maps to both `source_component` and `suggest-affected-components` feedback logs
+
 ## [0.7.5] - 2026-06-26
 
 ### Changed

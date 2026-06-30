@@ -1152,3 +1152,372 @@ class TestGetCveKpi:
 
         # Acceptance percentage: 1 accepted (standard), 1 rejected (programmatic) = 50%
         assert feature_data["acceptance_percentage"] == 50.0
+
+
+class TestComponentKpiHelpers:
+    """Unit tests for component KPI helper functions."""
+
+    def test_resolve_feature_aliases_for_source_component(self):
+        from aegis_ai_web.src.endpoints.kpi import _resolve_feature_aliases
+
+        aliases = _resolve_feature_aliases("source_component")
+        assert aliases == {"source_component", "suggest-affected-components"}
+
+    def test_resolve_feature_aliases_for_unrelated_feature(self):
+        from aegis_ai_web.src.endpoints.kpi import _resolve_feature_aliases
+
+        aliases = _resolve_feature_aliases("suggest-impact")
+        assert aliases == {"suggest-impact"}
+
+    def test_component_diff_exact_match(self):
+        from aegis_ai_web.src.endpoints.kpi import _component_diff
+
+        accepted, rejected, added = _component_diff(["kernel"], ["kernel"])
+        assert accepted == ["kernel"]
+        assert rejected == []
+        assert added == []
+
+    def test_component_diff_replacement(self):
+        from aegis_ai_web.src.endpoints.kpi import _component_diff
+
+        accepted, rejected, added = _component_diff(
+            ["kernel"], ["linux-kernel"]
+        )
+        assert accepted == []
+        assert rejected == ["kernel"]
+        assert added == ["linux-kernel"]
+
+    def test_component_diff_case_insensitive(self):
+        from aegis_ai_web.src.endpoints.kpi import _component_diff
+
+        accepted, rejected, added = _component_diff(["Kernel"], ["kernel"])
+        assert accepted == ["Kernel"]
+        assert rejected == []
+        assert added == []
+
+
+class TestComponentKpiFilters:
+    """Tests for source_component KPI filters and detail enrichment."""
+
+    @staticmethod
+    def _write_manual_rows(feedback_log_setup, rows):
+        with open(feedback_log_setup, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FEEDBACK_SCHEMA.field_names)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+
+    @staticmethod
+    def _write_programmatic_rows(programmatic_feedback_log_setup, rows):
+        with open(
+            programmatic_feedback_log_setup, "w", newline="", encoding="utf-8"
+        ) as f:
+            writer = csv.DictWriter(
+                f, fieldnames=PROGRAMMATIC_FEEDBACK_SCHEMA.field_names
+            )
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+
+    @staticmethod
+    def _component_rows():
+        return [
+            {
+                "datetime": "2026-03-19 21:52:24.452",
+                "feature": "source_component",
+                "cve_id": "CVE-2025-1001",
+                "email": "analyst@example.com",
+                "actual": '["kernel"]',
+                "expected": '["kernel"]',
+                "request_time": "2026-03-19 21:52:00",
+                "accept": "True",
+                "rejection_comment": "",
+                "version": "0.6.1",
+            },
+            {
+                "datetime": "2026-03-19 22:48:41.298",
+                "feature": "source_component",
+                "cve_id": "CVE-2025-1002",
+                "email": "analyst@example.com",
+                "actual": '["kernel"]',
+                "expected": '["linux-kernel"]',
+                "request_time": "2026-03-19 22:48:00",
+                "accept": "False",
+                "rejection_comment": "Wrong component",
+                "version": "0.6.1",
+            },
+            {
+                "datetime": "2026-03-20 13:16:01.227",
+                "feature": "source_component",
+                "cve_id": "CVE-2025-1003",
+                "email": "analyst@example.com",
+                "actual": '["kernel", "curl"]',
+                "expected": '["kernel"]',
+                "request_time": "2026-03-20 13:16:00",
+                "accept": "False",
+                "rejection_comment": "",
+                "version": "0.6.1",
+            },
+            {
+                "datetime": "2026-03-20 13:25:28.637",
+                "feature": "suggest-impact",
+                "cve_id": "CVE-2025-1004",
+                "email": "analyst@example.com",
+                "actual": "IMPORTANT",
+                "expected": "CRITICAL",
+                "request_time": "2026-03-20 13:25:00",
+                "accept": "False",
+                "rejection_comment": "",
+                "version": "0.6.1",
+            },
+        ]
+
+    def test_filter_by_cve_id(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            cve_id="CVE-2025-1002",
+            detail=True,
+        )
+        data = result["source_component"]
+
+        assert len(data.entries) == 1
+        assert data.entries[0].cve_id == "CVE-2025-1002"
+        assert data.entries[0].accepted is False
+        assert data.acceptance_percentage == 0.0
+
+    def test_filter_by_source_component(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            source_component="curl",
+            detail=True,
+        )
+        data = result["source_component"]
+
+        assert len(data.entries) == 1
+        assert data.entries[0].cve_id == "CVE-2025-1003"
+        assert data.entries[0].suggested_components == ["kernel", "curl"]
+
+    def test_filter_multiple_source_components(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            multiple_source_components=True,
+            detail=True,
+        )
+        data = result["source_component"]
+
+        assert len(data.entries) == 1
+        assert data.entries[0].cve_id == "CVE-2025-1003"
+        assert len(data.entries[0].suggested_components) == 2
+
+    def test_detail_includes_component_replacement_fields(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            cve_id="CVE-2025-1002",
+            detail=True,
+        )
+        entry = result["source_component"].entries[0]
+
+        assert entry.cve_id == "CVE-2025-1002"
+        assert entry.email == "analyst@example.com"
+        assert entry.feedback_source == "manual"
+        assert entry.suggested_components == ["kernel"]
+        assert entry.submitted_components == ["linux-kernel"]
+        assert entry.rejected_suggestions == ["kernel"]
+        assert entry.added_components == ["linux-kernel"]
+
+    def test_detail_false_keeps_legacy_entry_shape(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi("source_component", detail=False)
+        entry = result["source_component"].entries[0]
+        payload = entry.model_dump(exclude_none=True)
+
+        assert payload == {
+            "datetime": "2026-03-19 21:52:24.452",
+            "accepted": True,
+            "aegis_version": "0.6.1",
+        }
+
+    def test_feature_alias_suggest_affected_components(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(
+            feedback_log_setup,
+            [
+                {
+                    "datetime": "2026-03-19 21:52:24.452",
+                    "feature": "suggest-affected-components",
+                    "cve_id": "CVE-2025-2001",
+                    "email": "analyst@example.com",
+                    "actual": '["openssl"]',
+                    "expected": '["openssl"]',
+                    "request_time": "2026-03-19 21:52:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.6.1",
+                }
+            ],
+        )
+
+        result = get_cve_kpi("source_component", detail=True)
+        data = result["source_component"]
+
+        assert len(data.entries) == 1
+        assert data.entries[0].cve_id == "CVE-2025-2001"
+        assert data.entries[0].suggested_components == ["openssl"]
+
+    def test_filters_recompute_acceptance_percentage(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        unfiltered = get_cve_kpi("source_component")
+        filtered = get_cve_kpi(
+            "source_component",
+            source_component="curl",
+        )
+
+        assert unfiltered["source_component"].acceptance_percentage == 33.3
+        assert len(unfiltered["source_component"].entries) == 3
+        assert filtered["source_component"].acceptance_percentage == 0.0
+        assert len(filtered["source_component"].entries) == 1
+
+    def test_includes_scored_programmatic_component_feedback(
+        self, feedback_log_setup, programmatic_feedback_log_setup
+    ):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_programmatic_rows(
+            programmatic_feedback_log_setup,
+            [
+                {
+                    "datetime": "2026-03-21 10:00:00.123",
+                    "feature": "source_component",
+                    "cve_id": "CVE-2025-3001",
+                    "email": "bot@example.com",
+                    "suggested_value": '["kernel"]',
+                    "submitted_value": '["linux-kernel"]',
+                    "acceptance_score": "0.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                }
+            ],
+        )
+
+        result = get_cve_kpi("source_component", detail=True)
+        entry = result["source_component"].entries[0]
+
+        assert entry.cve_id == "CVE-2025-3001"
+        assert entry.feedback_source == "programmatic"
+        assert entry.accepted is False
+        assert entry.rejected_suggestions == ["kernel"]
+        assert entry.added_components == ["linux-kernel"]
+
+    def test_combined_cve_and_source_component_filters(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            cve_id="CVE-2025-1003",
+            source_component="kernel",
+            detail=True,
+        )
+        data = result["source_component"]
+
+        assert len(data.entries) == 1
+        assert data.entries[0].cve_id == "CVE-2025-1003"
+
+    def test_no_matches_returns_empty_result(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            cve_id="CVE-2099-0001",
+        )
+        data = result["source_component"]
+
+        assert data.entries == []
+        assert data.acceptance_percentage == 0.0
+
+
+class TestComponentKpiApi:
+    """HTTP tests for wired KPI query parameters."""
+
+    def test_api_default_response_shape(self, feedback_log_setup):
+        TestComponentKpiFilters._write_manual_rows(
+            feedback_log_setup, TestComponentKpiFilters._component_rows()
+        )
+
+        response = client.get("/api/v1/analysis/kpi/cve?feature=source_component")
+        assert response.status_code == 200
+        data = response.json()
+        assert "source_component" in data
+        assert len(data["source_component"]["entries"]) == 3
+        assert set(data["source_component"]["entries"][0].keys()) == {
+            "datetime",
+            "accepted",
+            "aegis_version",
+        }
+
+    def test_api_detail_and_filters(self, feedback_log_setup):
+        TestComponentKpiFilters._write_manual_rows(
+            feedback_log_setup, TestComponentKpiFilters._component_rows()
+        )
+
+        response = client.get(
+            "/api/v1/analysis/kpi/cve"
+            "?feature=source_component"
+            "&detail=true"
+            "&cve_id=CVE-2025-1002"
+        )
+        assert response.status_code == 200
+        entry = response.json()["source_component"]["entries"][0]
+        assert entry["cve_id"] == "CVE-2025-1002"
+        assert entry["suggested_components"] == ["kernel"]
+        assert entry["submitted_components"] == ["linux-kernel"]
+        assert entry["rejected_suggestions"] == ["kernel"]
+        assert entry["added_components"] == ["linux-kernel"]
+
+    def test_api_multiple_source_components_filter(self, feedback_log_setup):
+        TestComponentKpiFilters._write_manual_rows(
+            feedback_log_setup, TestComponentKpiFilters._component_rows()
+        )
+
+        response = client.get(
+            "/api/v1/analysis/kpi/cve"
+            "?feature=source_component"
+            "&multiple_source_components=true"
+            "&detail=true"
+        )
+        assert response.status_code == 200
+        entries = response.json()["source_component"]["entries"]
+        assert len(entries) == 1
+        assert entries[0]["cve_id"] == "CVE-2025-1003"
+
+    def test_api_invalid_cve_id_returns_422(self, feedback_log_setup):
+        response = client.get(
+            "/api/v1/analysis/kpi/cve?feature=source_component&cve_id=not-a-cve"
+        )
+        assert response.status_code == 422
