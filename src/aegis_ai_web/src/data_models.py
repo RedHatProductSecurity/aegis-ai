@@ -331,6 +331,60 @@ def validate_csv_headers(csv_headers: list[str]) -> bool:
     return True
 
 
+class BotFeatureKPI(BaseModel):
+    """Per-feature KPI metrics for osidb-bot auto-processing."""
+
+    applied: int = Field(
+        ..., ge=0, description="Suggestions that passed quality gates (type=AI-Bot)"
+    )
+    skipped: int = Field(
+        ...,
+        ge=0,
+        description="Suggestions discarded by quality gates (type=AI-Bot-Skipped)",
+    )
+    kept: int = Field(
+        ...,
+        ge=0,
+        description="Applied suggestions still unchanged in OSIDB after analyst review",
+    )
+    modified: int = Field(
+        ...,
+        ge=0,
+        description="Applied suggestions changed by an analyst",
+    )
+    acceptance_rate: float = Field(
+        ...,
+        ge=0.0,
+        le=100.0,
+        description="Percentage of applied suggestions kept unchanged (0.0-100.0)",
+    )
+    avg_data_quality: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Average data_quality score across all entries",
+    )
+    avg_confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Average confidence score across all entries",
+    )
+
+
+class BotKPIResponse(BaseModel):
+    """Response model for osidb-bot KPI metrics endpoint."""
+
+    total_flaws_processed: int = Field(
+        ...,
+        ge=0,
+        description="Total flaws processed by the bot and reviewed by analysts",
+    )
+    features: Dict[str, BotFeatureKPI] = Field(
+        ..., description="Per-feature KPI metrics keyed by field name"
+    )
+
+
 class KPIEntry(BaseModel):
     """
     Individual KPI entry model.

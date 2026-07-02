@@ -9,9 +9,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional, Sequence
 
-from aegis_ai import get_settings
-
-import osidb_bindings
 from osidb_bindings.session import Session
 
 logger = logging.getLogger(__name__)
@@ -170,17 +167,3 @@ def fetch_bot_processed_flaws(
 
     logger.info("found %d bot-processed flaws", len(flaws))
     return flaws
-
-
-def compute_bot_kpi(
-    *,
-    changed_after: Optional[datetime] = None,
-    changed_before: Optional[datetime] = None,
-) -> BotKPIResult:
-    """End-to-end: connect to OSIDB, fetch flaws, compute KPI."""
-    osidb_server = get_settings().osidb_server_url
-    osidb = osidb_bindings.new_session(osidb_server_uri=osidb_server)
-    flaws = fetch_bot_processed_flaws(
-        osidb, changed_after=changed_after, changed_before=changed_before
-    )
-    return aggregate_kpi(flaws)

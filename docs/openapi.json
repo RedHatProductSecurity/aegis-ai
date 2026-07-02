@@ -1,768 +1,278 @@
 {
-  "components": {
-    "schemas": {
-      "CVEFeatureName": {
-        "enum": [
-          "suggest-impact",
-          "suggest-cwe",
-          "suggest-description",
-          "suggest-statement",
-          "suggest-affected-components",
-          "identify-pii",
-          "cvss-diff-explainer",
-          "quality-review"
-        ],
-        "title": "CVEFeatureName",
-        "type": "string"
-      },
-      "CVEMultiAnalysisRequest": {
-        "additionalProperties": true,
-        "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Agent to use: 'public' (no OSIDB tools) or 'redhat' (with OSIDB tools). Defaults to the server-configured agent (AEGIS_WEB_FEATURE_AGENT).",
-            "title": "Agent"
-          },
-          "cve_id": {
-            "description": "CVE identifier (e.g. CVE-2025-12345)",
-            "pattern": "^CVE-[0-9]{4}-[0-9]{4,16}$",
-            "title": "Cve Id",
-            "type": "string"
-          },
-          "features": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Feature names to run. If omitted or empty, a default set of stable features is run.",
-            "title": "Features"
-          }
-        },
-        "required": [
-          "cve_id"
-        ],
-        "title": "CVEMultiAnalysisRequest",
-        "type": "object"
-      },
-      "CVEMultiAnalysisResponse": {
-        "properties": {
-          "errors": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/FeatureError"
-            },
-            "description": "Feature name to error detail (only for failures).",
-            "title": "Errors",
-            "type": "object"
-          },
-          "results": {
-            "additionalProperties": true,
-            "description": "Feature name to output model (or null on failure).",
-            "title": "Results",
-            "type": "object"
-          }
-        },
-        "title": "CVEMultiAnalysisResponse",
-        "type": "object"
-      },
-      "CVESingleAnalysisRequest": {
-        "additionalProperties": true,
-        "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Agent to use: 'public' (no OSIDB tools) or 'redhat' (with OSIDB tools). Defaults to the server-configured agent (AEGIS_WEB_FEATURE_AGENT).",
-            "title": "Agent"
-          },
-          "cve_id": {
-            "description": "CVE identifier (e.g. CVE-2025-12345)",
-            "pattern": "^CVE-[0-9]{4}-[0-9]{4,16}$",
-            "title": "Cve Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "cve_id"
-        ],
-        "title": "CVESingleAnalysisRequest",
-        "type": "object"
-      },
-      "ComponentFeatureName": {
-        "enum": [
-          "component-intelligence"
-        ],
-        "title": "ComponentFeatureName",
-        "type": "string"
-      },
-      "ErrorResponse": {
-        "properties": {
-          "detail": {
-            "title": "Detail",
-            "type": "string"
-          }
-        },
-        "required": [
-          "detail"
-        ],
-        "title": "ErrorResponse",
-        "type": "object"
-      },
-      "FeatureError": {
-        "properties": {
-          "detail": {
-            "description": "Human-readable error message",
-            "title": "Detail",
-            "type": "string"
-          },
-          "error": {
-            "description": "Exception class name",
-            "title": "Error",
-            "type": "string"
-          }
-        },
-        "required": [
-          "error",
-          "detail"
-        ],
-        "title": "FeatureError",
-        "type": "object"
-      },
-      "FeatureKPI": {
-        "description": "Feature KPI model for CVE analysis feedback.\n\nContains the acceptance score percentage and filtered log entries for a feature.\nEntries include both standard user feedback and programmatic (automatic) feedback.",
-        "properties": {
-          "acceptance_percentage": {
-            "description": "Acceptance score as a percentage (0.0 to 100.0, e.g., 75.0 for 75%)",
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Acceptance Percentage",
-            "type": "number"
-          },
-          "entries": {
-            "description": "List of log entries filtered by feature, sorted by datetime",
-            "items": {
-              "$ref": "#/components/schemas/KPIEntry"
-            },
-            "title": "Entries",
-            "type": "array"
-          }
-        },
-        "required": [
-          "acceptance_percentage",
-          "entries"
-        ],
-        "title": "FeatureKPI",
-        "type": "object"
-      },
-      "Feedback": {
-        "description": "Data structure for feedback.\n\nAll fields are stored without modification to preserve original data.\nCSV escaping is handled automatically by the csv library during logging.",
-        "properties": {
-          "accept": {
-            "default": false,
-            "title": "Accept",
-            "type": "boolean"
-          },
-          "actual": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "",
-            "title": "Actual"
-          },
-          "cve_id": {
-            "pattern": "^CVE-[0-9]{4}-[0-9]{4,16}$",
-            "title": "Cve Id",
-            "type": "string"
-          },
-          "email": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Email",
-            "type": "string"
-          },
-          "expected": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "",
-            "title": "Expected"
-          },
-          "feature": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Feature",
-            "type": "string"
-          },
-          "rejection_comment": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "",
-            "title": "Rejection Comment"
-          },
-          "request_time": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "",
-            "title": "Request Time"
-          }
-        },
-        "required": [
-          "feature",
-          "cve_id",
-          "email"
-        ],
-        "title": "Feedback",
-        "type": "object"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
-        "type": "object"
-      },
-      "KPIEntry": {
-        "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry.",
-        "properties": {
-          "accepted": {
-            "description": "Whether the feedback was accepted",
-            "title": "Accepted",
-            "type": "boolean"
-          },
-          "aegis_version": {
-            "default": "",
-            "description": "AEGIS version at time of feedback (may be empty string if not available)",
-            "title": "Aegis Version",
-            "type": "string"
-          },
-          "datetime": {
-            "description": "Timestamp of the feedback entry (format: YYYY-MM-DD HH:MM:SS.mmm or YYYY-MM-DD HH:MM:SS)",
-            "title": "Datetime",
-            "type": "string"
-          }
-        },
-        "required": [
-          "datetime",
-          "accepted"
-        ],
-        "title": "KPIEntry",
-        "type": "object"
-      },
-      "ProgrammaticFeedback": {
-        "additionalProperties": false,
-        "description": "Data structure for programmatic feedback collected when user saves a flaw.\n\nCaptures the AI suggested value and the actual submitted value for comparison.\nThe acceptance_score and llmjudge_explanation are calculated server-side\nand should not be sent by clients.",
-        "properties": {
-          "cve_id": {
-            "pattern": "^CVE-[0-9]{4}-[0-9]{4,16}$",
-            "title": "Cve Id",
-            "type": "string"
-          },
-          "email": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Email",
-            "type": "string"
-          },
-          "feature": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Feature",
-            "type": "string"
-          },
-          "submitted_value": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "",
-            "title": "Submitted Value"
-          },
-          "suggested_value": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "",
-            "title": "Suggested Value"
-          }
-        },
-        "required": [
-          "feature",
-          "cve_id",
-          "email"
-        ],
-        "title": "ProgrammaticFeedback",
-        "type": "object"
-      },
-      "SortOrder": {
-        "description": "Sort order for datetime field.",
-        "enum": [
-          "asc",
-          "desc"
-        ],
-        "title": "SortOrder",
-        "type": "string"
-      },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
-      }
-    },
-    "securitySchemes": {
-      "ApiKeyAuth": {
-        "in": "header",
-        "name": "X-API-Key",
-        "type": "apiKey"
-      }
-    }
-  },
+  "openapi": "3.1.0",
   "info": {
-    "description": "A simple web console and REST API for Aegis.",
     "title": "Aegis REST-API",
+    "description": "A simple web console and REST API for Aegis.",
     "version": "v1"
   },
-  "openapi": "3.1.0",
   "paths": {
     "/": {
       "get": {
+        "summary": "Home",
         "operationId": "home__get",
         "responses": {
           "200": {
+            "description": "Successful Response",
             "content": {
               "text/html": {
                 "schema": {
                   "type": "string"
                 }
               }
-            },
-            "description": "Successful Response"
+            }
           },
           "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Too Many Requests"
+            }
           },
           "default": {
+            "description": "Unexpected error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Unexpected error"
+            }
           }
-        },
-        "summary": "Home"
+        }
+      }
+    },
+    "/api/v1/analysis/cve": {
+      "get": {
+        "summary": "Cve Analysis",
+        "operationId": "cve_analysis_api_v1_analysis_cve_get",
+        "parameters": [
+          {
+            "name": "feature",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CVEFeatureName"
+            }
+          },
+          {
+            "name": "cve_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^CVE-[0-9]{4}-[0-9]{4,7}$",
+              "title": "Cve Id"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Detail"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analysis/cve/{feature}": {
+      "post": {
+        "summary": "Cve Analysis With Body",
+        "operationId": "cve_analysis_with_body_api_v1_analysis_cve__feature__post",
+        "parameters": [
+          {
+            "name": "feature",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CVEFeatureName"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Detail"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/analysis/component": {
       "get": {
+        "summary": "Component Analysis",
         "operationId": "component_analysis_api_v1_analysis_component_get",
         "parameters": [
           {
-            "in": "query",
             "name": "feature",
+            "in": "query",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ComponentFeatureName"
             }
           },
           {
-            "in": "query",
             "name": "component_name",
+            "in": "query",
             "required": true,
             "schema": {
-              "title": "Component Name",
-              "type": "string"
+              "type": "string",
+              "title": "Component Name"
             }
           },
           {
-            "in": "query",
             "name": "detail",
+            "in": "query",
             "required": false,
             "schema": {
+              "type": "boolean",
               "default": false,
-              "title": "Detail",
-              "type": "boolean"
+              "title": "Detail"
             }
           }
         ],
         "responses": {
           "200": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            },
-            "description": "Successful Response"
+            }
           },
           "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            },
-            "description": "Validation Error"
+            }
           },
           "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Too Many Requests"
+            }
           },
           "default": {
+            "description": "Unexpected error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Unexpected error"
-          }
-        },
-        "summary": "Component Analysis"
-      }
-    },
-    "/api/v1/analysis/cve": {
-      "get": {
-        "operationId": "cve_analysis_api_v1_analysis_cve_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "feature",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/CVEFeatureName"
-            }
-          },
-          {
-            "in": "query",
-            "name": "cve_id",
-            "required": true,
-            "schema": {
-              "pattern": "^CVE-[0-9]{4}-[0-9]{4,16}$",
-              "title": "Cve Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "detail",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Detail",
-              "type": "boolean"
             }
           }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Too Many Requests"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unexpected error"
-          }
-        },
-        "summary": "Cve Analysis"
-      },
-      "post": {
-        "operationId": "cve_multi_analysis_api_v1_analysis_cve_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "detail",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Detail",
-              "type": "boolean"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CVEMultiAnalysisRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CVEMultiAnalysisResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Too Many Requests"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unexpected error"
-          }
-        },
-        "summary": "Cve Multi Analysis"
-      }
-    },
-    "/api/v1/analysis/cve/{feature}": {
-      "post": {
-        "operationId": "cve_analysis_with_body_api_v1_analysis_cve__feature__post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "feature",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/CVEFeatureName"
-            }
-          },
-          {
-            "in": "query",
-            "name": "detail",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Detail",
-              "type": "boolean"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CVESingleAnalysisRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Too Many Requests"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unexpected error"
-          }
-        },
-        "summary": "Cve Analysis With Body"
+        }
       }
     },
     "/api/v1/analysis/kpi/cve": {
       "get": {
+        "summary": "Get CVE Analysis KPI Metrics",
         "description": "Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns a dictionary mapping feature names to their KPI responses (acceptance score percentage and all matching log entries sorted by datetime). Use feature='all' to get KPIs for all features. For single feature queries, the dict contains one key-value pair.",
         "operationId": "cve_kpi_api_v1_analysis_kpi_cve_get",
         "parameters": [
           {
-            "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
-            "in": "query",
             "name": "feature",
+            "in": "query",
             "required": true,
             "schema": {
+              "type": "string",
               "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
               "examples": [
                 "suggest-impact",
@@ -770,40 +280,78 @@
                 "suggest-description",
                 "all"
               ],
-              "title": "Feature",
-              "type": "string"
-            }
+              "title": "Feature"
+            },
+            "description": "Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features."
           },
           {
-            "description": "Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'.",
-            "in": "query",
             "name": "order",
+            "in": "query",
             "required": false,
             "schema": {
               "$ref": "#/components/schemas/SortOrder",
-              "default": "asc",
               "description": "Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'.",
               "examples": [
                 "asc",
                 "desc"
-              ]
-            }
+              ],
+              "default": "asc"
+            },
+            "description": "Sort order for datetime field. Must be 'asc' (ascending, oldest first) or 'desc' (descending, newest first). Defaults to 'asc'."
           }
         ],
         "responses": {
           "200": {
+            "description": "Successful response with KPI metrics",
             "content": {
               "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/FeatureKPI"
+                  },
+                  "title": "Response Cve Kpi Api V1 Analysis Kpi Cve Get"
+                },
                 "examples": {
+                  "single_feature": {
+                    "summary": "Response for single feature query",
+                    "value": {
+                      "suggest-impact": {
+                        "acceptance_percentage": 75.0,
+                        "entries": [
+                          {
+                            "datetime": "2025-01-15 10:30:45.123",
+                            "accepted": true,
+                            "aegis_version": "1.0.0"
+                          },
+                          {
+                            "datetime": "2025-01-15 11:00:00.456",
+                            "accepted": true,
+                            "aegis_version": "1.0.0"
+                          },
+                          {
+                            "datetime": "2025-01-15 11:30:15.789",
+                            "accepted": false,
+                            "aegis_version": "1.0.0"
+                          },
+                          {
+                            "datetime": "2025-01-15 12:00:30.012",
+                            "accepted": true,
+                            "aegis_version": "1.0.0"
+                          }
+                        ]
+                      }
+                    }
+                  },
                   "all_features": {
                     "summary": "Response when feature='all'",
                     "value": {
-                      "suggest-cwe": {
-                        "acceptance_percentage": 50.0,
-                        "entries": []
-                      },
                       "suggest-impact": {
                         "acceptance_percentage": 75.0,
+                        "entries": []
+                      },
+                      "suggest-cwe": {
+                        "acceptance_percentage": 50.0,
                         "entries": []
                       }
                     }
@@ -816,104 +364,191 @@
                         "entries": []
                       }
                     }
-                  },
-                  "single_feature": {
-                    "summary": "Response for single feature query",
-                    "value": {
-                      "suggest-impact": {
-                        "acceptance_percentage": 75.0,
-                        "entries": [
-                          {
-                            "accepted": true,
-                            "aegis_version": "1.0.0",
-                            "datetime": "2025-01-15 10:30:45.123"
-                          },
-                          {
-                            "accepted": true,
-                            "aegis_version": "1.0.0",
-                            "datetime": "2025-01-15 11:00:00.456"
-                          },
-                          {
-                            "accepted": false,
-                            "aegis_version": "1.0.0",
-                            "datetime": "2025-01-15 11:30:15.789"
-                          },
-                          {
-                            "accepted": true,
-                            "aegis_version": "1.0.0",
-                            "datetime": "2025-01-15 12:00:30.012"
-                          }
-                        ]
-                      }
-                    }
                   }
-                },
-                "schema": {
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/FeatureKPI"
-                  },
-                  "title": "Response Cve Kpi Api V1 Analysis Kpi Cve Get",
-                  "type": "object"
                 }
               }
-            },
-            "description": "Successful response with KPI metrics"
+            }
           },
           "422": {
+            "description": "Validation error - invalid order parameter or missing feature",
             "content": {
               "application/json": {
                 "example": {
                   "detail": [
                     {
+                      "type": "missing",
                       "loc": [
                         "query",
                         "feature"
                       ],
-                      "msg": "Field required",
-                      "type": "missing"
+                      "msg": "Field required"
                     }
                   ]
                 }
               }
-            },
-            "description": "Validation error - invalid order parameter or missing feature"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Too Many Requests"
+            }
           },
           "500": {
+            "description": "Internal server error",
             "content": {
               "application/json": {
                 "example": {
                   "detail": "Error retrieving KPI data for feature 'suggest-impact': <error message>"
                 }
               }
-            },
-            "description": "Internal server error"
+            }
           },
-          "default": {
+          "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Unexpected error"
+            }
+          },
+          "default": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
-        },
-        "summary": "Get CVE Analysis KPI Metrics"
+        }
+      }
+    },
+    "/api/v1/analysis/kpi/osidb-bot": {
+      "get": {
+        "summary": "Get osidb-bot KPI Metrics",
+        "description": "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. Compares bot suggestions against current flaw values to measure how often analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow state are included. Results are cached and incrementally updated on subsequent requests. Use full_refresh=true for exact counts (incremental results may slightly over-count flaws updated after the cache was built).",
+        "operationId": "osidb_bot_kpi_api_v1_analysis_kpi_osidb_bot_get",
+        "parameters": [
+          {
+            "name": "changed_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only include flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
+              "title": "Changed After"
+            },
+            "description": "Only include flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z)."
+          },
+          {
+            "name": "changed_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only include flaws updated before this ISO 8601 datetime.",
+              "title": "Changed Before"
+            },
+            "description": "Only include flaws updated before this ISO 8601 datetime."
+          },
+          {
+            "name": "full_refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Force a full query from scratch, ignoring and overwriting the cache.",
+              "default": false,
+              "title": "Full Refresh"
+            },
+            "description": "Force a full query from scratch, ignoring and overwriting the cache."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with bot KPI metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotKPIResponse"
+                },
+                "example": {
+                  "total_flaws_processed": 142,
+                  "features": {
+                    "impact": {
+                      "applied": 130,
+                      "skipped": 12,
+                      "kept": 110,
+                      "modified": 20,
+                      "acceptance_rate": 84.6,
+                      "avg_data_quality": 0.85,
+                      "avg_confidence": 0.82
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "OSIDB is unreachable",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Unable to connect to OSIDB."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/feedback": {
       "post": {
+        "summary": "Save Feedback",
         "description": "Receive feedback and log it to CSV file.\n\nAll data is preserved without modification. CSV library handles escaping.",
         "operationId": "save_feedback_api_v1_feedback_post",
         "requestBody": {
@@ -928,49 +563,49 @@
         },
         "responses": {
           "200": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            },
-            "description": "Successful Response"
+            }
           },
           "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            },
-            "description": "Validation Error"
+            }
           },
           "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Too Many Requests"
+            }
           },
           "default": {
+            "description": "Unexpected error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Unexpected error"
+            }
           }
-        },
-        "summary": "Save Feedback"
+        }
       }
     },
     "/api/v1/programmatic-feedback": {
       "post": {
+        "summary": "Save Programmatic Feedback",
         "description": "Receive programmatic feedback and log it to CSV file.\n\nThis endpoint captures AI suggestion acceptance data when users save flaws,\nincluding the suggested value and submitted value. The acceptance score is\ncalculated server-side based on whether the values match. For features that\nsupport semantic similarity (title, description, statement, mitigation),\nsemantic proximity scoring is attempted. If semantic scoring fails or times out,\nthe entry remains with an empty acceptance_score and can be retried later.",
         "operationId": "save_programmatic_feedback_api_v1_programmatic_feedback_post",
         "requestBody": {
@@ -985,45 +620,432 @@
         },
         "responses": {
           "200": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            },
-            "description": "Successful Response"
+            }
           },
           "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            },
-            "description": "Validation Error"
+            }
           },
           "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Too Many Requests"
+            }
           },
           "default": {
+            "description": "Unexpected error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Unexpected error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BotFeatureKPI": {
+        "properties": {
+          "applied": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Applied",
+            "description": "Suggestions that passed quality gates (type=AI-Bot)"
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Skipped",
+            "description": "Suggestions discarded by quality gates (type=AI-Bot-Skipped)"
+          },
+          "kept": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Kept",
+            "description": "Applied suggestions still unchanged in OSIDB after analyst review"
+          },
+          "modified": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Modified",
+            "description": "Applied suggestions changed by an analyst"
+          },
+          "acceptance_rate": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Acceptance Rate",
+            "description": "Percentage of applied suggestions kept unchanged (0.0-100.0)"
+          },
+          "avg_data_quality": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Avg Data Quality",
+            "description": "Average data_quality score across all entries"
+          },
+          "avg_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Avg Confidence",
+            "description": "Average confidence score across all entries"
           }
         },
-        "summary": "Save Programmatic Feedback"
+        "type": "object",
+        "required": [
+          "applied",
+          "skipped",
+          "kept",
+          "modified",
+          "acceptance_rate",
+          "avg_data_quality",
+          "avg_confidence"
+        ],
+        "title": "BotFeatureKPI",
+        "description": "Per-feature KPI metrics for osidb-bot auto-processing."
+      },
+      "BotKPIResponse": {
+        "properties": {
+          "total_flaws_processed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Flaws Processed",
+            "description": "Total flaws processed by the bot and reviewed by analysts"
+          },
+          "features": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BotFeatureKPI"
+            },
+            "type": "object",
+            "title": "Features",
+            "description": "Per-feature KPI metrics keyed by field name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_flaws_processed",
+          "features"
+        ],
+        "title": "BotKPIResponse",
+        "description": "Response model for osidb-bot KPI metrics endpoint."
+      },
+      "CVEFeatureName": {
+        "type": "string",
+        "enum": [
+          "suggest-impact",
+          "suggest-cwe",
+          "suggest-description",
+          "suggest-statement",
+          "suggest-affected-components",
+          "identify-pii",
+          "cvss-diff-explainer",
+          "quality-review"
+        ],
+        "title": "CVEFeatureName"
+      },
+      "ComponentFeatureName": {
+        "type": "string",
+        "enum": [
+          "component-intelligence"
+        ],
+        "title": "ComponentFeatureName"
+      },
+      "FeatureKPI": {
+        "properties": {
+          "acceptance_percentage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Acceptance Percentage",
+            "description": "Acceptance score as a percentage (0.0 to 100.0, e.g., 75.0 for 75%)"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/KPIEntry"
+            },
+            "type": "array",
+            "title": "Entries",
+            "description": "List of log entries filtered by feature, sorted by datetime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "acceptance_percentage",
+          "entries"
+        ],
+        "title": "FeatureKPI",
+        "description": "Feature KPI model for CVE analysis feedback.\n\nContains the acceptance score percentage and filtered log entries for a feature.\nEntries include both standard user feedback and programmatic (automatic) feedback."
+      },
+      "Feedback": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Feature"
+          },
+          "cve_id": {
+            "type": "string",
+            "pattern": "^CVE-[0-9]{4}-[0-9]{4,7}$",
+            "title": "Cve Id"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Email"
+          },
+          "request_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Time",
+            "default": ""
+          },
+          "actual": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual",
+            "default": ""
+          },
+          "expected": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected",
+            "default": ""
+          },
+          "accept": {
+            "type": "boolean",
+            "title": "Accept",
+            "default": false
+          },
+          "rejection_comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Comment",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "cve_id",
+          "email"
+        ],
+        "title": "Feedback",
+        "description": "Data structure for feedback.\n\nAll fields are stored without modification to preserve original data.\nCSV escaping is handled automatically by the csv library during logging."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "KPIEntry": {
+        "properties": {
+          "datetime": {
+            "type": "string",
+            "title": "Datetime",
+            "description": "Timestamp of the feedback entry (format: YYYY-MM-DD HH:MM:SS.mmm or YYYY-MM-DD HH:MM:SS)"
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted",
+            "description": "Whether the feedback was accepted"
+          },
+          "aegis_version": {
+            "type": "string",
+            "title": "Aegis Version",
+            "description": "AEGIS version at time of feedback (may be empty string if not available)",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "datetime",
+          "accepted"
+        ],
+        "title": "KPIEntry",
+        "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry."
+      },
+      "ProgrammaticFeedback": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Feature"
+          },
+          "cve_id": {
+            "type": "string",
+            "pattern": "^CVE-[0-9]{4}-[0-9]{4,7}$",
+            "title": "Cve Id"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Email"
+          },
+          "suggested_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Value",
+            "default": ""
+          },
+          "submitted_value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted Value",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "feature",
+          "cve_id",
+          "email"
+        ],
+        "title": "ProgrammaticFeedback",
+        "description": "Data structure for programmatic feedback collected when user saves a flaw.\n\nCaptures the AI suggested value and the actual submitted value for comparison.\nThe acceptance_score and llmjudge_explanation are calculated server-side\nand should not be sent by clients."
+      },
+      "SortOrder": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ],
+        "title": "SortOrder",
+        "description": "Sort order for datetime field."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
       }
     }
   },
