@@ -147,6 +147,26 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
         assert result["components"].kept == 1
 
+    def test_multiple_bot_entries_for_single_field(self):
+        aegis_meta = {
+            "processed": True,
+            "impact": [
+                _make_bot_entry("LOW", dq=0.8, conf=0.9),
+                _make_bot_entry("MODERATE", dq=0.6, conf=0.7),
+            ],
+        }
+        flaw = _make_flaw(aegis_meta, impact="LOW")
+        result = extract_flaw_kpi(aegis_meta, flaw)
+
+        stats = result["impact"]
+        assert stats.applied == 2
+        assert stats.kept == 1
+        assert stats.modified == 0
+        assert stats.total_entries == 2
+        assert stats.avg_data_quality == round((0.8 + 0.6) / 2, 2)
+        assert stats.avg_confidence == round((0.9 + 0.7) / 2, 2)
+        assert stats.acceptance_rate == 50.0
+
     def test_avg_metrics(self):
         aegis_meta = {
             "processed": True,

@@ -1,6 +1,92 @@
 {
   "components": {
     "schemas": {
+      "BotFeatureKPI": {
+        "description": "Per-feature KPI metrics for osidb-bot auto-processing.",
+        "properties": {
+          "acceptance_rate": {
+            "description": "Percentage of applied suggestions kept unchanged (0.0-100.0)",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Acceptance Rate",
+            "type": "number"
+          },
+          "applied": {
+            "description": "Suggestions that passed quality gates (type=AI-Bot)",
+            "minimum": 0.0,
+            "title": "Applied",
+            "type": "integer"
+          },
+          "avg_confidence": {
+            "description": "Average confidence score across all entries",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Avg Confidence",
+            "type": "number"
+          },
+          "avg_data_quality": {
+            "description": "Average data_quality score across all entries",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Avg Data Quality",
+            "type": "number"
+          },
+          "kept": {
+            "description": "Applied suggestions still unchanged in OSIDB after analyst review",
+            "minimum": 0.0,
+            "title": "Kept",
+            "type": "integer"
+          },
+          "modified": {
+            "description": "Applied suggestions changed by an analyst",
+            "minimum": 0.0,
+            "title": "Modified",
+            "type": "integer"
+          },
+          "skipped": {
+            "description": "Suggestions discarded by quality gates (type=AI-Bot-Skipped)",
+            "minimum": 0.0,
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "applied",
+          "skipped",
+          "kept",
+          "modified",
+          "acceptance_rate",
+          "avg_data_quality",
+          "avg_confidence"
+        ],
+        "title": "BotFeatureKPI",
+        "type": "object"
+      },
+      "BotKPIResponse": {
+        "description": "Response model for osidb-bot KPI metrics endpoint.",
+        "properties": {
+          "features": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BotFeatureKPI"
+            },
+            "description": "Per-feature KPI metrics keyed by field name",
+            "title": "Features",
+            "type": "object"
+          },
+          "total_flaws_processed": {
+            "description": "Total flaws processed by the bot and reviewed by analysts",
+            "minimum": 0.0,
+            "title": "Total Flaws Processed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_flaws_processed",
+          "features"
+        ],
+        "title": "BotKPIResponse",
+        "type": "object"
+      },
       "CVEFeatureName": {
         "enum": [
           "suggest-impact",
@@ -911,6 +997,119 @@
           }
         },
         "summary": "Get CVE Analysis KPI Metrics"
+      }
+    },
+    "/api/v1/analysis/kpi/osidb-bot": {
+      "get": {
+        "description": "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. Compares bot suggestions against current flaw values to measure how often analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow state are included.",
+        "operationId": "osidb_bot_kpi_api_v1_analysis_kpi_osidb_bot_get",
+        "parameters": [
+          {
+            "description": "Only include flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
+            "in": "query",
+            "name": "changed_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only include flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
+              "title": "Changed After"
+            }
+          },
+          {
+            "description": "Only include flaws updated before this ISO 8601 datetime.",
+            "in": "query",
+            "name": "changed_before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only include flaws updated before this ISO 8601 datetime.",
+              "title": "Changed Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "features": {
+                    "impact": {
+                      "acceptance_rate": 84.6,
+                      "applied": 130,
+                      "avg_confidence": 0.82,
+                      "avg_data_quality": 0.85,
+                      "kept": 110,
+                      "modified": 20,
+                      "skipped": 12
+                    }
+                  },
+                  "total_flaws_processed": 142
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/BotKPIResponse"
+                }
+              }
+            },
+            "description": "Successful response with bot KPI metrics"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Unable to connect to OSIDB."
+                }
+              }
+            },
+            "description": "OSIDB is unreachable"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error"
+          }
+        },
+        "summary": "Get osidb-bot KPI Metrics"
       }
     },
     "/api/v1/feedback": {
