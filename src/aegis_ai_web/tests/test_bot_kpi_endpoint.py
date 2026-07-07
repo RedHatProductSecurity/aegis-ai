@@ -2,11 +2,19 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from aegis_ai_web.src.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_kpi_cache(tmp_path, monkeypatch):
+    """Point the KPI cache at a fresh per-test directory so cached aggregates
+    from one test cannot leak into another."""
+    monkeypatch.setenv("AEGIS_BOT_KPI_CACHE_DIR", str(tmp_path))
 
 
 def _make_bot_entry(value, *, dq=0.9, conf=0.85):
