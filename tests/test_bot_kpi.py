@@ -1,10 +1,16 @@
 """Unit tests for osidb-bot KPI computation logic."""
 
+from datetime import datetime, timezone
+
 from aegis_ai.osidb_bot.kpi import (
+    BotKPICacheEntry,
+    BotKPIResult,
     FeatureStats,
+    _merge_feature_stats,
     _values_equal,
     aggregate_kpi,
     extract_flaw_kpi,
+    merge_kpi_results,
 )
 
 
@@ -270,3 +276,120 @@ class TestFeatureStats:
         stats = FeatureStats()
         assert stats.avg_data_quality == 0.0
         assert stats.avg_confidence == 0.0
+
+
+class TestMergeFeatureStats:
+    def test_sums_all_fields(self):
+        target = FeatureStats(
+            applied=3,
+            skipped=1,
+            kept=2,
+            modified=1,
+            data_quality_sum=2.7,
+            confidence_sum=2.4,
+            total_entries=4,
+        )
+        source = FeatureStats(
+            applied=2,
+            skipped=3,
+            kept=1,
+            modified=1,
+            data_quality_sum=1.8,
+            confidence_sum=1.5,
+            total_entries=5,
+        )
+        _merge_feature_stats(target, source)
+        assert target.applied == 5
+        assert target.skipped == 4
+        assert target.kept == 3
+        assert target.modified == 2
+        assert round(target.data_quality_sum, 1) == 4.5
+        assert round(target.confidence_sum, 1) == 3.9
+        assert target.total_entries == 9
+
+
+class TestMergeKpiResults:
+    def test_overlapping_keys(self):
+        base = BotKPIResult(
+            total_flaws_processed=10,
+            features={"impact": FeatureStats(applied=5, kept=3)},
+        )
+        incremental = BotKPIResult(
+            total_flaws_processed=2,
+            features={"impact": FeatureStats(applied=2, kept=1)},
+        )
+        merged = merge_kpi_results(base, incremental)
+        assert merged.total_flaws_processed == 12
+        assert merged.features["impact"].applied == 7
+        assert merged.features["impact"].kept == 4
+
+    def test_disjoint_keys(self):
+        base = BotKPIResult(
+            total_flaws_processed=5,
+            features={"impact": FeatureStats(applied=3)},
+        )
+        incremental = BotKPIResult(
+            total_flaws_processed=3,
+            features={"cwe_id": FeatureStats(applied=2)},
+        )
+        merged = merge_kpi_results(base, incremental)
+        assert merged.total_flaws_processed == 8
+        assert "impact" in merged.features
+        assert "cwe_id" in merged.features
+        assert merged.features["impact"].applied == 3
+        assert merged.features["cwe_id"].applied == 2
+
+    def test_merge_with_empty(self):
+        base = BotKPIResult(
+            total_flaws_processed=5,
+            features={"impact": FeatureStats(applied=3, kept=2)},
+        )
+        merged = merge_kpi_results(base, BotKPIResult())
+        assert merged.total_flaws_processed == 5
+        assert merged.features["impact"].applied == 3
+
+    def test_does_not_mutate_base(self):
+        base = BotKPIResult(
+            total_flaws_processed=5,
+            features={"impact": FeatureStats(applied=3)},
+        )
+        incremental = BotKPIResult(
+            total_flaws_processed=2,
+            features={"impact": FeatureStats(applied=1)},
+        )
+        merge_kpi_results(base, incremental)
+        assert base.total_flaws_processed == 5
+        assert base.features["impact"].applied == 3
+
+
+class TestBotKPICacheEntry:
+    def test_round_trip(self):
+        result = BotKPIResult(
+            total_flaws_processed=42,
+            features={
+                "impact": FeatureStats(
+                    applied=30,
+                    skipped=5,
+                    kept=25,
+                    modified=5,
+                    data_quality_sum=27.0,
+                    confidence_sum=24.0,
+                    total_entries=35,
+                ),
+                "cwe_id": FeatureStats(applied=10, kept=8, modified=2),
+            },
+        )
+        cutoff = datetime(2025, 7, 1, 12, 0, 0, tzinfo=timezone.utc)
+        entry = BotKPICacheEntry.from_kpi_result(result, cutoff)
+        json_str = entry.model_dump_json()
+        restored = BotKPICacheEntry.model_validate_json(json_str)
+        restored_result = restored.to_kpi_result()
+
+        assert restored.cutoff == cutoff
+        assert restored_result.total_flaws_processed == 42
+        assert restored_result.features["impact"].applied == 30
+        assert restored_result.features["impact"].kept == 25
+        assert restored_result.features["impact"].avg_data_quality == round(
+            27.0 / 35, 2
+        )
+        assert restored_result.features["cwe_id"].applied == 10

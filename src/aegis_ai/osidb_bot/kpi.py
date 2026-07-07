@@ -5,9 +5,11 @@ values to measure how often analysts keep, modify, or skip bot suggestions.
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any, Optional, Sequence
+
+from pydantic import BaseModel
 
 from osidb_bindings.session import Session
 
@@ -107,6 +109,17 @@ def extract_flaw_kpi(
     return result
 
 
+def _merge_feature_stats(target: FeatureStats, source: FeatureStats) -> None:
+    """Add source stats into target (mutating target)."""
+    target.applied += source.applied
+    target.skipped += source.skipped
+    target.kept += source.kept
+    target.modified += source.modified
+    target.data_quality_sum += source.data_quality_sum
+    target.confidence_sum += source.confidence_sum
+    target.total_entries += source.total_entries
+
+
 def aggregate_kpi(flaws: Sequence[dict[str, Any]]) -> BotKPIResult:
     """Aggregate KPI stats across multiple flaws."""
     result = BotKPIResult()
@@ -125,17 +138,25 @@ def aggregate_kpi(flaws: Sequence[dict[str, Any]]) -> BotKPIResult:
         for field_name, stats in flaw_stats.items():
             if field_name not in merged:
                 merged[field_name] = FeatureStats()
-            m = merged[field_name]
-            m.applied += stats.applied
-            m.skipped += stats.skipped
-            m.kept += stats.kept
-            m.modified += stats.modified
-            m.data_quality_sum += stats.data_quality_sum
-            m.confidence_sum += stats.confidence_sum
-            m.total_entries += stats.total_entries
+            _merge_feature_stats(merged[field_name], stats)
 
     result.features = merged
     return result
+
+
+def merge_kpi_results(base: BotKPIResult, incremental: BotKPIResult) -> BotKPIResult:
+    """Combine two KPI results by summing all counters."""
+    merged = BotKPIResult(
+        total_flaws_processed=base.total_flaws_processed
+        + incremental.total_flaws_processed,
+    )
+    for name, stats in base.features.items():
+        merged.features[name] = FeatureStats(**asdict(stats))
+    for name, stats in incremental.features.items():
+        if name not in merged.features:
+            merged.features[name] = FeatureStats()
+        _merge_feature_stats(merged.features[name], stats)
+    return merged
 
 
 def fetch_bot_processed_flaws(
@@ -167,3 +188,38 @@ def fetch_bot_processed_flaws(
 
     logger.info("found %d bot-processed flaws", len(flaws))
     return flaws
+
+
+class BotKPICacheEntry(BaseModel):
+    """On-disk cache for precomputed bot KPI aggregates."""
+
+    cutoff: datetime
+    total_flaws_processed: int
+    features: dict[str, dict[str, float]]
+
+    def to_kpi_result(self) -> BotKPIResult:
+        return BotKPIResult(
+            total_flaws_processed=self.total_flaws_processed,
+            features={
+                name: FeatureStats(
+                    applied=int(d["applied"]),
+                    skipped=int(d["skipped"]),
+                    kept=int(d["kept"]),
+                    modified=int(d["modified"]),
+                    data_quality_sum=d["data_quality_sum"],
+                    confidence_sum=d["confidence_sum"],
+                    total_entries=int(d["total_entries"]),
+                )
+                for name, d in self.features.items()
+            },
+        )
+
+    @classmethod
+    def from_kpi_result(
+        cls, result: BotKPIResult, cutoff: datetime
+    ) -> "BotKPICacheEntry":
+        return cls(
+            cutoff=cutoff,
+            total_flaws_processed=result.total_flaws_processed,
+            features={name: asdict(stats) for name, stats in result.features.items()},
+        )

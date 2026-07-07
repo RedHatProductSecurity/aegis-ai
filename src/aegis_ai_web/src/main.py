@@ -771,7 +771,10 @@ async def cve_kpi(
         "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. "
         "Compares bot suggestions against current flaw values to measure "
         "how often analysts keep, modify, or skip bot suggestions. "
-        "Only flaws in DONE workflow state are included."
+        "Only flaws in DONE workflow state are included. "
+        "Results are cached and incrementally updated on subsequent requests. "
+        "Use full_refresh=true for exact counts (incremental results may "
+        "slightly over-count flaws updated after the cache was built)."
     ),
     response_model=BotKPIResponse,
     responses={
@@ -815,12 +818,17 @@ async def osidb_bot_kpi(
         default=None,
         description="Only include flaws updated before this ISO 8601 datetime.",
     ),
+    full_refresh: bool = Query(
+        default=False,
+        description="Force a full query from scratch, ignoring and overwriting the cache.",
+    ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
     return await asyncio.to_thread(
         get_osidb_bot_kpi,
         changed_after=changed_after,
         changed_before=changed_before,
+        full_refresh=full_refresh,
     )
 
 
