@@ -149,10 +149,20 @@ class FlawFinder:
         if created_dt_gte is not None:
             kwargs["created_dt_gte"] = created_dt_gte
 
+        # XXX: temporary restriction: only flaws
+        # 1. with no public date or
+        # 2. public date after 2026-07-08
+        kwargs["include_fields"] = ["cve_id", "unembargo_dt"]
+        _unembargo_cutoff = datetime(2026, 7, 8, tzinfo=timezone.utc)
+
         # initiate the OSIDB search
         logger.info("searching CVEs: %s", _kwargs_for_log(kwargs))
         flaw_iterator = self.osidb.flaws.retrieve_list_iterator(**kwargs)
-        cve_ids = [flaw.cve_id for flaw in flaw_iterator]
+        cve_ids: list[CVEID] = []
+        for flaw in flaw_iterator:
+            udt = flaw.unembargo_dt
+            if isinstance(udt, Unset) or udt is None or udt >= _unembargo_cutoff:
+                cve_ids.append(flaw.cve_id)
         if state is None:
             return cve_ids
 

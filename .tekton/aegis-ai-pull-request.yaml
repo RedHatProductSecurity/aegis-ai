@@ -25,7 +25,7 @@ spec:
   - name: output-image
     value: quay.io/redhat-user-workloads/aegis-tenant/aegis-ai:on-pr-{{revision}}
   - name: image-expires-after
-    value: 5d
+    value: 25d
   - name: dockerfile
     value: Containerfile
   - name: evals-skip-github-owner
