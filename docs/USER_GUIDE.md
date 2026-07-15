@@ -39,6 +39,7 @@ Aegis provides specialized features for:
 - PII (Personally Identifiable Information) detection
 - Component intelligence gathering
 - CVSS score difference explanations
+- CVE flaw content quality review and scoring
 
 ---
 
@@ -533,6 +534,17 @@ aegis suggest-statement "CVE-2025-0725"
 
 **Best Practice:** Review and customize the statement to match your organization's communication style.
 
+### Use Case 8: CVE Flaw Content Quality Review
+
+**Command:**
+```bash
+aegis quality-review "CVE-2025-0725"
+```
+
+**Expected Output:** Quality score with tier, per-criterion breakdown, customer lens assessment, and actionable recommendations with suggested rewrites.
+
+**Best Practice:** Use this to audit flaw content quality before publication.
+
 ---
 
 ## Recommended Data Inputs
@@ -615,6 +627,9 @@ aegis cvss-diff "CVE-2025-0725"
 
 # Component Intelligence
 aegis component-intelligence "libcap"
+
+# CVE Flaw Content Quality Review
+aegis quality-review "CVE-2025-0725"
 ```
 
 ---

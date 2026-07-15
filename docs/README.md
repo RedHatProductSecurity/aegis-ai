@@ -24,6 +24,7 @@ Welcome to the Aegis AI documentation.
 - **Suggest Statement** - Generates or improves CVE statements explaining product impact
 - **Identify PII** - Detects Personally Identifiable Information in security texts before publication
 - **CVSS Diff Explainer** - Explains differences between Red Hat and NVD CVSS scores
+- **Quality Review** - Scores CVE flaw content against a weighted quality rubric with a customer perspective assessment
 
 **Component Analysis:**
 - **Component Intelligence** - Generates comprehensive information about a software component
