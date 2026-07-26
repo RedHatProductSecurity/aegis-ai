@@ -122,7 +122,7 @@ dev = [
     "pytest-spec>=5.0.0",
     "pytest-sugar>=1.0.0",
     "pytest-xdist>=3.7.0",
-    "ruff<0.16.0",  # see https://github.com/RedHatProductSecurity/aegis-ai/pull/768 to unpin
+    "ruff<0.16.1",  # see https://github.com/RedHatProductSecurity/aegis-ai/pull/768 to unpin
     "twine>=6.1.0",
     "ty>=0.0.1a16",
     "types-requests>=2.32.0.20250515",
