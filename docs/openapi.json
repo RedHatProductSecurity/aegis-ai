@@ -18,27 +18,53 @@
             "type": "integer"
           },
           "avg_confidence": {
-            "description": "Average confidence score across all entries",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Avg Confidence",
-            "type": "number"
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average confidence score across entries that reported one. None when no entry recorded a confidence value.",
+            "title": "Avg Confidence"
           },
           "avg_data_quality": {
-            "description": "Average data_quality score across all entries",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Avg Data Quality",
-            "type": "number"
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average data_quality score across entries that reported one. None when no entry recorded a data_quality value.",
+            "title": "Avg Data Quality"
+          },
+          "avg_distance": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Average normalized distance (0.0 = exact match, 1.0 = maximum divergence) between modified suggestions and current values, using the same weighted scoring as evals. None when no distance data is available.",
+            "title": "Avg Distance"
           },
           "kept": {
-            "description": "Applied suggestions still unchanged in OSIDB after analyst review",
+            "description": "Applied suggestions still unchanged in OSIDB",
             "minimum": 0.0,
             "title": "Kept",
             "type": "integer"
           },
           "modified": {
-            "description": "Applied suggestions changed by an analyst",
+            "description": "Applied suggestions that were changed since being applied",
             "minimum": 0.0,
             "title": "Modified",
             "type": "integer"
@@ -55,9 +81,7 @@
           "skipped",
           "kept",
           "modified",
-          "acceptance_rate",
-          "avg_data_quality",
-          "avg_confidence"
+          "acceptance_rate"
         ],
         "title": "BotFeatureKPI",
         "type": "object"
@@ -74,7 +98,7 @@
             "type": "object"
           },
           "total_flaws_processed": {
-            "description": "Total flaws processed by the bot and reviewed by analysts",
+            "description": "Total flaws processed by the bot",
             "minimum": 0.0,
             "title": "Total Flaws Processed",
             "type": "integer"
@@ -1001,7 +1025,7 @@
     },
     "/api/v1/analysis/kpi/osidb-bot": {
       "get": {
-        "description": "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. Compares bot suggestions against current flaw values to measure how often analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow state are included. Results are cached and incrementally updated on subsequent requests. Use full_refresh=true for exact counts (incremental results may slightly over-count flaws updated after the cache was built).",
+        "description": "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. Compares bot suggestions against current flaw values to measure how often analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow state are included. Results are cached and incrementally updated on subsequent requests. Use full_refresh=true for exact counts (incremental results retain original stats for flaws that were re-updated after the cache was built).",
         "operationId": "osidb_bot_kpi_api_v1_analysis_kpi_osidb_bot_get",
         "parameters": [
           {
@@ -1066,6 +1090,7 @@
                       "applied": 130,
                       "avg_confidence": 0.82,
                       "avg_data_quality": 0.85,
+                      "avg_distance": 1.2,
                       "kept": 110,
                       "modified": 20,
                       "skipped": 12
