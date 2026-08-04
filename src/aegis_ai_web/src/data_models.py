@@ -345,12 +345,12 @@ class BotFeatureKPI(BaseModel):
     kept: int = Field(
         ...,
         ge=0,
-        description="Applied suggestions still unchanged in OSIDB after analyst review",
+        description="Applied suggestions still unchanged in OSIDB",
     )
     modified: int = Field(
         ...,
         ge=0,
-        description="Applied suggestions changed by an analyst",
+        description="Applied suggestions that were changed since being applied",
     )
     acceptance_rate: float = Field(
         ...,
@@ -358,17 +358,32 @@ class BotFeatureKPI(BaseModel):
         le=100.0,
         description="Percentage of applied suggestions kept unchanged (0.0-100.0)",
     )
-    avg_data_quality: float = Field(
-        ...,
+    avg_data_quality: float | None = Field(
+        default=None,
         ge=0.0,
-        le=1.0,
-        description="Average data_quality score across all entries",
+        description=(
+            "Average data_quality score across entries that reported one. "
+            "None when no entry recorded a data_quality value."
+        ),
     )
-    avg_confidence: float = Field(
-        ...,
+    avg_confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        description=(
+            "Average confidence score across entries that reported one. "
+            "None when no entry recorded a confidence value."
+        ),
+    )
+    avg_distance: float | None = Field(
+        default=None,
         ge=0.0,
         le=1.0,
-        description="Average confidence score across all entries",
+        description=(
+            "Average normalized distance (0.0 = exact match, 1.0 = maximum "
+            "divergence) between modified suggestions and current values, "
+            "using the same weighted scoring as evals. "
+            "None when no distance data is available."
+        ),
     )
 
 
@@ -378,9 +393,9 @@ class BotKPIResponse(BaseModel):
     total_flaws_processed: int = Field(
         ...,
         ge=0,
-        description="Total flaws processed by the bot and reviewed by analysts",
+        description="Total flaws processed by the bot",
     )
-    features: Dict[str, BotFeatureKPI] = Field(
+    features: dict[str, BotFeatureKPI] = Field(
         ..., description="Per-feature KPI metrics keyed by field name"
     )
 

@@ -8,10 +8,10 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from datetime import datetime
-from typing import Annotated, Any, Optional, cast
+from typing import Annotated, Any, cast
 
 import yaml
 from fastapi import FastAPI, Form, HTTPException, Query, Request
@@ -773,8 +773,8 @@ async def cve_kpi(
         "how often analysts keep, modify, or skip bot suggestions. "
         "Only flaws in DONE workflow state are included. "
         "Results are cached and incrementally updated on subsequent requests. "
-        "Use full_refresh=true for exact counts (incremental results may "
-        "slightly over-count flaws updated after the cache was built)."
+        "Use full_refresh=true for exact counts (incremental results retain "
+        "original stats for flaws that were re-updated after the cache was built)."
     ),
     response_model=BotKPIResponse,
     responses={
@@ -793,6 +793,7 @@ async def cve_kpi(
                                 "acceptance_rate": 84.6,
                                 "avg_data_quality": 0.85,
                                 "avg_confidence": 0.82,
+                                "avg_distance": 1.2,
                             },
                         },
                     },
@@ -810,11 +811,11 @@ async def cve_kpi(
     },
 )
 async def osidb_bot_kpi(
-    changed_after: Optional[datetime] = Query(
+    changed_after: datetime | None = Query(  # noqa: B008
         default=None,
         description="Only include flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
     ),
-    changed_before: Optional[datetime] = Query(
+    changed_before: datetime | None = Query(  # noqa: B008
         default=None,
         description="Only include flaws updated before this ISO 8601 datetime.",
     ),
@@ -824,6 +825,11 @@ async def osidb_bot_kpi(
     ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
+    if changed_after and changed_before and changed_after > changed_before:
+        raise HTTPException(
+            status_code=422,
+            detail="changed_after must be earlier than changed_before.",
+        )
     return await asyncio.to_thread(
         get_osidb_bot_kpi,
         changed_after=changed_after,
