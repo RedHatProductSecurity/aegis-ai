@@ -8,6 +8,9 @@ from aegis_ai_web.src.main import app
 
 client = TestClient(app)
 
+_PATCH_SAVE = patch("aegis_ai_web.src.endpoints.bot_kpi._save_cache")
+_PATCH_LOAD = patch("aegis_ai_web.src.endpoints.bot_kpi._load_cache", return_value=None)
+
 
 def _make_bot_entry(value, *, dq=0.9, conf=0.85):
     return {
@@ -39,6 +42,7 @@ def _make_flaw_dict(aegis_meta, **overrides):
         "cve_description": "",
         "cwe_id": "",
         "impact": "",
+        "cvss_scores": [],
         "aegis_meta": aegis_meta,
     }
     flaw.update(overrides)
@@ -46,9 +50,13 @@ def _make_flaw_dict(aegis_meta, **overrides):
 
 
 class TestOsidbBotKpiEndpoint:
+    @_PATCH_SAVE
+    @_PATCH_LOAD
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_returns_empty_when_no_flaws(self, mock_settings, mock_bindings):
+    def test_returns_empty_when_no_flaws(
+        self, mock_settings, mock_bindings, _mock_load, _mock_save
+    ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_session = MagicMock()
         mock_session.flaws.retrieve_list_iterator.return_value = iter([])
@@ -60,9 +68,13 @@ class TestOsidbBotKpiEndpoint:
         assert data["total_flaws_processed"] == 0
         assert data["features"] == {}
 
+    @_PATCH_SAVE
+    @_PATCH_LOAD
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_returns_kpi_for_processed_flaws(self, mock_settings, mock_bindings):
+    def test_returns_kpi_for_processed_flaws(
+        self, mock_settings, mock_bindings, _mock_load, _mock_save
+    ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         flaw_data = _make_flaw_dict(
@@ -92,9 +104,13 @@ class TestOsidbBotKpiEndpoint:
         assert data["features"]["cwe_id"]["modified"] == 1
         assert data["features"]["cwe_id"]["acceptance_rate"] == 0.0
 
+    @_PATCH_SAVE
+    @_PATCH_LOAD
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_includes_skipped_metrics(self, mock_settings, mock_bindings):
+    def test_includes_skipped_metrics(
+        self, mock_settings, mock_bindings, _mock_load, _mock_save
+    ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         flaw_data = _make_flaw_dict(
@@ -154,9 +170,13 @@ class TestOsidbBotKpiEndpoint:
         call_kwargs = mock_session.flaws.retrieve_list_iterator.call_args[1]
         assert "updated_dt__gte" in call_kwargs
 
+    @_PATCH_SAVE
+    @_PATCH_LOAD
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_multiple_flaws_aggregation(self, mock_settings, mock_bindings):
+    def test_multiple_flaws_aggregation(
+        self, mock_settings, mock_bindings, _mock_load, _mock_save
+    ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         flaw1 = _make_flaw_dict(

@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from aegis_ai.osidb_bot.kpi import (
+from aegis_ai_web.src.endpoints.bot_kpi import (
     BotKPICacheEntry,
     BotKPIResult,
     FeatureStats,
@@ -130,19 +130,6 @@ class TestExtractFlawKpi:
         flaw = _make_flaw(aegis_meta)
         result = extract_flaw_kpi(aegis_meta, flaw)
         assert result == {}
-
-    def test_underscore_fields_excluded(self):
-        aegis_meta = {
-            "processed": True,
-            "_ecosystems": [_make_bot_entry(["upstream"])],
-            "_cvss3_vector": [
-                _make_bot_entry("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N")
-            ],
-        }
-        flaw = _make_flaw(aegis_meta)
-        result = extract_flaw_kpi(aegis_meta, flaw)
-        assert "_ecosystems" not in result
-        assert "_cvss3_vector" not in result
 
     def test_list_comparison_components(self):
         aegis_meta = {

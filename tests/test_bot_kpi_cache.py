@@ -6,8 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from aegis_ai.osidb_bot.kpi import BotKPICacheEntry, BotKPIResult, FeatureStats
 from aegis_ai_web.src.endpoints.bot_kpi import (
+    BotKPICacheEntry,
+    BotKPIResult,
+    FeatureStats,
     _get_cache_path,
     _load_cache,
     _save_cache,
