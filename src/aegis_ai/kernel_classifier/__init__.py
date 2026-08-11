@@ -45,24 +45,25 @@ CVSS_ISSUER_PRIORITY = ["NIST", "RH", "CVEORG", "OSV", "CISA"]
 SCORE_BUCKET_BOUNDARIES = [4.0, 7.0, 9.0]
 
 # URLs tried in order to fetch raw git patches for kernel commits.
-# git.kernel.org's CGI only resolves commits on the default branch of each
-# tree, so stable-backport hashes often fail there.  The GitHub fallback
-# resolves any commit reachable from any branch in gregkh/linux (the
-# stable mirror that al-kernel also uses as its primary source).
+# gregkh/linux (GitHub) is tried first: it's the stable mirror al-kernel uses
+# as its primary source, resolves commits reachable from any branch
+# (including per-version linux-X.Y.y stable-backport branches that
+# git.kernel.org's CGI cannot serve), and — unlike git.kernel.org — is not
+# blocked on Red Hat production networks (AEGIS-484).  The git.kernel.org
+# trees are kept as fallbacks for when GitHub is unavailable or rate-limited.
+# Same ordering as HTML_COMMIT_URL_TEMPLATES below.
+# This is an interim HTTP-level fix; docs/rfcs/0001-git-based-kernel-patch-retrieval.md
+# (on origin/feat/git-based-fetch) proposes replacing this entirely with local
+# git-clone retrieval and should be reconciled with this ordering if it lands.
 PATCH_URL_TEMPLATES = [
+    "https://github.com/gregkh/linux/commit/{hash}.patch",
     "https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/patch/?id={hash}",
     "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/patch/?id={hash}",
     "https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/patch/?id={hash}",
-    # Stable-backport commits live on per-version branches (linux-X.Y.y) that
-    # git.kernel.org's CGI cannot resolve.  gregkh/linux is the GitHub mirror
-    # of the stable tree and resolves commits across all branches — the same
-    # source al-kernel uses.  This is the last-resort fallback.
-    "https://github.com/gregkh/linux/commit/{hash}.patch",
 ]
 
-_GREGKH_FALLBACK_TEMPLATE = PATCH_URL_TEMPLATES[-1]
-
 # URLs tried in order to fetch rendered commit HTML pages (for supplemental feature extraction).
+# GitHub first, git.kernel.org as fallback — same rationale as PATCH_URL_TEMPLATES.
 # These may need updating if upstream hosting changes.
 HTML_COMMIT_URL_TEMPLATES = [
     "https://github.com/gregkh/linux/commit/{hash}",
@@ -454,53 +455,67 @@ class KernelImpactClassifier:
 
         return b"".join(chunks).decode("utf-8", errors="replace")
 
-    async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
-        """Fetch raw patches from git.kernel.org for given commit hashes.
+    @classmethod
+    async def _fetch_first_match(
+        cls,
+        client: "httpx.AsyncClient",
+        commit_hash: str,
+        templates: list[str],
+        *,
+        size_limit: int,
+        min_length: int,
+        content_type: str,
+    ) -> str | None:
+        """Try each URL template for *commit_hash* in order; return the first
+        response that clears *min_length* (rejects error pages/empty bodies),
+        or ``None`` if every template fails.
+        """
+        for tmpl in templates:
+            url = tmpl.format(hash=commit_hash)
+            try:
+                text = await cls._fetch_with_limit(
+                    client, url, commit_hash, size_limit, content_type
+                )
+            except Exception:
+                logger.debug(
+                    "Template %s failed for %s", tmpl, commit_hash[:12], exc_info=True
+                )
+                continue
+            if text is not None and len(text) > min_length:
+                return text
+        return None
 
-        Tries torvalds, stable, linux-next, and the gregkh/linux GitHub
-        fallback in order.  Responses exceeding ``_PATCH_SIZE_LIMIT`` are
-        rejected early via ``Content-Length`` or a streaming byte cap so
-        pathological commits never sit fully buffered in memory.
+    async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
+        """Fetch raw patches for given commit hashes.
+
+        Tries gregkh/linux (GitHub) first, then the git.kernel.org torvalds,
+        stable, and linux-next trees — see ``PATCH_URL_TEMPLATES``.
+        Responses exceeding ``_PATCH_SIZE_LIMIT`` are rejected early via
+        ``Content-Length`` or a streaming byte cap so pathological commits
+        never sit fully buffered in memory.
 
         Returns list of (commit_hash, patch_content) tuples.
         """
         patches = []
         async with httpx.AsyncClient(timeout=30.0) as client:
             for commit_hash in commit_hashes:
-                fetched = False
-                used_template = None
-                for tmpl in PATCH_URL_TEMPLATES:
-                    url = tmpl.format(hash=commit_hash)
-                    try:
-                        text = await self._fetch_with_limit(
-                            client, url, commit_hash, _PATCH_SIZE_LIMIT, "patch"
-                        )
-                        if text is None:
-                            continue
-
-                        # Reject trivially small responses (error pages, empty diffs)
-                        if len(text) > 100:
-                            patches.append((commit_hash, text))
-                            logger.debug("Fetched patch for %s", commit_hash[:12])
-                            fetched = True
-                            used_template = tmpl
-                            break
-                    except Exception:  # noqa: S112
-                        continue
-                if not fetched:
+                text = await self._fetch_first_match(
+                    client,
+                    commit_hash,
+                    PATCH_URL_TEMPLATES,
+                    size_limit=_PATCH_SIZE_LIMIT,
+                    min_length=100,
+                    content_type="patch",
+                )
+                if text is None:
                     logger.warning(
-                        "Could not fetch patch %s from any source "
-                        "(including gregkh/linux fallback for resolving "
-                        "backport patches) — commit may not exist in "
-                        "any known tree",
+                        "Could not fetch patch %s from any source — "
+                        "commit may not exist in any known tree",
                         commit_hash[:12],
                     )
-                elif used_template == _GREGKH_FALLBACK_TEMPLATE:
-                    logger.debug(
-                        "Patch %s resolved via gregkh/linux fallback "
-                        "(stable-backport commit)",
-                        commit_hash[:12],
-                    )
+                    continue
+                patches.append((commit_hash, text))
+                logger.debug("Fetched patch for %s", commit_hash[:12])
         return patches
 
     async def _fetch_commit_html(
@@ -511,37 +526,30 @@ class KernelImpactClassifier:
         The al-kernel daemon analyses GitHub commit pages which contain crash
         reports, call stacks, and rendered diffs that raw git patches lack.
         We replicate that by fetching from GitHub (primary) with a
-        git.kernel.org fallback.  Responses exceeding ``_HTML_SIZE_LIMIT``
-        are rejected early to prevent large commits from bloating memory.
+        git.kernel.org fallback — see ``HTML_COMMIT_URL_TEMPLATES``.
+        Responses exceeding ``_HTML_SIZE_LIMIT`` are rejected early to
+        prevent large commits from bloating memory.
 
         Returns list of (commit_hash, html_content) tuples.
         """
         pages: list[tuple[str, str]] = []
         async with httpx.AsyncClient(timeout=30.0) as client:
             for commit_hash in commit_hashes:
-                fetched = False
-                for tmpl in HTML_COMMIT_URL_TEMPLATES:
-                    url = tmpl.format(hash=commit_hash)
-                    try:
-                        text = await self._fetch_with_limit(
-                            client, url, commit_hash, _HTML_SIZE_LIMIT, "commit HTML"
-                        )
-                        if text is None:
-                            continue
-
-                        # Reject trivially small responses (error pages, empty content);
-                        # HTML pages have more boilerplate overhead than raw patches
-                        if len(text) > 200:
-                            pages.append((commit_hash, text))
-                            logger.debug("Fetched commit HTML for %s", commit_hash[:12])
-                            fetched = True
-                            break
-                    except Exception:  # noqa: S112
-                        continue
-                if not fetched:
+                text = await self._fetch_first_match(
+                    client,
+                    commit_hash,
+                    HTML_COMMIT_URL_TEMPLATES,
+                    size_limit=_HTML_SIZE_LIMIT,
+                    min_length=200,
+                    content_type="commit HTML",
+                )
+                if text is None:
                     logger.warning(
                         "Could not fetch commit HTML for %s", commit_hash[:12]
                     )
+                    continue
+                pages.append((commit_hash, text))
+                logger.debug("Fetched commit HTML for %s", commit_hash[:12])
         return pages
 
     @staticmethod
