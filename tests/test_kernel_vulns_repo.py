@@ -95,6 +95,12 @@ def test_sync_vulns_repo_reclones_when_existing_path_is_not_a_git_repo(
 
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
+        # Simulate git clone creating the repo directory and .git subdirectory,
+        # so the test mirrors real postconditions of sync_vulns_repo.
+        if cmd[:2] == ["git", "clone"]:
+            dest = Path(cmd[3])
+            dest.mkdir(parents=True, exist_ok=True)
+            (dest / ".git").mkdir(parents=True, exist_ok=True)
         return MagicMock(returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -102,7 +108,9 @@ def test_sync_vulns_repo_reclones_when_existing_path_is_not_a_git_repo(
     result = sync_vulns_repo(repo_path, "https://example.com/vulns")
 
     assert result is True
-    assert not repo_path.exists()  # removed by shutil.rmtree before the clone ran
+    assert repo_path.exists()
+    assert (repo_path / ".git").exists()
+    assert not (repo_path / "partial-file").exists()  # old contents were removed
     assert calls == [["git", "clone", "https://example.com/vulns", str(repo_path)]]
 
 
