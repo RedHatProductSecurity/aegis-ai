@@ -28,6 +28,7 @@ def test_sync_vulns_repo_clones_when_missing(tmp_path: Path, monkeypatch) -> Non
 def test_sync_vulns_repo_pulls_when_present(tmp_path: Path, monkeypatch) -> None:
     repo_path = tmp_path / "vulns"
     repo_path.mkdir()
+    (repo_path / ".git").mkdir()
     calls = []
 
     def fake_run(cmd, **kwargs):
@@ -57,6 +58,7 @@ def test_sync_vulns_repo_clone_failure_propagates(tmp_path: Path, monkeypatch) -
 def test_sync_vulns_repo_pull_failure_is_swallowed(tmp_path: Path, monkeypatch) -> None:
     repo_path = tmp_path / "vulns"
     repo_path.mkdir()
+    (repo_path / ".git").mkdir()
 
     def fake_run(cmd, **kwargs):
         raise subprocess.CalledProcessError(1, cmd, stderr="pull exploded")
@@ -71,6 +73,7 @@ def test_sync_vulns_repo_pull_failure_is_swallowed(tmp_path: Path, monkeypatch) 
 def test_sync_vulns_repo_pull_timeout_is_swallowed(tmp_path: Path, monkeypatch) -> None:
     repo_path = tmp_path / "vulns"
     repo_path.mkdir()
+    (repo_path / ".git").mkdir()
 
     def fake_run(cmd, **kwargs):
         raise subprocess.TimeoutExpired(cmd, timeout=1)
@@ -80,6 +83,27 @@ def test_sync_vulns_repo_pull_timeout_is_swallowed(tmp_path: Path, monkeypatch) 
     result = sync_vulns_repo(repo_path, "https://example.com/vulns")
 
     assert result is False
+
+
+def test_sync_vulns_repo_reclones_when_existing_path_is_not_a_git_repo(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo_path = tmp_path / "vulns"
+    repo_path.mkdir()
+    (repo_path / "partial-file").write_text("leftover from an interrupted clone")
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return MagicMock(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = sync_vulns_repo(repo_path, "https://example.com/vulns")
+
+    assert result is True
+    assert not repo_path.exists()  # removed by shutil.rmtree before the clone ran
+    assert calls == [["git", "clone", "https://example.com/vulns", str(repo_path)]]
 
 
 def test_describe_git_error_prefers_stderr() -> None:

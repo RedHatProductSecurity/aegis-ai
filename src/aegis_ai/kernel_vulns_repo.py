@@ -13,6 +13,7 @@ mirrors the same repo at the same path under a different host.
 """
 
 import logging
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -43,7 +44,14 @@ def sync_vulns_repo(
     clone_timeout: int = GIT_CLONE_TIMEOUT,
     pull_timeout: int = GIT_PULL_TIMEOUT,
 ) -> bool:
-    """Clone *git_url* into *repo_path* if missing, else pull the latest history.
+    """Clone *git_url* into *repo_path* if missing or incomplete, else pull the
+    latest history.
+
+    A *repo_path* that exists but has no ``.git`` subdirectory is treated as
+    an incomplete clone (e.g. left behind by a clone that was interrupted or
+    timed out) and is removed and re-cloned rather than pulled — pulling
+    inside a non-repo directory would fail and get misreported as "stale
+    data" when there was never any valid data there.
 
     Raises ``subprocess.CalledProcessError`` or ``subprocess.TimeoutExpired``
     if the initial clone fails — callers decide how to react to a repo that
@@ -54,6 +62,10 @@ def sync_vulns_repo(
     Returns True if the repo is confirmed current (clone or pull succeeded),
     False if a pull failed and the existing clone was left as-is.
     """
+    if repo_path.exists() and not (repo_path / ".git").exists():
+        logger.warning("Removing incomplete clone at %s and re-cloning", repo_path)
+        shutil.rmtree(repo_path)
+
     if not repo_path.exists():
         repo_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info("Cloning %s into %s...", git_url, repo_path)

@@ -1,6 +1,7 @@
 """Tests for KernelImpactClassifier._fetch_first_match."""
 
 from unittest.mock import MagicMock
+from urllib.parse import urlparse
 
 import pytest
 
@@ -13,7 +14,7 @@ async def test_fetch_first_match_returns_first_success(monkeypatch) -> None:
 
     async def fake_fetch_with_limit(client, url, commit_hash, size_limit, content_type):
         calls.append(url)
-        if "github.com" in url:
+        if urlparse(url).hostname == "github.com":
             return "x" * 150
         raise AssertionError("should not fall through to later templates")
 
