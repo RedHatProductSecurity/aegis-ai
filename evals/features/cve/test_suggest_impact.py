@@ -9,6 +9,7 @@ from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorCont
 from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
+from aegis_ai.features.cve.impact_mappings import score_cvss3_diff, score_impact_diff
 from aegis_ai.kernel_classifier import is_kernel_component
 from evals.features.common import (
     common_feature_evals,
@@ -18,93 +19,6 @@ from evals.features.common import (
     run_evaluation,
 )
 from evals.utils.osidb_cache import read_cache_json
-
-# dict to convert "IMPORTANT" to 8.0 etc
-# the following line is needed for ruff to accept the aligned comments
-# fmt: off
-NUM_BY_IMPACT = {
-    "NONE": 0.0,        # 0
-    "LOW": 2.0,         # 0..4
-    "MODERATE": 5.5,    # 4..7
-    "IMPORTANT": 8.0,   # 7..9
-    "CRITICAL": 9.5,    # 9..10
-}
-# fmt: on
-
-
-def score_impact_diff(impact: str, impact_exp: str) -> float:
-    """Compare two impact severity strings and return a score.
-    Valid values: NONE, LOW, MODERATE, IMPORTANT, CRITICAL."""
-    imp = NUM_BY_IMPACT[impact.strip().upper()]
-    imp_exp = NUM_BY_IMPACT[impact_exp.strip().upper()]
-    return 1.0 - abs(imp - imp_exp) / 10.0
-
-
-# TODO: check whether the cvss Python module could anyhow help with this
-def score_cvss3_diff(cvss3: str, cvss3_exp: str) -> tuple[float, str | None]:
-    """Compare two CVSS 3.1 vectors and return (score, reason).
-    0.0 means completely different, 1.0 means exact match.
-    When the score is not 1.0, reason enumerates mismatched metrics."""
-    if cvss3 == cvss3_exp:
-        # exact match
-        return (1.0, None)
-
-    def _parse(v: str) -> dict[str, str]:
-        parts = v.split("/")
-        if parts and parts[0].startswith("CVSS:"):
-            parts = parts[1:]
-        out: dict[str, str] = {}
-        for p in parts:
-            if ":" in p:
-                k, val = p.split(":", 1)
-                out[k] = val
-        return out
-
-    a = _parse(cvss3)
-    b = _parse(cvss3_exp)
-
-    # Ordinal scales per CVSS v3.1 base metric
-    scales: dict[str, list[str]] = {
-        "AV": ["P", "L", "A", "N"],
-        "AC": ["H", "L"],
-        "PR": ["H", "L", "N"],
-        "UI": ["R", "N"],
-        "S": ["U", "C"],
-        "C": ["N", "L", "H"],
-        "I": ["N", "L", "H"],
-        "A": ["N", "L", "H"],
-    }
-
-    def _norm_dist(metric: str) -> float:
-        order = scales[metric]
-        try:
-            ia = order.index(a.get(metric, ""))
-            ib = order.index(b.get(metric, ""))
-        except ValueError:
-            # unknown value → treat as maximum difference
-            return 1.0
-        max_d = len(order) - 1
-        if max_d == 0:
-            return 0.0
-        return abs(ia - ib) / max_d
-
-    metrics = tuple(scales.keys())
-    diffs = [_norm_dist(m) for m in metrics]
-    avg_diff = sum(diffs) / len(diffs)
-    score = (1.0 - avg_diff) ** 2
-
-    # Build human-friendly reason for mismatches
-    mismatch_list: list[str] = []
-    for m in metrics:
-        va = a.get(m)
-        vb = b.get(m)
-        if va is None or vb is None:
-            continue
-        if va != vb:
-            mismatch_list.append(f"{m}: got {va}, expected {vb}")
-
-    reason = "mismatched metrics: " + "; ".join(mismatch_list)
-    return (score, reason)
 
 
 class ImpactEvaluator(Evaluator[str, SuggestImpactModel]):
