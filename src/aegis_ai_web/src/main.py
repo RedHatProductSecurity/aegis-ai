@@ -793,7 +793,7 @@ async def cve_kpi(
                                 "acceptance_rate": 84.6,
                                 "avg_data_quality": 0.85,
                                 "avg_confidence": 0.82,
-                                "avg_distance": 1.2,
+                                "avg_suggestion_deviation": 0.35,
                             },
                         },
                     },

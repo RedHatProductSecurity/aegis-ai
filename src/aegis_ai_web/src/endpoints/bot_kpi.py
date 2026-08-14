@@ -61,37 +61,35 @@ def _safe_float(value: Any) -> float:
         return 0.0
 
 
-def _compute_distance(field_name: str, suggested: Any, current: Any) -> float | None:
+def _compute_deviation(field_name: str, suggested: Any, current: Any) -> float:
+    """Compute how far the current value deviates from the bot's suggestion.
+
+    Returns 0.0 for an exact match.  For fields with a graded metric (impact,
+    CVSS) returns a normalized 0-1 score.  For all other fields returns 1.0
+    (binary mismatch) since no finer-grained comparison is available.
+    """
     if field_name == "impact":
         try:
             return round(1.0 - score_impact_diff(str(suggested), str(current)), 4)
         except KeyError:
-            return None
+            return 1.0
     if field_name == "_cvss3_vector":
         score, _reason = score_cvss3_diff(str(suggested), str(current))
         return round(1.0 - score, 4)
-    return None
+    return 1.0
 
 
 @dataclass
 class FeatureStats:
     applied: int = 0
     skipped: int = 0
-    kept: int = 0
-    modified: int = 0
     data_quality_sum: float = 0.0
     data_quality_count: int = 0
     confidence_sum: float = 0.0
     confidence_count: int = 0
     total_entries: int = 0
-    distance_sum: float = 0.0
-    distance_count: int = 0
-
-    @property
-    def acceptance_rate(self) -> float:
-        if self.applied == 0:
-            return 0.0
-        return round((self.kept / self.applied) * 100, 1)
+    suggestion_deviation_sum: float = 0.0
+    suggestion_deviation_count: int = 0
 
     @property
     def avg_data_quality(self) -> float | None:
@@ -106,16 +104,17 @@ class FeatureStats:
         return round(self.confidence_sum / self.confidence_count, 2)
 
     @property
-    def avg_distance(self) -> float | None:
-        if self.distance_count == 0:
+    def avg_suggestion_deviation(self) -> float | None:
+        if self.suggestion_deviation_count == 0:
             return None
-        return round(self.distance_sum / self.distance_count, 2)
+        return round(self.suggestion_deviation_sum / self.suggestion_deviation_count, 2)
 
 
 @dataclass
 class BotKPIResult:
     total_flaws_processed: int = 0
     features: dict[str, FeatureStats] = field(default_factory=dict)
+    modified_counts: dict[str, int] = field(default_factory=dict)
 
 
 def _values_equal(suggested: Any, current: Any) -> bool:
@@ -169,14 +168,12 @@ def _score_against_current(
     """Compare the bot's suggested value with the current flaw value, updating stats."""
     current_value = _get_current_value(field_name, flaw_data)
     if _values_equal(bot_entry["value"], current_value):
-        stats.kept += 1
+        stats.suggestion_deviation_count += 1
         return
 
-    stats.modified += 1
-    dist = _compute_distance(field_name, bot_entry["value"], current_value)
-    if dist is not None:
-        stats.distance_sum += dist
-        stats.distance_count += 1
+    deviation = _compute_deviation(field_name, bot_entry["value"], current_value)
+    stats.suggestion_deviation_sum += deviation
+    stats.suggestion_deviation_count += 1
 
 
 def extract_flaw_kpi(
@@ -204,15 +201,13 @@ def _merge_feature_stats(target: FeatureStats, source: FeatureStats) -> None:
     """Add source stats into target (mutating target)."""
     target.applied += source.applied
     target.skipped += source.skipped
-    target.kept += source.kept
-    target.modified += source.modified
     target.data_quality_sum += source.data_quality_sum
     target.data_quality_count += source.data_quality_count
     target.confidence_sum += source.confidence_sum
     target.confidence_count += source.confidence_count
     target.total_entries += source.total_entries
-    target.distance_sum += source.distance_sum
-    target.distance_count += source.distance_count
+    target.suggestion_deviation_sum += source.suggestion_deviation_sum
+    target.suggestion_deviation_count += source.suggestion_deviation_count
 
 
 def _is_bot_processed(flaw_data: dict[str, Any]) -> bool:
@@ -255,12 +250,20 @@ def _resum(per_flaw: dict[str, dict[str, FeatureStats]]) -> BotKPIResult:
     gets re-scored over time.
     """
     merged: dict[str, FeatureStats] = {}
+    modified_counts: dict[str, int] = {}
     for stats_by_field in per_flaw.values():
         for field_name, stats in stats_by_field.items():
             if field_name not in merged:
                 merged[field_name] = FeatureStats()
+                modified_counts[field_name] = 0
             _merge_feature_stats(merged[field_name], stats)
-    return BotKPIResult(total_flaws_processed=len(per_flaw), features=merged)
+            if stats.suggestion_deviation_sum > 0.0:
+                modified_counts[field_name] += 1
+    return BotKPIResult(
+        total_flaws_processed=len(per_flaw),
+        features=merged,
+        modified_counts=modified_counts,
+    )
 
 
 def _aggregate_kpi_and_ids(
@@ -314,34 +317,75 @@ def fetch_bot_processed_flaws(
 
 
 def _feature_stats_from_dict(d: dict[str, float]) -> FeatureStats:
-    """Reconstruct FeatureStats from its serialized form, tolerating missing keys.
+    """Reconstruct FeatureStats from its compact serialized form.
 
     Guards against a truncated or corrupt on-disk entry raising KeyError and
     turning into a 500 that repeats on every request until someone manually
     deletes the cache file.
     """
+    applied = int(d.get("applied", 0))
+    skipped = int(d.get("skipped", 0))
+    has_deviation = "deviation" in d
+    dq = d.get("data_quality")
+    conf = d.get("confidence")
     return FeatureStats(
-        applied=int(d.get("applied", 0)),
-        skipped=int(d.get("skipped", 0)),
-        kept=int(d.get("kept", 0)),
-        modified=int(d.get("modified", 0)),
-        data_quality_sum=d.get("data_quality_sum", 0.0),
-        data_quality_count=int(d.get("data_quality_count", 0)),
-        confidence_sum=d.get("confidence_sum", 0.0),
-        confidence_count=int(d.get("confidence_count", 0)),
-        total_entries=int(d.get("total_entries", 0)),
-        distance_sum=d.get("distance_sum", 0.0),
-        distance_count=int(d.get("distance_count", 0)),
+        applied=applied,
+        skipped=skipped,
+        total_entries=applied + skipped,
+        suggestion_deviation_sum=d.get("deviation", 0.0),
+        suggestion_deviation_count=1 if has_deviation else 0,
+        data_quality_sum=dq if dq is not None else 0.0,
+        data_quality_count=int(d.get("dq_n", 1)) if dq is not None else 0,
+        confidence_sum=conf if conf is not None else 0.0,
+        confidence_count=int(d.get("conf_n", 1)) if conf is not None else 0,
     )
+
+
+def _serialize_flaw_feature(stats: FeatureStats) -> dict[str, float]:
+    """Serialize a single flaw's per-feature stats for the cache.
+
+    Omits zero/default fields and derives counts from presence, so a typical
+    entry is just ``{"applied": 1, "deviation": 0.0, "data_quality": 0.9,
+    "confidence": 0.85}`` instead of nine sum/count pairs.
+    """
+    d: dict[str, float] = {"applied": stats.applied}
+    if stats.skipped:
+        d["skipped"] = stats.skipped
+    if stats.suggestion_deviation_count:
+        d["deviation"] = stats.suggestion_deviation_sum
+    if stats.data_quality_count:
+        d["data_quality"] = stats.data_quality_sum
+        if stats.data_quality_count != 1:
+            d["dq_n"] = stats.data_quality_count
+    if stats.confidence_count:
+        d["confidence"] = stats.confidence_sum
+        if stats.confidence_count != 1:
+            d["conf_n"] = stats.confidence_count
+    return d
 
 
 def _serialize_per_flaw(
     per_flaw: dict[str, dict[str, FeatureStats]],
-) -> dict[str, dict[str, dict[str, float]]]:
+    timestamps: dict[str, str] | None = None,
+) -> dict[str, "FlawCacheData"]:
+    ts = timestamps or {}
     return {
-        cve_id: {field_name: asdict(stats) for field_name, stats in by_field.items()}
+        cve_id: FlawCacheData(
+            fields={
+                field_name: _serialize_flaw_feature(stats)
+                for field_name, stats in by_field.items()
+            },
+            updated_dt=ts.get(cve_id),
+        )
         for cve_id, by_field in per_flaw.items()
     }
+
+
+class FlawCacheData(BaseModel):
+    """Per-flaw cache entry: the feature stats and the flaw's last-updated timestamp."""
+
+    fields: dict[str, dict[str, float]]
+    updated_dt: str | None = None
 
 
 class BotKPICacheEntry(BaseModel):
@@ -360,21 +404,22 @@ class BotKPICacheEntry(BaseModel):
     # sums + a seen-IDs list, no `flaws`/`aggregate` keys) must fail
     # validation here so `_load_cache` treats it as absent and triggers a
     # full refresh, rather than silently defaulting to an empty cache.
-    flaws: dict[str, dict[str, dict[str, float]]]
+    flaws: dict[str, FlawCacheData]
     aggregate: dict[str, dict[str, float]]
-    timestamps: dict[str, str] = {}
 
     @property
     def total_flaws_processed(self) -> int:
         return len(self.flaws)
 
     def to_kpi_result(self) -> BotKPIResult:
-        return BotKPIResult(
-            total_flaws_processed=self.total_flaws_processed,
-            features={
-                name: _feature_stats_from_dict(d) for name, d in self.aggregate.items()
-            },
-        )
+        per_flaw = {
+            cve_id: {
+                field_name: _feature_stats_from_dict(d)
+                for field_name, d in flaw.fields.items()
+            }
+            for cve_id, flaw in self.flaws.items()
+        }
+        return _resum(per_flaw)
 
     def filter_by_date(
         self,
@@ -384,42 +429,48 @@ class BotKPICacheEntry(BaseModel):
     ) -> "BotKPIResult":
         """Resum only flaws whose updated_dt falls within the given range."""
         filtered: dict[str, dict[str, FeatureStats]] = {}
-        for cve_id, by_field in self.flaws.items():
-            ts_str = self.timestamps.get(cve_id)
-            if ts_str is None:
+        for cve_id, flaw in self.flaws.items():
+            if flaw.updated_dt is None:
                 continue
-            updated_dt = datetime.fromisoformat(ts_str)
+            updated_dt = datetime.fromisoformat(flaw.updated_dt)
             if updated_dt.tzinfo is None:
                 updated_dt = updated_dt.replace(tzinfo=UTC)
             if changed_after is not None:
-                ca = changed_after if changed_after.tzinfo else changed_after.replace(tzinfo=UTC)
+                ca = (
+                    changed_after
+                    if changed_after.tzinfo
+                    else changed_after.replace(tzinfo=UTC)
+                )
                 if updated_dt < ca:
                     continue
             if changed_before is not None:
-                cb = changed_before if changed_before.tzinfo else changed_before.replace(tzinfo=UTC)
+                cb = (
+                    changed_before
+                    if changed_before.tzinfo
+                    else changed_before.replace(tzinfo=UTC)
+                )
                 if updated_dt > cb:
                     continue
             filtered[cve_id] = {
                 field_name: _feature_stats_from_dict(d)
-                for field_name, d in by_field.items()
+                for field_name, d in flaw.fields.items()
             }
         return _resum(filtered)
 
     @classmethod
     def build(
         cls,
-        flaws: dict[str, dict[str, dict[str, float]]],
+        flaws: dict[str, FlawCacheData],
         cutoff: datetime,
-        timestamps: dict[str, str] | None = None,
     ) -> "BotKPICacheEntry":
-        """Build a cache entry from a serialized per-flaw stats map, resumming
-        the aggregate from scratch."""
+        """Build a cache entry from per-flaw data, resumming the aggregate
+        from scratch."""
         per_flaw_stats = {
             cve_id: {
                 field_name: _feature_stats_from_dict(d)
-                for field_name, d in by_field.items()
+                for field_name, d in flaw.fields.items()
             }
-            for cve_id, by_field in flaws.items()
+            for cve_id, flaw in flaws.items()
         }
         aggregate_result = _resum(per_flaw_stats)
         return cls(
@@ -428,23 +479,25 @@ class BotKPICacheEntry(BaseModel):
             aggregate={
                 name: asdict(stats) for name, stats in aggregate_result.features.items()
             },
-            timestamps=timestamps or {},
         )
 
 
 # -- Response helpers ----------------------------------------------------------
 
 
-def _stats_to_response(stats: FeatureStats) -> BotFeatureKPI:
+def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKPI:
+    kept = stats.suggestion_deviation_count - modified_count
+    applied = stats.applied
+    acceptance_rate = round((kept / applied) * 100, 1) if applied > 0 else 0.0
     return BotFeatureKPI(
-        applied=stats.applied,
+        applied=applied,
         skipped=stats.skipped,
-        kept=stats.kept,
-        modified=stats.modified,
-        acceptance_rate=stats.acceptance_rate,
+        kept=kept,
+        modified=modified_count,
+        acceptance_rate=acceptance_rate,
         avg_data_quality=stats.avg_data_quality,
         avg_confidence=stats.avg_confidence,
-        avg_distance=stats.avg_distance,
+        avg_suggestion_deviation=stats.avg_suggestion_deviation,
     )
 
 
@@ -452,7 +505,8 @@ def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
     return BotKPIResponse(
         total_flaws_processed=result.total_flaws_processed,
         features={
-            name: _stats_to_response(stats) for name, stats in result.features.items()
+            name: _stats_to_response(stats, result.modified_counts.get(name, 0))
+            for name, stats in result.features.items()
         },
     )
 
@@ -544,7 +598,9 @@ def _fetch_with_cache(
     if cached is not None:
         flaws = fetch_bot_processed_flaws(osidb, changed_after=cached.cutoff)
     else:
-        flaws = fetch_bot_processed_flaws(osidb)
+        flaws = fetch_bot_processed_flaws(
+            osidb, changed_after=changed_after, changed_before=changed_before
+        )
 
     new_per_flaw, new_timestamps = _extract_per_flaw_stats(flaws)
     if not new_per_flaw:
@@ -556,19 +612,17 @@ def _fetch_with_cache(
             )
         return cached.to_kpi_result()
 
-    new_serialized = _serialize_per_flaw(new_per_flaw)
+    new_serialized = _serialize_per_flaw(new_per_flaw, new_timestamps)
     with _cache_lock():
         latest_cached = _load_cache()
         if latest_cached is not None:
             merged_flaws = {**latest_cached.flaws, **new_serialized}
-            merged_timestamps = {**latest_cached.timestamps, **new_timestamps}
             saved_cutoff = max(cutoff, latest_cached.cutoff)
         else:
             merged_flaws = new_serialized
-            merged_timestamps = new_timestamps
             saved_cutoff = cutoff
 
-        entry = BotKPICacheEntry.build(merged_flaws, saved_cutoff, merged_timestamps)
+        entry = BotKPICacheEntry.build(merged_flaws, saved_cutoff)
         _save_cache(entry)
         if has_date_filters:
             return entry.filter_by_date(
@@ -584,7 +638,7 @@ def _fetch_direct(osidb: Any) -> BotKPIResult:
         flaws = fetch_bot_processed_flaws(osidb)
         per_flaw, timestamps = _extract_per_flaw_stats(flaws)
         entry = BotKPICacheEntry.build(
-            _serialize_per_flaw(per_flaw), cutoff, timestamps
+            _serialize_per_flaw(per_flaw, timestamps), cutoff
         )
         _save_cache(entry)
         return entry.to_kpi_result()
@@ -600,7 +654,14 @@ def get_osidb_bot_kpi(
     try:
         osidb_server = get_settings().osidb_server_url
         osidb = osidb_bindings.new_session(osidb_server_uri=osidb_server)
-        if full_refresh:
+        has_date_filters = changed_after is not None or changed_before is not None
+        if full_refresh and has_date_filters:
+            flaws = fetch_bot_processed_flaws(
+                osidb, changed_after=changed_after, changed_before=changed_before
+            )
+            per_flaw, _ = _extract_per_flaw_stats(flaws)
+            result = _resum(per_flaw)
+        elif full_refresh:
             result = _fetch_direct(osidb)
         else:
             result = _fetch_with_cache(
