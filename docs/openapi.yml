@@ -30,16 +30,16 @@ components:
           description: Average data_quality score across entries that reported one.
             None when no entry recorded a data_quality value.
           title: Avg Data Quality
-        avg_distance:
+        avg_suggestion_deviation:
           anyOf:
           - maximum: 1.0
             minimum: 0.0
             type: number
           - type: 'null'
-          description: Average normalized distance (0.0 = exact match, 1.0 = maximum
+          description: Average normalized deviation (0.0 = exact match, 1.0 = maximum
             divergence) between modified suggestions and current values, using the
-            same weighted scoring as evals. None when no distance data is available.
-          title: Avg Distance
+            same weighted scoring as evals. None when no deviation data is available.
+          title: Avg Suggestion Deviation
         kept:
           description: Applied suggestions still unchanged in OSIDB
           minimum: 0.0
@@ -724,7 +724,7 @@ paths:
                     applied: 130
                     avg_confidence: 0.82
                     avg_data_quality: 0.85
-                    avg_distance: 1.2
+                    avg_suggestion_deviation: 0.35
                     kept: 110
                     modified: 20
                     skipped: 12

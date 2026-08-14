@@ -374,15 +374,15 @@ class BotFeatureKPI(BaseModel):
             "None when no entry recorded a confidence value."
         ),
     )
-    avg_distance: float | None = Field(
+    avg_suggestion_deviation: float | None = Field(
         default=None,
         ge=0.0,
         le=1.0,
         description=(
-            "Average normalized distance (0.0 = exact match, 1.0 = maximum "
+            "Average normalized deviation (0.0 = exact match, 1.0 = maximum "
             "divergence) between modified suggestions and current values, "
             "using the same weighted scoring as evals. "
-            "None when no distance data is available."
+            "None when no deviation data is available."
         ),
     )
 

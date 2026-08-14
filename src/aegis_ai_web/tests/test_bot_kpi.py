@@ -1,6 +1,5 @@
 """Unit tests for osidb-bot KPI computation logic."""
 
-from dataclasses import asdict
 from datetime import UTC, datetime
 
 import pytest
@@ -9,9 +8,11 @@ from aegis_ai.features.cve.impact_mappings import score_cvss3_diff, score_impact
 from aegis_ai_web.src.endpoints.bot_kpi import (
     BotKPICacheEntry,
     FeatureStats,
-    _compute_distance,
+    FlawCacheData,
+    _compute_deviation,
     _extract_flaw_ids,
     _merge_feature_stats,
+    _serialize_flaw_feature,
     _values_equal,
     aggregate_kpi,
     extract_flaw_kpi,
@@ -123,17 +124,20 @@ class TestCvssDistance:
         assert score == 0.0
 
 
-class TestComputeDistance:
+class TestComputeDeviation:
     def test_impact_field(self):
-        dist = _compute_distance("impact", "LOW", "IMPORTANT")
-        assert dist == round(1.0 - score_impact_diff("LOW", "IMPORTANT"), 4)
+        dev = _compute_deviation("impact", "LOW", "IMPORTANT")
+        assert dev == round(1.0 - score_impact_diff("LOW", "IMPORTANT"), 4)
 
     def test_cvss_field(self):
         v = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
-        assert _compute_distance("_cvss3_vector", v, v) == 0.0
+        assert _compute_deviation("_cvss3_vector", v, v) == 0.0
 
-    def test_other_field_returns_none(self):
-        assert _compute_distance("cwe_id", "CWE-79", "CWE-89") is None
+    def test_other_field_returns_binary_mismatch(self):
+        assert _compute_deviation("cwe_id", "CWE-79", "CWE-89") == 1.0
+
+    def test_impact_unknown_severity_returns_max(self):
+        assert _compute_deviation("impact", "CRITICAL", "BOGUS") == 1.0
 
 
 class TestExtractFlawKpi:
@@ -148,12 +152,13 @@ class TestExtractFlawKpi:
 
         assert "impact" in result
         assert result["impact"].applied == 1
-        assert result["impact"].kept == 1
-        assert result["impact"].modified == 0
+        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestion_deviation_sum == 0.0
 
         assert "cwe_id" in result
         assert result["cwe_id"].applied == 1
-        assert result["cwe_id"].kept == 1
+        assert result["cwe_id"].suggestion_deviation_count == 1
+        assert result["cwe_id"].suggestion_deviation_sum == 0.0
 
     def test_applied_but_modified(self):
         aegis_meta = {
@@ -164,10 +169,10 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         assert result["impact"].applied == 1
-        assert result["impact"].kept == 0
-        assert result["impact"].modified == 1
+        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestion_deviation_sum > 0.0
 
-    def test_modified_impact_records_distance(self):
+    def test_modified_impact_records_suggestion_deviation(self):
         aegis_meta = {
             "processed": True,
             "impact": [_make_bot_entry("CRITICAL")],
@@ -175,11 +180,11 @@ class TestExtractFlawKpi:
         flaw = _make_flaw(aegis_meta, impact="LOW")
         result = extract_flaw_kpi(aegis_meta, flaw)
 
-        assert result["impact"].modified == 1
-        assert result["impact"].distance_count == 1
-        assert result["impact"].avg_distance == 0.75
+        assert result["impact"].suggestion_deviation_sum > 0.0
+        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].avg_suggestion_deviation == 0.75
 
-    def test_kept_impact_no_distance(self):
+    def test_kept_impact_zero_deviation(self):
         aegis_meta = {
             "processed": True,
             "impact": [_make_bot_entry("LOW")],
@@ -187,9 +192,9 @@ class TestExtractFlawKpi:
         flaw = _make_flaw(aegis_meta, impact="LOW")
         result = extract_flaw_kpi(aegis_meta, flaw)
 
-        assert result["impact"].kept == 1
-        assert result["impact"].distance_count == 0
-        assert result["impact"].avg_distance is None
+        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestion_deviation_sum == 0.0
+        assert result["impact"].avg_suggestion_deviation == 0.0
 
     def test_skipped_entry(self):
         aegis_meta = {
@@ -201,8 +206,7 @@ class TestExtractFlawKpi:
 
         assert result["cwe_id"].applied == 0
         assert result["cwe_id"].skipped == 1
-        assert result["cwe_id"].kept == 0
-        assert result["cwe_id"].modified == 0
+        assert result["cwe_id"].suggestion_deviation_count == 0
 
     def test_mixed_applied_and_skipped(self):
         aegis_meta = {
@@ -214,7 +218,7 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         assert result["impact"].applied == 1
-        assert result["impact"].kept == 1
+        assert result["impact"].suggestion_deviation_sum == 0.0
         assert result["cwe_id"].skipped == 1
         assert result["cwe_id"].applied == 0
 
@@ -249,7 +253,7 @@ class TestExtractFlawKpi:
         assert "cvss3_vector" in result
         assert "_cvss3_vector" not in result
         assert result["cvss3_vector"].applied == 1
-        assert result["cvss3_vector"].kept == 1
+        assert result["cvss3_vector"].suggestion_deviation_sum == 0.0
 
     def test_cvss3_vector_modified(self):
         suggested = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
@@ -264,10 +268,10 @@ class TestExtractFlawKpi:
         )
         result = extract_flaw_kpi(aegis_meta, flaw)
 
-        assert result["cvss3_vector"].modified == 1
-        assert result["cvss3_vector"].distance_count == 1
-        assert result["cvss3_vector"].avg_distance is not None
-        assert result["cvss3_vector"].avg_distance > 0.0
+        assert result["cvss3_vector"].suggestion_deviation_count == 1
+        assert result["cvss3_vector"].suggestion_deviation_sum > 0.0
+        assert result["cvss3_vector"].avg_suggestion_deviation is not None
+        assert result["cvss3_vector"].avg_suggestion_deviation > 0.0
 
     def test_cvss3_vector_no_rh_issuer(self):
         vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
@@ -282,7 +286,7 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         assert result["cvss3_vector"].applied == 1
-        assert result["cvss3_vector"].modified == 1
+        assert result["cvss3_vector"].suggestion_deviation_sum > 0.0
 
     def test_cvss3_vector_null_cvss_scores_does_not_raise(self):
         vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
@@ -294,7 +298,7 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         assert result["cvss3_vector"].applied == 1
-        assert result["cvss3_vector"].modified == 1
+        assert result["cvss3_vector"].suggestion_deviation_sum > 0.0
 
     def test_list_comparison_components(self):
         aegis_meta = {
@@ -303,7 +307,7 @@ class TestExtractFlawKpi:
         }
         flaw = _make_flaw(aegis_meta, components=["kernel", "curl"])
         result = extract_flaw_kpi(aegis_meta, flaw)
-        assert result["components"].kept == 1
+        assert result["components"].suggestion_deviation_sum == 0.0
 
     def test_multiple_bot_entries_compares_latest(self):
         aegis_meta = {
@@ -318,12 +322,11 @@ class TestExtractFlawKpi:
 
         stats = result["impact"]
         assert stats.applied == 2
-        assert stats.kept == 1
-        assert stats.modified == 0
+        assert stats.suggestion_deviation_count == 1
+        assert stats.suggestion_deviation_sum == 0.0
         assert stats.total_entries == 2
         assert stats.avg_data_quality == round((0.8 + 0.6) / 2, 2)
         assert stats.avg_confidence == round((0.9 + 0.7) / 2, 2)
-        assert stats.acceptance_rate == 50.0
 
     def test_avg_metrics(self):
         aegis_meta = {
@@ -402,8 +405,7 @@ class TestAggregateKpi:
 
         assert result.total_flaws_processed == 1
         assert result.features["impact"].applied == 1
-        assert result.features["impact"].kept == 1
-        assert result.features["impact"].acceptance_rate == 100.0
+        assert result.modified_counts["impact"] == 0
 
     def test_multiple_flaws(self):
         flaw1 = _make_flaw(
@@ -425,11 +427,9 @@ class TestAggregateKpi:
         stats = result.features["impact"]
         assert stats.applied == 2
         assert stats.skipped == 1
-        assert stats.kept == 1
-        assert stats.modified == 1
-        assert stats.acceptance_rate == 50.0
+        assert result.modified_counts["impact"] == 1
 
-    def test_multiple_flaws_aggregate_distance(self):
+    def test_multiple_flaws_aggregate_suggestion_deviation(self):
         flaw1 = _make_flaw(
             {"processed": True, "impact": [_make_bot_entry("CRITICAL")]},
             impact="LOW",
@@ -442,9 +442,9 @@ class TestAggregateKpi:
         result = aggregate_kpi([flaw1, flaw2])
 
         stats = result.features["impact"]
-        assert stats.modified == 2
-        assert stats.distance_count == 2
-        assert stats.avg_distance == 0.5
+        assert result.modified_counts["impact"] == 2
+        assert stats.suggestion_deviation_count == 2
+        assert stats.avg_suggestion_deviation == 0.5
 
     def test_skips_flaw_without_processed_flag(self):
         flaw = _make_flaw(
@@ -471,32 +471,24 @@ class TestAggregateKpi:
         result = aggregate_kpi([flaw])
 
         assert result.total_flaws_processed == 1
-        assert result.features["impact"].kept == 1
-        assert result.features["cwe_id"].modified == 1
+        assert result.modified_counts["impact"] == 0
+        assert result.modified_counts["cwe_id"] == 1
         assert result.features["title"].skipped == 1
 
 
 class TestFeatureStats:
-    def test_acceptance_rate_no_applied(self):
-        stats = FeatureStats()
-        assert stats.acceptance_rate == 0.0
-
-    def test_acceptance_rate_calculation(self):
-        stats = FeatureStats(applied=10, kept=7)
-        assert stats.acceptance_rate == 70.0
-
     def test_avg_metrics_none_when_no_data(self):
         stats = FeatureStats()
         assert stats.avg_data_quality is None
         assert stats.avg_confidence is None
 
-    def test_avg_distance_none_when_no_data(self):
+    def test_avg_suggestion_deviation_none_when_no_data(self):
         stats = FeatureStats()
-        assert stats.avg_distance is None
+        assert stats.avg_suggestion_deviation is None
 
-    def test_avg_distance_calculation(self):
-        stats = FeatureStats(distance_sum=6.0, distance_count=3)
-        assert stats.avg_distance == 2.0
+    def test_avg_suggestion_deviation_calculation(self):
+        stats = FeatureStats(suggestion_deviation_sum=6.0, suggestion_deviation_count=3)
+        assert stats.avg_suggestion_deviation == 2.0
 
 
 class TestMergeFeatureStats:
@@ -504,64 +496,64 @@ class TestMergeFeatureStats:
         target = FeatureStats(
             applied=3,
             skipped=1,
-            kept=2,
-            modified=1,
             data_quality_sum=2.7,
             data_quality_count=4,
             confidence_sum=2.4,
             confidence_count=4,
             total_entries=4,
-            distance_sum=3.0,
-            distance_count=1,
+            suggestion_deviation_sum=3.0,
+            suggestion_deviation_count=2,
         )
         source = FeatureStats(
             applied=2,
             skipped=3,
-            kept=1,
-            modified=1,
             data_quality_sum=1.8,
             data_quality_count=5,
             confidence_sum=1.5,
             confidence_count=5,
             total_entries=5,
-            distance_sum=2.0,
-            distance_count=2,
+            suggestion_deviation_sum=2.0,
+            suggestion_deviation_count=3,
         )
         _merge_feature_stats(target, source)
         assert target.applied == 5
         assert target.skipped == 4
-        assert target.kept == 3
-        assert target.modified == 2
         assert round(target.data_quality_sum, 1) == 4.5
         assert target.data_quality_count == 9
         assert round(target.confidence_sum, 1) == 3.9
         assert target.confidence_count == 9
         assert target.total_entries == 9
-        assert round(target.distance_sum, 1) == 5.0
-        assert target.distance_count == 3
+        assert round(target.suggestion_deviation_sum, 1) == 5.0
+        assert target.suggestion_deviation_count == 5
 
 
 class TestBotKPICacheEntry:
     def test_build_and_round_trip(self):
         flaws = {
-            "CVE-2025-0001": {
-                "impact": asdict(
-                    FeatureStats(
-                        applied=30,
-                        skipped=5,
-                        kept=25,
-                        modified=5,
-                        data_quality_sum=27.0,
-                        data_quality_count=35,
-                        confidence_sum=24.0,
-                        confidence_count=35,
-                        total_entries=35,
-                        distance_sum=8.0,
-                        distance_count=5,
-                    )
-                ),
-                "cwe_id": asdict(FeatureStats(applied=10, kept=8, modified=2)),
-            },
+            "CVE-2025-0001": FlawCacheData(
+                fields={
+                    "impact": _serialize_flaw_feature(
+                        FeatureStats(
+                            applied=1,
+                            skipped=1,
+                            data_quality_sum=0.9,
+                            data_quality_count=1,
+                            confidence_sum=0.85,
+                            confidence_count=1,
+                            total_entries=2,
+                            suggestion_deviation_sum=0.5,
+                            suggestion_deviation_count=1,
+                        )
+                    ),
+                    "cwe_id": _serialize_flaw_feature(
+                        FeatureStats(
+                            applied=1,
+                            suggestion_deviation_count=1,
+                            suggestion_deviation_sum=0.0,
+                        )
+                    ),
+                }
+            ),
         }
         cutoff = datetime(2025, 7, 1, 12, 0, 0, tzinfo=UTC)
         entry = BotKPICacheEntry.build(flaws, cutoff)
@@ -571,28 +563,44 @@ class TestBotKPICacheEntry:
 
         assert restored.cutoff == cutoff
         assert restored_result.total_flaws_processed == 1
-        assert restored_result.features["impact"].applied == 30
-        assert restored_result.features["impact"].kept == 25
-        assert restored_result.features["impact"].avg_data_quality == round(
-            27.0 / 35, 2
-        )
-        assert restored_result.features["impact"].distance_sum == 8.0
-        assert restored_result.features["impact"].distance_count == 5
-        assert restored_result.features["impact"].avg_distance == round(8.0 / 5, 2)
-        assert restored_result.features["cwe_id"].applied == 10
+        impact = restored_result.features["impact"]
+        assert impact.applied == 1
+        assert impact.skipped == 1
+        assert impact.avg_data_quality == 0.9
+        assert impact.avg_confidence == 0.85
+        assert impact.suggestion_deviation_sum == 0.5
+        assert impact.suggestion_deviation_count == 1
+        assert impact.avg_suggestion_deviation == 0.5
+        assert restored_result.modified_counts["impact"] == 1
+        assert restored_result.features["cwe_id"].applied == 1
 
     def test_build_resums_multiple_flaws_from_scratch(self):
         flaws = {
-            "CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, kept=1))},
-            "CVE-2025-0002": {"impact": asdict(FeatureStats(applied=1, modified=1))},
+            "CVE-2025-0001": FlawCacheData(
+                fields={
+                    "impact": _serialize_flaw_feature(
+                        FeatureStats(applied=1, suggestion_deviation_count=1)
+                    )
+                }
+            ),
+            "CVE-2025-0002": FlawCacheData(
+                fields={
+                    "impact": _serialize_flaw_feature(
+                        FeatureStats(
+                            applied=1,
+                            suggestion_deviation_count=1,
+                            suggestion_deviation_sum=0.75,
+                        )
+                    )
+                }
+            ),
         }
         entry = BotKPICacheEntry.build(flaws, datetime(2025, 7, 1, tzinfo=UTC))
         result = entry.to_kpi_result()
 
         assert result.total_flaws_processed == 2
         assert result.features["impact"].applied == 2
-        assert result.features["impact"].kept == 1
-        assert result.features["impact"].modified == 1
+        assert result.modified_counts["impact"] == 1
 
     def test_overwriting_a_flaw_reflects_its_latest_scoring_not_the_sum(self):
         """Regression test for the staleness bug: re-scoring a flaw (e.g.
@@ -600,20 +608,37 @@ class TestBotKPICacheEntry:
         contribution, not add another one alongside it."""
         cutoff = datetime(2025, 7, 1, tzinfo=UTC)
         original = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, kept=1))}},
+            {
+                "CVE-2025-0001": FlawCacheData(
+                    fields={
+                        "impact": _serialize_flaw_feature(
+                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                        )
+                    }
+                )
+            },
             cutoff,
         )
         rescored_flaws = {
             **original.flaws,
-            "CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, modified=1))},
+            "CVE-2025-0001": FlawCacheData(
+                fields={
+                    "impact": _serialize_flaw_feature(
+                        FeatureStats(
+                            applied=1,
+                            suggestion_deviation_count=1,
+                            suggestion_deviation_sum=0.75,
+                        )
+                    )
+                }
+            ),
         }
         rescored = BotKPICacheEntry.build(rescored_flaws, cutoff)
         result = rescored.to_kpi_result()
 
         assert result.total_flaws_processed == 1
         assert result.features["impact"].applied == 1
-        assert result.features["impact"].kept == 0
-        assert result.features["impact"].modified == 1
+        assert result.modified_counts["impact"] == 1
 
     def test_old_schema_cache_fails_validation(self):
         """Cache files from before this schema (flat aggregate sums + a
@@ -652,14 +677,15 @@ class TestBotKPICacheEntry:
         someone manually deletes it.
         """
         entry = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": {}}}, cutoff=datetime(2025, 7, 1, tzinfo=UTC)
+            {"CVE-2025-0001": FlawCacheData(fields={"impact": {}})},
+            cutoff=datetime(2025, 7, 1, tzinfo=UTC),
         )
         result = entry.to_kpi_result()
         stats = result.features["impact"]
         assert stats.applied == 0
         assert stats.skipped == 0
-        assert stats.kept == 0
-        assert stats.modified == 0
+        assert stats.suggestion_deviation_count == 0
+        assert stats.suggestion_deviation_sum == 0.0
         assert stats.data_quality_sum == 0.0
         assert stats.confidence_sum == 0.0
         assert stats.total_entries == 0

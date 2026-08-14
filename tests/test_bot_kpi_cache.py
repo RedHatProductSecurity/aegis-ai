@@ -2,7 +2,6 @@
 
 import threading
 import time
-from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -13,9 +12,11 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     BotKPICacheEntry,
     BotKPIResult,
     FeatureStats,
+    FlawCacheData,
     _get_cache_path,
     _load_cache,
     _save_cache,
+    _serialize_flaw_feature,
     get_osidb_bot_kpi,
 )
 
@@ -71,15 +72,18 @@ def _seed_cache(cache_path: Path, result: BotKPIResult, cutoff: datetime) -> Non
     matches exactly -- these tests only care about the resulting aggregate
     and count, not realistic per-flaw data.
     """
-    flaws: dict[str, dict[str, dict[str, float]]] = {}
+    flaws: dict[str, FlawCacheData] = {}
     remaining = result.total_flaws_processed
     if result.features:
-        flaws["CVE-SEED-0000"] = {
-            name: asdict(stats) for name, stats in result.features.items()
-        }
+        flaws["CVE-SEED-0000"] = FlawCacheData(
+            fields={
+                name: _serialize_flaw_feature(stats)
+                for name, stats in result.features.items()
+            }
+        )
         remaining -= 1
     for i in range(max(remaining, 0)):
-        flaws[f"CVE-SEED-PAD-{i:04d}"] = {}
+        flaws[f"CVE-SEED-PAD-{i:04d}"] = FlawCacheData(fields={})
     entry = BotKPICacheEntry.build(flaws, cutoff)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(entry.model_dump_json())
@@ -118,7 +122,15 @@ class TestCacheIO:
     def test_save_and_load_round_trip(self, cache_dir):
         cutoff = datetime(2025, 7, 1, tzinfo=UTC)
         entry = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": asdict(FeatureStats(applied=3, kept=2))}},
+            {
+                "CVE-2025-0001": FlawCacheData(
+                    fields={
+                        "impact": _serialize_flaw_feature(
+                            FeatureStats(applied=3, suggestion_deviation_count=2)
+                        )
+                    }
+                )
+            },
             cutoff,
         )
         _save_cache(entry)
@@ -195,7 +207,13 @@ class TestGetOsidbBotKpiCaching:
 
         cached_result = BotKPIResult(
             total_flaws_processed=10,
-            features={"impact": FeatureStats(applied=8, kept=6, modified=2)},
+            features={
+                "impact": FeatureStats(
+                    applied=8,
+                    suggestion_deviation_count=8,
+                    suggestion_deviation_sum=1.5,
+                )
+            },
         )
         cutoff = datetime(2025, 6, 1, tzinfo=UTC)
         _seed_cache(cache_dir, cached_result, cutoff)
@@ -213,7 +231,6 @@ class TestGetOsidbBotKpiCaching:
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 11
         assert response.features["impact"].applied == 9
-        assert response.features["impact"].kept == 7
 
         call_kwargs = mock_session.flaws.retrieve_list_iterator.call_args[1]
         assert call_kwargs["updated_dt__gte"] == cutoff
@@ -335,7 +352,15 @@ class TestGetOsidbBotKpiCaching:
 
         cutoff = datetime(2025, 6, 1, tzinfo=UTC)
         entry = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, kept=1))}},
+            {
+                "CVE-2025-0001": FlawCacheData(
+                    fields={
+                        "impact": _serialize_flaw_feature(
+                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                        )
+                    }
+                )
+            },
             cutoff,
         )
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -368,7 +393,15 @@ class TestGetOsidbBotKpiCaching:
 
         cutoff = datetime(2025, 6, 1, tzinfo=UTC)
         entry = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, kept=1))}},
+            {
+                "CVE-2025-0001": FlawCacheData(
+                    fields={
+                        "impact": _serialize_flaw_feature(
+                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                        )
+                    }
+                )
+            },
             cutoff,
         )
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -409,7 +442,15 @@ class TestGetOsidbBotKpiCaching:
 
         cutoff = datetime(2025, 6, 1, tzinfo=UTC)
         entry = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, kept=1))}},
+            {
+                "CVE-2025-0001": FlawCacheData(
+                    fields={
+                        "impact": _serialize_flaw_feature(
+                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                        )
+                    }
+                )
+            },
             cutoff,
         )
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -446,7 +487,15 @@ class TestGetOsidbBotKpiCaching:
 
         cutoff = datetime(2025, 6, 1, tzinfo=UTC)
         entry = BotKPICacheEntry.build(
-            {"CVE-2025-0001": {"impact": asdict(FeatureStats(applied=1, kept=1))}},
+            {
+                "CVE-2025-0001": FlawCacheData(
+                    fields={
+                        "impact": _serialize_flaw_feature(
+                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                        )
+                    }
+                )
+            },
             cutoff,
         )
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
