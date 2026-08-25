@@ -12,6 +12,7 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     _compute_deviation,
     _extract_flaw_ids,
     _merge_feature_stats,
+    _result_to_response,
     _serialize_flaw_feature,
     _values_equal,
     aggregate_kpi,
@@ -152,12 +153,12 @@ class TestExtractFlawKpi:
 
         assert "impact" in result
         assert result["impact"].applied == 1
-        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestions_compared == 1
         assert result["impact"].suggestion_deviation_sum == 0.0
 
         assert "cwe_id" in result
         assert result["cwe_id"].applied == 1
-        assert result["cwe_id"].suggestion_deviation_count == 1
+        assert result["cwe_id"].suggestions_compared == 1
         assert result["cwe_id"].suggestion_deviation_sum == 0.0
 
     def test_applied_but_modified(self):
@@ -169,7 +170,7 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         assert result["impact"].applied == 1
-        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestions_compared == 1
         assert result["impact"].suggestion_deviation_sum > 0.0
 
     def test_modified_impact_records_suggestion_deviation(self):
@@ -181,7 +182,7 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         assert result["impact"].suggestion_deviation_sum > 0.0
-        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestions_compared == 1
         assert result["impact"].avg_suggestion_deviation == 0.75
 
     def test_kept_impact_zero_deviation(self):
@@ -192,7 +193,7 @@ class TestExtractFlawKpi:
         flaw = _make_flaw(aegis_meta, impact="LOW")
         result = extract_flaw_kpi(aegis_meta, flaw)
 
-        assert result["impact"].suggestion_deviation_count == 1
+        assert result["impact"].suggestions_compared == 1
         assert result["impact"].suggestion_deviation_sum == 0.0
         assert result["impact"].avg_suggestion_deviation == 0.0
 
@@ -206,7 +207,7 @@ class TestExtractFlawKpi:
 
         assert result["cwe_id"].applied == 0
         assert result["cwe_id"].skipped == 1
-        assert result["cwe_id"].suggestion_deviation_count == 0
+        assert result["cwe_id"].suggestions_compared == 0
 
     def test_mixed_applied_and_skipped(self):
         aegis_meta = {
@@ -268,7 +269,7 @@ class TestExtractFlawKpi:
         )
         result = extract_flaw_kpi(aegis_meta, flaw)
 
-        assert result["cvss3_vector"].suggestion_deviation_count == 1
+        assert result["cvss3_vector"].suggestions_compared == 1
         assert result["cvss3_vector"].suggestion_deviation_sum > 0.0
         assert result["cvss3_vector"].avg_suggestion_deviation is not None
         assert result["cvss3_vector"].avg_suggestion_deviation > 0.0
@@ -322,7 +323,7 @@ class TestExtractFlawKpi:
 
         stats = result["impact"]
         assert stats.applied == 2
-        assert stats.suggestion_deviation_count == 1
+        assert stats.suggestions_compared == 1
         assert stats.suggestion_deviation_sum == 0.0
         assert stats.total_entries == 2
         assert stats.avg_data_quality == round((0.8 + 0.6) / 2, 2)
@@ -443,7 +444,7 @@ class TestAggregateKpi:
 
         stats = result.features["impact"]
         assert result.modified_counts["impact"] == 2
-        assert stats.suggestion_deviation_count == 2
+        assert stats.suggestions_compared == 2
         assert stats.avg_suggestion_deviation == 0.5
 
     def test_skips_flaw_without_processed_flag(self):
@@ -476,6 +477,39 @@ class TestAggregateKpi:
         assert result.features["title"].skipped == 1
 
 
+class TestResultToResponse:
+    def test_acceptance_rate_uses_evaluated_not_applied(self):
+        # Two AI-Bot impact entries (a re-suggestion), the latest of which
+        # matches the current value. acceptance_rate must be measured against
+        # the single accept/reject decision (suggestions_compared == 1), not
+        # the per-entry applied count (== 2), so a kept suggestion reads 100%.
+        aegis_meta = {
+            "processed": True,
+            "impact": [_make_bot_entry("LOW"), _make_bot_entry("MODERATE")],
+        }
+        flaw = _make_flaw(aegis_meta, impact="MODERATE")
+        response = _result_to_response(aggregate_kpi([flaw]))
+
+        impact = response.features["impact"]
+        assert impact.applied == 2
+        assert impact.kept == 1
+        assert impact.modified == 0
+        assert impact.acceptance_rate == 100.0
+
+    def test_acceptance_rate_zero_when_latest_modified(self):
+        aegis_meta = {
+            "processed": True,
+            "impact": [_make_bot_entry("LOW"), _make_bot_entry("MODERATE")],
+        }
+        flaw = _make_flaw(aegis_meta, impact="CRITICAL")
+        response = _result_to_response(aggregate_kpi([flaw]))
+
+        impact = response.features["impact"]
+        assert impact.kept == 0
+        assert impact.modified == 1
+        assert impact.acceptance_rate == 0.0
+
+
 class TestFeatureStats:
     def test_avg_metrics_none_when_no_data(self):
         stats = FeatureStats()
@@ -487,7 +521,7 @@ class TestFeatureStats:
         assert stats.avg_suggestion_deviation is None
 
     def test_avg_suggestion_deviation_calculation(self):
-        stats = FeatureStats(suggestion_deviation_sum=6.0, suggestion_deviation_count=3)
+        stats = FeatureStats(suggestion_deviation_sum=6.0, suggestions_compared=3)
         assert stats.avg_suggestion_deviation == 2.0
 
 
@@ -502,7 +536,7 @@ class TestMergeFeatureStats:
             confidence_count=4,
             total_entries=4,
             suggestion_deviation_sum=3.0,
-            suggestion_deviation_count=2,
+            suggestions_compared=2,
         )
         source = FeatureStats(
             applied=2,
@@ -513,7 +547,7 @@ class TestMergeFeatureStats:
             confidence_count=5,
             total_entries=5,
             suggestion_deviation_sum=2.0,
-            suggestion_deviation_count=3,
+            suggestions_compared=3,
         )
         _merge_feature_stats(target, source)
         assert target.applied == 5
@@ -524,7 +558,7 @@ class TestMergeFeatureStats:
         assert target.confidence_count == 9
         assert target.total_entries == 9
         assert round(target.suggestion_deviation_sum, 1) == 5.0
-        assert target.suggestion_deviation_count == 5
+        assert target.suggestions_compared == 5
 
 
 class TestBotKPICacheEntry:
@@ -542,13 +576,13 @@ class TestBotKPICacheEntry:
                             confidence_count=1,
                             total_entries=2,
                             suggestion_deviation_sum=0.5,
-                            suggestion_deviation_count=1,
+                            suggestions_compared=1,
                         )
                     ),
                     "cwe_id": _serialize_flaw_feature(
                         FeatureStats(
                             applied=1,
-                            suggestion_deviation_count=1,
+                            suggestions_compared=1,
                             suggestion_deviation_sum=0.0,
                         )
                     ),
@@ -569,7 +603,7 @@ class TestBotKPICacheEntry:
         assert impact.avg_data_quality == 0.9
         assert impact.avg_confidence == 0.85
         assert impact.suggestion_deviation_sum == 0.5
-        assert impact.suggestion_deviation_count == 1
+        assert impact.suggestions_compared == 1
         assert impact.avg_suggestion_deviation == 0.5
         assert restored_result.modified_counts["impact"] == 1
         assert restored_result.features["cwe_id"].applied == 1
@@ -579,7 +613,7 @@ class TestBotKPICacheEntry:
             "CVE-2025-0001": FlawCacheData(
                 fields={
                     "impact": _serialize_flaw_feature(
-                        FeatureStats(applied=1, suggestion_deviation_count=1)
+                        FeatureStats(applied=1, suggestions_compared=1)
                     )
                 }
             ),
@@ -588,7 +622,7 @@ class TestBotKPICacheEntry:
                     "impact": _serialize_flaw_feature(
                         FeatureStats(
                             applied=1,
-                            suggestion_deviation_count=1,
+                            suggestions_compared=1,
                             suggestion_deviation_sum=0.75,
                         )
                     )
@@ -612,7 +646,7 @@ class TestBotKPICacheEntry:
                 "CVE-2025-0001": FlawCacheData(
                     fields={
                         "impact": _serialize_flaw_feature(
-                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                            FeatureStats(applied=1, suggestions_compared=1)
                         )
                     }
                 )
@@ -626,7 +660,7 @@ class TestBotKPICacheEntry:
                     "impact": _serialize_flaw_feature(
                         FeatureStats(
                             applied=1,
-                            suggestion_deviation_count=1,
+                            suggestions_compared=1,
                             suggestion_deviation_sum=0.75,
                         )
                     )
@@ -684,7 +718,7 @@ class TestBotKPICacheEntry:
         stats = result.features["impact"]
         assert stats.applied == 0
         assert stats.skipped == 0
-        assert stats.suggestion_deviation_count == 0
+        assert stats.suggestions_compared == 0
         assert stats.suggestion_deviation_sum == 0.0
         assert stats.data_quality_sum == 0.0
         assert stats.confidence_sum == 0.0

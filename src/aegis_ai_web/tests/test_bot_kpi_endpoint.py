@@ -1,6 +1,5 @@
 """Integration tests for the osidb-bot KPI endpoint."""
 
-from contextlib import nullcontext
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -9,12 +8,32 @@ from aegis_ai_web.src.main import app
 
 client = TestClient(app)
 
-_PATCH_SAVE = patch("aegis_ai_web.src.endpoints.bot_kpi._save_cache")
-_PATCH_LOAD = patch("aegis_ai_web.src.endpoints.bot_kpi._load_cache", return_value=None)
-# get_settings() is mocked without a real bot_kpi_cache_dir/config_dir, so avoid
-# _cache_lock touching the real filesystem via the resulting bogus cache path.
-_PATCH_LOCK = patch(
-    "aegis_ai_web.src.endpoints.bot_kpi._cache_lock", side_effect=nullcontext
+
+class _FakeCacheHandler:
+    """Context-manager stand-in for the real cache handler.
+
+    get_settings() is mocked without a real bot_kpi_cache_dir/config_dir, so the
+    tests must never touch the filesystem: reads return no cache and writes are
+    dropped.
+    """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        return None
+
+    def write(self, entry):
+        pass
+
+
+_PATCH_READ = patch("aegis_ai_web.src.endpoints.bot_kpi._read_cache", return_value=None)
+_PATCH_HANDLER = patch(
+    "aegis_ai_web.src.endpoints.bot_kpi._cache_handler",
+    side_effect=lambda: _FakeCacheHandler(),
 )
 
 
@@ -56,13 +75,12 @@ def _make_flaw_dict(aegis_meta, **overrides):
 
 
 class TestOsidbBotKpiEndpoint:
-    @_PATCH_LOCK
-    @_PATCH_SAVE
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_returns_empty_when_no_flaws(
-        self, mock_settings, mock_bindings, _mock_load, _mock_save, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_session = MagicMock()
@@ -75,13 +93,12 @@ class TestOsidbBotKpiEndpoint:
         assert data["total_flaws_processed"] == 0
         assert data["features"] == {}
 
-    @_PATCH_LOCK
-    @_PATCH_SAVE
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_returns_kpi_for_processed_flaws(
-        self, mock_settings, mock_bindings, _mock_load, _mock_save, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
@@ -112,13 +129,12 @@ class TestOsidbBotKpiEndpoint:
         assert data["features"]["cwe_id"]["modified"] == 1
         assert data["features"]["cwe_id"]["acceptance_rate"] == 0.0
 
-    @_PATCH_LOCK
-    @_PATCH_SAVE
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_includes_skipped_metrics(
-        self, mock_settings, mock_bindings, _mock_load, _mock_save, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
@@ -172,13 +188,12 @@ class TestOsidbBotKpiEndpoint:
         )
         assert response.status_code == 422
 
-    @_PATCH_LOCK
-    @_PATCH_SAVE
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_changed_after_filters_from_cache(
-        self, mock_settings, mock_bindings, _mock_load, _mock_save, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
@@ -209,13 +224,12 @@ class TestOsidbBotKpiEndpoint:
         assert data["total_flaws_processed"] == 1
         assert data["features"]["impact"]["applied"] == 1
 
-    @_PATCH_LOCK
-    @_PATCH_SAVE
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_changed_before_filters_from_cache(
-        self, mock_settings, mock_bindings, _mock_load, _mock_save, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
@@ -246,12 +260,12 @@ class TestOsidbBotKpiEndpoint:
         assert data["total_flaws_processed"] == 1
         assert data["features"]["impact"]["applied"] == 1
 
-    @_PATCH_LOCK
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_internal_error_returns_500(
-        self, mock_settings, mock_bindings, _mock_load, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_session = MagicMock()
@@ -263,13 +277,12 @@ class TestOsidbBotKpiEndpoint:
         assert "internal error" in response.json()["detail"].lower()
         assert "boom" not in response.json()["detail"]
 
-    @_PATCH_LOCK
-    @_PATCH_SAVE
-    @_PATCH_LOAD
+    @_PATCH_HANDLER
+    @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_multiple_flaws_aggregation(
-        self, mock_settings, mock_bindings, _mock_load, _mock_save, _mock_lock
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 

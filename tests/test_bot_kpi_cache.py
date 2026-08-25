@@ -13,9 +13,9 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     BotKPIResult,
     FeatureStats,
     FlawCacheData,
+    _cache_handler,
     _get_cache_path,
-    _load_cache,
-    _save_cache,
+    _read_cache,
     _serialize_flaw_feature,
     get_osidb_bot_kpi,
 )
@@ -117,7 +117,7 @@ class TestGetCachePath:
 
 class TestCacheIO:
     def test_load_nonexistent_returns_none(self, cache_dir):
-        assert _load_cache() is None
+        assert _read_cache() is None
 
     def test_save_and_load_round_trip(self, cache_dir):
         cutoff = datetime(2025, 7, 1, tzinfo=UTC)
@@ -126,15 +126,16 @@ class TestCacheIO:
                 "CVE-2025-0001": FlawCacheData(
                     fields={
                         "impact": _serialize_flaw_feature(
-                            FeatureStats(applied=3, suggestion_deviation_count=2)
+                            FeatureStats(applied=3, suggestions_compared=2)
                         )
                     }
                 )
             },
             cutoff,
         )
-        _save_cache(entry)
-        loaded = _load_cache()
+        with _cache_handler() as handler:
+            handler.write(entry)
+        loaded = _read_cache()
         assert loaded is not None
         assert loaded.cutoff == cutoff
         assert loaded.total_flaws_processed == 1
@@ -143,13 +144,12 @@ class TestCacheIO:
     def test_corrupt_cache_returns_none(self, cache_dir):
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
         cache_dir.write_text("not valid json {{{")
-        assert _load_cache() is None
+        assert _read_cache() is None
 
     def test_old_schema_cache_returns_none(self, cache_dir):
         """A cache file from before the per-flaw schema (flat aggregate sums
-        + a seen-IDs list, no `flaws`/`aggregate` keys) must be treated as
-        absent, triggering one full refresh rather than a crash or a
-        silently-empty cache."""
+        + a seen-IDs list, no `flaws` key) fails validation and is treated as
+        absent, so the next request simply re-fetches from OSIDB."""
         import json
 
         old_format_json = json.dumps(
@@ -162,16 +162,7 @@ class TestCacheIO:
         )
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
         cache_dir.write_text(old_format_json)
-        assert _load_cache() is None
-
-    def test_save_failure_does_not_raise(self, cache_dir, monkeypatch):
-        monkeypatch.setattr(
-            "aegis_ai_web.src.endpoints.bot_kpi._get_cache_path",
-            lambda: Path("/nonexistent/dir/cache.json"),
-        )
-        cutoff = datetime(2025, 7, 1, tzinfo=UTC)
-        entry = BotKPICacheEntry.build({}, cutoff)
-        _save_cache(entry)
+        assert _read_cache() is None
 
 
 class TestGetOsidbBotKpiCaching:
@@ -210,7 +201,7 @@ class TestGetOsidbBotKpiCaching:
             features={
                 "impact": FeatureStats(
                     applied=8,
-                    suggestion_deviation_count=8,
+                    suggestions_compared=8,
                     suggestion_deviation_sum=1.5,
                 )
             },
@@ -237,40 +228,9 @@ class TestGetOsidbBotKpiCaching:
 
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_full_refresh_overwrites_cache(
+    def test_date_filter_returns_subset_without_altering_cache(
         self, mock_settings, mock_bindings, cache_dir
     ):
-        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
-        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
-
-        old_result = BotKPIResult(
-            total_flaws_processed=100,
-            features={"impact": FeatureStats(applied=80)},
-        )
-        _seed_cache(cache_dir, old_result, datetime(2025, 1, 1, tzinfo=UTC))
-
-        flaw_data = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("LOW")]},
-            impact="LOW",
-        )
-        mock_flaw = MagicMock()
-        mock_flaw.to_dict.return_value = flaw_data
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter([mock_flaw])
-        mock_bindings.new_session.return_value = mock_session
-
-        response = get_osidb_bot_kpi(full_refresh=True)
-        assert response.total_flaws_processed == 1
-
-        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
-        assert cached.total_flaws_processed == 1
-
-        call_kwargs = mock_session.flaws.retrieve_list_iterator.call_args[1]
-        assert "updated_dt__gte" not in call_kwargs
-
-    @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
-    @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_date_filter_skips_cache(self, mock_settings, mock_bindings, cache_dir):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
 
@@ -284,34 +244,6 @@ class TestGetOsidbBotKpiCaching:
         after = datetime(2025, 5, 1, tzinfo=UTC)
         response = get_osidb_bot_kpi(changed_after=after)
         assert response.total_flaws_processed == 0
-
-        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
-        assert cached.total_flaws_processed == 50
-
-    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
-    @patch(f"{_BOT_KPI_MODULE}.get_settings")
-    def test_full_refresh_with_date_filter_does_not_corrupt_cache(
-        self, mock_settings, mock_bindings, cache_dir
-    ):
-        """full_refresh + date filters must not save a partial result as cache."""
-        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
-
-        old_result = BotKPIResult(total_flaws_processed=50)
-        _seed_cache(cache_dir, old_result, datetime(2025, 6, 1, tzinfo=UTC))
-
-        flaw_data = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("LOW")]},
-            impact="LOW",
-        )
-        mock_flaw = MagicMock()
-        mock_flaw.to_dict.return_value = flaw_data
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter([mock_flaw])
-        mock_bindings.new_session.return_value = mock_session
-
-        after = datetime(2025, 7, 1, tzinfo=UTC)
-        response = get_osidb_bot_kpi(full_refresh=True, changed_after=after)
-        assert response.total_flaws_processed == 1
 
         cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
         assert cached.total_flaws_processed == 50
@@ -356,7 +288,7 @@ class TestGetOsidbBotKpiCaching:
                 "CVE-2025-0001": FlawCacheData(
                     fields={
                         "impact": _serialize_flaw_feature(
-                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                            FeatureStats(applied=1, suggestions_compared=1)
                         )
                     }
                 )
@@ -397,7 +329,7 @@ class TestGetOsidbBotKpiCaching:
                 "CVE-2025-0001": FlawCacheData(
                     fields={
                         "impact": _serialize_flaw_feature(
-                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                            FeatureStats(applied=1, suggestions_compared=1)
                         )
                     }
                 )
@@ -446,7 +378,7 @@ class TestGetOsidbBotKpiCaching:
                 "CVE-2025-0001": FlawCacheData(
                     fields={
                         "impact": _serialize_flaw_feature(
-                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                            FeatureStats(applied=1, suggestions_compared=1)
                         )
                     }
                 )
@@ -491,7 +423,7 @@ class TestGetOsidbBotKpiCaching:
                 "CVE-2025-0001": FlawCacheData(
                     fields={
                         "impact": _serialize_flaw_feature(
-                            FeatureStats(applied=1, suggestion_deviation_count=1)
+                            FeatureStats(applied=1, suggestions_compared=1)
                         )
                     }
                 )
@@ -506,36 +438,13 @@ class TestGetOsidbBotKpiCaching:
         mock_session.flaws.retrieve_list_iterator.return_value = iter([])
         mock_bindings.new_session.return_value = mock_session
 
-        with patch(f"{_BOT_KPI_MODULE}._save_cache") as mock_save_cache:
-            response = get_osidb_bot_kpi()
-            mock_save_cache.assert_not_called()
+        response = get_osidb_bot_kpi()
 
         assert response.total_flaws_processed == 1
         assert response.features["impact"].applied == 1
         assert response.features["impact"].kept == 1
+        # No new flaws means no write, so the cache file is left untouched.
         assert cache_dir.read_text() == cached_json_before
-
-    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
-    @patch(f"{_BOT_KPI_MODULE}.get_settings")
-    def test_full_refresh_populates_per_flaw_entries(
-        self, mock_settings, mock_bindings, cache_dir
-    ):
-        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
-
-        flaw_data = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("LOW")]},
-            impact="LOW",
-        )
-        mock_flaw = MagicMock()
-        mock_flaw.to_dict.return_value = flaw_data
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter([mock_flaw])
-        mock_bindings.new_session.return_value = mock_session
-
-        get_osidb_bot_kpi(full_refresh=True)
-
-        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
-        assert list(cached.flaws.keys()) == ["CVE-2025-0001"]
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")

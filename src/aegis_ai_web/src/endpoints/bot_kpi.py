@@ -4,13 +4,9 @@ Compares bot suggestions (stored in aegis_meta) against current flaw field
 values to measure how often analysts keep, modify, or skip bot suggestions.
 """
 
-import fcntl
 import logging
-import os
-import tempfile
 from collections.abc import Sequence
-from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -21,6 +17,7 @@ from pydantic import BaseModel
 
 from aegis_ai import get_settings
 from aegis_ai.features.cve.impact_mappings import score_cvss3_diff, score_impact_diff
+from aegis_ai.state_file import StateFileHandler
 from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIResponse
 
 logger = logging.getLogger(__name__)
@@ -89,7 +86,13 @@ class FeatureStats:
     confidence_count: int = 0
     total_entries: int = 0
     suggestion_deviation_sum: float = 0.0
-    suggestion_deviation_count: int = 0
+    # Number of the bot's *latest* per-field suggestions that were compared
+    # against the flaw's current value -- i.e. the accept/modify decisions
+    # (kept + modified), one per field. Skipped suggestions are not compared,
+    # and re-suggestions of the same field count once (only the latest is
+    # compared), so this is <= `applied`. It is the denominator for both
+    # `avg_suggestion_deviation` and the acceptance rate.
+    suggestions_compared: int = 0
 
     @property
     def avg_data_quality(self) -> float | None:
@@ -105,9 +108,9 @@ class FeatureStats:
 
     @property
     def avg_suggestion_deviation(self) -> float | None:
-        if self.suggestion_deviation_count == 0:
+        if self.suggestions_compared == 0:
             return None
-        return round(self.suggestion_deviation_sum / self.suggestion_deviation_count, 2)
+        return round(self.suggestion_deviation_sum / self.suggestions_compared, 2)
 
 
 @dataclass
@@ -168,12 +171,12 @@ def _score_against_current(
     """Compare the bot's suggested value with the current flaw value, updating stats."""
     current_value = _get_current_value(field_name, flaw_data)
     if _values_equal(bot_entry["value"], current_value):
-        stats.suggestion_deviation_count += 1
+        stats.suggestions_compared += 1
         return
 
     deviation = _compute_deviation(field_name, bot_entry["value"], current_value)
     stats.suggestion_deviation_sum += deviation
-    stats.suggestion_deviation_count += 1
+    stats.suggestions_compared += 1
 
 
 def extract_flaw_kpi(
@@ -207,7 +210,7 @@ def _merge_feature_stats(target: FeatureStats, source: FeatureStats) -> None:
     target.confidence_count += source.confidence_count
     target.total_entries += source.total_entries
     target.suggestion_deviation_sum += source.suggestion_deviation_sum
-    target.suggestion_deviation_count += source.suggestion_deviation_count
+    target.suggestions_compared += source.suggestions_compared
 
 
 def _is_bot_processed(flaw_data: dict[str, Any]) -> bool:
@@ -333,7 +336,7 @@ def _feature_stats_from_dict(d: dict[str, float]) -> FeatureStats:
         skipped=skipped,
         total_entries=applied + skipped,
         suggestion_deviation_sum=d.get("deviation", 0.0),
-        suggestion_deviation_count=1 if has_deviation else 0,
+        suggestions_compared=1 if has_deviation else 0,
         data_quality_sum=dq if dq is not None else 0.0,
         data_quality_count=int(d.get("dq_n", 1)) if dq is not None else 0,
         confidence_sum=conf if conf is not None else 0.0,
@@ -351,7 +354,7 @@ def _serialize_flaw_feature(stats: FeatureStats) -> dict[str, float]:
     d: dict[str, float] = {"applied": stats.applied}
     if stats.skipped:
         d["skipped"] = stats.skipped
-    if stats.suggestion_deviation_count:
+    if stats.suggestions_compared:
         d["deviation"] = stats.suggestion_deviation_sum
     if stats.data_quality_count:
         d["data_quality"] = stats.data_quality_sum
@@ -389,23 +392,22 @@ class FlawCacheData(BaseModel):
 
 
 class BotKPICacheEntry(BaseModel):
-    """On-disk cache of each flaw's own KPI contribution, plus a memoized
-    aggregate over all of them.
+    """On-disk cache of each bot-processed flaw's own KPI contribution.
 
-    Storing each flaw's contribution individually (rather than only a
-    running total) is what lets a flaw be correctly re-scored if it's
-    edited again after the bot's initial pass: its entry is simply
-    overwritten and the aggregate is resummed from scratch, instead of the
-    flaw being permanently frozen at its first-seen state.
+    Only per-flaw data is cached, never an aggregate: the aggregate depends on
+    the request's date filters and on whatever changed in OSIDB between
+    requests, and resumming it from the cached per-flaw stats is far cheaper
+    than the JSON (de)serialization the cache already pays for. The cache
+    exists solely to avoid re-fetching unchanged flaws from OSIDB.
+
+    Storing each flaw's contribution individually (rather than only a running
+    total) is what lets a flaw be correctly re-scored if it's edited again
+    after the bot's initial pass: its entry is simply overwritten and the
+    aggregate is resummed from scratch.
     """
 
     cutoff: datetime
-    # No defaults: a cache file from before this schema (flat aggregate
-    # sums + a seen-IDs list, no `flaws`/`aggregate` keys) must fail
-    # validation here so `_load_cache` treats it as absent and triggers a
-    # full refresh, rather than silently defaulting to an empty cache.
     flaws: dict[str, FlawCacheData]
-    aggregate: dict[str, dict[str, float]]
 
     @property
     def total_flaws_processed(self) -> int:
@@ -463,34 +465,23 @@ class BotKPICacheEntry(BaseModel):
         flaws: dict[str, FlawCacheData],
         cutoff: datetime,
     ) -> "BotKPICacheEntry":
-        """Build a cache entry from per-flaw data, resumming the aggregate
-        from scratch."""
-        per_flaw_stats = {
-            cve_id: {
-                field_name: _feature_stats_from_dict(d)
-                for field_name, d in flaw.fields.items()
-            }
-            for cve_id, flaw in flaws.items()
-        }
-        aggregate_result = _resum(per_flaw_stats)
-        return cls(
-            cutoff=cutoff,
-            flaws=flaws,
-            aggregate={
-                name: asdict(stats) for name, stats in aggregate_result.features.items()
-            },
-        )
+        """Build a cache entry from per-flaw data."""
+        return cls(cutoff=cutoff, flaws=flaws)
 
 
 # -- Response helpers ----------------------------------------------------------
 
 
 def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKPI:
-    kept = stats.suggestion_deviation_count - modified_count
-    applied = stats.applied
-    acceptance_rate = round((kept / applied) * 100, 1) if applied > 0 else 0.0
+    # Acceptance is a per-flaw-field decision (kept vs. modified), so the rate
+    # is measured against suggestions_compared, not `applied` (a per-entry count
+    # that a re-suggested flaw inflates past the number of accept/modify
+    # decisions).
+    kept = stats.suggestions_compared - modified_count
+    compared = stats.suggestions_compared
+    acceptance_rate = round((kept / compared) * 100, 1) if compared > 0 else 0.0
     return BotFeatureKPI(
-        applied=applied,
+        applied=stats.applied,
         skipped=stats.skipped,
         kept=kept,
         modified=modified_count,
@@ -521,48 +512,23 @@ def _get_cache_path() -> Path:
     return Path(settings.config_dir) / "osidb_bot_kpi" / "kpi_cache.json"
 
 
-@contextmanager
-def _cache_lock():
-    """Serialize cache read-modify-write cycles across concurrent requests."""
-    lock_path = _get_cache_path().with_suffix(".lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(lock_path, "w") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+def _cache_handler() -> StateFileHandler[BotKPICacheEntry]:
+    """A blocking, file-locked handler over the KPI cache file itself.
 
-
-def _load_cache() -> BotKPICacheEntry | None:
+    Locking the cache file directly (no separate ``.lock`` sidecar) means
+    there is only ever one file to reason about. The blocking lock serializes
+    the read-modify-write cycles of concurrent requests so they can't clobber
+    each other's results.
+    """
     cache_path = _get_cache_path()
-    if not cache_path.is_file():
-        return None
-    try:
-        return BotKPICacheEntry.model_validate_json(cache_path.read_text())
-    except Exception:
-        logger.warning("Failed to load bot KPI cache, will do full query")
-        logger.debug("Cache load error details", exc_info=True)
-        return None
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    return StateFileHandler(str(cache_path), BotKPICacheEntry, blocking=True)
 
 
-def _save_cache(entry: BotKPICacheEntry) -> None:
-    cache_path = _get_cache_path()
-    try:
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp_path = tempfile.mkstemp(
-            dir=cache_path.parent, suffix=".tmp", prefix="kpi_cache_"
-        )
-        try:
-            with os.fdopen(fd, "w") as f:
-                f.write(entry.model_dump_json(indent=2))
-            os.replace(tmp_path, cache_path)
-        except BaseException:
-            os.unlink(tmp_path)
-            raise
-    except Exception:
-        logger.warning("Failed to write bot KPI cache")
-        logger.debug("Cache write error details", exc_info=True)
+def _read_cache() -> BotKPICacheEntry | None:
+    """Read the cache under a brief lock; None if absent, empty, or corrupt."""
+    with _cache_handler() as handler:
+        return handler.read()
 
 
 # -- Endpoint handler ----------------------------------------------------------
@@ -574,101 +540,67 @@ def _fetch_with_cache(
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
 ) -> BotKPIResult:
-    """Fetch flaws using the incremental cache, falling back to a full query.
+    """Fetch flaws using the incremental cache, then aggregate on demand.
 
     The OSIDB fetch runs outside the cache lock so a slow or hung query can't
     block every other concurrent request. If nothing changed since the cache
-    was built, the stored aggregate is returned as-is -- no lock, no resum.
-    Only a fetch that actually finds changed/new flaws pays for a lock and a
-    full resum, so the expensive work scales with how often the underlying
-    data changes, not with how often this endpoint is polled. Every fetched
-    flaw overwrites its own entry (whether new or previously seen), which is
-    what allows a flaw to be correctly re-scored if it's edited again after
-    the bot's initial pass, instead of being frozen at its first-seen state.
+    was built, the cached per-flaw data is aggregated and returned without a
+    write. Only a fetch that finds changed/new flaws pays for a lock and a
+    save, so the expensive work scales with how often the underlying data
+    changes, not with how often this endpoint is polled. Every fetched flaw
+    overwrites its own entry (whether new or previously seen), which is what
+    allows a flaw to be correctly re-scored if it's edited again after the
+    bot's initial pass, instead of being frozen at its first-seen state.
 
-    When date filters are provided, the cache is still refreshed incrementally
-    (and saved in full) but the returned result is filtered to only include
-    flaws whose updated_dt falls within the requested range.
+    The aggregate is always computed fresh from per-flaw stats (never cached),
+    so date filters simply restrict which cached flaws are summed for the
+    response; the cache always holds the complete set fetched from OSIDB.
     """
     has_date_filters = changed_after is not None or changed_before is not None
-    # Captured before the OSIDB query runs so flaws updated mid-fetch are
-    # still >= cutoff and get picked up by the next incremental fetch.
+    # Stamped before the OSIDB query runs so flaws updated mid-fetch are still
+    # >= cutoff and get picked up by the next incremental fetch.
     cutoff = datetime.now(UTC)
-    cached = _load_cache()
-    if cached is not None:
-        flaws = fetch_bot_processed_flaws(osidb, changed_after=cached.cutoff)
-    else:
-        flaws = fetch_bot_processed_flaws(
-            osidb, changed_after=changed_after, changed_before=changed_before
-        )
 
+    cached = _read_cache()
+    flaws = fetch_bot_processed_flaws(
+        osidb, changed_after=cached.cutoff if cached is not None else None
+    )
     new_per_flaw, new_timestamps = _extract_per_flaw_stats(flaws)
+
     if not new_per_flaw:
-        if cached is None:
-            return BotKPIResult()
-        if has_date_filters:
-            return cached.filter_by_date(
-                changed_after=changed_after, changed_before=changed_before
-            )
-        return cached.to_kpi_result()
+        # Nothing changed since the cache was built; serve it as-is.
+        entry = cached or BotKPICacheEntry(cutoff=cutoff, flaws={})
+    else:
+        new_serialized = _serialize_per_flaw(new_per_flaw, new_timestamps)
+        with _cache_handler() as handler:
+            latest = handler.read()
+            merged_flaws = dict(latest.flaws) if latest is not None else {}
+            merged_flaws.update(new_serialized)
+            saved_cutoff = max(cutoff, latest.cutoff) if latest is not None else cutoff
+            entry = BotKPICacheEntry(cutoff=saved_cutoff, flaws=merged_flaws)
+            handler.write(entry)
 
-    new_serialized = _serialize_per_flaw(new_per_flaw, new_timestamps)
-    with _cache_lock():
-        latest_cached = _load_cache()
-        if latest_cached is not None:
-            merged_flaws = {**latest_cached.flaws, **new_serialized}
-            saved_cutoff = max(cutoff, latest_cached.cutoff)
-        else:
-            merged_flaws = new_serialized
-            saved_cutoff = cutoff
-
-        entry = BotKPICacheEntry.build(merged_flaws, saved_cutoff)
-        _save_cache(entry)
-        if has_date_filters:
-            return entry.filter_by_date(
-                changed_after=changed_after, changed_before=changed_before
-            )
-        return entry.to_kpi_result()
-
-
-def _fetch_direct(osidb: Any) -> BotKPIResult:
-    """Full refresh: fetch all flaws from OSIDB and replace the cache."""
-    with _cache_lock():
-        cutoff = datetime.now(UTC)
-        flaws = fetch_bot_processed_flaws(osidb)
-        per_flaw, timestamps = _extract_per_flaw_stats(flaws)
-        entry = BotKPICacheEntry.build(
-            _serialize_per_flaw(per_flaw, timestamps), cutoff
+    if has_date_filters:
+        return entry.filter_by_date(
+            changed_after=changed_after, changed_before=changed_before
         )
-        _save_cache(entry)
-        return entry.to_kpi_result()
+    return entry.to_kpi_result()
 
 
 def get_osidb_bot_kpi(
     *,
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
-    full_refresh: bool = False,
 ) -> BotKPIResponse:
     """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
     try:
         osidb_server = get_settings().osidb_server_url
         osidb = osidb_bindings.new_session(osidb_server_uri=osidb_server)
-        has_date_filters = changed_after is not None or changed_before is not None
-        if full_refresh and has_date_filters:
-            flaws = fetch_bot_processed_flaws(
-                osidb, changed_after=changed_after, changed_before=changed_before
-            )
-            per_flaw, _ = _extract_per_flaw_stats(flaws)
-            result = _resum(per_flaw)
-        elif full_refresh:
-            result = _fetch_direct(osidb)
-        else:
-            result = _fetch_with_cache(
-                osidb,
-                changed_after=changed_after,
-                changed_before=changed_before,
-            )
+        result = _fetch_with_cache(
+            osidb,
+            changed_after=changed_after,
+            changed_before=changed_before,
+        )
         return _result_to_response(result)
     except OSError:
         # OSError also covers requests.exceptions.RequestException (it subclasses

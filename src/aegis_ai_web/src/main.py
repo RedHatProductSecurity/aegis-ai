@@ -772,9 +772,8 @@ async def cve_kpi(
         "Compares bot suggestions against current flaw values to measure "
         "how often analysts keep, modify, or skip bot suggestions. "
         "Only flaws in DONE workflow state are included. "
-        "Results are cached and incrementally updated on subsequent requests. "
-        "Use full_refresh=true for exact counts (incremental results retain "
-        "original stats for flaws that were re-updated after the cache was built)."
+        "Results are cached and incrementally updated on subsequent requests; "
+        "a flaw is automatically re-scored whenever it changes in OSIDB."
     ),
     response_model=BotKPIResponse,
     responses={
@@ -819,10 +818,6 @@ async def osidb_bot_kpi(
         default=None,
         description="Only include flaws updated before this ISO 8601 datetime.",
     ),
-    full_refresh: bool = Query(
-        default=False,
-        description="Force a full query from scratch, ignoring and overwriting the cache.",
-    ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
     if changed_after and changed_before and changed_after > changed_before:
@@ -834,7 +829,6 @@ async def osidb_bot_kpi(
         get_osidb_bot_kpi,
         changed_after=changed_after,
         changed_before=changed_before,
-        full_refresh=full_refresh,
     )
 
 
