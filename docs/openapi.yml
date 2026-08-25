@@ -30,16 +30,16 @@ components:
           description: Average data_quality score across entries that reported one.
             None when no entry recorded a data_quality value.
           title: Avg Data Quality
-        avg_distance:
+        avg_suggestion_deviation:
           anyOf:
           - maximum: 1.0
             minimum: 0.0
             type: number
           - type: 'null'
-          description: Average normalized distance (0.0 = exact match, 1.0 = maximum
+          description: Average normalized deviation (0.0 = exact match, 1.0 = maximum
             divergence) between modified suggestions and current values, using the
-            same weighted scoring as evals. None when no distance data is available.
-          title: Avg Distance
+            same weighted scoring as evals. None when no deviation data is available.
+          title: Avg Suggestion Deviation
         kept:
           description: Applied suggestions still unchanged in OSIDB
           minimum: 0.0
@@ -673,8 +673,7 @@ paths:
         Compares bot suggestions against current flaw values to measure how often
         analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow
         state are included. Results are cached and incrementally updated on subsequent
-        requests. Use full_refresh=true for exact counts (incremental results retain
-        original stats for flaws that were re-updated after the cache was built).
+        requests; a flaw is automatically re-scored whenever it changes in OSIDB.
       operationId: osidb_bot_kpi_api_v1_analysis_kpi_osidb_bot_get
       parameters:
       - description: Only include flaws updated after this ISO 8601 datetime (e.g.
@@ -701,17 +700,6 @@ paths:
           - type: 'null'
           description: Only include flaws updated before this ISO 8601 datetime.
           title: Changed Before
-      - description: Force a full query from scratch, ignoring and overwriting the
-          cache.
-        in: query
-        name: full_refresh
-        required: false
-        schema:
-          default: false
-          description: Force a full query from scratch, ignoring and overwriting the
-            cache.
-          title: Full Refresh
-          type: boolean
       responses:
         '200':
           content:
@@ -723,7 +711,7 @@ paths:
                     applied: 130
                     avg_confidence: 0.82
                     avg_data_quality: 0.85
-                    avg_distance: 1.2
+                    avg_suggestion_deviation: 0.35
                     kept: 110
                     modified: 20
                     skipped: 12
