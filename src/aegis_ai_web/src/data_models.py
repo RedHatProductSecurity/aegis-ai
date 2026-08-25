@@ -334,8 +334,15 @@ def validate_csv_headers(csv_headers: list[str]) -> bool:
 class BotFeatureKPI(BaseModel):
     """Per-feature KPI metrics for osidb-bot auto-processing."""
 
-    applied: int = Field(
-        ..., ge=0, description="Suggestions that passed quality gates (type=AI-Bot)"
+    suggested: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Bot suggestions made for this field (type=AI-Bot), counting every "
+            "suggestion including re-suggestions of the same field. Because kept "
+            "and modified reflect one accept-or-modify decision per field (the "
+            "latest suggestion only), suggested is >= kept + modified."
+        ),
     )
     skipped: int = Field(
         ...,
@@ -345,22 +352,26 @@ class BotFeatureKPI(BaseModel):
     kept: int = Field(
         ...,
         ge=0,
-        description="Applied suggestions still unchanged in OSIDB",
+        description="Fields whose latest bot suggestion still matches the current OSIDB value",
     )
     modified: int = Field(
         ...,
         ge=0,
-        description="Applied suggestions that were changed since being applied",
+        description="Fields whose latest bot suggestion differs from the current OSIDB value",
     )
     acceptance_rate: float = Field(
         ...,
         ge=0.0,
         le=100.0,
-        description="Percentage of applied suggestions kept unchanged (0.0-100.0)",
+        description=(
+            "Percentage of compared fields kept unchanged, "
+            "kept / (kept + modified) * 100 (0.0-100.0)"
+        ),
     )
     avg_data_quality: float | None = Field(
         default=None,
         ge=0.0,
+        le=1.0,
         description=(
             "Average data_quality score across entries that reported one. "
             "None when no entry recorded a data_quality value."
@@ -369,6 +380,7 @@ class BotFeatureKPI(BaseModel):
     avg_confidence: float | None = Field(
         default=None,
         ge=0.0,
+        le=1.0,
         description=(
             "Average confidence score across entries that reported one. "
             "None when no entry recorded a confidence value."
@@ -393,7 +405,11 @@ class BotKPIResponse(BaseModel):
     total_flaws_processed: int = Field(
         ...,
         ge=0,
-        description="Total flaws processed by the bot",
+        description=(
+            "Number of bot-processed flaws that contributed to the result: those "
+            "with at least one suggestion whose timestamp falls in the selected "
+            "time range, or all bot-processed flaws when no range is given."
+        ),
     )
     features: dict[str, BotFeatureKPI] = Field(
         ..., description="Per-feature KPI metrics keyed by field name"
