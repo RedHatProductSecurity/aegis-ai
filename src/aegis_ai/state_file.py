@@ -11,6 +11,14 @@ Two lock disciplines are supported:
   for a single-instance process that must not run twice against one file;
 * blocking -- wait for the lock, suitable for serializing the read-modify-write
   cycles of concurrent requests in a web server.
+
+.. warning::
+
+   ``fcntl.flock`` is a *blocking* syscall in the blocking discipline.  In an
+   asyncio-based application it must not be called directly on the event loop
+   thread -- doing so blocks the whole loop until the lock is acquired, which
+   can manifest as hard-to-debug production freezes.  Call it from a worker
+   thread instead (e.g. via ``asyncio.to_thread``).
 """
 
 import fcntl
@@ -21,7 +29,7 @@ from typing import Never, Self
 
 from pydantic import BaseModel, ValidationError
 
-logger = logging.getLogger(__name__)
+_module_logger = logging.getLogger(__name__)
 
 
 class StateFileHandler[T: BaseModel]:
@@ -30,6 +38,13 @@ class StateFileHandler[T: BaseModel]:
     Use as a context manager; the lock is held for the lifetime of the ``with``
     block.  ``read()`` returns ``None`` when the file is empty or unparsable,
     so a truncated or corrupt file degrades to "no state" rather than raising.
+
+    .. warning::
+
+       In the blocking discipline (``blocking=True``) the ``with`` block
+       acquires the lock via a blocking ``fcntl.flock`` syscall.  Never enter a
+       blocking handler directly on an asyncio event loop thread -- offload it
+       to a worker thread (``asyncio.to_thread``) to avoid freezing the loop.
     """
 
     def __init__(
@@ -38,16 +53,16 @@ class StateFileHandler[T: BaseModel]:
         model_type: type[T],
         *,
         blocking: bool = False,
-        exclude_defaults: bool = False,
+        logger: logging.Logger | logging.LoggerAdapter | None = None,
     ):
         self.state_file = state_file
         self.model_type = model_type
         self.blocking = blocking
-        self.exclude_defaults = exclude_defaults
+        self.logger = logger or _module_logger
         self.state_fd = -1
 
     def _fail(self, e: Exception, msg: str) -> Never:
-        logger.debug("%s: %s", msg, e)
+        self.logger.debug("%s: %s", msg, e)
         raise RuntimeError(f"{msg}: {self.state_file} ({e.__class__.__name__})")
 
     def __enter__(self) -> Self:
@@ -68,7 +83,7 @@ class StateFileHandler[T: BaseModel]:
             self.state_fd = -1
             self._fail(e, "failed to lock state file")
 
-        logger.debug("locked state file: %s", self.state_file)
+        self.logger.debug("locked state file: %s", self.state_file)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -91,7 +106,7 @@ class StateFileHandler[T: BaseModel]:
         try:
             return self.model_type.model_validate_json(data)
         except (ValidationError, json.JSONDecodeError):
-            logger.warning(
+            self.logger.warning(
                 "Failed to load state from %r; treating as no state", self.state_file
             )
             return None
@@ -101,7 +116,7 @@ class StateFileHandler[T: BaseModel]:
         if not self.state_file:
             return
         assert self.state_fd >= 0
-        payload = state.model_dump_json(exclude_defaults=self.exclude_defaults) + "\n"
+        payload = state.model_dump_json(exclude_defaults=True) + "\n"
         raw = payload.encode("utf-8")
         os.lseek(self.state_fd, 0, os.SEEK_SET)
         size = os.write(self.state_fd, raw)
