@@ -785,7 +785,7 @@ async def cve_kpi(
                         "total_flaws_processed": 142,
                         "features": {
                             "impact": {
-                                "applied": 130,
+                                "suggested": 133,
                                 "skipped": 12,
                                 "kept": 110,
                                 "modified": 20,

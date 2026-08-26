@@ -52,6 +52,27 @@ def score_impact_diff(impact: str, impact_exp: str) -> float:
     return 1.0 - abs(imp - imp_exp) / 10.0
 
 
+def _normalized_component_set(components: list[str]) -> set[str]:
+    """Lowercase and strip component names, dropping empty/non-string entries."""
+    return {c.lower().strip() for c in components if c and isinstance(c, str)}
+
+
+def score_components_diff(components: list[str], components_exp: list[str]) -> float:
+    """Compare two component lists and return a similarity score in [0.0, 1.0].
+
+    Names are normalized (lowercased, stripped) before comparison, so a case-only
+    change scores 1.0. Otherwise a normalized Jaccard index is used, so a single
+    component added to or removed from a list of N scores N/(N+1) rather than
+    collapsing to 0.0. Two empty lists count as an exact match (1.0).
+    """
+    got = _normalized_component_set(components)
+    exp = _normalized_component_set(components_exp)
+    union = got | exp
+    if not union:
+        return 1.0
+    return len(got & exp) / len(union)
+
+
 def _parse_cvss_vector(vector: str) -> dict[str, str]:
     parts = vector.split("/")
     if parts and parts[0].startswith("CVSS:"):

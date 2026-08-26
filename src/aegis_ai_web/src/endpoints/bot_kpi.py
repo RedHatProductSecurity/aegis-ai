@@ -4,6 +4,8 @@ Compares bot suggestions (stored in aegis_meta) against current flaw field
 values to measure how often analysts keep, modify, or skip bot suggestions.
 """
 
+from __future__ import annotations
+
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -13,10 +15,14 @@ from typing import Any
 
 import osidb_bindings
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from aegis_ai import get_settings
-from aegis_ai.features.cve.impact_mappings import score_cvss3_diff, score_impact_diff
+from aegis_ai.features.cve.impact_mappings import (
+    score_components_diff,
+    score_cvss3_diff,
+    score_impact_diff,
+)
 from aegis_ai.state_file import StateFileHandler
 from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIResponse
 
@@ -36,6 +42,13 @@ _INCLUDE_FIELDS = ",".join(
 
 _DISPLAY_NAMES: dict[str, str] = {"_cvss3_vector": "cvss3_vector"}
 
+# osidb-bot's "birthday": the date the bot feature was introduced (first commit
+# 2026-02-10).  Applied unconditionally as a ``created_dt_gte`` lower bound on
+# the flaw-index search so the query can never scrape unrelated OSIDB history --
+# either by mistake or as a DoS attempt.  The request's ``changed_after`` filter
+# is applied separately as ``updated_dt_gte``.
+OSIDB_BOT_BIRTHDAY = datetime(2026, 2, 10, tzinfo=UTC)
+
 
 def _display_name(field_name: str) -> str:
     return _DISPLAY_NAMES.get(field_name, field_name)
@@ -51,19 +64,13 @@ def _get_current_value(field_name: str, flaw_data: dict[str, Any]) -> Any:
     return flaw_data.get(field_name)
 
 
-def _safe_float(value: Any) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
-
-
 def _compute_deviation(field_name: str, suggested: Any, current: Any) -> float:
     """Compute how far the current value deviates from the bot's suggestion.
 
     Returns 0.0 for an exact match.  For fields with a graded metric (impact,
-    CVSS) returns a normalized 0-1 score.  For all other fields returns 1.0
-    (binary mismatch) since no finer-grained comparison is available.
+    CVSS, components) returns a normalized 0-1 score.  For the remaining fields
+    (title, cve_description, cwe_id) returns 1.0 (binary mismatch) since no
+    finer-grained comparison is available.
     """
     if field_name == "impact":
         try:
@@ -73,12 +80,19 @@ def _compute_deviation(field_name: str, suggested: Any, current: Any) -> float:
     if field_name == "_cvss3_vector":
         score, _reason = score_cvss3_diff(str(suggested), str(current))
         return round(1.0 - score, 4)
+    if field_name == "components":
+        # Graded set distance: a case-only change scores 0.0 and a single
+        # component added/removed from a list of N scores 1/(N+1), rather than
+        # a flat 1.0 for any difference.
+        suggested_list = suggested if isinstance(suggested, list) else [suggested]
+        current_list = current if isinstance(current, list) else [current]
+        return round(1.0 - score_components_diff(suggested_list, current_list), 4)
     return 1.0
 
 
 @dataclass
 class FeatureStats:
-    applied: int = 0
+    suggested: int = 0
     skipped: int = 0
     data_quality_sum: float = 0.0
     data_quality_count: int = 0
@@ -90,7 +104,7 @@ class FeatureStats:
     # against the flaw's current value -- i.e. the accept/modify decisions
     # (kept + modified), one per field. Skipped suggestions are not compared,
     # and re-suggestions of the same field count once (only the latest is
-    # compared), so this is <= `applied`. It is the denominator for both
+    # compared), so this is <= `suggested`. It is the denominator for both
     # `avg_suggestion_deviation` and the acceptance rate.
     suggestions_compared: int = 0
 
@@ -131,78 +145,161 @@ def _values_equal(suggested: Any, current: Any) -> bool:
     return str(suggested) == str(current)
 
 
-def _score_bot_entries(
-    entries: list[dict[str, Any]],
-) -> tuple[FeatureStats, dict[str, Any] | None]:
-    """Accumulate per-entry stats and return the latest AI-Bot entry, if any."""
-    stats = FeatureStats()
-    bot_entry: dict[str, Any] | None = None
+def _opt_float(value: Any) -> float | None:
+    """Coerce an optional metric to float, preserving None.
 
-    for entry in entries:
-        # Older entries recorded before data_quality/confidence tracking was
-        # added have no such keys; treat them as unknown rather than 0.0, so
-        # they don't drag the average down.
-        if entry.get("data_quality") is not None:
-            stats.data_quality_sum += _safe_float(entry.get("data_quality"))
+    A missing metric (None) must not count toward an average, whereas a present
+    but non-numeric one degrades to 0.0 rather than raising.
+    """
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _suggestion_record(
+    field_name: str, entry: dict[str, Any], current_value: Any
+) -> SuggestionRecord:
+    """Distill one raw aegis_meta entry into the compact record KPI scoring needs.
+
+    The deviation of an AI-Bot suggestion from the flaw's current value is
+    computed here, once, at fetch time -- it stays valid until the flaw's
+    ``updated_dt`` advances, which itself forces a re-fetch and recompute.
+    Skipped entries have no value to compare, so their deviation is None.
+    """
+    entry_type = entry.get("type", "")
+    deviation: float | None = None
+    if entry_type == "AI-Bot" and "value" in entry:
+        if _values_equal(entry["value"], current_value):
+            deviation = 0.0
+        else:
+            deviation = _compute_deviation(field_name, entry["value"], current_value)
+    return SuggestionRecord(
+        timestamp=entry.get("timestamp"),
+        type=entry_type,
+        data_quality=_opt_float(entry.get("data_quality")),
+        confidence=_opt_float(entry.get("confidence")),
+        deviation=deviation,
+    )
+
+
+def _compact_fields(
+    aegis_meta: dict[str, Any], flaw_data: dict[str, Any]
+) -> dict[str, list[SuggestionRecord]]:
+    """Reduce a raw flaw's suggestion history to the compact records KPI reads.
+
+    Only the KPI-relevant fields are kept, and each suggestion is reduced to its
+    timestamp, type, data_quality/confidence and (for AI-Bot entries) its
+    pre-computed deviation. The bulky raw fields never read by KPI -- explanation,
+    tools_used, skip_description, the full ``cvss_scores`` array, the raw
+    suggested value -- are dropped.
+    """
+    fields: dict[str, list[SuggestionRecord]] = {}
+    for field_name in _ALL_KPI_FIELDS:
+        entries = aegis_meta.get(field_name)
+        if not entries or not isinstance(entries, list):
+            continue
+        current_value = _get_current_value(field_name, flaw_data)
+        fields[field_name] = [
+            _suggestion_record(field_name, entry, current_value) for entry in entries
+        ]
+    return fields
+
+
+def _score_records(
+    records: list[SuggestionRecord],
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+) -> FeatureStats | None:
+    """Aggregate one field's suggestion records, filtered to the date window.
+
+    Each suggestion is filtered by its own recorded ``timestamp`` -- *not* the
+    flaw's ``updated_dt`` -- so a field whose suggestions all fall outside the
+    window drops out entirely (returns None). Only the latest in-window AI-Bot
+    suggestion is compared against the current value (via its pre-computed
+    deviation), matching the single accept/modify decision an analyst made.
+    """
+    in_window = [
+        record
+        for record in records
+        if _in_date_range(record.timestamp, changed_after, changed_before)
+    ]
+    if not in_window:
+        return None
+
+    stats = FeatureStats()
+    latest_bot: SuggestionRecord | None = None
+    for record in in_window:
+        # Entries recorded before data_quality/confidence tracking existed have
+        # None for those metrics; they must not drag the average toward 0.
+        if record.data_quality is not None:
+            stats.data_quality_sum += record.data_quality
             stats.data_quality_count += 1
-        if entry.get("confidence") is not None:
-            stats.confidence_sum += _safe_float(entry.get("confidence"))
+        if record.confidence is not None:
+            stats.confidence_sum += record.confidence
             stats.confidence_count += 1
         stats.total_entries += 1
 
-        entry_type = entry.get("type", "")
-        if entry_type == "AI-Bot":
-            stats.applied += 1
+        if record.type == "AI-Bot":
+            stats.suggested += 1
             # Keep overwriting so we compare against the latest suggestion;
-            # entries are appended chronologically by record_aegis_meta().
-            bot_entry = entry
-        elif entry_type == "AI-Bot-Skipped":
+            # records are stored chronologically by record_aegis_meta().
+            latest_bot = record
+        elif record.type == "AI-Bot-Skipped":
             stats.skipped += 1
 
-    return stats, bot_entry
-
-
-def _score_against_current(
-    field_name: str,
-    bot_entry: dict[str, Any],
-    flaw_data: dict[str, Any],
-    stats: FeatureStats,
-) -> None:
-    """Compare the bot's suggested value with the current flaw value, updating stats."""
-    current_value = _get_current_value(field_name, flaw_data)
-    if _values_equal(bot_entry["value"], current_value):
+    if latest_bot is not None and latest_bot.deviation is not None:
+        stats.suggestion_deviation_sum += latest_bot.deviation
         stats.suggestions_compared += 1
-        return
 
-    deviation = _compute_deviation(field_name, bot_entry["value"], current_value)
-    stats.suggestion_deviation_sum += deviation
-    stats.suggestions_compared += 1
+    return stats
+
+
+def _score_fields(
+    fields: dict[str, list[SuggestionRecord]],
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+) -> dict[str, FeatureStats]:
+    """Score every field's records, keyed by display name; skip empty windows."""
+    result: dict[str, FeatureStats] = {}
+    for field_name, records in fields.items():
+        stats = _score_records(
+            records, changed_after=changed_after, changed_before=changed_before
+        )
+        if stats is not None:
+            result[_display_name(field_name)] = stats
+    return result
 
 
 def extract_flaw_kpi(
     aegis_meta: dict[str, Any],
     flaw_data: dict[str, Any],
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
 ) -> dict[str, FeatureStats]:
-    """Extract per-feature stats from a single flaw's aegis_meta."""
-    result: dict[str, FeatureStats] = {}
+    """Extract per-feature stats from a single flaw's raw aegis_meta.
 
-    for field_name in _ALL_KPI_FIELDS:
-        entries = aegis_meta.get(field_name)
-        if not entries or not isinstance(entries, list):
-            continue
-
-        stats, bot_entry = _score_bot_entries(entries)
-        if bot_entry is not None and "value" in bot_entry:
-            _score_against_current(field_name, bot_entry, flaw_data, stats)
-
-        result[_display_name(field_name)] = stats
-
-    return result
+    Compacts the raw suggestion history (see :func:`_compact_fields`) and scores
+    it (see :func:`_score_records`). Date filters apply per suggestion against
+    its own ``timestamp`` -- *not* the flaw's ``updated_dt`` -- so a flaw edited
+    last week whose ``components`` suggestion was made months ago does not
+    distort a "last N days" query. A field with no in-window suggestion
+    contributes nothing.
+    """
+    fields = _compact_fields(aegis_meta, flaw_data)
+    return _score_fields(
+        fields, changed_after=changed_after, changed_before=changed_before
+    )
 
 
 def _merge_feature_stats(target: FeatureStats, source: FeatureStats) -> None:
     """Add source stats into target (mutating target)."""
-    target.applied += source.applied
+    target.suggested += source.suggested
     target.skipped += source.skipped
     target.data_quality_sum += source.data_quality_sum
     target.data_quality_count += source.data_quality_count
@@ -221,17 +318,14 @@ def _is_bot_processed(flaw_data: dict[str, Any]) -> bool:
 
 def _extract_per_flaw_stats(
     flaws: Sequence[dict[str, Any]],
-) -> tuple[dict[str, dict[str, FeatureStats]], dict[str, str]]:
+) -> dict[str, dict[str, FeatureStats]]:
     """Compute per-field KPI stats for each bot-processed flaw, keyed by CVE ID.
-
-    Returns (stats_by_cve, timestamps_by_cve).
 
     A flaw with no CVE ID has no stable identity to key a per-flaw cache
     entry on (and can never be re-scored later if it's edited again), so
     it's excluded -- this doesn't occur for real OSIDB flaws in practice.
     """
     result: dict[str, dict[str, FeatureStats]] = {}
-    timestamps: dict[str, str] = {}
     for flaw_data in flaws:
         if not _is_bot_processed(flaw_data):
             continue
@@ -239,10 +333,7 @@ def _extract_per_flaw_stats(
         if not cve_id:
             continue
         result[cve_id] = extract_flaw_kpi(flaw_data["aegis_meta"], flaw_data)
-        updated_dt = flaw_data.get("updated_dt")
-        if updated_dt is not None:
-            timestamps[cve_id] = str(updated_dt)
-    return result, timestamps
+    return result
 
 
 def _resum(per_flaw: dict[str, dict[str, FeatureStats]]) -> BotKPIResult:
@@ -273,7 +364,7 @@ def _aggregate_kpi_and_ids(
     flaws: Sequence[dict[str, Any]],
 ) -> tuple[BotKPIResult, list[str]]:
     """Aggregate KPI stats and collect processed CVE IDs in a single pass."""
-    per_flaw, _ = _extract_per_flaw_stats(flaws)
+    per_flaw = _extract_per_flaw_stats(flaws)
     return _resum(per_flaw), list(per_flaw.keys())
 
 
@@ -289,184 +380,233 @@ def _extract_flaw_ids(flaws: Sequence[dict[str, Any]]) -> list[str]:
     return flaw_ids
 
 
-def fetch_bot_processed_flaws(
+def _fetch_flaw_index(
     osidb: Any,
     *,
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
-) -> list[dict[str, Any]]:
-    """Query OSIDB for bot-processed flaws in DONE workflow state."""
+) -> dict[str, str]:
+    """Fetch a cheap ``{cve_id: updated_dt}`` index of DONE flaws in range.
+
+    This is the first phase of the two-phase fetch: it pulls only the two
+    fields needed to decide whether each flaw's cached full data is still
+    current (bot-processed status can't be filtered server-side, so every DONE
+    flaw in range is indexed). Full per-flaw data is fetched separately, and
+    only for flaws whose watermark has advanced -- see :func:`_fetch_flaws_batch`.
+
+    The search is always bounded by ``created_dt_gte=OSIDB_BOT_BIRTHDAY`` so it
+    can never scrape unrelated OSIDB history. The request's ``changed_after`` and
+    ``changed_before`` filters are pushed down separately as ``updated_dt`` bounds
+    so a narrow query (e.g. the last few days) fetches only that window.
+    ``cve_id__isempty=False`` drops flaws without a CVE ID server-side instead of
+    fetching them only to discard them here.
+    """
     kwargs: dict[str, Any] = {
-        "include_fields": _INCLUDE_FIELDS,
+        "include_fields": "cve_id,updated_dt",
         "workflow_state": "DONE",
-        "limit": 200,
+        "created_dt_gte": OSIDB_BOT_BIRTHDAY,
+        "cve_id__isempty": False,
+        "limit": 1000,
     }
-
     if changed_after is not None:
-        kwargs["updated_dt__gte"] = changed_after
+        kwargs["updated_dt_gte"] = changed_after
     if changed_before is not None:
-        kwargs["updated_dt__lte"] = changed_before
+        kwargs["updated_dt_lte"] = changed_before
+    logger.info("querying OSIDB flaw index: %s", kwargs)
 
-    logger.info("querying OSIDB for bot-processed flaws: %s", kwargs)
-
-    flaws: list[dict[str, Any]] = []
+    index: dict[str, str] = {}
     for flaw in osidb.flaws.retrieve_list_iterator(**kwargs):
         flaw_dict = flaw.to_dict()
-        if _is_bot_processed(flaw_dict):
-            flaws.append(flaw_dict)
+        cve_id = flaw_dict.get("cve_id")
+        if not cve_id:
+            continue
+        index[cve_id] = str(flaw_dict.get("updated_dt") or "")
 
-    logger.info("found %d bot-processed flaws", len(flaws))
-    return flaws
+    logger.info("flaw index: %d DONE flaws", len(index))
+    return index
 
 
-def _feature_stats_from_dict(d: dict[str, float]) -> FeatureStats:
-    """Reconstruct FeatureStats from its compact serialized form.
+_BATCH_SIZE = 100
 
-    Guards against a truncated or corrupt on-disk entry raising KeyError and
-    turning into a 500 that repeats on every request until someone manually
-    deletes the cache file.
+
+def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Fetch full KPI-relevant fields for multiple flaws in batched queries.
+
+    CVE IDs are chunked to avoid exceeding the HTTP URL length limit.
     """
-    applied = int(d.get("applied", 0))
-    skipped = int(d.get("skipped", 0))
-    has_deviation = "deviation" in d
-    dq = d.get("data_quality")
-    conf = d.get("confidence")
-    return FeatureStats(
-        applied=applied,
-        skipped=skipped,
-        total_entries=applied + skipped,
-        suggestion_deviation_sum=d.get("deviation", 0.0),
-        suggestions_compared=1 if has_deviation else 0,
-        data_quality_sum=dq if dq is not None else 0.0,
-        data_quality_count=int(d.get("dq_n", 1)) if dq is not None else 0,
-        confidence_sum=conf if conf is not None else 0.0,
-        confidence_count=int(d.get("conf_n", 1)) if conf is not None else 0,
+    if not cve_ids:
+        return {}
+    logger.info("fetching %d flaws from OSIDB in batch", len(cve_ids))
+    result: dict[str, dict[str, Any]] = {}
+    for offset in range(0, len(cve_ids), _BATCH_SIZE):
+        chunk = cve_ids[offset : offset + _BATCH_SIZE]
+        for flaw in osidb.flaws.retrieve_list_iterator(
+            cve_id=chunk, include_fields=_INCLUDE_FIELDS, limit=200
+        ):
+            flaw_dict = flaw.to_dict()
+            cve_id = flaw_dict.get("cve_id")
+            if cve_id:
+                result[cve_id] = flaw_dict
+    logger.info("fetched %d/%d flaws", len(result), len(cve_ids))
+    return result
+
+
+def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheData:
+    """Build a cache entry from a fully-fetched flaw.
+
+    A bot-processed flaw stores its compact per-field suggestion records (see
+    :func:`_compact_fields`) so it can be re-scored per request with any date
+    filter -- the per-suggestion timestamps and deviations survive to disk,
+    without the bulky raw fields KPI never reads. A non-bot-processed flaw is
+    stored as a skip marker (no fields) so its full data isn't re-fetched until
+    its watermark advances.
+    """
+    if not _is_bot_processed(flaw_data):
+        return FlawCacheData(updated_dt=updated_dt, bot_processed=False)
+    aegis_meta = flaw_data.get("aegis_meta") or {}
+    return FlawCacheData(
+        updated_dt=updated_dt,
+        bot_processed=True,
+        fields=_compact_fields(aegis_meta, flaw_data),
     )
 
 
-def _serialize_flaw_feature(stats: FeatureStats) -> dict[str, float]:
-    """Serialize a single flaw's per-feature stats for the cache.
+def _needs_fetch(cached: FlawCacheData | None, updated_dt: str) -> bool:
+    """A flaw needs a full fetch when it's uncached or its watermark advanced."""
+    return cached is None or cached.updated_dt != updated_dt
 
-    Omits zero/default fields and derives counts from presence, so a typical
-    entry is just ``{"applied": 1, "deviation": 0.0, "data_quality": 0.9,
-    "confidence": 0.85}`` instead of nine sum/count pairs.
+
+def _in_date_range(
+    dt_str: str | None,
+    changed_after: datetime | None,
+    changed_before: datetime | None,
+) -> bool:
+    """Whether an ISO timestamp falls within the (optional) request filters.
+
+    Used both for a suggestion's own ``timestamp`` and, historically, a flaw's
+    ``updated_dt``.
     """
-    d: dict[str, float] = {"applied": stats.applied}
-    if stats.skipped:
-        d["skipped"] = stats.skipped
-    if stats.suggestions_compared:
-        d["deviation"] = stats.suggestion_deviation_sum
-    if stats.data_quality_count:
-        d["data_quality"] = stats.data_quality_sum
-        if stats.data_quality_count != 1:
-            d["dq_n"] = stats.data_quality_count
-    if stats.confidence_count:
-        d["confidence"] = stats.confidence_sum
-        if stats.confidence_count != 1:
-            d["conf_n"] = stats.confidence_count
-    return d
-
-
-def _serialize_per_flaw(
-    per_flaw: dict[str, dict[str, FeatureStats]],
-    timestamps: dict[str, str] | None = None,
-) -> dict[str, "FlawCacheData"]:
-    ts = timestamps or {}
-    return {
-        cve_id: FlawCacheData(
-            fields={
-                field_name: _serialize_flaw_feature(stats)
-                for field_name, stats in by_field.items()
-            },
-            updated_dt=ts.get(cve_id),
+    if changed_after is None and changed_before is None:
+        return True
+    if not dt_str:
+        # A value with no timestamp can't be placed on the timeline, so it can't
+        # satisfy an explicit date filter.
+        return False
+    updated_dt = datetime.fromisoformat(dt_str)
+    if updated_dt.tzinfo is None:
+        updated_dt = updated_dt.replace(tzinfo=UTC)
+    if changed_after is not None:
+        ca = (
+            changed_after if changed_after.tzinfo else changed_after.replace(tzinfo=UTC)
         )
-        for cve_id, by_field in per_flaw.items()
-    }
+        if updated_dt < ca:
+            return False
+    if changed_before is not None:
+        cb = (
+            changed_before
+            if changed_before.tzinfo
+            else changed_before.replace(tzinfo=UTC)
+        )
+        if updated_dt > cb:
+            return False
+    return True
+
+
+class SuggestionRecord(BaseModel):
+    """One bot suggestion's KPI-relevant facts, distilled from an aegis_meta entry.
+
+    Only what scoring reads is kept: the ``timestamp`` (for per-suggestion date
+    filtering), the entry ``type``, ``data_quality``/``confidence``, and -- for
+    AI-Bot entries -- the ``deviation`` of the suggested value from the flaw's
+    current value, pre-computed at fetch time. The bulky raw fields never read by
+    KPI (explanation, tools_used, skip_description, the full ``cvss_scores``
+    array, the raw suggested value) are not stored.
+    """
+
+    timestamp: str | None = None
+    type: str = ""
+    data_quality: float | None = None
+    confidence: float | None = None
+    deviation: float | None = None
 
 
 class FlawCacheData(BaseModel):
-    """Per-flaw cache entry: the feature stats and the flaw's last-updated timestamp."""
+    """Per-flaw cache entry keyed by the flaw's own ``updated_dt`` watermark.
 
-    fields: dict[str, dict[str, float]]
-    updated_dt: str | None = None
+    ``updated_dt`` is the per-CVE watermark: there is no globally valid cutoff
+    across requests, so each flaw is re-fetched only when *its own* timestamp
+    advances past the cached one.
+
+    ``bot_processed`` records whether the flaw carried bot suggestions when it
+    was last fetched. Non-bot-processed DONE flaws are cached too -- as a skip
+    marker with empty ``fields`` -- so their full data isn't re-fetched on every
+    request; only a change to their ``updated_dt`` triggers a re-fetch.
+
+    ``fields`` maps each KPI-relevant field to its compact suggestion records.
+    Records are stored -- rather than a pre-aggregated per-flaw stat -- so each
+    request can re-score with its own date filter against the per-suggestion
+    timestamps, which a pre-aggregated stat would have discarded.
+
+    ``extra="forbid"`` makes a cache file written in an earlier schema (e.g. the
+    prior ``flaw``-keyed raw-flaw format) fail validation rather than parse as an
+    empty entry, so the whole cache is treated as absent and cleanly re-fetched
+    instead of silently undercounting.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    updated_dt: str
+    bot_processed: bool = True
+    fields: dict[str, list[SuggestionRecord]] = {}
 
 
 class BotKPICacheEntry(BaseModel):
-    """On-disk cache of each bot-processed flaw's own KPI contribution.
+    """On-disk cache of each DONE flaw's compact KPI-relevant records.
 
     Only per-flaw data is cached, never an aggregate: the aggregate depends on
-    the request's date filters and on whatever changed in OSIDB between
-    requests, and resumming it from the cached per-flaw stats is far cheaper
-    than the JSON (de)serialization the cache already pays for. The cache
-    exists solely to avoid re-fetching unchanged flaws from OSIDB.
+    the request's date filters, and re-scoring the cached records is far cheaper
+    than the OSIDB round-trip the cache exists to avoid. The cache exists solely
+    to avoid re-fetching unchanged flaws from OSIDB.
 
-    Storing each flaw's contribution individually (rather than only a running
-    total) is what lets a flaw be correctly re-scored if it's edited again
-    after the bot's initial pass: its entry is simply overwritten and the
-    aggregate is resummed from scratch.
+    Storing each flaw's records individually (rather than a running total) is
+    what lets a flaw be correctly re-scored if it's edited again after the bot's
+    initial pass, and lets each request apply its own date filter to the
+    per-suggestion timestamps: its entry is simply overwritten and the aggregate
+    is recomputed from scratch.
     """
 
-    cutoff: datetime
     flaws: dict[str, FlawCacheData]
 
     @property
     def total_flaws_processed(self) -> int:
-        return len(self.flaws)
+        return sum(1 for flaw in self.flaws.values() if flaw.bot_processed)
 
-    def to_kpi_result(self) -> BotKPIResult:
-        per_flaw = {
-            cve_id: {
-                field_name: _feature_stats_from_dict(d)
-                for field_name, d in flaw.fields.items()
-            }
-            for cve_id, flaw in self.flaws.items()
-        }
-        return _resum(per_flaw)
-
-    def filter_by_date(
+    def to_kpi_result(
         self,
         *,
         changed_after: datetime | None = None,
         changed_before: datetime | None = None,
-    ) -> "BotKPIResult":
-        """Resum only flaws whose updated_dt falls within the given range."""
-        filtered: dict[str, dict[str, FeatureStats]] = {}
-        for cve_id, flaw in self.flaws.items():
-            if flaw.updated_dt is None:
-                continue
-            updated_dt = datetime.fromisoformat(flaw.updated_dt)
-            if updated_dt.tzinfo is None:
-                updated_dt = updated_dt.replace(tzinfo=UTC)
-            if changed_after is not None:
-                ca = (
-                    changed_after
-                    if changed_after.tzinfo
-                    else changed_after.replace(tzinfo=UTC)
-                )
-                if updated_dt < ca:
-                    continue
-            if changed_before is not None:
-                cb = (
-                    changed_before
-                    if changed_before.tzinfo
-                    else changed_before.replace(tzinfo=UTC)
-                )
-                if updated_dt > cb:
-                    continue
-            filtered[cve_id] = {
-                field_name: _feature_stats_from_dict(d)
-                for field_name, d in flaw.fields.items()
-            }
-        return _resum(filtered)
+    ) -> BotKPIResult:
+        """Re-score the bot-processed flaws, filtering suggestions by the range.
 
-    @classmethod
-    def build(
-        cls,
-        flaws: dict[str, FlawCacheData],
-        cutoff: datetime,
-    ) -> "BotKPICacheEntry":
-        """Build a cache entry from per-flaw data."""
-        return cls(cutoff=cutoff, flaws=flaws)
+        Non-bot-processed skip markers never contribute. Date filters (if any)
+        are applied per suggestion against its own ``timestamp`` (see
+        :func:`_score_records`), so a flaw contributes only the fields it was
+        actually given a suggestion for within the window -- and drops out
+        entirely if none of its suggestions fall in range.
+        """
+        per_flaw: dict[str, dict[str, FeatureStats]] = {}
+        for cve_id, flaw in self.flaws.items():
+            if not flaw.bot_processed:
+                continue
+            stats_by_field = _score_fields(
+                flaw.fields,
+                changed_after=changed_after,
+                changed_before=changed_before,
+            )
+            if stats_by_field:
+                per_flaw[cve_id] = stats_by_field
+        return _resum(per_flaw)
 
 
 # -- Response helpers ----------------------------------------------------------
@@ -474,14 +614,14 @@ class BotKPICacheEntry(BaseModel):
 
 def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKPI:
     # Acceptance is a per-flaw-field decision (kept vs. modified), so the rate
-    # is measured against suggestions_compared, not `applied` (a per-entry count
-    # that a re-suggested flaw inflates past the number of accept/modify
+    # is measured against suggestions_compared, not `suggested` (a per-entry
+    # count that a re-suggested flaw inflates past the number of accept/modify
     # decisions).
     kept = stats.suggestions_compared - modified_count
     compared = stats.suggestions_compared
     acceptance_rate = round((kept / compared) * 100, 1) if compared > 0 else 0.0
     return BotFeatureKPI(
-        applied=stats.applied,
+        suggested=stats.suggested,
         skipped=stats.skipped,
         kept=kept,
         modified=modified_count,
@@ -534,57 +674,109 @@ def _read_cache() -> BotKPICacheEntry | None:
 # -- Endpoint handler ----------------------------------------------------------
 
 
+def _reconcile_flaws(
+    existing: dict[str, FlawCacheData],
+    fetched: dict[str, FlawCacheData],
+    index: dict[str, str],
+    *,
+    index_is_complete: bool,
+) -> dict[str, FlawCacheData]:
+    """Merge freshly fetched flaws into the cache, pruning departures if it's safe.
+
+    Freshly fetched entries always win. Pruning of cached flaws absent from the
+    index depends on whether the index is *complete*:
+
+    - Complete index (an unfiltered request, whose index lists every DONE flaw
+      since the bot birthday): a cached flaw absent from it has left DONE (or was
+      deleted), so it is pruned and stops counting.
+    - Date-bounded index (a windowed request): the index is only that window, so
+      an absent flaw may simply be outside it -- pruning would evict flaws from
+      other windows (two disjoint ranges would flush each other completely) and
+      permanently drop a flaw edited past a fixed report's window. Nothing is
+      pruned; such departures are reconciled by the next unfiltered request. A
+      KPI query only counts flaws whose suggestions fall in its window (see
+      :func:`_score_records`), so retained out-of-window entries never distort a
+      windowed result.
+    """
+    if index_is_complete:
+        merged = {cve_id: flaw for cve_id, flaw in existing.items() if cve_id in index}
+    else:
+        merged = dict(existing)
+    merged.update(fetched)
+    return merged
+
+
 def _fetch_with_cache(
     osidb: Any,
     *,
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
 ) -> BotKPIResult:
-    """Fetch flaws using the incremental cache, then aggregate on demand.
+    """Fetch flaws via the two-phase incremental cache, then aggregate on demand.
 
-    The OSIDB fetch runs outside the cache lock so a slow or hung query can't
-    block every other concurrent request. If nothing changed since the cache
-    was built, the cached per-flaw data is aggregated and returned without a
-    write. Only a fetch that finds changed/new flaws pays for a lock and a
-    save, so the expensive work scales with how often the underlying data
-    changes, not with how often this endpoint is polled. Every fetched flaw
-    overwrites its own entry (whether new or previously seen), which is what
-    allows a flaw to be correctly re-scored if it's edited again after the
-    bot's initial pass, instead of being frozen at its first-seen state.
+    A cheap ``{cve_id: updated_dt}`` index of the DONE flaws in range is fetched
+    first (see :func:`_fetch_flaw_index` for how the range is bounded); full
+    per-flaw data is fetched only for flaws that are new or whose own
+    ``updated_dt`` watermark advanced past the cached one. Both fetches run
+    outside the cache lock so a slow query can't block other requests. When
+    nothing new is fetched, the cache is served as-is without a write; otherwise
+    the freshly fetched flaws are merged into it under the lock (see
+    :func:`_merge_flaws`). Re-fetching a flaw overwrites its own entry, so a flaw
+    edited again after the bot's pass is correctly re-scored rather than frozen.
 
-    The aggregate is always computed fresh from per-flaw stats (never cached),
-    so date filters simply restrict which cached flaws are summed for the
-    response; the cache always holds the complete set fetched from OSIDB.
+    Departed flaws are pruned only against a *complete* index -- i.e. on an
+    unfiltered request, whose index lists every DONE flaw since the bot birthday.
+    A date-bounded index is only a window, so the cache is never pruned to it
+    (that would evict flaws from other windows and defeat the cache whenever the
+    window changes); such departures are reconciled by the next unfiltered
+    request. The aggregate is always computed fresh by re-scoring the cached
+    records (never cached itself). ``to_kpi_result`` applies the request's date
+    range to each flaw's per-suggestion timestamps, so the response is correct
+    even when the cache holds flaws outside the requested window.
     """
-    has_date_filters = changed_after is not None or changed_before is not None
-    # Stamped before the OSIDB query runs so flaws updated mid-fetch are still
-    # >= cutoff and get picked up by the next incremental fetch.
-    cutoff = datetime.now(UTC)
+    index = _fetch_flaw_index(
+        osidb, changed_after=changed_after, changed_before=changed_before
+    )
 
     cached = _read_cache()
-    flaws = fetch_bot_processed_flaws(
-        osidb, changed_after=cached.cutoff if cached is not None else None
-    )
-    new_per_flaw, new_timestamps = _extract_per_flaw_stats(flaws)
+    cached_flaws = cached.flaws if cached is not None else {}
 
-    if not new_per_flaw:
-        # Nothing changed since the cache was built; serve it as-is.
-        entry = cached or BotKPICacheEntry(cutoff=cutoff, flaws={})
+    stale_ids = [
+        cve_id
+        for cve_id, updated_dt in index.items()
+        if _needs_fetch(cached_flaws.get(cve_id), updated_dt)
+    ]
+    batch = _fetch_flaws_batch(osidb, stale_ids)
+    fetched: dict[str, FlawCacheData] = {}
+    for cve_id, flaw_data in batch.items():
+        updated_dt = index.get(cve_id, "")
+        fetched[cve_id] = _flaw_cache_data(flaw_data, updated_dt)
+
+    # Only an unfiltered request sees a complete index (every DONE flaw since the
+    # bot birthday); only then can a cached flaw's absence be read as a departure
+    # and pruned. A date-bounded index is just a window, so absence there is
+    # ambiguous and nothing is pruned (see _reconcile_flaws).
+    index_is_complete = changed_after is None and changed_before is None
+    has_departures = index_is_complete and not set(cached_flaws).issubset(index)
+
+    if not fetched and not has_departures:
+        # Nothing new to fetch and nothing to prune, so nothing to write; serve
+        # the cache as-is.
+        entry = cached if cached is not None else BotKPICacheEntry(flaws={})
     else:
-        new_serialized = _serialize_per_flaw(new_per_flaw, new_timestamps)
         with _cache_handler() as handler:
             latest = handler.read()
-            merged_flaws = dict(latest.flaws) if latest is not None else {}
-            merged_flaws.update(new_serialized)
-            saved_cutoff = max(cutoff, latest.cutoff) if latest is not None else cutoff
-            entry = BotKPICacheEntry(cutoff=saved_cutoff, flaws=merged_flaws)
+            existing = latest.flaws if latest is not None else cached_flaws
+            entry = BotKPICacheEntry(
+                flaws=_reconcile_flaws(
+                    existing, fetched, index, index_is_complete=index_is_complete
+                )
+            )
             handler.write(entry)
 
-    if has_date_filters:
-        return entry.filter_by_date(
-            changed_after=changed_after, changed_before=changed_before
-        )
-    return entry.to_kpi_result()
+    return entry.to_kpi_result(
+        changed_after=changed_after, changed_before=changed_before
+    )
 
 
 def get_osidb_bot_kpi(

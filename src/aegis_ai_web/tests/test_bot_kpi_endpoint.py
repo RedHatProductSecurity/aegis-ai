@@ -37,12 +37,12 @@ _PATCH_HANDLER = patch(
 )
 
 
-def _make_bot_entry(value, *, dq=0.9, conf=0.85):
+def _make_bot_entry(value, *, dq=0.9, conf=0.85, timestamp="2025-03-13T12:00:00"):
     return {
         "type": "AI-Bot",
         "value": value,
         "explanation": "test",
-        "timestamp": "2025-03-13T12:00:00",
+        "timestamp": timestamp,
         "data_quality": dq,
         "confidence": conf,
     }
@@ -62,6 +62,7 @@ def _make_skipped_entry(*, dq=0.4, conf=0.3):
 def _make_flaw_dict(aegis_meta, **overrides):
     flaw = {
         "cve_id": "CVE-2025-0001",
+        "updated_dt": "2025-06-01T00:00:00+00:00",
         "components": [],
         "title": "",
         "cve_description": "",
@@ -74,6 +75,39 @@ def _make_flaw_dict(aegis_meta, **overrides):
     return flaw
 
 
+def _make_session(*flaws):
+    """Mock OSIDB session for the two-phase fetch (cheap index + batch fetch).
+
+    The index iterator yields cve_id/updated_dt stubs; a batch call (with
+    ``cve_id=[...]``) returns full flaw data for the requested IDs.
+    """
+    by_cve = {flaw["cve_id"]: flaw for flaw in flaws}
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        stubs = []
+        for flaw in flaws:
+            stub = MagicMock()
+            stub.to_dict.return_value = {
+                "cve_id": flaw["cve_id"],
+                "updated_dt": flaw.get("updated_dt", ""),
+            }
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
 class TestOsidbBotKpiEndpoint:
     @_PATCH_HANDLER
     @_PATCH_READ
@@ -83,9 +117,7 @@ class TestOsidbBotKpiEndpoint:
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter([])
-        mock_bindings.new_session.return_value = mock_session
+        mock_bindings.new_session.return_value = _make_session()
 
         response = client.get("/api/v1/analysis/kpi/osidb-bot")
         assert response.status_code == 200
@@ -111,19 +143,14 @@ class TestOsidbBotKpiEndpoint:
             impact="LOW",
             cwe_id="CWE-89",
         )
-        mock_flaw = MagicMock()
-        mock_flaw.to_dict.return_value = flaw_data
-
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter([mock_flaw])
-        mock_bindings.new_session.return_value = mock_session
+        mock_bindings.new_session.return_value = _make_session(flaw_data)
 
         response = client.get("/api/v1/analysis/kpi/osidb-bot")
         assert response.status_code == 200
         data = response.json()
 
         assert data["total_flaws_processed"] == 1
-        assert data["features"]["impact"]["applied"] == 1
+        assert data["features"]["impact"]["suggested"] == 1
         assert data["features"]["impact"]["kept"] == 1
         assert data["features"]["impact"]["acceptance_rate"] == 100.0
         assert data["features"]["cwe_id"]["modified"] == 1
@@ -144,19 +171,14 @@ class TestOsidbBotKpiEndpoint:
                 "impact": [_make_skipped_entry(dq=0.4, conf=0.3)],
             },
         )
-        mock_flaw = MagicMock()
-        mock_flaw.to_dict.return_value = flaw_data
-
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter([mock_flaw])
-        mock_bindings.new_session.return_value = mock_session
+        mock_bindings.new_session.return_value = _make_session(flaw_data)
 
         response = client.get("/api/v1/analysis/kpi/osidb-bot")
         assert response.status_code == 200
         data = response.json()
 
         assert data["features"]["impact"]["skipped"] == 1
-        assert data["features"]["impact"]["applied"] == 0
+        assert data["features"]["impact"]["suggested"] == 0
         assert data["features"]["impact"]["avg_data_quality"] == 0.4
         assert data["features"]["impact"]["avg_confidence"] == 0.3
 
@@ -195,26 +217,31 @@ class TestOsidbBotKpiEndpoint:
     def test_changed_after_filters_from_cache(
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
+        """Filtering keys on each suggestion's own timestamp: the flaw whose
+        suggestion predates the window is excluded even though both flaws are
+        cached."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         old_flaw = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            {
+                "processed": True,
+                "impact": [_make_bot_entry("LOW", timestamp="2025-05-01T00:00:00")],
+            },
             impact="LOW",
             updated_dt="2025-05-01T00:00:00+00:00",
         )
         new_flaw = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("MODERATE")]},
+            {
+                "processed": True,
+                "impact": [
+                    _make_bot_entry("MODERATE", timestamp="2025-07-01T00:00:00")
+                ],
+            },
             impact="MODERATE",
             cve_id="CVE-2025-0002",
             updated_dt="2025-07-01T00:00:00+00:00",
         )
-        mock_flaws = [MagicMock(), MagicMock()]
-        mock_flaws[0].to_dict.return_value = old_flaw
-        mock_flaws[1].to_dict.return_value = new_flaw
-
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter(mock_flaws)
-        mock_bindings.new_session.return_value = mock_session
+        mock_bindings.new_session.return_value = _make_session(old_flaw, new_flaw)
 
         response = client.get(
             "/api/v1/analysis/kpi/osidb-bot?changed_after=2025-06-01T00:00:00"
@@ -222,7 +249,7 @@ class TestOsidbBotKpiEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["total_flaws_processed"] == 1
-        assert data["features"]["impact"]["applied"] == 1
+        assert data["features"]["impact"]["suggested"] == 1
 
     @_PATCH_HANDLER
     @_PATCH_READ
@@ -231,26 +258,30 @@ class TestOsidbBotKpiEndpoint:
     def test_changed_before_filters_from_cache(
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
+        """Same per-suggestion-timestamp filtering, upper bound: the flaw whose
+        suggestion postdates the window is excluded."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         old_flaw = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            {
+                "processed": True,
+                "impact": [_make_bot_entry("LOW", timestamp="2025-05-01T00:00:00")],
+            },
             impact="LOW",
             updated_dt="2025-05-01T00:00:00+00:00",
         )
         new_flaw = _make_flaw_dict(
-            {"processed": True, "impact": [_make_bot_entry("MODERATE")]},
+            {
+                "processed": True,
+                "impact": [
+                    _make_bot_entry("MODERATE", timestamp="2025-07-01T00:00:00")
+                ],
+            },
             impact="MODERATE",
             cve_id="CVE-2025-0002",
             updated_dt="2025-07-01T00:00:00+00:00",
         )
-        mock_flaws = [MagicMock(), MagicMock()]
-        mock_flaws[0].to_dict.return_value = old_flaw
-        mock_flaws[1].to_dict.return_value = new_flaw
-
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter(mock_flaws)
-        mock_bindings.new_session.return_value = mock_session
+        mock_bindings.new_session.return_value = _make_session(old_flaw, new_flaw)
 
         response = client.get(
             "/api/v1/analysis/kpi/osidb-bot?changed_before=2025-06-01T00:00:00"
@@ -258,7 +289,7 @@ class TestOsidbBotKpiEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["total_flaws_processed"] == 1
-        assert data["features"]["impact"]["applied"] == 1
+        assert data["features"]["impact"]["suggested"] == 1
 
     @_PATCH_HANDLER
     @_PATCH_READ
@@ -295,21 +326,14 @@ class TestOsidbBotKpiEndpoint:
             impact="IMPORTANT",
             cve_id="CVE-2025-0002",
         )
-
-        mock_flaws = [MagicMock(), MagicMock()]
-        mock_flaws[0].to_dict.return_value = flaw1
-        mock_flaws[1].to_dict.return_value = flaw2
-
-        mock_session = MagicMock()
-        mock_session.flaws.retrieve_list_iterator.return_value = iter(mock_flaws)
-        mock_bindings.new_session.return_value = mock_session
+        mock_bindings.new_session.return_value = _make_session(flaw1, flaw2)
 
         response = client.get("/api/v1/analysis/kpi/osidb-bot")
         assert response.status_code == 200
         data = response.json()
 
         assert data["total_flaws_processed"] == 2
-        assert data["features"]["impact"]["applied"] == 2
+        assert data["features"]["impact"]["suggested"] == 2
         assert data["features"]["impact"]["kept"] == 1
         assert data["features"]["impact"]["modified"] == 1
         assert data["features"]["impact"]["acceptance_rate"] == 50.0

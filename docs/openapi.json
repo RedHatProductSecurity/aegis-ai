@@ -5,21 +5,16 @@
         "description": "Per-feature KPI metrics for osidb-bot auto-processing.",
         "properties": {
           "acceptance_rate": {
-            "description": "Percentage of applied suggestions kept unchanged (0.0-100.0)",
+            "description": "Percentage of compared fields kept unchanged, kept / (kept + modified) * 100 (0.0-100.0)",
             "maximum": 100.0,
             "minimum": 0.0,
             "title": "Acceptance Rate",
             "type": "number"
           },
-          "applied": {
-            "description": "Suggestions that passed quality gates (type=AI-Bot)",
-            "minimum": 0.0,
-            "title": "Applied",
-            "type": "integer"
-          },
           "avg_confidence": {
             "anyOf": [
               {
+                "maximum": 1.0,
                 "minimum": 0.0,
                 "type": "number"
               },
@@ -33,6 +28,7 @@
           "avg_data_quality": {
             "anyOf": [
               {
+                "maximum": 1.0,
                 "minimum": 0.0,
                 "type": "number"
               },
@@ -58,13 +54,13 @@
             "title": "Avg Suggestion Deviation"
           },
           "kept": {
-            "description": "Applied suggestions still unchanged in OSIDB",
+            "description": "Fields whose latest bot suggestion still matches the current OSIDB value",
             "minimum": 0.0,
             "title": "Kept",
             "type": "integer"
           },
           "modified": {
-            "description": "Applied suggestions that were changed since being applied",
+            "description": "Fields whose latest bot suggestion differs from the current OSIDB value",
             "minimum": 0.0,
             "title": "Modified",
             "type": "integer"
@@ -74,10 +70,16 @@
             "minimum": 0.0,
             "title": "Skipped",
             "type": "integer"
+          },
+          "suggested": {
+            "description": "Bot suggestions made for this field (type=AI-Bot), counting every suggestion including re-suggestions of the same field. Because kept and modified reflect one accept-or-modify decision per field (the latest suggestion only), suggested is >= kept + modified.",
+            "minimum": 0.0,
+            "title": "Suggested",
+            "type": "integer"
           }
         },
         "required": [
-          "applied",
+          "suggested",
           "skipped",
           "kept",
           "modified",
@@ -98,7 +100,7 @@
             "type": "object"
           },
           "total_flaws_processed": {
-            "description": "Total flaws processed by the bot",
+            "description": "Number of bot-processed flaws that contributed to the result: those with at least one suggestion whose timestamp falls in the selected time range, or all bot-processed flaws when no range is given.",
             "minimum": 0.0,
             "title": "Total Flaws Processed",
             "type": "integer"
@@ -1074,13 +1076,13 @@
                   "features": {
                     "impact": {
                       "acceptance_rate": 84.6,
-                      "applied": 130,
                       "avg_confidence": 0.82,
                       "avg_data_quality": 0.85,
                       "avg_suggestion_deviation": 0.35,
                       "kept": 110,
                       "modified": 20,
-                      "skipped": 12
+                      "skipped": 12,
+                      "suggested": 133
                     }
                   },
                   "total_flaws_processed": 142
