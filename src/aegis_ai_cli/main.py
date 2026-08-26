@@ -431,7 +431,7 @@ def osidb_bot(state_file, force, read_only, max_age, max_retries, cve_ids):
     # lazy import to speed up basic Aegis CLI operations
     from pytimeparse2 import parse as parse_duration
 
-    from aegis_ai.osidb_bot import Bot, StateFileHandler, logger
+    from aegis_ai.osidb_bot import Bot, BotStateFileHandler, logger
     from aegis_ai.osidb_bot.util import log_memory
 
     # avoid logging tracebacks when GSSAPI auth fails
@@ -466,7 +466,7 @@ def osidb_bot(state_file, force, read_only, max_age, max_retries, cve_ids):
     try:
         # this prevents multiple processes running in parallel on a single state file
         # (if state_file is not None)
-        with StateFileHandler(state_file) as sfh:
+        with BotStateFileHandler(state_file) as sfh:
             osidb_bot = Bot(
                 sfh,
                 cli_agent,

@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from aegis_ai.data_models import CVEID
 from aegis_ai.osidb_bot.util import logger
-from aegis_ai.state_file import StateFileHandler as _StateFileHandler
+from aegis_ai.state_file import StateFileHandler
 
 
 class BotPosition(BaseModel):
@@ -30,17 +30,17 @@ class BotState(BotPosition):
     retry_list: dict[str, int] = Field(default_factory=dict)
 
 
-class StateFileHandler(_StateFileHandler[BotState]):
+class BotStateFileHandler(StateFileHandler[BotState]):
     """Non-blocking, single-instance lock over the bot's ``BotState`` file.
 
     Thin specialization of the generic ``aegis_ai.state_file.StateFileHandler``
-    that fixes the model to ``BotState`` and keeps the legacy
-    ``read_state``/``write_state`` method names used by ``StateProxy``.
-    ``exclude_defaults=True`` omits an empty ``retry_list`` from the file.
+    that fixes the model to ``BotState``, routes log output through the
+    ``[osidb-bot]`` logger, and keeps the legacy ``read_state``/``write_state``
+    method names used by ``StateProxy``.
     """
 
     def __init__(self, state_file: str | None):
-        super().__init__(state_file, BotState, blocking=False, exclude_defaults=True)
+        super().__init__(state_file, BotState, blocking=False, logger=logger)
 
     def read_state(self) -> BotState | None:
         return self.read()
@@ -87,12 +87,12 @@ class _ObservableDict(dict):
 class StateProxy:
     """In-memory cache for BotState that auto-writes to disk on update."""
 
-    _sfh: "StateFileHandler"
+    _sfh: "BotStateFileHandler"
     _state: BotState
     _retry_list: _ObservableDict
     read_only: bool
 
-    def __init__(self, sfh: "StateFileHandler", read_only: bool = False):
+    def __init__(self, sfh: "BotStateFileHandler", read_only: bool = False):
         self._sfh = sfh
         self._state = sfh.read_state() or BotState()
         self._retry_list = _ObservableDict(

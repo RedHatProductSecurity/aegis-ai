@@ -581,10 +581,10 @@ async def test_schedule_retry_creates_manual_triage_on_last_attempt(mock_exec_fe
     agent = MagicMock()
 
     from aegis_ai.osidb_bot.bot import Bot
-    from aegis_ai.osidb_bot.state import StateFileHandler
+    from aegis_ai.osidb_bot.state import BotStateFileHandler
 
     with (
-        StateFileHandler(None) as sfh,
+        BotStateFileHandler(None) as sfh,
         patch(
             "aegis_ai.osidb_bot.bot.osidb_bindings.new_session", return_value=session
         ),
@@ -614,10 +614,10 @@ async def test_validation_failure_skips_retry_and_manual_triage(mock_exec_featur
     agent = MagicMock()
 
     from aegis_ai.osidb_bot.bot import Bot
-    from aegis_ai.osidb_bot.state import StateFileHandler
+    from aegis_ai.osidb_bot.state import BotStateFileHandler
 
     with (
-        StateFileHandler(None) as sfh,
+        BotStateFileHandler(None) as sfh,
         patch(
             "aegis_ai.osidb_bot.bot.osidb_bindings.new_session", return_value=session
         ),
