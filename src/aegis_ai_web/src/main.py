@@ -333,6 +333,7 @@ cve_feature_registry: dict[str, type] = {
     "identify-pii": cve.IdentifyPII,
     "cvss-diff-explainer": cve.CVSSDiffExplainer,
     "quality-review": cve.QualityReview,
+    "suggest-affected-packages": cve.SuggestAffectedPackages,
     "query-affected-components": cve.QueryAffectedComponents,
 }
 DEFAULT_CVE_FEATURES = [
