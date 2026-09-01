@@ -77,6 +77,60 @@ class QueryAffectedComponentsModel(BaseModel):
         return f"{len(self.affected_components)} affected component(s)"
 
 
+class AffectedPackageEntry(BaseModel):
+    """A single package-level affectedness suggestion with rationale."""
+
+    purl: str = Field(
+        ...,
+        description="Package URL identifying the source RPM package.",
+    )
+
+    ps_update_stream: str = Field(
+        ...,
+        description="The product stream update identifier (e.g., 'rhel-9.6.0.z').",
+    )
+
+    affected: bool = Field(
+        ...,
+        description="Whether this source RPM package is affected by the vulnerability.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Per-package rationale for the affectedness determination.",
+    )
+
+    affected_subcomponents: str | None = Field(
+        default=None,
+        description="Optional free-text hint about which internal components within "
+        "the package are affected (e.g., 'XFS kernel module', 'libcurl HTTP/2 handler').",
+    )
+
+
+class SuggestAffectedPackagesModel(AegisFeatureModel):
+    """LLM-driven suggestion of source RPM package affectedness."""
+
+    cve_id: CVEID = Field(
+        ...,
+        description="The CVE identifier for the analyzed flaw.",
+    )
+
+    affected_packages: list[AffectedPackageEntry] = Field(
+        default_factory=list,
+        description="Per-package affectedness suggestions with PURLs and rationale.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Overall rationale for the affectedness analysis.",
+    )
+
+    def printable_outcome(self) -> str:
+        affected = sum(1 for p in self.affected_packages if p.affected)
+        total = len(self.affected_packages)
+        return f"{affected}/{total} package(s) affected"
+
+
 class SuggestAffectedComponentsModel(AegisFeatureModel):
     """Model for suggested affected components inferred from CVE data."""
 
