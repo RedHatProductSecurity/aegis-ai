@@ -241,8 +241,8 @@ def to_kpi_entry(entry: dict[str, Any], detail: bool) -> KPIEntry:
             aegis_version=entry["aegis_version"],
         )
 
-    suggested = parse_components(entry.get("suggested_raw", ""))
-    submitted = parse_components(entry.get("submitted_raw", ""))
+    suggested = clean_components(parse_components(entry.get("suggested_raw", "")))
+    submitted = clean_components(parse_components(entry.get("submitted_raw", "")))
     accepted_components, rejected, added = component_diff(suggested, submitted)
 
     return KPIEntry(
