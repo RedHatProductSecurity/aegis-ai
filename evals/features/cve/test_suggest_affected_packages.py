@@ -42,8 +42,13 @@ SAMPLE_SEED = int(os.getenv("AEGIS_EVALS_SUGGEST_AFFECTED_PACKAGES_SAMPLE_SEED",
 
 # CVE IDs with OSIDB cache entries that include affects with purl and
 # ps_update_stream fields.  Populate by re-fetching qualifying CVEs with
-# include_affects=True.  Empty until cache entries are updated.
-DEFAULT_CVE_IDS: tuple[str, ...] = ()
+# include_affects=True in write_cache_entry().
+DEFAULT_CVE_IDS: tuple[str, ...] = (
+    "CVE-2014-9984",
+    "CVE-2025-49175",
+    "CVE-2026-3904",
+    "CVE-2026-34982",
+)
 
 
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = ()
