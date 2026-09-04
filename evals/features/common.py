@@ -485,6 +485,23 @@ class DataQualityEvaluator(Evaluator[str, AegisFeatureModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
+class ConfidenceEvaluator(Evaluator[str, AegisFeatureModel]):
+    """Compare confidence with the expected value."""
+
+    _sigma = 0.1
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, AegisFeatureModel]
+    ) -> EvaluationReason:
+        assert ctx.expected_output is not None
+        got = ctx.output.confidence
+        expected = ctx.expected_output.confidence
+        diff = got - expected
+        score = math.exp(-(diff**2) / (2 * self._sigma**2))
+        reason = None if score >= 1.0 else f"got {got}, expected {expected}"
+        return EvaluationReason(value=score, reason=reason)
+
+
 def _parse_trace(trace: str | None) -> tuple[list[str], list[str]]:
     """Extract rules_fired and guardrails_fired lists from a reconciliation trace."""
     import re
