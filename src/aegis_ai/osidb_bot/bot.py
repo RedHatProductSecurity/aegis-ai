@@ -12,7 +12,7 @@ from pydantic_ai import Agent
 
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
-from aegis_ai.osidb_bot.state import BotPosition, StateFileHandler, StateProxy
+from aegis_ai.osidb_bot.state import BotPosition, BotStateFileHandler, StateProxy
 from aegis_ai.osidb_bot.suggest import _KERNEL_FLAGS_KEY, DEFAULT_SUGGESTION_LIST
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 
@@ -439,7 +439,7 @@ class Bot(StateProxy):
 
     def __init__(
         self,
-        state_file_handler: StateFileHandler,
+        state_file_handler: BotStateFileHandler,
         agent: Agent,
         *,
         force: bool = False,

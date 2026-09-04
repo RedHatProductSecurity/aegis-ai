@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any, cast
@@ -42,6 +43,7 @@ from . import (
     web_feature_agent,
 )
 from .data_models import (
+    BotKPIResponse,
     CVEMultiAnalysisRequest,
     CVEMultiAnalysisResponse,
     CVESingleAnalysisRequest,
@@ -50,6 +52,7 @@ from .data_models import (
     Feedback,
     ProgrammaticFeedback,
 )
+from .endpoints.bot_kpi import get_osidb_bot_kpi
 from .endpoints.kpi import SortOrder, get_cve_kpi
 from .feedback_logger import feedback_logger, programmatic_feedback_logger
 from .semantic_scoring import (
@@ -762,6 +765,74 @@ async def cve_kpi(
     return result
 
 
+@app.get(
+    f"/api/{AEGIS_REST_API_VERSION}/analysis/kpi/osidb-bot",
+    summary="Get osidb-bot KPI Metrics",
+    description=(
+        "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. "
+        "Compares bot suggestions against current flaw values to measure "
+        "how often analysts keep, modify, or skip bot suggestions. "
+        "Only flaws in DONE workflow state are included. "
+        "Results are cached and incrementally updated on subsequent requests; "
+        "a flaw is automatically re-scored whenever it changes in OSIDB."
+    ),
+    response_model=BotKPIResponse,
+    responses={
+        200: {
+            "description": "Successful response with bot KPI metrics",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total_flaws_processed": 142,
+                        "features": {
+                            "impact": {
+                                "suggested": 133,
+                                "skipped": 12,
+                                "kept": 110,
+                                "modified": 20,
+                                "acceptance_rate": 84.6,
+                                "avg_data_quality": 0.85,
+                                "avg_confidence": 0.82,
+                                "avg_suggestion_deviation": 0.35,
+                            },
+                        },
+                    },
+                }
+            },
+        },
+        503: {
+            "description": "OSIDB is unreachable",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Unable to connect to OSIDB."}
+                }
+            },
+        },
+    },
+)
+async def osidb_bot_kpi(
+    changed_after: datetime | None = Query(  # noqa: B008
+        default=None,
+        description="Only include flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
+    ),
+    changed_before: datetime | None = Query(  # noqa: B008
+        default=None,
+        description="Only include flaws updated before this ISO 8601 datetime.",
+    ),
+) -> BotKPIResponse:
+    """Get KPI metrics for flaws auto-processed by the osidb-bot."""
+    if changed_after and changed_before and changed_after > changed_before:
+        raise HTTPException(
+            status_code=422,
+            detail="changed_after must be earlier than changed_before.",
+        )
+    return await asyncio.to_thread(
+        get_osidb_bot_kpi,
+        changed_after=changed_after,
+        changed_before=changed_before,
+    )
+
+
 def log_email_mismatch(request: Request, email: str) -> None:
     """
     When Kerberos auth is enabled, log a warning if the email does not
@@ -932,7 +1003,6 @@ async def save_programmatic_feedback(request: Request, feedback: ProgrammaticFee
     semantic proximity scoring is attempted. If semantic scoring fails or times out,
     the entry remains with an empty acceptance_score and can be retried later.
     """
-    from datetime import datetime
 
     try:
         feature = feedback.feature

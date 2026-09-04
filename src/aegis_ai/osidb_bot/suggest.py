@@ -80,6 +80,8 @@ def record_aegis_meta(
         "tools_used": output.tools_used,
         **extra,
     }
+    # Chronological order: newest entries last. KPI comparison in
+    # bot_kpi.py relies on this to pick the latest suggestion.
     dst_field.append(entry)
 
 

@@ -13,11 +13,11 @@ import logging
 import time
 
 from aegis_ai import get_settings
+from aegis_ai.features.cve.impact_mappings import score_cvss3_diff, score_impact_diff
 
 # Reuse evaluators and utilities from evals
 from evals.features.common import FIELD_RUBRICS, create_llm_judge
 from evals.features.cve.test_suggest_cwe import SuggestCweEvaluator
-from evals.features.cve.test_suggest_impact import score_cvss3_diff, score_impact_diff
 
 logger = logging.getLogger(__name__)
 

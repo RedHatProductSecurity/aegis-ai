@@ -1,5 +1,97 @@
 components:
   schemas:
+    BotFeatureKPI:
+      description: Per-feature KPI metrics for osidb-bot auto-processing.
+      properties:
+        acceptance_rate:
+          description: Percentage of compared fields kept unchanged, kept / (kept
+            + modified) * 100 (0.0-100.0)
+          maximum: 100.0
+          minimum: 0.0
+          title: Acceptance Rate
+          type: number
+        avg_confidence:
+          anyOf:
+          - maximum: 1.0
+            minimum: 0.0
+            type: number
+          - type: 'null'
+          description: Average confidence score across entries that reported one.
+            None when no entry recorded a confidence value.
+          title: Avg Confidence
+        avg_data_quality:
+          anyOf:
+          - maximum: 1.0
+            minimum: 0.0
+            type: number
+          - type: 'null'
+          description: Average data_quality score across entries that reported one.
+            None when no entry recorded a data_quality value.
+          title: Avg Data Quality
+        avg_suggestion_deviation:
+          anyOf:
+          - maximum: 1.0
+            minimum: 0.0
+            type: number
+          - type: 'null'
+          description: Average normalized deviation (0.0 = exact match, 1.0 = maximum
+            divergence) between modified suggestions and current values, using the
+            same weighted scoring as evals. None when no deviation data is available.
+          title: Avg Suggestion Deviation
+        kept:
+          description: Fields whose latest bot suggestion still matches the current
+            OSIDB value
+          minimum: 0.0
+          title: Kept
+          type: integer
+        modified:
+          description: Fields whose latest bot suggestion differs from the current
+            OSIDB value
+          minimum: 0.0
+          title: Modified
+          type: integer
+        skipped:
+          description: Suggestions discarded by quality gates (type=AI-Bot-Skipped)
+          minimum: 0.0
+          title: Skipped
+          type: integer
+        suggested:
+          description: Bot suggestions made for this field (type=AI-Bot), counting
+            every suggestion including re-suggestions of the same field. Because kept
+            and modified reflect one accept-or-modify decision per field (the latest
+            suggestion only), suggested is >= kept + modified.
+          minimum: 0.0
+          title: Suggested
+          type: integer
+      required:
+      - suggested
+      - skipped
+      - kept
+      - modified
+      - acceptance_rate
+      title: BotFeatureKPI
+      type: object
+    BotKPIResponse:
+      description: Response model for osidb-bot KPI metrics endpoint.
+      properties:
+        features:
+          additionalProperties:
+            $ref: '#/components/schemas/BotFeatureKPI'
+          description: Per-feature KPI metrics keyed by field name
+          title: Features
+          type: object
+        total_flaws_processed:
+          description: 'Number of bot-processed flaws that contributed to the result:
+            those with at least one suggestion whose timestamp falls in the selected
+            time range, or all bot-processed flaws when no range is given.'
+          minimum: 0.0
+          title: Total Flaws Processed
+          type: integer
+      required:
+      - total_flaws_processed
+      - features
+      title: BotKPIResponse
+      type: object
     CVEFeatureName:
       enum:
       - suggest-impact
@@ -586,6 +678,73 @@ paths:
           description: Internal server error
         default: *id002
       summary: Get CVE Analysis KPI Metrics
+  /api/v1/analysis/kpi/osidb-bot:
+    get:
+      description: Retrieve KPI metrics for flaws auto-processed by the osidb-bot.
+        Compares bot suggestions against current flaw values to measure how often
+        analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow
+        state are included. Results are cached and incrementally updated on subsequent
+        requests; a flaw is automatically re-scored whenever it changes in OSIDB.
+      operationId: osidb_bot_kpi_api_v1_analysis_kpi_osidb_bot_get
+      parameters:
+      - description: Only include flaws updated after this ISO 8601 datetime (e.g.
+          2025-01-01T00:00:00Z).
+        in: query
+        name: changed_after
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Only include flaws updated after this ISO 8601 datetime (e.g.
+            2025-01-01T00:00:00Z).
+          title: Changed After
+      - description: Only include flaws updated before this ISO 8601 datetime.
+        in: query
+        name: changed_before
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Only include flaws updated before this ISO 8601 datetime.
+          title: Changed Before
+      responses:
+        '200':
+          content:
+            application/json:
+              example:
+                features:
+                  impact:
+                    acceptance_rate: 84.6
+                    avg_confidence: 0.82
+                    avg_data_quality: 0.85
+                    avg_suggestion_deviation: 0.35
+                    kept: 110
+                    modified: 20
+                    skipped: 12
+                    suggested: 133
+                total_flaws_processed: 142
+              schema:
+                $ref: '#/components/schemas/BotKPIResponse'
+          description: Successful response with bot KPI metrics
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '429': *id001
+        '503':
+          content:
+            application/json:
+              example:
+                detail: Unable to connect to OSIDB.
+          description: OSIDB is unreachable
+        default: *id002
+      summary: Get osidb-bot KPI Metrics
   /api/v1/feedback:
     post:
       description: 'Receive feedback and log it to CSV file.
