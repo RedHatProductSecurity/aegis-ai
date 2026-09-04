@@ -154,6 +154,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-40611",
     "CVE-2026-40938",
     "CVE-2026-41843",
+    "CVE-2026-56128",
 )
 
 
@@ -206,6 +207,7 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-40611": ["golang"],
     "CVE-2026-40938": ["golang"],
     "CVE-2026-41843": ["maven"],
+    "CVE-2026-56128": ["upstream"],
 }
 
 
