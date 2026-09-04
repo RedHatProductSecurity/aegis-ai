@@ -1,4 +1,3 @@
-import math
 from typing import get_args
 
 import cvss
@@ -11,6 +10,7 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
 from aegis_ai.kernel_classifier import is_kernel_component
 from evals.features.common import (
+    DataQualityEvaluator,
     common_feature_evals,
     create_llm_judge,
     make_eval_reason,
@@ -158,25 +158,6 @@ class CVSSVectorEvaluator(Evaluator[str, SuggestImpactModel]):
             reason = f"unhandled exception: {e}"
 
         score = reflect_confidence(ctx, score)
-        return EvaluationReason(value=score, reason=reason)
-
-
-class DataQualityEvaluator(Evaluator[str, SuggestImpactModel]):
-    """Compare data_quality with the expected value when specified"""
-
-    _sigma = 0.1  # controls tolerance: ~0.61 at ±0.1, ~0.14 at ±0.2
-
-    def evaluate(
-        self, ctx: EvaluatorContext[str, SuggestImpactModel]
-    ) -> EvaluationReason:
-        assert ctx.expected_output is not None
-        got = ctx.output.data_quality
-        expected = ctx.expected_output.data_quality
-        diff = got - expected
-
-        # Gaussian similarity
-        score = math.exp(-(diff**2) / (2 * self._sigma**2))
-        reason = None if score >= 1.0 else f"got {got}, expected {expected}"
         return EvaluationReason(value=score, reason=reason)
 
 

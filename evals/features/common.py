@@ -466,6 +466,25 @@ class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):
         )
 
 
+class DataQualityEvaluator(Evaluator[str, AegisFeatureModel]):
+    """Compare data_quality with the expected value when specified."""
+
+    _sigma = 0.1  # controls tolerance: ~0.61 at ±0.1, ~0.14 at ±0.2
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, AegisFeatureModel]
+    ) -> EvaluationReason:
+        assert ctx.expected_output is not None
+        got = ctx.output.data_quality
+        expected = ctx.expected_output.data_quality
+        diff = got - expected
+
+        # Gaussian similarity
+        score = math.exp(-(diff**2) / (2 * self._sigma**2))
+        reason = None if score >= 1.0 else f"got {got}, expected {expected}"
+        return EvaluationReason(value=score, reason=reason)
+
+
 def _parse_trace(trace: str | None) -> tuple[list[str], list[str]]:
     """Extract rules_fired and guardrails_fired lists from a reconciliation trace."""
     import re
