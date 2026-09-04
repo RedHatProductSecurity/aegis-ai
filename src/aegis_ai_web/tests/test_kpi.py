@@ -1158,80 +1158,28 @@ class TestGetCveKpi:
 class TestComponentKpiHelpers:
     """Unit tests for component KPI helper functions."""
 
-    def test_resolve_feature_aliases_for_source_component(self):
-        from aegis_ai_web.src.endpoints.kpi import resolve_feature_aliases
+    def test_canonical_feature_maps_component_alias(self):
+        from aegis_ai_web.src.endpoints.kpi import canonical_feature
 
-        aliases = resolve_feature_aliases("source_component")
-        assert aliases == {"source_component", "suggest-affected-components"}
+        assert canonical_feature("source_component") == "suggest-affected-components"
 
-    def test_resolve_feature_aliases_for_unrelated_feature(self):
-        from aegis_ai_web.src.endpoints.kpi import resolve_feature_aliases
+    def test_canonical_feature_maps_description_alias(self):
+        from aegis_ai_web.src.endpoints.kpi import canonical_feature
 
-        aliases = resolve_feature_aliases("suggest-impact")
-        assert aliases == {"suggest-impact"}
+        assert canonical_feature("cve_description") == "suggest-description"
 
-    def test_resolve_feature_aliases_is_one_way(self):
-        from aegis_ai_web.src.endpoints.kpi import resolve_feature_aliases
+    def test_canonical_feature_passes_through_public_names(self):
+        from aegis_ai_web.src.endpoints.kpi import canonical_feature
 
-        # suggest-affected-components must keep its original single-key scope.
-        aliases = resolve_feature_aliases("suggest-affected-components")
-        assert aliases == {"suggest-affected-components"}
-
-    def test_component_diff_exact_match(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(["kernel"], ["kernel"])
-        assert accepted == ["kernel"]
-        assert rejected == []
-        assert added == []
-
-    def test_component_diff_replacement(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(["kernel"], ["linux-kernel"])
-        assert accepted == []
-        assert rejected == ["kernel"]
-        assert added == ["linux-kernel"]
-
-    def test_component_diff_case_sensitive(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        # Aegis treats components as case-sensitive: Kernel != kernel.
-        accepted, rejected, added = component_diff(["Kernel"], ["kernel"])
-        assert accepted == []
-        assert rejected == ["Kernel"]
-        assert added == ["kernel"]
-
-    def test_component_diff_empty_lists(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        assert component_diff([], []) == ([], [], [])
-        assert component_diff([], ["curl"]) == ([], [], ["curl"])
-        assert component_diff(["curl"], []) == ([], ["curl"], [])
-
-    def test_component_diff_ignores_empty_and_whitespace(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(
-            ["", "  ", "kernel"], ["  ", "", "curl"]
+        # Canonical public names and unrelated features resolve to themselves.
+        assert canonical_feature("suggest-affected-components") == (
+            "suggest-affected-components"
         )
-        assert accepted == []
-        assert rejected == ["kernel"]
-        assert added == ["curl"]
-
-    def test_component_diff_dedupes_preserving_order(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(
-            ["kernel", "kernel", "curl"], ["curl", "curl", "openssl"]
-        )
-        assert accepted == ["curl"]
-        assert rejected == ["kernel"]
-        assert added == ["openssl"]
+        assert canonical_feature("suggest-impact") == "suggest-impact"
 
 
 class TestComponentKpiFilters:
-    """Tests for source_component KPI filters and detail enrichment."""
+    """Tests for source_component KPI filters."""
 
     @staticmethod
     def _write_manual_rows(feedback_log_setup, rows):
@@ -1314,12 +1262,12 @@ class TestComponentKpiFilters:
         result = get_cve_kpi(
             "source_component",
             cve_id="CVE-2025-1002",
-            detail=True,
         )
         data = result["source_component"]
 
+        # CVE-2025-1002 is the only match; identify it by its datetime.
         assert len(data.entries) == 1
-        assert data.entries[0].cve_id == "CVE-2025-1002"
+        assert data.entries[0].datetime == "2026-03-19 22:48:41.298"
         assert data.entries[0].accepted is False
         assert data.acceptance_percentage == 0.0
 
@@ -1331,13 +1279,12 @@ class TestComponentKpiFilters:
         result = get_cve_kpi(
             "source_component",
             source_component="curl",
-            detail=True,
         )
         data = result["source_component"]
 
+        # Only CVE-2025-1003 suggests "curl".
         assert len(data.entries) == 1
-        assert data.entries[0].cve_id == "CVE-2025-1003"
-        assert data.entries[0].suggested_components == ["kernel", "curl"]
+        assert data.entries[0].datetime == "2026-03-20 13:16:01.227"
 
     def test_filter_by_source_component_is_case_sensitive(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
@@ -1348,7 +1295,6 @@ class TestComponentKpiFilters:
         result = get_cve_kpi(
             "source_component",
             source_component="Curl",
-            detail=True,
         )
         data = result["source_component"]
 
@@ -1363,43 +1309,23 @@ class TestComponentKpiFilters:
         result = get_cve_kpi(
             "source_component",
             multiple_source_components=True,
-            detail=True,
         )
         data = result["source_component"]
 
+        # Only CVE-2025-1003 suggests two components.
         assert len(data.entries) == 1
-        assert data.entries[0].cve_id == "CVE-2025-1003"
-        assert data.entries[0].suggested_components is not None
-        assert len(data.entries[0].suggested_components) == 2
+        assert data.entries[0].datetime == "2026-03-20 13:16:01.227"
 
-    def test_detail_includes_component_replacement_fields(self, feedback_log_setup):
+    def test_entry_shape_is_minimal(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
 
         self._write_manual_rows(feedback_log_setup, self._component_rows())
 
-        result = get_cve_kpi(
-            "source_component",
-            cve_id="CVE-2025-1002",
-            detail=True,
-        )
+        result = get_cve_kpi("source_component")
         entry = result["source_component"].entries[0]
+        payload = entry.model_dump()
 
-        assert entry.cve_id == "CVE-2025-1002"
-        assert entry.feedback_source == "manual"
-        assert entry.suggested_components == ["kernel"]
-        assert entry.submitted_components == ["linux-kernel"]
-        assert entry.rejected_suggestions == ["kernel"]
-        assert entry.added_components == ["linux-kernel"]
-
-    def test_detail_false_keeps_legacy_entry_shape(self, feedback_log_setup):
-        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
-
-        self._write_manual_rows(feedback_log_setup, self._component_rows())
-
-        result = get_cve_kpi("source_component", detail=False)
-        entry = result["source_component"].entries[0]
-        payload = entry.model_dump(exclude_none=True)
-
+        # KPIEntry carries only the generic fields; no feature-specific data.
         assert payload == {
             "datetime": "2026-03-19 21:52:24.452",
             "accepted": True,
@@ -1427,12 +1353,13 @@ class TestComponentKpiFilters:
             ],
         )
 
-        result = get_cve_kpi("source_component", detail=True)
+        # Querying source_component resolves to the canonical
+        # suggest-affected-components feature and picks up this row.
+        result = get_cve_kpi("source_component")
         data = result["source_component"]
 
         assert len(data.entries) == 1
-        assert data.entries[0].cve_id == "CVE-2025-2001"
-        assert data.entries[0].suggested_components == ["openssl"]
+        assert data.entries[0].datetime == "2026-03-19 21:52:24.452"
 
     def test_filters_recompute_acceptance_percentage(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
@@ -1450,7 +1377,7 @@ class TestComponentKpiFilters:
         assert filtered["source_component"].acceptance_percentage == 0.0
         assert len(filtered["source_component"].entries) == 1
 
-    def test_includes_scored_programmatic_component_feedback(
+    def test_includes_scored_programmatic_component_entries(
         self, feedback_log_setup, programmatic_feedback_log_setup
     ):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
@@ -1472,14 +1399,11 @@ class TestComponentKpiFilters:
             ],
         )
 
-        result = get_cve_kpi("source_component", detail=True)
+        result = get_cve_kpi("source_component")
         entry = result["source_component"].entries[0]
 
-        assert entry.cve_id == "CVE-2025-3001"
-        assert entry.feedback_source == "programmatic"
+        assert entry.datetime == "2026-03-21 10:00:00.123"
         assert entry.accepted is False
-        assert entry.rejected_suggestions == ["kernel"]
-        assert entry.added_components == ["linux-kernel"]
 
     def test_combined_cve_and_source_component_filters(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
@@ -1490,12 +1414,11 @@ class TestComponentKpiFilters:
             "source_component",
             cve_id="CVE-2025-1003",
             source_component="kernel",
-            detail=True,
         )
         data = result["source_component"]
 
         assert len(data.entries) == 1
-        assert data.entries[0].cve_id == "CVE-2025-1003"
+        assert data.entries[0].datetime == "2026-03-20 13:16:01.227"
 
     def test_no_matches_returns_empty_result(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
@@ -1604,10 +1527,11 @@ class TestComponentKpiFilters:
             ],
         )
 
-        data = get_cve_kpi("source_component", detail=True)["source_component"]
+        data = get_cve_kpi("source_component")["source_component"]
 
+        # Only the scored (acceptance_score=1.0) row survives.
         assert len(data.entries) == 1
-        assert data.entries[0].cve_id == "CVE-2025-5001"
+        assert data.entries[0].datetime == "2026-03-21 10:00:00.123"
 
     def test_all_features_component_filter_excludes_non_component(
         self, feedback_log_setup
@@ -1617,15 +1541,91 @@ class TestComponentKpiFilters:
         # _component_rows() mixes source_component rows with a suggest-impact row.
         self._write_manual_rows(feedback_log_setup, self._component_rows())
 
-        result = get_cve_kpi("all", source_component="kernel", detail=True)
+        result = get_cve_kpi("all", source_component="kernel")
 
         # Component filter applies only to component features; suggest-impact is
-        # excluded entirely rather than filtered on a scalar value.
+        # excluded entirely rather than filtered on a scalar value. Under
+        # feature="all", source_component rows report under their canonical
+        # public feature name.
         assert "suggest-impact" not in result
-        assert "source_component" in result
-        for entry in result["source_component"].entries:
-            assert entry.suggested_components is not None
-            assert "kernel" in entry.suggested_components
+        assert "source_component" not in result
+        assert "suggest-affected-components" in result
+        # All three source_component rows (1001, 1002, 1003) suggest "kernel".
+        assert len(result["suggest-affected-components"].entries) == 3
+
+    def test_all_features_unifies_manual_and_programmatic_aliases(
+        self, feedback_log_setup, programmatic_feedback_log_setup
+    ):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        # Manual feedback logs component/description features under the public
+        # route names; the osidb-bot logs them under raw field names. Under
+        # feature="all" both must collapse onto the canonical public key.
+        self._write_manual_rows(
+            feedback_log_setup,
+            [
+                {
+                    "datetime": "2026-03-19 21:52:24.452",
+                    "feature": "suggest-affected-components",
+                    "cve_id": "CVE-2025-6001",
+                    "email": "analyst@example.com",
+                    "actual": '["openssl"]',
+                    "expected": '["openssl"]',
+                    "request_time": "2026-03-19 21:52:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.6.1",
+                },
+                {
+                    "datetime": "2026-03-19 22:00:00.000",
+                    "feature": "suggest-description",
+                    "cve_id": "CVE-2025-6002",
+                    "email": "analyst@example.com",
+                    "actual": "desc",
+                    "expected": "desc",
+                    "request_time": "2026-03-19 22:00:00",
+                    "accept": "True",
+                    "rejection_comment": "",
+                    "version": "0.6.1",
+                },
+            ],
+        )
+        self._write_programmatic_rows(
+            programmatic_feedback_log_setup,
+            [
+                {
+                    "datetime": "2026-03-21 10:00:00.123",
+                    "feature": "source_component",
+                    "cve_id": "CVE-2025-6003",
+                    "email": "bot@example.com",
+                    "suggested_value": '["kernel"]',
+                    "submitted_value": '["kernel"]',
+                    "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                },
+                {
+                    "datetime": "2026-03-21 11:00:00.123",
+                    "feature": "cve_description",
+                    "cve_id": "CVE-2025-6004",
+                    "email": "bot@example.com",
+                    "suggested_value": "desc",
+                    "submitted_value": "desc",
+                    "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                },
+            ],
+        )
+
+        result = get_cve_kpi("all")
+
+        # Raw log keys must not leak into the response.
+        assert "source_component" not in result
+        assert "cve_description" not in result
+        # Each alias pair is unified under one canonical key spanning both sources.
+        assert len(result["suggest-affected-components"].entries) == 2
+        assert len(result["suggest-description"].entries) == 2
 
 
 class TestComponentKpiApi:
@@ -1647,28 +1647,21 @@ class TestComponentKpiApi:
             "aegis_version",
         }
 
-    def test_api_detail_and_filters(self, feedback_log_setup):
+    def test_api_cve_id_filter(self, feedback_log_setup):
         TestComponentKpiFilters._write_manual_rows(
             feedback_log_setup, TestComponentKpiFilters._component_rows()
         )
 
         response = client.get(
-            "/api/v1/analysis/kpi/cve"
-            "?feature=source_component"
-            "&detail=true"
-            "&cve_id=CVE-2025-1002"
+            "/api/v1/analysis/kpi/cve?feature=source_component&cve_id=CVE-2025-1002"
         )
         assert response.status_code == 200
-        entry = response.json()["source_component"]["entries"][0]
-        assert entry["cve_id"] == "CVE-2025-1002"
-        assert entry["suggested_components"] == ["kernel"]
-        assert entry["submitted_components"] == ["linux-kernel"]
-        assert entry["rejected_suggestions"] == ["kernel"]
-        assert entry["added_components"] == ["linux-kernel"]
-        # email is intentionally not part of the KPI response contract (PII).
-        assert "email" not in entry
-        # accepted_components is None here and omitted by response_model_exclude_none.
-        assert "accepted_components" not in entry
+        entries = response.json()["source_component"]["entries"]
+        assert len(entries) == 1
+        # CVE-2025-1002 identified by its datetime; response carries no cve_id.
+        assert entries[0]["datetime"] == "2026-03-19 22:48:41.298"
+        # The response contract exposes only the generic entry fields.
+        assert set(entries[0].keys()) == {"datetime", "accepted", "aegis_version"}
 
     def test_api_multiple_source_components_filter(self, feedback_log_setup):
         TestComponentKpiFilters._write_manual_rows(
@@ -1679,12 +1672,11 @@ class TestComponentKpiApi:
             "/api/v1/analysis/kpi/cve"
             "?feature=source_component"
             "&multiple_source_components=true"
-            "&detail=true"
         )
         assert response.status_code == 200
         entries = response.json()["source_component"]["entries"]
         assert len(entries) == 1
-        assert entries[0]["cve_id"] == "CVE-2025-1003"
+        assert entries[0]["datetime"] == "2026-03-20 13:16:01.227"
 
     def test_api_multiple_source_components_no_matches(self, feedback_log_setup):
         TestComponentKpiFilters._write_manual_rows(

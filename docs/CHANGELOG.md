@@ -7,9 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- KPI endpoint filters for component feedback: `cve_id`, `source_component`, and `multiple_source_components` query parameters on `GET /api/v1/analysis/kpi/cve`
-- `detail=true` on the KPI endpoint returns CVE and component diff fields (`suggested_components`, `accepted_components`, `rejected_suggestions`, `added_components`)
-- `source_component` feature alias on the KPI endpoint maps to both `source_component` and `suggest-affected-components` feedback logs (one-way; querying `suggest-affected-components` keeps its original scope). Component matching is case-sensitive.
+- KPI endpoint filters for component feedback: `cve_id`, `source_component`, and `multiple_source_components` query parameters on `GET /api/v1/analysis/kpi/cve`. Component matching is case-sensitive.
+- KPI endpoint reports feedback under canonical public feature names, so manual and programmatic (osidb-bot) log entries unify under `feature=all`: `source_component` collapses into `suggest-affected-components` and `cve_description` into `suggest-description`. Either raw key is still accepted as a query alias for its canonical feature.
 
 
 ## [0.9.0] - 2026-08-12

@@ -272,42 +272,12 @@
         "type": "object"
       },
       "KPIEntry": {
-        "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry.\nWhen ``detail=true`` is passed to the KPI endpoint, optional fields are\npopulated with CVE and component feedback context.",
+        "description": "Individual KPI entry model.\n\nContains datetime, acceptance status, and AEGIS version for a feedback entry.",
         "properties": {
           "accepted": {
             "description": "Whether the feedback was accepted",
             "title": "Accepted",
             "type": "boolean"
-          },
-          "accepted_components": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Suggested components also present in submission (included when detail=true)",
-            "title": "Accepted Components"
-          },
-          "added_components": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Submitted components not in the suggestion (included when detail=true)",
-            "title": "Added Components"
           },
           "aegis_version": {
             "default": "",
@@ -315,79 +285,10 @@
             "title": "Aegis Version",
             "type": "string"
           },
-          "cve_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "CVE identifier (included when detail=true)",
-            "title": "Cve Id"
-          },
           "datetime": {
             "description": "Timestamp of the feedback entry (format: YYYY-MM-DD HH:MM:SS.mmm or YYYY-MM-DD HH:MM:SS)",
             "title": "Datetime",
             "type": "string"
-          },
-          "feedback_source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Feedback origin: manual or programmatic (included when detail=true)",
-            "title": "Feedback Source"
-          },
-          "rejected_suggestions": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Suggested components not present in submission (included when detail=true)",
-            "title": "Rejected Suggestions"
-          },
-          "submitted_components": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Components submitted by the user (included when detail=true)",
-            "title": "Submitted Components"
-          },
-          "suggested_components": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Components suggested by AEGIS (included when detail=true)",
-            "title": "Suggested Components"
           }
         },
         "required": [
@@ -940,18 +841,6 @@
               "default": false,
               "description": "When true, only include entries where AEGIS suggested two or more components.",
               "title": "Multiple Source Components",
-              "type": "boolean"
-            }
-          },
-          {
-            "description": "When true, include CVE and component fields on each KPI entry.",
-            "in": "query",
-            "name": "detail",
-            "required": false,
-            "schema": {
-              "default": false,
-              "description": "When true, include CVE and component fields on each KPI entry.",
-              "title": "Detail",
               "type": "boolean"
             }
           }
