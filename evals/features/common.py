@@ -467,34 +467,72 @@ class ToolsUsedEvaluator(Evaluator[str, AegisFeatureModel]):
 
 
 class DataQualityEvaluator(Evaluator[str, AegisFeatureModel]):
-    """Compare data_quality with the expected value when specified."""
+    """Compare data_quality against an expected value or upper bound.
+
+    In point mode (default), uses Gaussian similarity against
+    ``ctx.expected_output.data_quality``.  In bound mode (``max_value``
+    set), scores 1.0 when the value is at or below the bound and applies
+    Gaussian falloff above it.
+    """
 
     _sigma = 0.1  # controls tolerance: ~0.61 at ±0.1, ~0.14 at ±0.2
+
+    def __init__(self, *, max_value: float | None = None):
+        super().__init__()
+        self._max_value = max_value
 
     def evaluate(
         self, ctx: EvaluatorContext[str, AegisFeatureModel]
     ) -> EvaluationReason:
-        assert ctx.expected_output is not None
         got = ctx.output.data_quality
+
+        if self._max_value is not None:
+            if got <= self._max_value:
+                return EvaluationReason(value=1.0, reason=None)
+            diff = got - self._max_value
+            score = math.exp(-(diff**2) / (2 * self._sigma**2))
+            return EvaluationReason(
+                value=score, reason=f"got {got}, expected <={self._max_value}"
+            )
+
+        assert ctx.expected_output is not None
         expected = ctx.expected_output.data_quality
         diff = got - expected
-
-        # Gaussian similarity
         score = math.exp(-(diff**2) / (2 * self._sigma**2))
         reason = None if score >= 1.0 else f"got {got}, expected {expected}"
         return EvaluationReason(value=score, reason=reason)
 
 
 class ConfidenceEvaluator(Evaluator[str, AegisFeatureModel]):
-    """Compare confidence with the expected value."""
+    """Compare confidence against an expected value or upper bound.
+
+    In point mode (default), uses Gaussian similarity against
+    ``ctx.expected_output.confidence``.  In bound mode (``max_value``
+    set), scores 1.0 when the value is at or below the bound and applies
+    Gaussian falloff above it.
+    """
 
     _sigma = 0.1
+
+    def __init__(self, *, max_value: float | None = None):
+        super().__init__()
+        self._max_value = max_value
 
     def evaluate(
         self, ctx: EvaluatorContext[str, AegisFeatureModel]
     ) -> EvaluationReason:
-        assert ctx.expected_output is not None
         got = ctx.output.confidence
+
+        if self._max_value is not None:
+            if got <= self._max_value:
+                return EvaluationReason(value=1.0, reason=None)
+            diff = got - self._max_value
+            score = math.exp(-(diff**2) / (2 * self._sigma**2))
+            return EvaluationReason(
+                value=score, reason=f"got {got}, expected <={self._max_value}"
+            )
+
+        assert ctx.expected_output is not None
         expected = ctx.expected_output.confidence
         diff = got - expected
         score = math.exp(-(diff**2) / (2 * self._sigma**2))

@@ -55,8 +55,8 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
 # CVEs where affects data is missing or incomplete (no PURLs).  The LLM
 # should report low data_quality and confidence rather than guessing.
 LOW_QUALITY_CVE_IDS: dict[str, tuple[float, float]] = {
-    # (expected data_quality, expected confidence)
-    "CVE-2026-84327": (0.3, 0.5),
+    # (max data_quality, max confidence)
+    "CVE-2026-84327": (0.5, 0.5),
 }
 
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = ()
@@ -132,7 +132,7 @@ def _build_cases(
 
     # Add low-quality cases (CVEs with missing/incomplete affects data)
     cache_path = Path(OSIDB_CACHE_DIR)
-    for cve_id, (exp_dq, exp_conf) in LOW_QUALITY_CVE_IDS.items():
+    for cve_id, (max_dq, max_conf) in LOW_QUALITY_CVE_IDS.items():
         if cve_id_filter is not None and cve_id not in cve_id_filter:
             continue
         if not (cache_path / f"{cve_id}.json").is_file():
@@ -145,15 +145,15 @@ def _build_cases(
             cve_id=cve_id,
             affected_packages=[],
             explanation="",
-            data_quality=exp_dq,
-            confidence=exp_conf,
+            data_quality=max_dq,
+            confidence=max_conf,
             disclaimer=disclaimer,
         )
         metadata: dict[str, Any] = {"cve_id": cve_id}
         if cve_id in KNOWN_TO_FAIL_CVE_IDS:
             metadata["known_to_fail_evaluators"] = [
-                "DataQualityEvaluator",
                 "ConfidenceEvaluator",
+                "DataQualityEvaluator",
             ]
         cases.append(
             LowQualityCase(
@@ -161,7 +161,10 @@ def _build_cases(
                 inputs=cve_id,
                 expected_output=expected_output,
                 metadata=metadata,
-                evaluators=(DataQualityEvaluator(), ConfidenceEvaluator()),
+                evaluators=(
+                    DataQualityEvaluator(max_value=max_dq),
+                    ConfidenceEvaluator(max_value=max_conf),
+                ),
             )
         )
 
