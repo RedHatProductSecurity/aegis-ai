@@ -17,7 +17,7 @@ import logging
 import os
 import random
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, get_args
 
 import pytest
 from pydantic_evals import Case
@@ -29,6 +29,8 @@ from aegis_ai.features.cve import SuggestAffectedPackages
 from aegis_ai.features.cve.data_models import SuggestAffectedPackagesModel
 from aegis_ai.toolsets.tools.osidb import CVE
 from evals.features.common import (
+    ConfidenceEvaluator,
+    DataQualityEvaluator,
     FeatureMetricsEvaluator,
     ToolsUsedEvaluator,
     reflect_confidence,
@@ -50,6 +52,12 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-34982",
 )
 
+# CVEs where affects data is missing or incomplete (no PURLs).  The LLM
+# should report low data_quality and confidence rather than guessing.
+LOW_QUALITY_CVE_IDS: dict[str, tuple[float, float]] = {
+    # (expected data_quality, expected confidence)
+    "CVE-2026-84327": (0.3, 0.5),
+}
 
 KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = ()
 
@@ -98,7 +106,7 @@ def _build_cases(
     sample_size: int | None = None,
     seed: int = SAMPLE_SEED,
     cve_id_filter: set[str] | None = None,
-) -> list["SuggestAffectedPackagesCase"]:
+) -> list["SuggestAffectedPackagesCase | LowQualityCase"]:
     """Build cases from osidb_cache; optionally sample N."""
     qualifying = _load_qualifying_cves(cve_id_filter=cve_id_filter)
     cases = []
@@ -118,9 +126,44 @@ def _build_cases(
             inputs=cve_id,
             expected_output=expected_pairs,
             metadata=metadata,
-            evaluators=(),
+            evaluators=(FeatureMetricsEvaluator(),),
         )
         cases.append(case)
+
+    # Add low-quality cases (CVEs with missing/incomplete affects data)
+    cache_path = Path(OSIDB_CACHE_DIR)
+    for cve_id, (exp_dq, exp_conf) in LOW_QUALITY_CVE_IDS.items():
+        if cve_id_filter is not None and cve_id not in cve_id_filter:
+            continue
+        if not (cache_path / f"{cve_id}.json").is_file():
+            logger.debug("Skip low-quality case %s: no cache file", cve_id)
+            continue
+        disclaimer = get_args(
+            SuggestAffectedPackagesModel.model_fields["disclaimer"].annotation
+        )[0]
+        expected_output = SuggestAffectedPackagesModel(
+            cve_id=cve_id,
+            affected_packages=[],
+            explanation="",
+            data_quality=exp_dq,
+            confidence=exp_conf,
+            disclaimer=disclaimer,
+        )
+        metadata: dict[str, Any] = {"cve_id": cve_id}
+        if cve_id in KNOWN_TO_FAIL_CVE_IDS:
+            metadata["known_to_fail_evaluators"] = [
+                "DataQualityEvaluator",
+                "ConfidenceEvaluator",
+            ]
+        cases.append(
+            LowQualityCase(
+                name=f"suggest-affected-packages-{cve_id}",
+                inputs=cve_id,
+                expected_output=expected_output,
+                metadata=metadata,
+                evaluators=(DataQualityEvaluator(), ConfidenceEvaluator()),
+            )
+        )
 
     if sample_size is not None and sample_size < len(cases):
         rng = random.Random(seed)
@@ -156,7 +199,9 @@ class PackageOverlapEvaluator(Evaluator[str, SuggestAffectedPackagesModel]):
     def evaluate(
         self, ctx: EvaluatorContext[str, SuggestAffectedPackagesModel]
     ) -> EvaluationReason:
-        expected_pairs = cast(list[tuple[str, str]], ctx.expected_output or [])
+        if not isinstance(ctx.expected_output, list):
+            return EvaluationReason(value=1.0, reason=None)
+        expected_pairs = cast(list[tuple[str, str]], ctx.expected_output)
         suggested = getattr(ctx.output, "affected_packages", None) or []
         got_pairs = [(p.purl, p.ps_update_stream) for p in suggested if p.affected]
 
@@ -181,6 +226,13 @@ class PackageOverlapEvaluator(Evaluator[str, SuggestAffectedPackagesModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
+class LowQualityCase(Case):
+    """Evaluation case for CVEs with insufficient affects data."""
+
+    inputs: str
+    expected_output: SuggestAffectedPackagesModel
+
+
 async def suggest_affected_packages(cve_id: CVEID) -> SuggestAffectedPackagesModel:
     """Run SuggestAffectedPackages for the given CVE."""
     feature = SuggestAffectedPackages(rh_feature_agent)
@@ -189,7 +241,6 @@ async def suggest_affected_packages(cve_id: CVEID) -> SuggestAffectedPackagesMod
 
 
 evals = [
-    FeatureMetricsEvaluator(),
     ToolsUsedEvaluator(),
     PackageOverlapEvaluator(),
 ]
@@ -211,7 +262,8 @@ def suggest_affected_packages_cases(request):
     if raw:
         cve_id_filter = {cve_id.strip() for cve_id in raw.split(",") if cve_id.strip()}
     else:
-        cve_id_filter = set(DEFAULT_CVE_IDS) if DEFAULT_CVE_IDS else None
+        all_ids = set(DEFAULT_CVE_IDS) | set(LOW_QUALITY_CVE_IDS)
+        cve_id_filter = all_ids if all_ids else None
     return _build_cases(
         sample_size=sample_size,
         seed=SAMPLE_SEED,
