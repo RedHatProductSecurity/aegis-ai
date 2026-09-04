@@ -26,6 +26,7 @@ Aegis features provide common product security analysis:
 * **Identify PII:** Automatically detect and flag Personally Identifiable Information within security texts.
 * **Suggest Security Text:** Rephrase or refine security advisories and descriptions for clarity or specific audiences.
 * **CVSS Diff Explainer:** Understand  differences between Red Hat and NVD CVSS scores with AI-generated explanations.
+* **Quality Review:** Score CVE flaw content against a weighted quality rubric and assess it from a customer perspective.
 
 ### Component Intelligence
 * **Component Intelligence:** Generate a component information 'card'.

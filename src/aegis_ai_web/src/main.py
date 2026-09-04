@@ -726,7 +726,7 @@ async def component_analysis(
 async def cve_kpi(
     feature: str = Query(
         ...,
-        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', or 'all' to get KPIs for all features.",
+        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', 'quality-review', or 'all' to get KPIs for all features.",
         examples=["suggest-impact", "suggest-cwe", "suggest-description", "all"],
     ),
     order: SortOrder = Query(  # noqa: B008
