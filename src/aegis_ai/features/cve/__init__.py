@@ -18,6 +18,7 @@ from aegis_ai.features.cve.data_models import (
     QueryAffectedComponentsModel,
     RevisedExplanationModel,
     SuggestAffectedComponentsModel,
+    SuggestAffectedPackagesModel,
     SuggestCWEModel,
     SuggestDescriptionModel,
     SuggestImpactModel,
@@ -1242,6 +1243,47 @@ The three core questions every review must address:
         )
 
         return await self.guarded_run(prompt, deps=deps, output_type=QualityReviewModel)
+
+
+class SuggestAffectedPackages(Feature):
+    """LLM-driven suggestion of source RPM package affectedness."""
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        deps = feature_deps(exclude_osidb_fields=[], static_context=static_context)
+        prompt = AegisPrompt(
+            user_instruction=(
+                "Analyze the CVE and its OSIDB affects data (including PURLs and "
+                "product streams) to determine which source RPM packages are affected "
+                "by the vulnerability. Use the OSIDB tool to retrieve flaw data."
+            ),
+            goals="""\
+- For each affect entry with a PURL, determine whether the source RPM package is affected by the specific vulnerability described in the CVE.
+- Produce a per-package affectedness suggestion with rationale.
+- Where possible, identify which internal sub-components within the package are affected (e.g., a specific kernel module, a library within a larger source package).
+- Signal low data_quality when the CVE description or affects data is insufficient for confident analysis.
+- Provide an overall explanation summarizing the affectedness analysis.
+""",
+            rules="""\
+- Use the osidb_tool with the provided cve_id to retrieve CVE flaw data, including affects with PURLs.
+- The affects array is valid in PRE_SECONDARY_ASSESSMENT and later flaw states. In earlier states, the array can be empty or incomplete — this does NOT mean no packages are affected, only that the data is not yet available.
+- If the affects array is empty or appears incomplete (e.g., flaw is in an early state like NEW or TRIAGE), set data_quality to LOW and explain that affects data is not yet available.
+- Analyze CVE description, references, patches, and comments to understand the technical scope of the vulnerability.
+- For each source RPM package identified by PURL in the affects list:
+  - Determine whether the package contains the vulnerable code or functionality.
+  - Consider the ps_update_stream context — different streams may have different codebases.
+  - Provide a concise per-package explanation.
+  - If you can identify specific sub-components (kernel modules, libraries, binaries) within the package that are affected, include them in affected_subcomponents.
+- Use github MCP tool to inspect commit diffs or repository structure when reference URLs are available.
+- The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
+- Set confidence based on how much technical evidence is available to support your determination.
+- Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
+""",
+            context=_build_cve_input(cve_id, static_context),
+            output_schema=SuggestAffectedPackagesModel.model_json_schema(),
+        )
+        return await self.guarded_run(
+            prompt, deps=deps, output_type=SuggestAffectedPackagesModel
+        )
 
 
 class QueryAffectedComponents(DeterministicFeature):

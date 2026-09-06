@@ -389,6 +389,23 @@ def suggest_affected_components(cve_id):
 
 @aegis_cli.command()
 @click.argument("cve_id", type=CVEID)
+def suggest_affected_packages(cve_id):
+    """
+    Suggest affected source RPM packages for a CVE (LLM-driven).
+    """
+
+    async def _doit():
+        feature = cve.SuggestAffectedPackages(cli_agent)
+        return await feature.exec(cve_id)
+
+    result = asyncio.run(_doit())
+    if result:
+        console.print(Rule())
+        console.print(result.output.model_dump_json(indent=2))
+
+
+@aegis_cli.command()
+@click.argument("cve_id", type=CVEID)
 def query_affected_components(cve_id):
     """
     Query OSIDB for affected components (deterministic, no LLM).
