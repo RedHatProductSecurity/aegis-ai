@@ -1281,6 +1281,7 @@ class SuggestAffectedPackages(Feature):
   - Provide a concise per-package explanation.
   - If you can identify specific sub-components (kernel modules, libraries, binaries) within the package that are affected, include them in affected_subcomponents.
 - Use github MCP tool to inspect commit diffs or repository structure when reference URLs are available.
+- For each affected source RPM package, you MUST call list_binary_rpms_tool to look up the binary RPM subpackages it produces. Pass the source package name extracted from the PURL and the ps_update_stream from the affect entry. Record the binary RPM names in the affected_subcomponents field of that package's AffectedPackageEntry.
 - The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
@@ -1288,8 +1289,14 @@ class SuggestAffectedPackages(Feature):
             context=_build_cve_input(cve_id, static_context),
             output_schema=SuggestAffectedPackagesModel.model_json_schema(),
         )
+
+        from aegis_ai.toolsets import build_system_toolset
+
         return await self.guarded_run(
-            prompt, deps=deps, output_type=SuggestAffectedPackagesModel
+            prompt,
+            deps=deps,
+            output_type=SuggestAffectedPackagesModel,
+            toolsets=[build_system_toolset],
         )
 
 
