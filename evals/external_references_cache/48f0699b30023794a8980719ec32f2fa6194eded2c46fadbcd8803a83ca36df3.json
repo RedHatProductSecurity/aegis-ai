@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/open-telemetry/opentelemetry-go/pull/7880",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/open-telemetry/opentelemetry-go/pull/7880",
+        "url": "https://github.com/open-telemetry/opentelemetry-go/pull/7880",
+        "content_type": null,
+        "extracted_text": null
+    }
+}
