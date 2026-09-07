@@ -200,7 +200,7 @@ def cve_exclude_fields(
 
 
 async def cve_retrieve(cve_id: CVEID) -> CVE:
-    logger.info(f"retrieving {cve_id} from osidb")
+    logger.info(f"[osidb_tool] retrieving {cve_id} from osidb")
     validated_cve_id = cveid_validator.validate_python(cve_id)
 
     try:
@@ -211,11 +211,11 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
         # dictates if a user has access or not.
         if not OSIDB_RETRIEVE_EMBARGOED and flaw.embargoed:
             logger.info(
-                f"retrieved {validated_cve_id} from osidb but it is under embargo and AEGIS_OSIDB_RETRIEVE_EMBARGOED is set 'false'."
+                f"[osidb_tool] retrieved {validated_cve_id} from osidb but it is under embargo and AEGIS_OSIDB_RETRIEVE_EMBARGOED is set 'false'."
             )
             raise ValueError(f"Could not retrieve {cve_id}")
 
-        logger.info(f"{validated_cve_id}:{flaw.title}")
+        logger.info(f"[osidb_tool] {validated_cve_id}: {flaw.title}")
         comments = ""
         for i, comment in enumerate(flaw.comments):
             if i >= 15:  # FIXME: remove limit of 15 comments
@@ -301,14 +301,16 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
         and _has_sufficient_static_context(static_ctx)
     ):
         cve = _cve_from_static_context(input.cve_id, static_ctx)
-        logger.info(f"Using static context for {input.cve_id} (skipping OSIDB)")
+        logger.info(
+            f"[osidb_tool] Using static context for {input.cve_id} (skipping OSIDB)"
+        )
     elif static_ctx and isinstance(static_ctx, dict):
         # Insufficient context — fetch from OSIDB, then let request-provided
         # fields take precedence over the OSIDB data.
         cve = await cve_retrieve(input.cve_id)
         cve = _apply_static_overrides(cve, static_ctx)
         logger.info(
-            f"Enriched OSIDB data for {input.cve_id} with static context overrides"
+            f"[osidb_tool] Enriched OSIDB data for {input.cve_id} with static context overrides"
         )
     else:
         cve = await cve_retrieve(input.cve_id)

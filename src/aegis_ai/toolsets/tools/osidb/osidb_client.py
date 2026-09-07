@@ -148,7 +148,7 @@ class OSIDBClient:
         Retrieves raw flaw data from OSIDB for a given CVE ID.
         Uses delegated Kerberos credentials when present (web request with delegation).
         """
-        logger.info(f"Retrieving raw flaw data for {cve_id} from OSIDB.")
+        logger.info(f"[osidb_tool] Retrieving raw flaw data for {cve_id} from OSIDB.")
         session, token = await self._get_session_or_token()
         if session is None and not token:
             raise OSIDBAuthError(
@@ -158,7 +158,7 @@ class OSIDBClient:
             )
         if token:
             logger.info(
-                "Using delegated Kerberos credentials for OSIDB (pass-through auth)"
+                "[osidb_tool] Using delegated Kerberos credentials for OSIDB (pass-through auth)"
             )
             base = get_settings().osidb_server_url.rstrip("/")
             url = f"{base}/osidb/api/v2/flaws/{cve_id}"
@@ -201,7 +201,9 @@ class OSIDBClient:
                 raise
 
         if not include_embargoed and flaw_data.embargoed:
-            logger.info(f"Flaw {cve_id} is embargoed and retrieval is disabled.")
+            logger.info(
+                f"[osidb_tool] Flaw {cve_id} is embargoed and retrieval is disabled."
+            )
             raise ValueError(f"Could not retrieve {cve_id}")
 
         return flaw_data
@@ -285,7 +287,7 @@ class OSIDBClient:
         Retrieves flaws related to a specific component using an async iterator.
         Uses delegated Kerberos credentials when present (same as get_flaw_data).
         """
-        logger.info(f"Listing flaws for component '{component_name}'.")
+        logger.info(f"[osidb_tool] Listing flaws for component '{component_name}'.")
         session, token = await self._get_session_or_token()
         if token:
             async for flaw in self._list_component_flaws_with_token(
@@ -307,7 +309,7 @@ class OSIDBClient:
         Retrieves count of flaws related to a specific component.
         Uses delegated Kerberos credentials when present (same as get_flaw_data).
         """
-        logger.info(f"Counting flaws for component '{component_name}'.")
+        logger.info(f"[osidb_tool] Counting flaws for component '{component_name}'.")
         session, token = await self._get_session_or_token()
         if token:
             return await self._count_component_flaws_with_token(component_name, token)
