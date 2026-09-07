@@ -4,13 +4,19 @@ on:
     branches: [ "main" ]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   tests:
-    name: pytest
+    name: Sanity and unit tests
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Kerberos development libraries
         run: |
@@ -20,9 +26,46 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.1
 
-      - name: Install the project
-        run: uv sync --all-extras --dev
-
       - name: Run checks and tests
-        run: make all
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            uv sync --all-extras --dev
+            make all
+            exit $?
+          fi
+
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          COMMITS=$(git rev-list --reverse "$BASE".."$HEAD")
+          TOTAL=$(echo "$COMMITS" | wc -l)
+          CURRENT=0
+          for COMMIT in $COMMITS; do
+            CURRENT=$((CURRENT + 1))
+            SHORT=$(git rev-parse --short "$COMMIT")
+            SUBJECT=$(git log -1 --format=%s "$COMMIT")
+            echo ""
+            echo "::group::[$CURRENT/$TOTAL] $SHORT — $SUBJECT"
+            git checkout --force "$COMMIT"
+            git clean -dfx --exclude=.venv
+            if ! (uv sync --all-extras --dev && make all); then
+              echo "::endgroup::"
+              echo ""
+              echo "::error::commit $SHORT failed — $SUBJECT"
+              echo ""
+              echo "======================================================"
+              echo "  FAILED at commit [$CURRENT/$TOTAL]: $SHORT"
+              echo "  $SUBJECT"
+              echo "======================================================"
+              echo ""
+              echo "  This commit does not pass 'make all' on its own."
+              echo "  Each commit in a pull request must pass independently."
+              echo ""
+              echo "  To fix, use interactive rebase to edit the failing commit:"
+              echo ""
+              echo "    git rebase -i $SHORT~1"
+              echo ""
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
 
