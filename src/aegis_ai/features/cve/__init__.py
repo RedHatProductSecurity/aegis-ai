@@ -1269,7 +1269,8 @@ class SuggestAffectedPackages(Feature):
         # so the LLM reads them from context instead of making per-affect
         # tool calls that would time out on CVEs with many streams.
         if get_settings().use_build_system_tool and affects:
-            await self._enrich_affects_with_binary_rpms(affects)
+            if await self._enrich_affects_with_binary_rpms(affects):
+                pre_invoked_tools.append("list_binary_rpms")
             if isinstance(static_context, dict):
                 static_context["affects"] = affects
 
@@ -1330,9 +1331,12 @@ class SuggestAffectedPackages(Feature):
         return result
 
     @staticmethod
-    async def _enrich_affects_with_binary_rpms(affects: list) -> None:
+    async def _enrich_affects_with_binary_rpms(affects: list) -> bool:
         """Pre-compute binary RPMs for unique (package, stream) pairs and
-        inject results into each affect dict as a ``binary_rpms`` key."""
+        inject results into each affect dict as a ``binary_rpms`` key.
+
+        Returns True if at least one affect was enriched.
+        """
         from packageurl import PackageURL
 
         from aegis_ai.toolsets.tools.build_system import _lookup_binary_rpms
@@ -1351,14 +1355,36 @@ class SuggestAffectedPackages(Feature):
                 unique_keys[(pkg_name, stream)] = None
 
         if not unique_keys:
-            return
+            return False
+
+        logger.info(
+            "[list_binary_rpms] looking up %d unique (package, stream) pairs "
+            "from %d affects",
+            len(unique_keys),
+            len(affects),
+        )
 
         async def _lookup(
             pkg: str, stream: str
         ) -> tuple[tuple[str, str], list[str] | None]:
             result = await asyncio.to_thread(_lookup_binary_rpms, pkg, stream)
-            rpms = result.binary_rpms if result.status == "success" else None
-            return (pkg, stream), rpms
+            if result.status == "success":
+                logger.info(
+                    "[list_binary_rpms] %s/%s -> %d binary RPMs",
+                    pkg,
+                    stream,
+                    len(result.binary_rpms),
+                )
+                return (pkg, stream), result.binary_rpms
+            msg = result.error_message
+            if msg and not msg.startswith("No builds found for package"):
+                logger.warning(
+                    "[list_binary_rpms] %s/%s failed: %s",
+                    pkg,
+                    stream,
+                    result.error_message,
+                )
+            return (pkg, stream), None
 
         results = await asyncio.gather(
             *[_lookup(pkg, stream) for pkg, stream in unique_keys]
@@ -1367,6 +1393,7 @@ class SuggestAffectedPackages(Feature):
             k: rpms for k, rpms in results if rpms is not None
         }
 
+        enriched = 0
         for a in affects:
             if not isinstance(a, dict):
                 continue
@@ -1381,6 +1408,10 @@ class SuggestAffectedPackages(Feature):
             key = (pkg_name, stream)
             if key in rpm_cache:
                 a["binary_rpms"] = rpm_cache[key]
+                enriched += 1
+
+        logger.info("[list_binary_rpms] enriched %d/%d affects", enriched, len(affects))
+        return enriched > 0
 
 
 class QueryAffectedComponents(DeterministicFeature):
