@@ -211,6 +211,9 @@ class AppSettings(BaseSettings):
     use_external_references_tool: bool = get_env_flag(
         "AEGIS_USE_EXT_REFS_TOOL_CONTEXT", False
     )
+    use_build_system_tool: bool = get_env_flag(
+        "AEGIS_USE_BUILD_SYSTEM_TOOL_CONTEXT", False
+    )
 
     # Enables the kernel-specific XGBoost impact classifier for Linux kernel CVEs.
     # When true, kernel CVEs are routed through the patch-feature pipeline before
