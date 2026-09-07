@@ -1249,6 +1249,24 @@ class SuggestAffectedPackages(Feature):
     """LLM-driven suggestion of source RPM package affectedness."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        # Resolve affects data for pre-computation of binary RPMs.
+        if isinstance(static_context, dict) and "affects" in static_context:
+            affects = static_context["affects"]
+        elif self.agent.name == "RHFeatureAgent":
+            cve_data = await osidb_tool.cve_retrieve(cve_id)
+            affects = cve_data.affects
+            static_context = cve_data.model_dump()
+        else:
+            affects = []
+
+        # Pre-compute binary RPMs (deduplicated by unique package+stream)
+        # so the LLM reads them from context instead of making per-affect
+        # tool calls that would time out on CVEs with many streams.
+        if get_settings().use_build_system_tool and affects:
+            await self._enrich_affects_with_binary_rpms(affects)
+            if isinstance(static_context, dict):
+                static_context["affects"] = affects
+
         # Only use static_context for deps when it contains affects data;
         # otherwise let the OSIDB tool fetch the full flaw record.
         deps_context = (
@@ -1281,7 +1299,7 @@ class SuggestAffectedPackages(Feature):
   - Provide a concise per-package explanation.
   - If you can identify specific sub-components (kernel modules, libraries, binaries) within the package that are affected, include them in affected_subcomponents.
 - Use github MCP tool to inspect commit diffs or repository structure when reference URLs are available.
-- For each affected source RPM package, you MUST call list_binary_rpms_tool to look up the binary RPM subpackages it produces. Pass the source package name extracted from the PURL and the ps_update_stream from the affect entry. Record the binary RPM names in the affected_subcomponents field of that package's AffectedPackageEntry.
+- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. Use this data to identify which specific binaries within the package are affected and record them in affected_subcomponents. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream.
 - The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
@@ -1298,6 +1316,59 @@ class SuggestAffectedPackages(Feature):
             output_type=SuggestAffectedPackagesModel,
             toolsets=[build_system_toolset],
         )
+
+    @staticmethod
+    async def _enrich_affects_with_binary_rpms(affects: list) -> None:
+        """Pre-compute binary RPMs for unique (package, stream) pairs and
+        inject results into each affect dict as a ``binary_rpms`` key."""
+        from packageurl import PackageURL
+
+        from aegis_ai.toolsets.tools.build_system import _lookup_binary_rpms
+
+        unique_keys: dict[tuple[str, str], None] = {}
+        for a in affects:
+            if not isinstance(a, dict):
+                continue
+            purl_str = a.get("purl")
+            stream = a.get("ps_update_stream")
+            if purl_str and stream:
+                try:
+                    pkg_name = PackageURL.from_string(purl_str).name
+                except ValueError:
+                    continue
+                unique_keys[(pkg_name, stream)] = None
+
+        if not unique_keys:
+            return
+
+        async def _lookup(
+            pkg: str, stream: str
+        ) -> tuple[tuple[str, str], list[str] | None]:
+            result = await asyncio.to_thread(_lookup_binary_rpms, pkg, stream)
+            rpms = result.binary_rpms if result.status == "success" else None
+            return (pkg, stream), rpms
+
+        results = await asyncio.gather(
+            *[_lookup(pkg, stream) for pkg, stream in unique_keys]
+        )
+        rpm_cache: dict[tuple[str, str], list[str]] = {
+            k: rpms for k, rpms in results if rpms is not None
+        }
+
+        for a in affects:
+            if not isinstance(a, dict):
+                continue
+            purl_str = a.get("purl")
+            stream = a.get("ps_update_stream")
+            if not purl_str or not stream:
+                continue
+            try:
+                pkg_name = PackageURL.from_string(purl_str).name
+            except ValueError:
+                continue
+            key = (pkg_name, stream)
+            if key in rpm_cache:
+                a["binary_rpms"] = rpm_cache[key]
 
 
 class QueryAffectedComponents(DeterministicFeature):
