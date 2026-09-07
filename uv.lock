@@ -41,6 +41,7 @@ dependencies = [
     { name = "fastmcp" },
     { name = "httpx" },
     { name = "jinja2" },
+    { name = "koji" },
     { name = "logfire", extra = ["fastapi", "httpx", "sqlite3"] },
     { name = "mcp-nvd" },
     { name = "mcp-pypi" },
@@ -131,6 +132,7 @@ requires-dist = [
     { name = "imbalanced-learn", marker = "extra == 'classifier-deps'", specifier = ">=0.13.0" },
     { name = "imbalanced-learn", marker = "extra == 'ml-deps'", specifier = ">=0.13.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "koji", specifier = ">=1.35.0" },
     { name = "logfire", extras = ["fastapi", "httpx", "sqlite3"] },
     { name = "matplotlib", marker = "extra == 'classifier-deps'", specifier = ">=3.10.5" },
     { name = "matplotlib", marker = "extra == 'ml-deps'", specifier = ">=3.10.5" },
@@ -2175,6 +2177,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e3/9a/59a6f6ae6f938c15076be2c21b6cedea973d71bb1349ec84fa485fab82cf/kiwisolver-1.5.1-cp315-cp315t-musllinux_1_2_x86_64.whl", hash = "sha256:ab620eb663952455271ac37f9aaad86b73c969c02f11f53cea405b38e96a4300", size = 2395634, upload-time = "2026-08-28T10:28:03.977Z" },
     { url = "https://files.pythonhosted.org/packages/e9/2d/8982c1fb7926da5bb7ed60318c3665b5c3f941447271ac982960a11b8637/kiwisolver-1.5.1-cp315-cp315t-win_amd64.whl", hash = "sha256:cb6fae641357ed2f6e533c0d3c6504a4a5703621a50c89459e46051d56b61140", size = 75379, upload-time = "2026-08-28T10:28:06.307Z" },
     { url = "https://files.pythonhosted.org/packages/07/78/ba7b6dfa1708b82b373ac056928a30c545d5c1a627df9839dcec3c6c1881/kiwisolver-1.5.1-cp315-cp315t-win_arm64.whl", hash = "sha256:b390aec180a7c054919c04898835e1c77bced23ea8383eb2c570213bf25d1a86", size = 73011, upload-time = "2026-08-28T10:28:07.578Z" },
+]
+
+[[package]]
+name = "koji"
+version = "1.36.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "defusedxml" },
+    { name = "python-dateutil" },
+    { name = "requests" },
+    { name = "requests-gssapi" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c0/5a/4e59eb5904342ea4cc2c756d603f4d14605eeb3b8a7d00957284bd3e5317/koji-1.36.1.tar.gz", hash = "sha256:8fa2a75ec786c1007cdcc2c558956dc6463b6b1cc8f68201a27b145156586444", size = 225461, upload-time = "2026-07-08T18:01:28.181Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/78/ee/b032968ddbb4e1576deb5897b033ab83c5733ae96bf8d4604ec55c05bc14/koji-1.36.1-py3-none-any.whl", hash = "sha256:a6708ebe0bb552448de12f0d845e5ae55d414b7db012917bbafa028808549d7a", size = 232396, upload-time = "2026-07-08T18:01:27.129Z" },
 ]
 
 [[package]]
