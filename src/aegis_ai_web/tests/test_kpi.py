@@ -1178,6 +1178,62 @@ class TestComponentKpiHelpers:
         assert canonical_feature("suggest-impact") == "suggest-impact"
 
 
+class TestComponentDiff:
+    """Tests for the component_diff helper used by detail enrichment."""
+
+    def test_component_diff_exact_match(self):
+        from aegis_ai_web.src.endpoints.kpi import component_diff
+
+        accepted, rejected, added = component_diff(["kernel"], ["kernel"])
+        assert accepted == ["kernel"]
+        assert rejected == []
+        assert added == []
+
+    def test_component_diff_replacement(self):
+        from aegis_ai_web.src.endpoints.kpi import component_diff
+
+        accepted, rejected, added = component_diff(["kernel"], ["linux-kernel"])
+        assert accepted == []
+        assert rejected == ["kernel"]
+        assert added == ["linux-kernel"]
+
+    def test_component_diff_case_sensitive(self):
+        from aegis_ai_web.src.endpoints.kpi import component_diff
+
+        # Aegis treats components as case-sensitive: Kernel != kernel.
+        accepted, rejected, added = component_diff(["Kernel"], ["kernel"])
+        assert accepted == []
+        assert rejected == ["Kernel"]
+        assert added == ["kernel"]
+
+    def test_component_diff_empty_lists(self):
+        from aegis_ai_web.src.endpoints.kpi import component_diff
+
+        assert component_diff([], []) == ([], [], [])
+        assert component_diff([], ["curl"]) == ([], [], ["curl"])
+        assert component_diff(["curl"], []) == ([], ["curl"], [])
+
+    def test_component_diff_ignores_empty_and_whitespace(self):
+        from aegis_ai_web.src.endpoints.kpi import component_diff
+
+        accepted, rejected, added = component_diff(
+            ["", "  ", "kernel"], ["  ", "", "curl"]
+        )
+        assert accepted == []
+        assert rejected == ["kernel"]
+        assert added == ["curl"]
+
+    def test_component_diff_dedupes_preserving_order(self):
+        from aegis_ai_web.src.endpoints.kpi import component_diff
+
+        accepted, rejected, added = component_diff(
+            ["kernel", "kernel", "curl"], ["curl", "curl", "openssl"]
+        )
+        assert accepted == ["curl"]
+        assert rejected == ["kernel"]
+        assert added == ["openssl"]
+
+
 class TestComponentKpiFilters:
     """Tests for source_component KPI filters."""
 
@@ -1263,7 +1319,7 @@ class TestComponentKpiFilters:
             "source_component",
             cve_id="CVE-2025-1002",
         )
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         # CVE-2025-1002 is the only match; identify it by its datetime.
         assert len(data.entries) == 1
@@ -1280,7 +1336,7 @@ class TestComponentKpiFilters:
             "source_component",
             source_component="curl",
         )
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         # Only CVE-2025-1003 suggests "curl".
         assert len(data.entries) == 1
@@ -1296,7 +1352,7 @@ class TestComponentKpiFilters:
             "source_component",
             source_component="Curl",
         )
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         assert data.entries == []
         assert data.acceptance_percentage == 0.0
@@ -1310,7 +1366,7 @@ class TestComponentKpiFilters:
             "source_component",
             multiple_source_components=True,
         )
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         # Only CVE-2025-1003 suggests two components.
         assert len(data.entries) == 1
@@ -1322,15 +1378,36 @@ class TestComponentKpiFilters:
         self._write_manual_rows(feedback_log_setup, self._component_rows())
 
         result = get_cve_kpi("source_component")
-        entry = result["source_component"].entries[0]
-        payload = entry.model_dump()
+        entry = result["suggest-affected-components"].entries[0]
+        payload = entry.model_dump(exclude_none=True)
 
-        # KPIEntry carries only the generic fields; no feature-specific data.
+        # Without detail=true, KPIEntry carries only the generic fields; the
+        # optional CVE/component fields stay None and are excluded.
         assert payload == {
             "datetime": "2026-03-19 21:52:24.452",
             "accepted": True,
             "aegis_version": "0.6.1",
         }
+
+    def test_detail_includes_component_replacement_fields(self, feedback_log_setup):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        self._write_manual_rows(feedback_log_setup, self._component_rows())
+
+        result = get_cve_kpi(
+            "source_component",
+            cve_id="CVE-2025-1002",
+            detail=True,
+        )
+        entry = result["suggest-affected-components"].entries[0]
+
+        assert entry.cve_id == "CVE-2025-1002"
+        assert entry.feedback_source == "manual"
+        assert entry.components is not None
+        assert entry.components.suggested_components == ["kernel"]
+        assert entry.components.submitted_components == ["linux-kernel"]
+        assert entry.components.rejected_suggestions == ["kernel"]
+        assert entry.components.added_components == ["linux-kernel"]
 
     def test_feature_alias_suggest_affected_components(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
@@ -1356,7 +1433,7 @@ class TestComponentKpiFilters:
         # Querying source_component resolves to the canonical
         # suggest-affected-components feature and picks up this row.
         result = get_cve_kpi("source_component")
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         assert len(data.entries) == 1
         assert data.entries[0].datetime == "2026-03-19 21:52:24.452"
@@ -1372,10 +1449,10 @@ class TestComponentKpiFilters:
             source_component="curl",
         )
 
-        assert unfiltered["source_component"].acceptance_percentage == 33.3
-        assert len(unfiltered["source_component"].entries) == 3
-        assert filtered["source_component"].acceptance_percentage == 0.0
-        assert len(filtered["source_component"].entries) == 1
+        assert unfiltered["suggest-affected-components"].acceptance_percentage == 33.3
+        assert len(unfiltered["suggest-affected-components"].entries) == 3
+        assert filtered["suggest-affected-components"].acceptance_percentage == 0.0
+        assert len(filtered["suggest-affected-components"].entries) == 1
 
     def test_includes_scored_programmatic_component_entries(
         self, feedback_log_setup, programmatic_feedback_log_setup
@@ -1400,7 +1477,7 @@ class TestComponentKpiFilters:
         )
 
         result = get_cve_kpi("source_component")
-        entry = result["source_component"].entries[0]
+        entry = result["suggest-affected-components"].entries[0]
 
         assert entry.datetime == "2026-03-21 10:00:00.123"
         assert entry.accepted is False
@@ -1415,7 +1492,7 @@ class TestComponentKpiFilters:
             cve_id="CVE-2025-1003",
             source_component="kernel",
         )
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         assert len(data.entries) == 1
         assert data.entries[0].datetime == "2026-03-20 13:16:01.227"
@@ -1429,7 +1506,7 @@ class TestComponentKpiFilters:
             "source_component",
             cve_id="CVE-2099-0001",
         )
-        data = result["source_component"]
+        data = result["suggest-affected-components"]
 
         assert data.entries == []
         assert data.acceptance_percentage == 0.0
@@ -1476,7 +1553,7 @@ class TestComponentKpiFilters:
         )
 
         data = get_cve_kpi("source_component", source_component="curl")[
-            "source_component"
+            "suggest-affected-components"
         ]
 
         assert len(data.entries) == 2
@@ -1527,7 +1604,7 @@ class TestComponentKpiFilters:
             ],
         )
 
-        data = get_cve_kpi("source_component")["source_component"]
+        data = get_cve_kpi("source_component")["suggest-affected-components"]
 
         # Only the scored (acceptance_score=1.0) row survives.
         assert len(data.entries) == 1
@@ -1627,6 +1704,92 @@ class TestComponentKpiFilters:
         assert len(result["suggest-affected-components"].entries) == 2
         assert len(result["suggest-description"].entries) == 2
 
+    def test_programmatic_aliases_dedupe_by_canonical_feature(
+        self, programmatic_feedback_log_setup
+    ):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        # The same programmatic CVE is logged under both the raw
+        # (source_component) and canonical (suggest-affected-components) keys.
+        # Deduplication runs on the canonical feature, so the two rows collapse
+        # into a single KPI sample rather than double-counting acceptance.
+        self._write_programmatic_rows(
+            programmatic_feedback_log_setup,
+            [
+                {
+                    "datetime": "2026-03-21 10:00:00.123",
+                    "feature": "source_component",
+                    "cve_id": "CVE-2025-7001",
+                    "email": "bot@example.com",
+                    "suggested_value": '["kernel"]',
+                    "submitted_value": '["linux-kernel"]',
+                    "acceptance_score": "0.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                },
+                {
+                    "datetime": "2026-03-21 11:00:00.123",
+                    "feature": "suggest-affected-components",
+                    "cve_id": "CVE-2025-7001",
+                    "email": "bot@example.com",
+                    "suggested_value": '["kernel"]',
+                    "submitted_value": '["kernel"]',
+                    "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                },
+            ],
+        )
+
+        data = get_cve_kpi("source_component")["suggest-affected-components"]
+
+        # Only the most recent row survives dedup -> a single accepted sample.
+        assert len(data.entries) == 1
+        assert data.entries[0].datetime == "2026-03-21 11:00:00.123"
+        assert data.acceptance_percentage == 100.0
+
+    def test_programmatic_dedupe_keeps_latest_when_rows_reordered(
+        self, programmatic_feedback_log_setup
+    ):
+        from aegis_ai_web.src.endpoints.kpi import get_cve_kpi
+
+        # Same alias pair as above, but the newer row is written first. Dedup
+        # must pick the latest by datetime, not by reader order, so the result
+        # is identical regardless of row ordering.
+        self._write_programmatic_rows(
+            programmatic_feedback_log_setup,
+            [
+                {
+                    "datetime": "2026-03-21 11:00:00.123",
+                    "feature": "suggest-affected-components",
+                    "cve_id": "CVE-2025-7001",
+                    "email": "bot@example.com",
+                    "suggested_value": '["kernel"]',
+                    "submitted_value": '["kernel"]',
+                    "acceptance_score": "1.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                },
+                {
+                    "datetime": "2026-03-21 10:00:00.123",
+                    "feature": "source_component",
+                    "cve_id": "CVE-2025-7001",
+                    "email": "bot@example.com",
+                    "suggested_value": '["kernel"]',
+                    "submitted_value": '["linux-kernel"]',
+                    "acceptance_score": "0.0",
+                    "llmjudge_explanation": "",
+                    "version": "0.6.1",
+                },
+            ],
+        )
+
+        data = get_cve_kpi("source_component")["suggest-affected-components"]
+
+        assert len(data.entries) == 1
+        assert data.entries[0].datetime == "2026-03-21 11:00:00.123"
+        assert data.acceptance_percentage == 100.0
+
 
 class TestComponentKpiApi:
     """HTTP tests for wired KPI query parameters."""
@@ -1639,9 +1802,10 @@ class TestComponentKpiApi:
         response = client.get("/api/v1/analysis/kpi/cve?feature=source_component")
         assert response.status_code == 200
         data = response.json()
-        assert "source_component" in data
-        assert len(data["source_component"]["entries"]) == 3
-        assert set(data["source_component"]["entries"][0].keys()) == {
+        assert "suggest-affected-components" in data
+        assert "source_component" not in data
+        assert len(data["suggest-affected-components"]["entries"]) == 3
+        assert set(data["suggest-affected-components"]["entries"][0].keys()) == {
             "datetime",
             "accepted",
             "aegis_version",
@@ -1656,7 +1820,7 @@ class TestComponentKpiApi:
             "/api/v1/analysis/kpi/cve?feature=source_component&cve_id=CVE-2025-1002"
         )
         assert response.status_code == 200
-        entries = response.json()["source_component"]["entries"]
+        entries = response.json()["suggest-affected-components"]["entries"]
         assert len(entries) == 1
         # CVE-2025-1002 identified by its datetime; response carries no cve_id.
         assert entries[0]["datetime"] == "2026-03-19 22:48:41.298"
@@ -1674,7 +1838,7 @@ class TestComponentKpiApi:
             "&multiple_source_components=true"
         )
         assert response.status_code == 200
-        entries = response.json()["source_component"]["entries"]
+        entries = response.json()["suggest-affected-components"]["entries"]
         assert len(entries) == 1
         assert entries[0]["datetime"] == "2026-03-20 13:16:01.227"
 
@@ -1692,7 +1856,7 @@ class TestComponentKpiApi:
             "&cve_id=CVE-2025-1001"
         )
         assert response.status_code == 200
-        data = response.json()["source_component"]
+        data = response.json()["suggest-affected-components"]
         assert data["entries"] == []
         assert data["acceptance_percentage"] == 0.0
 

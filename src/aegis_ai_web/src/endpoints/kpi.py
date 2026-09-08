@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from aegis_ai_web.src.data_models import FeatureKPI, KPIEntry
+from aegis_ai_web.src.data_models import FeatureKPI, KPIComponentDetails, KPIEntry
 from aegis_ai_web.src.feedback_logger import (
     feedback_logger,
     programmatic_feedback_logger,
@@ -76,11 +76,33 @@ def clean_components(components: list[str]) -> list[str]:
     return cleaned
 
 
+def component_diff(
+    suggested: list[str], submitted: list[str]
+) -> tuple[list[str], list[str], list[str]]:
+    """Return accepted, rejected, and added component lists.
+
+    Comparison is case-sensitive (``Glib`` and ``glib`` are distinct components)
+    and each list preserves the original feedback-log ordering.
+    """
+    suggested_clean = clean_components(suggested)
+    submitted_clean = clean_components(submitted)
+    suggested_set = set(suggested_clean)
+    submitted_set = set(submitted_clean)
+    accepted = [c for c in suggested_clean if c in submitted_set]
+    rejected = [c for c in suggested_clean if c not in submitted_set]
+    added = [c for c in submitted_clean if c not in suggested_set]
+    return accepted, rejected, added
+
+
 def _deduplicate_programmatic_feedback(
     entries: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """
     Deduplicate programmatic feedback entries by (cve_id, feature), keeping the most recent.
+
+    The feature is canonicalized so raw aliases for the same CVE (e.g.
+    ``source_component`` and ``suggest-affected-components``) collapse into a
+    single entry rather than surviving as duplicate samples after normalization.
 
     Args:
         entries: List of programmatic feedback entry dictionaries
@@ -92,9 +114,15 @@ def _deduplicate_programmatic_feedback(
 
     for entry in entries:
         cve_id = entry.get("cve_id", "")
-        feature = entry.get("feature", "")
+        feature = canonical_feature(entry.get("feature", ""))
         key = (cve_id, feature)
-        deduped[key] = entry
+        existing = deduped.get(key)
+        # Select the most recent record by datetime rather than reader order, so
+        # reordered input still yields the latest entry per (cve_id, feature).
+        if existing is None or _parse_datetime_str(
+            entry.get("datetime", "")
+        ) >= _parse_datetime_str(existing.get("datetime", "")):
+            deduped[key] = entry
 
     return list(deduped.values())
 
@@ -219,21 +247,46 @@ def collect_normalized_entries(
     return entries
 
 
-def to_kpi_entry(entry: dict[str, Any]) -> KPIEntry:
+def to_kpi_entry(entry: dict[str, Any], detail: bool) -> KPIEntry:
     """Convert a normalized feedback entry to a KPIEntry response object."""
+    if not detail:
+        return KPIEntry(
+            datetime=entry["datetime"],
+            accepted=entry["accepted"],
+            aegis_version=entry["aegis_version"],
+        )
+
+    suggested = parse_components(entry.get("suggested_raw", ""))
+    submitted = parse_components(entry.get("submitted_raw", ""))
+    accepted_components, rejected, added = component_diff(suggested, submitted)
+
+    components = None
+    if suggested or submitted:
+        components = KPIComponentDetails(
+            suggested_components=suggested or None,
+            submitted_components=submitted or None,
+            accepted_components=accepted_components or None,
+            rejected_suggestions=rejected or None,
+            added_components=added or None,
+        )
+
     return KPIEntry(
         datetime=entry["datetime"],
         accepted=entry["accepted"],
         aegis_version=entry["aegis_version"],
+        cve_id=entry.get("cve_id") or None,
+        feedback_source=entry.get("feedback_source"),
+        components=components,
     )
 
 
 def _compute_kpi(
     normalized_entries: list[dict[str, Any]],
     order: SortOrder,
+    detail: bool,
 ) -> FeatureKPI:
     """Compute KPI metrics from normalized feedback entries."""
-    kpi_entries = [to_kpi_entry(entry) for entry in normalized_entries]
+    kpi_entries = [to_kpi_entry(entry, detail) for entry in normalized_entries]
     if not kpi_entries:
         return FeatureKPI(acceptance_percentage=0.0, entries=[])
 
@@ -257,6 +310,7 @@ def _get_all_features_kpi(
     cve_id: str | None = None,
     source_component: str | None = None,
     multiple_source_components: bool = False,
+    detail: bool = False,
 ) -> dict[str, FeatureKPI]:
     """Get KPI metrics for all features in a single pass over log data."""
     entries_by_feature: dict[str, list[dict[str, Any]]] = {}
@@ -272,7 +326,7 @@ def _get_all_features_kpi(
             entries_by_feature.setdefault(feature_key, []).append(entry)
 
     return {
-        feature: _compute_kpi(entries, order)
+        feature: _compute_kpi(entries, order, detail)
         for feature, entries in entries_by_feature.items()
     }
 
@@ -284,6 +338,7 @@ def get_cve_kpi(
     cve_id: str | None = None,
     source_component: str | None = None,
     multiple_source_components: bool = False,
+    detail: bool = False,
 ) -> dict[str, FeatureKPI]:
     """
     Get KPI metrics for CVE analysis feedback filtered by feature.
@@ -294,6 +349,7 @@ def get_cve_kpi(
         cve_id: Optional exact CVE identifier filter
         source_component: Optional filter for entries suggesting this component
         multiple_source_components: When True, only entries with 2+ suggested components
+        detail: When True, include CVE and component fields on each entry
 
     Returns:
         Dict[str, FeatureKPI] mapping feature names to their KPI responses.
@@ -305,6 +361,7 @@ def get_cve_kpi(
                 cve_id=cve_id,
                 source_component=source_component,
                 multiple_source_components=multiple_source_components,
+                detail=detail,
             )
         except Exception:
             logging.error(  # noqa: G201
@@ -323,7 +380,9 @@ def get_cve_kpi(
             source_component=source_component,
             multiple_source_components=multiple_source_components,
         )
-        return {feature: _compute_kpi(normalized_entries, order)}
+        return {
+            canonical_feature(feature): _compute_kpi(normalized_entries, order, detail)
+        }
 
     except Exception:
         logging.error(  # noqa: G201
