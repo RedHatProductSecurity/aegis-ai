@@ -8,6 +8,7 @@ names produced by that build.
 import asyncio
 import json
 import logging
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -23,6 +24,10 @@ logger = logging.getLogger(__name__)
 
 DEPTOPIA_API_PATH = "/api/v1/incoming/search"
 BREW_PROFILE = "brew"
+
+_EXCLUDED_RPM_PATTERNS = re.compile(
+    r"^glibc-(all-langpacks|langpack-|minimal-langpack)|-debuginfo(-|$)|-debugsource$"
+)
 
 
 class ListBinaryRPMsInput(BaseToolInput):
@@ -92,9 +97,15 @@ def _resolve_build_from_stream(
 
 
 def _list_binary_rpms(session: koji.ClientSession, build_id: int) -> list[str]:
-    """List binary RPM names for a build, excluding source RPMs."""
+    """List binary RPM names for a build, excluding source RPMs and noise."""
     rpms = session.listRPMs(buildID=build_id)
-    return sorted({r["name"] for r in rpms if r["arch"] != "src"})
+    return sorted(
+        {
+            r["name"]
+            for r in rpms
+            if r["arch"] != "src" and not _EXCLUDED_RPM_PATTERNS.search(r["name"])
+        }
+    )
 
 
 def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOutput:
