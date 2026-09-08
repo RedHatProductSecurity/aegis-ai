@@ -83,6 +83,24 @@ def record_aegis_meta(
     dst_field.append(entry)
 
 
+def record_aegis_failure(
+    flaw_data: FlawData,
+    timestamp: datetime,
+    dst: str,
+    output: AegisAnswer,
+) -> None:
+    record_aegis_meta(
+        flaw_data,
+        timestamp,
+        dst,
+        output,
+        type="AI-Bot-Skipped",
+        skip_reason="failure",
+        skip_description=f"{dst} suggestion failed",
+        explanation=output.explanation,
+    )
+
+
 def update_field(
     flaw_data: FlawData,
     timestamp: datetime,
@@ -187,6 +205,7 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
     suggested_cwes = output.cwe
     if not suggested_cwes:
         logger.warning(f"{cve_id}: CWE suggestion failed")
+        record_aegis_failure(flaw_data, ts, "cwe_id", output)
         return set()
 
     # pick the first CWE in the list off suggested CWEs
@@ -198,10 +217,11 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
 
 
 async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
+    cve_id = flaw_data.get("cve_id")
+
     # look for existing RH CVSS
     for cvss in flaw_data["cvss_scores"]:
         if cvss["issuer"] == "RH":
-            cve_id = flaw_data.get("cve_id")
             logger.warning(f"{cve_id}: refusing to overwrite RH CVSS")
             return set()
 
@@ -209,9 +229,13 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     feature = cve.SuggestImpact(agent)
     output = await exec_feature(feature, flaw_data)
 
+    if not output.impact:
+        record_aegis_failure(flaw_data, ts, "impact", output)
+
+    if not output.cvss3_vector:
+        record_aegis_failure(flaw_data, ts, "_cvss3_vector", output)
+
     if not output.impact or not output.cvss3_vector:
-        cve_id = flaw_data.get("cve_id")
-        logger.warning(f"{cve_id}: impact suggestion incomplete, skipping")
         return set()
 
     # pick the "impact" field
