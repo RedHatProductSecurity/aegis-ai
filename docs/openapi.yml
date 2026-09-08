@@ -295,11 +295,65 @@ components:
           type: array
       title: HTTPValidationError
       type: object
+    KPIComponentDetails:
+      description: 'Component-level feedback diff for a KPI entry.
+
+
+        Populated only for component features when ``detail=true`` is passed to the
+
+        KPI endpoint.'
+      properties:
+        accepted_components:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Suggested components also present in submission
+          title: Accepted Components
+        added_components:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Submitted components not in the suggestion
+          title: Added Components
+        rejected_suggestions:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Suggested components not present in submission
+          title: Rejected Suggestions
+        submitted_components:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Components submitted by the user
+          title: Submitted Components
+        suggested_components:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Components suggested by AEGIS
+          title: Suggested Components
+      title: KPIComponentDetails
+      type: object
     KPIEntry:
       description: 'Individual KPI entry model.
 
 
-        Contains datetime, acceptance status, and AEGIS version for a feedback entry.'
+        Contains datetime, acceptance status, and AEGIS version for a feedback entry.
+
+        When ``detail=true`` is passed to the KPI endpoint, optional fields are
+
+        populated with CVE and component feedback context.'
       properties:
         accepted:
           description: Whether the feedback was accepted
@@ -311,11 +365,29 @@ components:
             available)
           title: Aegis Version
           type: string
+        components:
+          anyOf:
+          - $ref: '#/components/schemas/KPIComponentDetails'
+          - type: 'null'
+          description: Component feedback diff (included when detail=true for component
+            features)
+        cve_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: CVE identifier (included when detail=true)
+          title: Cve Id
         datetime:
           description: 'Timestamp of the feedback entry (format: YYYY-MM-DD HH:MM:SS.mmm
             or YYYY-MM-DD HH:MM:SS)'
           title: Datetime
           type: string
+        feedback_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Feedback origin: manual or programmatic (included when detail=true)'
+          title: Feedback Source
       required:
       - datetime
       - accepted
@@ -657,6 +729,16 @@ paths:
           description: When true, only include entries where AEGIS suggested two or
             more components.
           title: Multiple Source Components
+          type: boolean
+      - description: When true, include CVE and component context fields on each entry.
+        in: query
+        name: detail
+        required: false
+        schema:
+          default: false
+          description: When true, include CVE and component context fields on each
+            entry.
+          title: Detail
           type: boolean
       responses:
         '200':

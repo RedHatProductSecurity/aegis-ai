@@ -637,6 +637,7 @@ async def component_analysis(
     summary="Get CVE Analysis KPI Metrics",
     description="Retrieve Key Performance Indicator (KPI) metrics for CVE analysis feedback, filtered by feature name. Returns a dictionary mapping feature names to their KPI responses (acceptance score percentage and all matching log entries sorted by datetime). Use feature='all' to get KPIs for all features. For single feature queries, the dict contains one key-value pair.",
     response_model=dict[str, FeatureKPI],
+    response_model_exclude_none=True,
     responses={
         200: {
             "description": "Successful response with KPI metrics",
@@ -759,6 +760,10 @@ async def cve_kpi(
         default=False,
         description="When true, only include entries where AEGIS suggested two or more components.",
     ),
+    detail: bool = Query(
+        default=False,
+        description="When true, include CVE and component context fields on each entry.",
+    ),
 ) -> dict[str, FeatureKPI]:
     """
     Get KPI metrics for CVE analysis feedback filtered by feature.
@@ -772,6 +777,7 @@ async def cve_kpi(
     - **cve_id**: Optional. Restrict results to a single CVE.
     - **source_component**: Optional. Restrict results to entries suggesting this component.
     - **multiple_source_components**: Optional. Restrict to multi-component suggestions.
+    - **detail**: Optional. Include CVE/component context on each entry.
 
     **Returns:**
     - Dict[str, FeatureKPI] mapping feature names to their KPI responses.
@@ -783,6 +789,7 @@ async def cve_kpi(
     GET /api/v1/analysis/kpi/cve?feature=source_component&order=desc
     GET /api/v1/analysis/kpi/cve?feature=source_component&source_component=kernel
     GET /api/v1/analysis/kpi/cve?feature=source_component&cve_id=CVE-2025-1234
+    GET /api/v1/analysis/kpi/cve?feature=source_component&detail=true&source_component=kernel
     GET /api/v1/analysis/kpi/cve?feature=all
     ```
     """
@@ -792,6 +799,7 @@ async def cve_kpi(
         cve_id=cve_id,
         source_component=source_component,
         multiple_source_components=multiple_source_components,
+        detail=detail,
     )
     return result
 
