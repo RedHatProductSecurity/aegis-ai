@@ -1,0 +1,17 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "glibc",
+    "ps_update_stream": "rhel-6-els",
+    "binary_rpms": [
+        "glibc",
+        "glibc-common",
+        "glibc-debuginfo-common",
+        "glibc-devel",
+        "glibc-headers",
+        "glibc-static",
+        "glibc-utils",
+        "nscd"
+    ],
+    "build_nvr": "glibc-2.12-1.212.el6_10.4"
+}

@@ -1,0 +1,8 @@
+{
+    "status": "not_found",
+    "error_message": "No builds found for package 'xorg-x11-server' in stream 'rhel-9.7'",
+    "package": "xorg-x11-server",
+    "ps_update_stream": "rhel-9.7",
+    "binary_rpms": [],
+    "build_nvr": null
+}
