@@ -1,0 +1,16 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "tigervnc",
+    "ps_update_stream": "rhel-8.8.0.z",
+    "binary_rpms": [
+        "tigervnc",
+        "tigervnc-icons",
+        "tigervnc-license",
+        "tigervnc-selinux",
+        "tigervnc-server",
+        "tigervnc-server-minimal",
+        "tigervnc-server-module"
+    ],
+    "build_nvr": "tigervnc-1.12.0-15.el8_8.18"
+}

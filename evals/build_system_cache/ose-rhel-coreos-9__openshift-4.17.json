@@ -1,0 +1,8 @@
+{
+    "status": "not_found",
+    "error_message": "No builds found for package 'ose-rhel-coreos-9' in stream 'openshift-4.17'",
+    "package": "ose-rhel-coreos-9",
+    "ps_update_stream": "openshift-4.17",
+    "binary_rpms": [],
+    "build_nvr": null
+}

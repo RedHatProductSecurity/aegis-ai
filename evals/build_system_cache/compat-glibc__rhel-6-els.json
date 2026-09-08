@@ -1,0 +1,11 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "compat-glibc",
+    "ps_update_stream": "rhel-6-els",
+    "binary_rpms": [
+        "compat-glibc",
+        "compat-glibc-headers"
+    ],
+    "build_nvr": "compat-glibc-2.5-46.2"
+}

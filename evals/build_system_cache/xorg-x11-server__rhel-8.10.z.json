@@ -1,0 +1,17 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "xorg-x11-server",
+    "ps_update_stream": "rhel-8.10.z",
+    "binary_rpms": [
+        "xorg-x11-server-Xdmx",
+        "xorg-x11-server-Xephyr",
+        "xorg-x11-server-Xnest",
+        "xorg-x11-server-Xorg",
+        "xorg-x11-server-Xvfb",
+        "xorg-x11-server-common",
+        "xorg-x11-server-devel",
+        "xorg-x11-server-source"
+    ],
+    "build_nvr": "xorg-x11-server-1.20.11-28.el8_10.3"
+}
