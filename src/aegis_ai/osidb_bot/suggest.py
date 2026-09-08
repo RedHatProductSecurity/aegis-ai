@@ -90,12 +90,8 @@ def update_field(
     output: AegisAnswer,
     src: str | None = None,
     value: str | None = None,
-    only_if_missing: bool = False,
 ) -> set[str]:
     assert (not src) or (not value)
-    if only_if_missing and flaw_data.get(dst):
-        # do not override existing field
-        return set()
 
     cve_id = flaw_data.get("cve_id", "")
     skip_reason = check_metrics(dst, cve_id, output)
