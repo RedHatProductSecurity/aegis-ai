@@ -1250,6 +1250,10 @@ class SuggestAffectedPackages(Feature):
     """LLM-driven suggestion of source RPM package affectedness."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        # Track tools invoked outside the LLM tool-call loop so they
+        # appear in ``tools_used`` even though pydantic-ai won't see them.
+        pre_invoked_tools: list[str] = []
+
         # Resolve affects data for pre-computation of binary RPMs.
         if isinstance(static_context, dict) and "affects" in static_context:
             affects = static_context["affects"]
@@ -1257,6 +1261,7 @@ class SuggestAffectedPackages(Feature):
             cve_data = await osidb_tool.cve_retrieve(cve_id)
             affects = cve_data.affects
             static_context = cve_data.model_dump()
+            pre_invoked_tools.append("osidb_tool")
         else:
             affects = []
 
@@ -1311,12 +1316,18 @@ class SuggestAffectedPackages(Feature):
 
         from aegis_ai.toolsets import build_system_toolset
 
-        return await self.guarded_run(
+        result = await self.guarded_run(
             prompt,
             deps=deps,
             output_type=SuggestAffectedPackagesModel,
             toolsets=[build_system_toolset],
         )
+
+        for tool_name in pre_invoked_tools:
+            if tool_name not in result.output.tools_used:
+                result.output.tools_used.append(tool_name)
+
+        return result
 
     @staticmethod
     async def _enrich_affects_with_binary_rpms(affects: list) -> None:
