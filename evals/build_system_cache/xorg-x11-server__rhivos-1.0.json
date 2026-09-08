@@ -1,0 +1,8 @@
+{
+    "status": "not_found",
+    "error_message": "No builds found for package 'xorg-x11-server' in stream 'rhivos-1.0'",
+    "package": "xorg-x11-server",
+    "ps_update_stream": "rhivos-1.0",
+    "binary_rpms": [],
+    "build_nvr": null
+}

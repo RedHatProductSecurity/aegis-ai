@@ -1,0 +1,14 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "vim",
+    "ps_update_stream": "rhel-9.9",
+    "binary_rpms": [
+        "vim-X11",
+        "vim-common",
+        "vim-enhanced",
+        "vim-filesystem",
+        "vim-minimal"
+    ],
+    "build_nvr": "vim-8.2.2637-26.el9_8.13"
+}

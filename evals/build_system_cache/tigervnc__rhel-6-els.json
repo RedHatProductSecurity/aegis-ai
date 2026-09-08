@@ -1,0 +1,13 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "tigervnc",
+    "ps_update_stream": "rhel-6-els",
+    "binary_rpms": [
+        "tigervnc",
+        "tigervnc-server",
+        "tigervnc-server-applet",
+        "tigervnc-server-module"
+    ],
+    "build_nvr": "tigervnc-1.1.0-25.el6_10.18"
+}

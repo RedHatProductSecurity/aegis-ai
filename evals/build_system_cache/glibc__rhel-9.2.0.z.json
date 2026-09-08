@@ -1,0 +1,32 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "glibc",
+    "ps_update_stream": "rhel-9.2.0.z",
+    "binary_rpms": [
+        "compat-libpthread-nonshared",
+        "glibc",
+        "glibc-all-langpacks",
+        "glibc-benchtests",
+        "glibc-common",
+        "glibc-devel",
+        "glibc-doc",
+        "glibc-gconv-extra",
+        "glibc-headers",
+        "glibc-locale-source",
+        "glibc-minimal-langpack",
+        "glibc-nss-devel",
+        "glibc-static",
+        "glibc-utils",
+        "libnsl",
+        "nscd",
+        "nss_db",
+        "nss_hesiod",
+        "sysroot-aarch64-el9-glibc",
+        "sysroot-i386-el9-glibc",
+        "sysroot-ppc64le-el9-glibc",
+        "sysroot-s390x-el9-glibc",
+        "sysroot-x86_64-el9-glibc"
+    ],
+    "build_nvr": "glibc-2.34-60.el9_2.20"
+}
