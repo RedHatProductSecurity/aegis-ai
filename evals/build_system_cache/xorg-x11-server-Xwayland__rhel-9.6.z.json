@@ -1,0 +1,11 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "xorg-x11-server-Xwayland",
+    "ps_update_stream": "rhel-9.6.z",
+    "binary_rpms": [
+        "xorg-x11-server-Xwayland",
+        "xorg-x11-server-Xwayland-devel"
+    ],
+    "build_nvr": "xorg-x11-server-Xwayland-23.2.7-6.el9_6.3"
+}
