@@ -123,12 +123,6 @@ def update_field(
 
         value = getattr(output, src)
 
-    # check the original value in flaw_data
-    orig_val = flaw_data.get(dst)
-    if type(orig_val) is type(value) and orig_val == value:
-        # skip the update if the field already has the same type and value
-        return set()
-
     # write to destination
     flaw_data[dst] = value
 
