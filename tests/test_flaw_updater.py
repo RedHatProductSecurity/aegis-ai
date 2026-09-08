@@ -298,7 +298,7 @@ def test_update_field_skipped_low_data_quality():
 
     changed = update_field(flaw_data, TS, "cwe_id", output, value="CWE-79")
 
-    assert changed == set()
+    assert changed == {"aegis_meta"}
     assert flaw_data["cwe_id"] == ""
 
     entries = flaw_data["aegis_meta"]["cwe_id"]
@@ -329,7 +329,7 @@ def test_update_field_skipped_low_confidence():
 
     changed = update_field(flaw_data, TS, "impact", output, value="LOW")
 
-    assert changed == set()
+    assert changed == {"aegis_meta"}
     assert flaw_data["impact"] == ""
 
     entries = flaw_data["aegis_meta"]["impact"]
@@ -357,7 +357,7 @@ def test_update_field_skipped_both_metrics_low():
 
     changed = update_field(flaw_data, TS, "title", output, value="Bad title")
 
-    assert changed == set()
+    assert changed == {"aegis_meta"}
     assert flaw_data["title"] == ""
 
     entries = flaw_data["aegis_meta"]["title"]
@@ -419,7 +419,7 @@ async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
     result = await updater.apply_suggestions()
     assert result is False
 
-    assert updater.updated_fields == set()
+    assert updater.updated_fields == {"aegis_meta"}
 
     aegis_meta = flaw_data["aegis_meta"]
     for field in ("components", "title", "cve_description", "cwe_id", "impact"):
@@ -433,6 +433,43 @@ async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
             assert entry["data_quality"] == LOW_QUALITY
             assert entry["confidence"] == LOW_CONFIDENCE
             datetime.fromisoformat(entry["timestamp"])
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_flaw_updater_empty_cwe_records_aegis_meta(mock_exec_feature):
+    """Empty CWE suggestion records AI-Bot-Skipped and adds aegis_meta to updated_fields."""
+
+    async def _empty_cwe_exec(feature, flaw_data):
+        name = feature.__class__.__name__
+        if name == "SuggestCWE":
+            return SimpleNamespace(
+                cwe=[],
+                explanation="No CWE found",
+                data_quality=1.0,
+                confidence=1.0,
+                tools_used=[],
+            )
+        return await _canned_exec_feature(feature, flaw_data)
+
+    mock_exec_feature.side_effect = _empty_cwe_exec
+
+    flaw_data = _minimal_flaw_data()
+    session = _mock_session(flaw_data)
+    agent = MagicMock()
+
+    updater = FlawUpdater(session, agent, CVE_ID)
+    result = await updater.apply_suggestions()
+
+    assert result is False
+    assert "aegis_meta" in updater.updated_fields
+
+    entries = flaw_data["aegis_meta"]["cwe_id"]
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["type"] == "AI-Bot-Skipped"
+    assert entry["skip_reason"] == "failure"
+    assert "cwe_id" in entry["skip_description"]
 
 
 @pytest.mark.asyncio

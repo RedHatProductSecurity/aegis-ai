@@ -88,7 +88,7 @@ def record_aegis_failure(
     timestamp: datetime,
     dst: str,
     output: AegisAnswer,
-) -> None:
+) -> set[str]:
     record_aegis_meta(
         flaw_data,
         timestamp,
@@ -99,6 +99,7 @@ def record_aegis_failure(
         skip_description=f"{dst} suggestion failed",
         explanation=output.explanation,
     )
+    return {"aegis_meta"}
 
 
 def update_field(
@@ -127,7 +128,7 @@ def update_field(
                 f" is below threshold {METRICS_THR[skip_reason]['skip_thr']}"
             ),
         )
-        return set()
+        return {"aegis_meta"}
 
     # get source value
     if value is None:
@@ -205,8 +206,7 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
     suggested_cwes = output.cwe
     if not suggested_cwes:
         logger.warning(f"{cve_id}: CWE suggestion failed")
-        record_aegis_failure(flaw_data, ts, "cwe_id", output)
-        return set()
+        return record_aegis_failure(flaw_data, ts, "cwe_id", output)
 
     # pick the first CWE in the list off suggested CWEs
     cwe = suggested_cwes[0]
@@ -229,22 +229,26 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     feature = cve.SuggestImpact(agent)
     output = await exec_feature(feature, flaw_data)
 
+    changed: set[str] = set()
+
     if not output.impact:
-        record_aegis_failure(flaw_data, ts, "impact", output)
+        changed |= record_aegis_failure(flaw_data, ts, "impact", output)
 
     if not output.cvss3_vector:
-        record_aegis_failure(flaw_data, ts, "_cvss3_vector", output)
+        changed |= record_aegis_failure(flaw_data, ts, "_cvss3_vector", output)
 
     if not output.impact or not output.cvss3_vector:
-        return set()
+        return changed
 
     # pick the "impact" field
-    changed = update_field(flaw_data, ts, "impact", output)
+    changed |= update_field(flaw_data, ts, "impact", output)
 
     # record aegis_meta for RH CVSS (in the format used by OSIM)
-    if not update_field(
+    cvss_changed = update_field(
         flaw_data, ts, "_cvss3_vector", output, value=output.cvss3_vector
-    ):
+    )
+    changed |= cvss_changed
+    if "_cvss3_vector" not in cvss_changed:
         # do not update CVSS when check_metrics() decides to skip the update
         return changed
 
