@@ -160,12 +160,14 @@ class TestComputeDeviation:
     def test_impact_unknown_severity_returns_max(self):
         assert _compute_deviation("impact", "CRITICAL", "BOGUS") == 1.0
 
-    def test_components_case_only_change_is_zero_deviation(self):
-        assert _compute_deviation("components", ["Kernel"], ["kernel"]) == 0.0
+    def test_components_case_only_change_is_small_deviation(self):
+        # Case-only change normalizes to a Jaccard match; the 0.9 factor keeps it
+        # from reading as "kept", giving a small 0.1 deviation.
+        assert _compute_deviation("components", ["Kernel"], ["kernel"]) == 0.1
 
     def test_components_single_addition_is_graded(self):
-        # One component added to a list of one: Jaccard 1/2 -> deviation 0.5.
-        assert _compute_deviation("components", ["kernel"], ["kernel", "curl"]) == 0.5
+        # One component added to a list of one: Jaccard 1/2 * 0.9 -> deviation 0.55.
+        assert _compute_deviation("components", ["kernel"], ["kernel", "curl"]) == 0.55
 
     def test_components_disjoint_sets_is_max_deviation(self):
         assert _compute_deviation("components", ["kernel"], ["curl"]) == 1.0
@@ -255,6 +257,24 @@ class TestExtractFlawKpi:
         assert result["cwe_id"].suggested == 0
         assert result["cwe_id"].skipped == 1
         assert result["cwe_id"].suggestions_compared == 0
+
+    def test_multiple_skipped_entries_count_once(self):
+        # A field re-skipped multiple times counts as one skip, though both
+        # entries still feed the data_quality/confidence averages.
+        aegis_meta = {
+            "processed": True,
+            "cwe_id": [
+                _make_skipped_entry(dq=0.4, conf=0.3),
+                _make_skipped_entry(dq=0.2, conf=0.1),
+            ],
+        }
+        flaw = _make_flaw(aegis_meta)
+        result = extract_flaw_kpi(aegis_meta, flaw)
+
+        stats = result["cwe_id"]
+        assert stats.suggested == 0
+        assert stats.skipped == 1
+        assert stats.total_entries == 2
 
     def test_mixed_applied_and_skipped(self):
         aegis_meta = {
@@ -369,7 +389,9 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         stats = result["impact"]
-        assert stats.suggested == 2
+        # A field re-suggested twice counts as one suggestion, though both
+        # entries still feed the data_quality/confidence averages.
+        assert stats.suggested == 1
         assert stats.suggestions_compared == 1
         assert stats.suggestion_deviation_sum == 0.0
         assert stats.total_entries == 2
@@ -433,8 +455,8 @@ class TestExtractFlawKpi:
 
     def test_latest_bot_entry_without_value_is_not_compared(self):
         """The latest AI-Bot entry carrying no ``value`` (nothing to compare
-        against the current field) still counts toward ``suggested`` but not toward
-        the accept/modify comparison."""
+        against the current field) still marks the field as suggested but does
+        not count toward the accept/modify comparison."""
         earlier = _make_bot_entry("LOW")
         latest = _make_bot_entry("MODERATE")
         del latest["value"]
@@ -443,7 +465,7 @@ class TestExtractFlawKpi:
         result = extract_flaw_kpi(aegis_meta, flaw)
 
         stats = result["impact"]
-        assert stats.suggested == 2
+        assert stats.suggested == 1
         assert stats.suggestions_compared == 0
 
     def test_entries_predating_metrics_tracking_excluded_from_average(self):
@@ -555,9 +577,10 @@ class TestAggregateKpi:
 class TestResultToResponse:
     def test_acceptance_rate_uses_evaluated_not_applied(self):
         # Two AI-Bot impact entries (a re-suggestion), the latest of which
-        # matches the current value. acceptance_rate must be measured against
-        # the single accept/reject decision (suggestions_compared == 1), not
-        # the per-entry suggested count (== 2), so a kept suggestion reads 100%.
+        # matches the current value. The re-suggested field counts as a single
+        # suggestion, and acceptance_rate is measured against the single
+        # accept/reject decision (suggestions_compared == 1), so a kept
+        # suggestion reads 100%.
         aegis_meta = {
             "processed": True,
             "impact": [_make_bot_entry("LOW"), _make_bot_entry("MODERATE")],
@@ -566,7 +589,7 @@ class TestResultToResponse:
         response = _result_to_response(aggregate_kpi([flaw]))
 
         impact = response.features["impact"]
-        assert impact.suggested == 2
+        assert impact.suggested == 1
         assert impact.kept == 1
         assert impact.modified == 0
         assert impact.acceptance_rate == 100.0

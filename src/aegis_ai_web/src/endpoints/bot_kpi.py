@@ -81,12 +81,15 @@ def _compute_deviation(field_name: str, suggested: Any, current: Any) -> float:
         score, _reason = score_cvss3_diff(str(suggested), str(current))
         return round(1.0 - score, 4)
     if field_name == "components":
-        # Graded set distance: a case-only change scores 0.0 and a single
-        # component added/removed from a list of N scores 1/(N+1), rather than
-        # a flat 1.0 for any difference.
+        # Graded set distance via a normalized Jaccard index, so a single
+        # component added/removed from a list of N scores 1/(N+1) rather than a
+        # flat 1.0 for any difference.  The 0.9 factor keeps a case-only change
+        # (which normalizes to an exact Jaccard match) from scoring 0.0: since
+        # this branch is only reached for values that are not already equal, it
+        # registers a small 0.1 deviation instead of reading as "kept".
         suggested_list = suggested if isinstance(suggested, list) else [suggested]
         current_list = current if isinstance(current, list) else [current]
-        return round(1.0 - score_components_diff(suggested_list, current_list), 4)
+        return round(1.0 - 0.9 * score_components_diff(suggested_list, current_list), 4)
     return 1.0
 
 
@@ -103,9 +106,9 @@ class FeatureStats:
     # Number of the bot's *latest* per-field suggestions that were compared
     # against the flaw's current value -- i.e. the accept/modify decisions
     # (kept + modified), one per field. Skipped suggestions are not compared,
-    # and re-suggestions of the same field count once (only the latest is
-    # compared), so this is <= `suggested`. It is the denominator for both
-    # `avg_suggestion_deviation` and the acceptance rate.
+    # and a re-suggested field is compared once (only the latest), so this is
+    # <= `suggested` (itself per-field, at most 1 here). It is the denominator
+    # for both `avg_suggestion_deviation` and the acceptance rate.
     suggestions_compared: int = 0
 
     @property
@@ -244,12 +247,18 @@ def _score_records(
         stats.total_entries += 1
 
         if record.type == "AI-Bot":
-            stats.suggested += 1
-            # Keep overwriting so we compare against the latest suggestion;
-            # records are stored chronologically by record_aegis_meta().
+            # A field re-suggested multiple times (only possible via
+            # `osidb-bot --force`) counts as one suggestion, so `suggested` is
+            # per-field, not per-entry. This keeps it a checkable invariant --
+            # suggestions_compared <= suggested <= 1 per field -- so a corrupted
+            # server-side cache can be detected. Keep overwriting `latest_bot`
+            # so we compare against the latest suggestion; records are stored
+            # chronologically by record_aegis_meta().
+            stats.suggested = 1
             latest_bot = record
         elif record.type == "AI-Bot-Skipped":
-            stats.skipped += 1
+            # Skips are per-field too (at most 1), for the same integrity reason.
+            stats.skipped = 1
 
     if latest_bot is not None and latest_bot.deviation is not None:
         stats.suggestion_deviation_sum += latest_bot.deviation

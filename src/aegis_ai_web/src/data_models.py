@@ -338,16 +338,21 @@ class BotFeatureKPI(BaseModel):
         ...,
         ge=0,
         description=(
-            "Bot suggestions made for this field (type=AI-Bot), counting every "
-            "suggestion including re-suggestions of the same field. Because kept "
-            "and modified reflect one accept-or-modify decision per field (the "
-            "latest suggestion only), suggested is >= kept + modified."
+            "Flaw fields the bot made a suggestion for (type=AI-Bot), counted "
+            "once per field even if it was re-suggested (only possible via "
+            "`osidb-bot --force`). Because kept and modified reflect one "
+            "accept-or-modify decision per field (the latest suggestion only), "
+            "suggested is >= kept + modified -- a checkable data-integrity bound."
         ),
     )
     skipped: int = Field(
         ...,
         ge=0,
-        description="Suggestions discarded by quality gates (type=AI-Bot-Skipped)",
+        description=(
+            "Flaw fields the bot skipped on quality gates (type=AI-Bot-Skipped), "
+            "counted once per field even if it was re-skipped (only possible via "
+            "`osidb-bot --force`)."
+        ),
     )
     kept: int = Field(
         ...,

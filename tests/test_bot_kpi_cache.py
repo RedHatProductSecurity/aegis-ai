@@ -195,7 +195,8 @@ class TestCacheIO:
         loaded = _read_cache()
         assert loaded is not None
         assert loaded.total_flaws_processed == 1
-        assert loaded.to_kpi_result().features["impact"].suggested == 3
+        # The impact field was re-suggested 3 times on one flaw, counted once.
+        assert loaded.to_kpi_result().features["impact"].suggested == 1
 
     def test_corrupt_cache_returns_none(self, cache_dir):
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
