@@ -45,6 +45,10 @@ def koji_rpms():
         {"name": "curl", "arch": "aarch64"},
         {"name": "libcurl", "arch": "aarch64"},
         {"name": "curl", "arch": "src"},
+        {"name": "curl-debuginfo", "arch": "x86_64"},
+        {"name": "curl-debugsource", "arch": "x86_64"},
+        {"name": "glibc-langpack-en", "arch": "x86_64"},
+        {"name": "glibc-langpack-de", "arch": "x86_64"},
     ]
 
 
@@ -143,6 +147,18 @@ class TestListBinaryRPMs:
 
         assert result.count("curl") == 1
         assert result.count("libcurl") == 1
+
+    def test_filters_noisy_rpms(self, mock_koji_session, koji_rpms):
+        mock_koji_session.listRPMs.return_value = koji_rpms
+
+        result = _list_binary_rpms(mock_koji_session, 12345)
+
+        assert "curl-debuginfo" not in result
+        assert "curl-debugsource" not in result
+        assert "glibc-langpack-en" not in result
+        assert "glibc-langpack-de" not in result
+        assert "curl" in result
+        assert "libcurl" in result
 
     def test_empty_rpms(self, mock_koji_session):
         mock_koji_session.listRPMs.return_value = []
