@@ -46,7 +46,7 @@ jobs:
             echo ""
             echo "::group::[$CURRENT/$TOTAL] $SHORT — $SUBJECT"
             git checkout --force "$COMMIT"
-            git clean -dfx --exclude=.venv
+            git clean -df
             if ! (uv sync --all-extras --dev && make all); then
               echo "::endgroup::"
               echo ""
