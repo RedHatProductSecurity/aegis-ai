@@ -55,6 +55,7 @@ Aegis uses AI in the following areas:
 4. **PII Detection:** AI identifies potentially sensitive information in security texts
 5. **Score Explanation:** AI explains differences between CVSS scores
 6. **Component Intelligence:** AI gathers and synthesizes information about software components
+7. **Quality Review:** AI scores CVE flaw content against a weighted quality rubric and assesses it from a customer perspective
 
 ### AI Model Providers
 
