@@ -1,13 +1,11 @@
-import fcntl
-import json
-import os
 from datetime import datetime
-from typing import Any, Never, Self
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 from aegis_ai.data_models import CVEID
 from aegis_ai.osidb_bot.util import logger
+from aegis_ai.state_file import StateFileHandler
 
 
 class BotPosition(BaseModel):
@@ -32,106 +30,23 @@ class BotState(BotPosition):
     retry_list: dict[str, int] = Field(default_factory=dict)
 
 
-class StateFileHandler:
-    # state file name (path)
-    state_file: str | None
+class BotStateFileHandler(StateFileHandler[BotState]):
+    """Non-blocking, single-instance lock over the bot's ``BotState`` file.
 
-    # state file descriptor (OS level)
-    state_fd: int
+    Thin specialization of the generic ``aegis_ai.state_file.StateFileHandler``
+    that fixes the model to ``BotState``, routes log output through the
+    ``[osidb-bot]`` logger, and keeps the legacy ``read_state``/``write_state``
+    method names used by ``StateProxy``.
+    """
 
     def __init__(self, state_file: str | None):
-        self.state_file = state_file
-        self.state_fd = -1
-
-    def _fail(self, e: Exception, msg: str) -> Never:
-        logger.debug(f"{msg}: {e!s}")
-        raise RuntimeError(f"{msg}: {self.state_file} ({e.__class__.__name__})")
-
-    def _sf_prefix(self) -> str:
-        """state file prefix for logging of state read/writes"""
-        assert 0 <= self.state_fd
-        fd_link = f"/proc/{os.getpid()}/fd/{self.state_fd}"
-        try:
-            target = os.readlink(fd_link)
-            return f"{fd_link} -> {target}"
-        except OSError:
-            return fd_link
-
-    def __enter__(self) -> Self:
-        if not self.state_file:
-            # do nothing
-            return self
-
-        # open the state file for reading and writing
-        try:
-            self.state_fd = os.open(self.state_file, os.O_RDWR | os.O_CREAT)
-        except OSError as e:
-            self._fail(e, "failed to open or create state file")
-
-        # lock the state file
-        try:
-            fcntl.flock(self.state_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError as e:
-            self._fail(e, "failed to lock state file")
-
-        logger.debug(f"successfully locked state file: {self.state_file}")
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        if not self.state_file:
-            # do nothing
-            return
-
-        # unlock and close the state file
-        fcntl.flock(self.state_fd, fcntl.LOCK_UN)
-        os.close(self.state_fd)
-        self.state_fd = -1
+        super().__init__(state_file, BotState, blocking=False, logger=logger)
 
     def read_state(self) -> BotState | None:
-        """Read JSON-encoded BotState from state_fd. Returns None if file is empty."""
-        if not self.state_file:
-            # do nothing
-            return None
-
-        # read file contents
-        assert 0 <= self.state_fd
-        with os.fdopen(self.state_fd, "r", closefd=False) as f:
-            f.seek(0)
-            data = f.read()
-        if not data:
-            return None
-
-        # parse JSON
-        try:
-            state = BotState.model_validate_json(data)
-            logger.debug(f"{self._sf_prefix()}: read {state.model_dump_json()}")
-            return state
-        except (ValidationError, json.JSONDecodeError):
-            logger.warning(
-                "Failed to load bot state from %r; treating as no state",
-                self.state_file,
-            )
-            return None
+        return self.read()
 
     def write_state(self, state: BotState) -> None:
-        """Write JSON-encoded BotState to state_fd."""
-        if not self.state_file:
-            # do nothing
-            return
-
-        assert 0 <= self.state_fd
-
-        # serialize JSON (exclude_defaults omits empty retry_list)
-        payload = state.model_dump_json(exclude_defaults=True) + "\n"
-        raw = payload.encode("utf-8")
-
-        # write the data at the beginning of the state file
-        os.lseek(self.state_fd, 0, os.SEEK_SET)
-        size: int = os.write(self.state_fd, raw)
-        os.ftruncate(self.state_fd, size)
-
-        # log a successfully written state file
-        logger.debug(f"{self._sf_prefix()}: written {state.model_dump_json()}")
+        self.write(state)
 
 
 class _ObservableDict(dict):
@@ -172,12 +87,12 @@ class _ObservableDict(dict):
 class StateProxy:
     """In-memory cache for BotState that auto-writes to disk on update."""
 
-    _sfh: "StateFileHandler"
+    _sfh: "BotStateFileHandler"
     _state: BotState
     _retry_list: _ObservableDict
     read_only: bool
 
-    def __init__(self, sfh: "StateFileHandler", read_only: bool = False):
+    def __init__(self, sfh: "BotStateFileHandler", read_only: bool = False):
         self._sfh = sfh
         self._state = sfh.read_state() or BotState()
         self._retry_list = _ObservableDict(
