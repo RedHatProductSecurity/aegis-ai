@@ -7,8 +7,10 @@ from OSIDB, and computes accuracy metrics.
 Usage:
     uv run python scripts/analyze_kernel_accuracy.py
     uv run python scripts/analyze_kernel_accuracy.py --gold path/to/gold.tsv
+    uv run python scripts/analyze_kernel_accuracy.py --fresh --jobs 4
 
 Requires: VPN + Kerberos ticket (kinit), AEGIS_OSIDB_SERVER_URL env var.
+With --fresh: also requires AEGIS_LLM_HOST, AEGIS_LLM_MODEL, and an LLM API key.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ DEFAULT_GOLD = SCRIPT_DIR / "gold.tsv"
 SEVERITY_RANK = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3}
 
 INCLUDE_FIELDS = "cve_id,impact,cvss_scores,aegis_meta,classification"
+INCLUDE_FIELDS_FRESH = "cve_id,impact,cvss_scores,classification"
 
 
 def load_cve_ids(gold_path: Path) -> list[str]:
@@ -151,13 +154,96 @@ async def _fetch_one(
     }
 
 
-async def fetch_all(session: Any, cve_ids: list[str], jobs: int) -> list[dict]:
+async def _fetch_and_suggest_one(
+    session: Any,
+    cve_id: str,
+    index: int,
+    total: int,
+    sem: asyncio.Semaphore,
+    output_dir: Path | None = None,
+) -> dict:
+    """Fetch ground truth from OSIDB, then run SuggestImpact live."""
+    from aegis_ai.agents import rh_feature_agent
+    from aegis_ai.features.cve import SuggestImpact
+
+    async with sem:
+        log.info("[%d/%d] %s (fresh)", index, total, cve_id)
+        try:
+            flaw = await asyncio.to_thread(
+                session.flaws.retrieve,
+                id=cve_id,
+                include_fields=INCLUDE_FIELDS_FRESH,
+            )
+            data = flaw.to_dict()
+        except Exception as exc:
+            log.warning("Failed to fetch %s: %s", cve_id, exc)
+            return {"cve_id": cve_id, "error": str(exc)}
+
+    osidb_impact = (data.get("impact") or "").upper()
+    rh_score, rh_vector = get_rh_cvss(data.get("cvss_scores") or [])
+    classification = data.get("classification") or {}
+
+    try:
+        feature = SuggestImpact(rh_feature_agent)
+        result = await feature.exec(cve_id)
+        output = result.output
+        suggested_impact = (output.impact or "").upper()
+        suggested_vector = output.cvss3_vector
+        suggested_score = (
+            _score_from_vector(suggested_vector) if suggested_vector else None
+        )
+    except Exception as exc:
+        log.warning("SuggestImpact failed for %s: %s", cve_id, exc)
+        return {"cve_id": cve_id, "error": f"suggest-impact: {exc}"}
+
+    if output_dir is not None:
+        dump_path = output_dir / f"{cve_id}-suggest-impact.json"
+        dump_path.write_text(output.model_dump_json(indent=2) + "\n", encoding="utf-8")
+        log.info("  -> %s", dump_path)
+
+    diff = None
+    if suggested_impact and osidb_impact:
+        diff = classify_diff(suggested_impact, osidb_impact)
+
+    return {
+        "cve_id": cve_id,
+        "processed": None,
+        "classification": (
+            f"{classification.get('workflow', '?')}/{classification.get('state', '?')}"
+        ),
+        "osidb_impact": osidb_impact,
+        "suggested_impact": suggested_impact,
+        "diff": diff or "",
+        "rh_cvss_score": rh_score,
+        "suggested_cvss_score": suggested_score,
+        "cvss_diff": round(suggested_score - rh_score, 1)
+        if rh_score is not None and suggested_score is not None
+        else None,
+        "rh_cvss_vector": rh_vector,
+        "suggested_cvss_vector": suggested_vector or "",
+    }
+
+
+async def fetch_all(
+    session: Any,
+    cve_ids: list[str],
+    jobs: int,
+    *,
+    fresh: bool = False,
+    output_dir: Path | None = None,
+) -> list[dict]:
     """Fetch flaw data from OSIDB for all CVEs, up to *jobs* in parallel."""
     sem = asyncio.Semaphore(jobs)
-    tasks = [
-        _fetch_one(session, cve_id, i, len(cve_ids), sem)
-        for i, cve_id in enumerate(cve_ids, 1)
-    ]
+    if fresh:
+        tasks = [
+            _fetch_and_suggest_one(session, cve_id, i, len(cve_ids), sem, output_dir)
+            for i, cve_id in enumerate(cve_ids, 1)
+        ]
+    else:
+        tasks = [
+            _fetch_one(session, cve_id, i, len(cve_ids), sem)
+            for i, cve_id in enumerate(cve_ids, 1)
+        ]
     results = await asyncio.gather(*tasks)
     errors = sum(1 for r in results if "error" in r)
     if errors:
@@ -169,17 +255,25 @@ def print_report(results: list[dict]) -> None:
     """Print the accuracy report to stdout."""
     valid = [r for r in results if "error" not in r]
     errored = [r for r in results if "error" in r]
+    show_proc = any(r.get("processed") is not None for r in valid)
 
     print("\n" + "=" * 130)
     print("AEGIS SUGGEST-IMPACT ACCURACY REPORT — Kernel CVEs")
     print("=" * 130)
 
     # Per-CVE table
-    header = (
-        f"{'CVE':<20} {'Proc':<5} {'Classification':<35} "
-        f"{'OSIDB':<12} {'Aegis':<12} {'Diff':<16} "
-        f"{'RH CVSS':<8} {'Aegis CVSS':<11} {'CVSS Diff':<10}"
-    )
+    if show_proc:
+        header = (
+            f"{'CVE':<20} {'Proc':<5} {'Classification':<35} "
+            f"{'OSIDB':<12} {'Aegis':<12} {'Diff':<16} "
+            f"{'RH CVSS':<8} {'Aegis CVSS':<11} {'CVSS Diff':<10}"
+        )
+    else:
+        header = (
+            f"{'CVE':<20} {'Classification':<35} "
+            f"{'OSIDB':<12} {'Aegis':<12} {'Diff':<16} "
+            f"{'RH CVSS':<8} {'Aegis CVSS':<11} {'CVSS Diff':<10}"
+        )
     print(f"\n{header}")
     print("-" * 140)
 
@@ -191,18 +285,25 @@ def print_report(results: list[dict]) -> None:
             else "—"
         )
         cd = f"{r['cvss_diff']:+.1f}" if r["cvss_diff"] is not None else "—"
-        proc = "Y" if r["processed"] else "N"
-        print(
-            f"{r['cve_id']:<20} {proc:<5} {r['classification']:<35} "
-            f"{r['osidb_impact']:<12} {r['suggested_impact']:<12} "
-            f"{r['diff']:<16} {rh_s:<8} {ae_s:<11} {cd:<10}"
-        )
+        if show_proc:
+            proc = "Y" if r["processed"] else "N"
+            print(
+                f"{r['cve_id']:<20} {proc:<5} {r['classification']:<35} "
+                f"{r['osidb_impact']:<12} {r['suggested_impact']:<12} "
+                f"{r['diff']:<16} {rh_s:<8} {ae_s:<11} {cd:<10}"
+            )
+        else:
+            print(
+                f"{r['cve_id']:<20} {r['classification']:<35} "
+                f"{r['osidb_impact']:<12} {r['suggested_impact']:<12} "
+                f"{r['diff']:<16} {rh_s:<8} {ae_s:<11} {cd:<10}"
+            )
 
     for r in errored:
         print(f"{r['cve_id']:<20} {'ERR':<5} {r['error']}")
 
     # Aggregate metrics
-    unprocessed = [r for r in valid if not r["processed"]]
+    unprocessed = [r for r in valid if r.get("processed") is False]
     comparable = [r for r in valid if r["diff"]]
     matches = [r for r in comparable if r["diff"] == "match"]
     underest = [r for r in comparable if r["diff"] == "underestimation"]
@@ -280,11 +381,24 @@ async def async_main(args: argparse.Namespace) -> None:
         print("ERROR: No CVE IDs found in gold file", file=sys.stderr)
         sys.exit(1)
 
+    if args.fresh:
+        from aegis_ai import config_logging
+
+        config_logging()
+
     log.info("Loaded %d CVE IDs from %s", len(cve_ids), args.gold)
-    log.info("Connecting to OSIDB at %s (jobs=%d)", args.osidb_url, args.jobs)
+    log.info(
+        "Connecting to OSIDB at %s (jobs=%d, fresh=%s)",
+        args.osidb_url,
+        args.jobs,
+        args.fresh,
+    )
 
     session = osidb_bindings.new_session(osidb_server_uri=args.osidb_url)
-    results = await fetch_all(session, cve_ids, args.jobs)
+    output_dir = args.gold.resolve().parent if args.fresh else None
+    results = await fetch_all(
+        session, cve_ids, args.jobs, fresh=args.fresh, output_dir=output_dir
+    )
     print_report(results)
 
 
@@ -313,6 +427,11 @@ def main() -> None:
         type=int,
         default=8,
         help="Number of parallel OSIDB fetches (default: 8)",
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Run suggest-impact live instead of reading aegis_meta from OSIDB",
     )
     args = parser.parse_args()
 
