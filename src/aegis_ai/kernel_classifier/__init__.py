@@ -415,6 +415,8 @@ class KernelImpactClassifier:
     def available(self) -> bool:
         return self.model is not None and self._feature_extractor is not None
 
+    _503_RETRY_DELAYS = (3, 6)
+
     @staticmethod
     async def _fetch_with_limit(
         client: "httpx.AsyncClient",
@@ -426,46 +428,61 @@ class KernelImpactClassifier:
         """Stream-fetch a URL, aborting before buffering if oversized.
 
         Returns the response text if it's within *size_limit*, or ``None``
-        if the response was too large, non-200, or failed.
+        if the response was too large, non-200, or failed.  Retries once
+        on 503 (git.kernel.org rate-limiting) after a short delay.
         """
-        async with client.stream("GET", url, follow_redirects=True) as resp:
-            if resp.status_code != 200:
-                return None
+        for attempt, delay in enumerate(
+            (*KernelImpactClassifier._503_RETRY_DELAYS, None)
+        ):
+            async with client.stream("GET", url, follow_redirects=True) as resp:
+                if resp.status_code == 503 and delay is not None:
+                    logger.info(
+                        "503 for %s %s (attempt %d), retrying in %ds",
+                        content_type,
+                        commit_hash[:12],
+                        attempt + 1,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                if resp.status_code != 200:
+                    return None
 
-            content_length = resp.headers.get("content-length")
-            if content_length:
-                try:
-                    if int(content_length) > size_limit:
+                content_length = resp.headers.get("content-length")
+                if content_length:
+                    try:
+                        if int(content_length) > size_limit:
+                            logger.warning(
+                                "Skipping oversized %s %s (%s bytes via Content-Length)",
+                                content_type,
+                                commit_hash[:12],
+                                content_length,
+                            )
+                            return None
+                    except ValueError:
                         logger.warning(
-                            "Skipping oversized %s %s (%s bytes via Content-Length)",
+                            "Malformed Content-Length for %s %s: %r",
                             content_type,
                             commit_hash[:12],
                             content_length,
                         )
+
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in resp.aiter_bytes():
+                    total += len(chunk)
+                    if total > size_limit:
+                        logger.warning(
+                            "Dropping oversized %s %s (%d bytes streamed)",
+                            content_type,
+                            commit_hash[:12],
+                            total,
+                        )
                         return None
-                except ValueError:
-                    logger.warning(
-                        "Malformed Content-Length for %s %s: %r",
-                        content_type,
-                        commit_hash[:12],
-                        content_length,
-                    )
+                    chunks.append(chunk)
 
-            chunks: list[bytes] = []
-            total = 0
-            async for chunk in resp.aiter_bytes():
-                total += len(chunk)
-                if total > size_limit:
-                    logger.warning(
-                        "Dropping oversized %s %s (%d bytes streamed)",
-                        content_type,
-                        commit_hash[:12],
-                        total,
-                    )
-                    return None
-                chunks.append(chunk)
-
-        return b"".join(chunks).decode("utf-8", errors="replace")
+                return b"".join(chunks).decode("utf-8", errors="replace")
+        return None
 
     async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
         """Fetch raw patches from git.kernel.org for given commit hashes.
