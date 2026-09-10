@@ -320,6 +320,24 @@ class TestOsidbBotKpiEndpoint:
     @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
+    def test_component_param_scopes_osidb_query(
+        self, mock_settings, mock_bindings, _mock_read, _mock_handler
+    ):
+        """The component query param is pushed to OSIDB as an affects filter so
+        the KPI is scoped to flaws affecting that component."""
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+        session = _make_session()
+        mock_bindings.new_session.return_value = session
+
+        response = client.get("/api/v1/analysis/kpi/osidb-bot?component=kernel")
+        assert response.status_code == 200
+        index_call = session.flaws.retrieve_list_iterator.call_args_list[0]
+        assert index_call.kwargs["affects__ps_component"] == "kernel"
+
+    @_PATCH_HANDLER
+    @_PATCH_READ
+    @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
+    @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_multiple_flaws_aggregation(
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):

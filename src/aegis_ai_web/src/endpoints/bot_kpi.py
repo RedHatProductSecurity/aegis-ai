@@ -394,6 +394,7 @@ def _fetch_flaw_index(
     *,
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
+    component: str | None = None,
 ) -> dict[str, str]:
     """Fetch a cheap ``{cve_id: updated_dt}`` index of DONE flaws in range.
 
@@ -408,7 +409,9 @@ def _fetch_flaw_index(
     ``changed_before`` filters are pushed down separately as ``updated_dt`` bounds
     so a narrow query (e.g. the last few days) fetches only that window.
     ``cve_id__isempty=False`` drops flaws without a CVE ID server-side instead of
-    fetching them only to discard them here.
+    fetching them only to discard them here. When ``component`` is given, it is
+    pushed down as ``affects__ps_component`` so the index (and thus the result)
+    is scoped to flaws affecting that component.
     """
     kwargs: dict[str, Any] = {
         "include_fields": "cve_id,updated_dt",
@@ -421,6 +424,8 @@ def _fetch_flaw_index(
         kwargs["updated_dt_gte"] = changed_after
     if changed_before is not None:
         kwargs["updated_dt_lte"] = changed_before
+    if component is not None:
+        kwargs["affects__ps_component"] = component
     logger.info("querying OSIDB flaw index: %s", kwargs)
 
     index: dict[str, str] = {}
@@ -595,6 +600,7 @@ class BotKPICacheEntry(BaseModel):
         *,
         changed_after: datetime | None = None,
         changed_before: datetime | None = None,
+        only_cve_ids: set[str] | None = None,
     ) -> BotKPIResult:
         """Re-score the bot-processed flaws, filtering suggestions by the range.
 
@@ -603,9 +609,16 @@ class BotKPICacheEntry(BaseModel):
         :func:`_score_records`), so a flaw contributes only the fields it was
         actually given a suggestion for within the window -- and drops out
         entirely if none of its suggestions fall in range.
+
+        ``only_cve_ids`` restricts scoring to a subset of the cached flaws. The
+        shared cache holds every component's flaws, so a component-scoped request
+        passes the component's CVE IDs here to count only those; ``None`` (the
+        default) scores every cached flaw.
         """
         per_flaw: dict[str, dict[str, FeatureStats]] = {}
         for cve_id, flaw in self.flaws.items():
+            if only_cve_ids is not None and cve_id not in only_cve_ids:
+                continue
             if not flaw.bot_processed:
                 continue
             stats_by_field = _score_fields(
@@ -720,6 +733,7 @@ def _fetch_with_cache(
     *,
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
+    component: str | None = None,
 ) -> BotKPIResult:
     """Fetch flaws via the two-phase incremental cache, then aggregate on demand.
 
@@ -742,9 +756,26 @@ def _fetch_with_cache(
     records (never cached itself). ``to_kpi_result`` applies the request's date
     range to each flaw's per-suggestion timestamps, so the response is correct
     even when the cache holds flaws outside the requested window.
+
+    A *component-scoped* request is the exception to the "index in range" rule:
+    it omits both date bounds from the membership index (fetching the whole
+    component set) and applies the dates only during per-suggestion scoring --
+    see the inline note below and :func:`to_kpi_result`.
     """
+    # A component-scoped request uses the index as its membership set: only these
+    # flaws are counted (the shared cache holds every component's flaws). Date
+    # bounds must therefore be left OFF the index -- they filter on the flaw's
+    # updated_dt, but the KPI scopes dates per suggestion timestamp, so a flaw
+    # edited after the window whose suggestion is in-window must stay in the
+    # membership set and be date-filtered during scoring (see to_kpi_result).
+    # Pushing updated_dt bounds here would drop it and undercount. An unfiltered
+    # or date-only request keeps the date bounds: it scores the whole cache, so
+    # the bounds are only a cheap fetch window, not the membership set.
     index = _fetch_flaw_index(
-        osidb, changed_after=changed_after, changed_before=changed_before
+        osidb,
+        changed_after=changed_after if component is None else None,
+        changed_before=changed_before if component is None else None,
+        component=component,
     )
 
     cached = _read_cache()
@@ -763,9 +794,12 @@ def _fetch_with_cache(
 
     # Only an unfiltered request sees a complete index (every DONE flaw since the
     # bot birthday); only then can a cached flaw's absence be read as a departure
-    # and pruned. A date-bounded index is just a window, so absence there is
-    # ambiguous and nothing is pruned (see _reconcile_flaws).
-    index_is_complete = changed_after is None and changed_before is None
+    # and pruned. A date-bounded or component-scoped index is only a subset of the
+    # shared cache, so absence there is ambiguous and nothing is pruned (see
+    # _reconcile_flaws).
+    index_is_complete = (
+        changed_after is None and changed_before is None and component is None
+    )
     has_departures = index_is_complete and not set(cached_flaws).issubset(index)
 
     if not fetched and not has_departures:
@@ -783,8 +817,15 @@ def _fetch_with_cache(
             )
             handler.write(entry)
 
+    # The shared cache holds every component's flaws; a component-scoped request
+    # counts only the flaws in its (server-filtered) index, whereas an unfiltered
+    # or date-only request scores the whole cache (out-of-window flaws are excluded
+    # per suggestion timestamp during scoring, so they never distort the result).
+    only_cve_ids = set(index) if component is not None else None
     return entry.to_kpi_result(
-        changed_after=changed_after, changed_before=changed_before
+        changed_after=changed_after,
+        changed_before=changed_before,
+        only_cve_ids=only_cve_ids,
     )
 
 
@@ -792,6 +833,7 @@ def get_osidb_bot_kpi(
     *,
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
+    component: str | None = None,
 ) -> BotKPIResponse:
     """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
     try:
@@ -801,6 +843,7 @@ def get_osidb_bot_kpi(
             osidb,
             changed_after=changed_after,
             changed_before=changed_before,
+            component=component,
         )
         return _result_to_response(result)
     except OSError:
