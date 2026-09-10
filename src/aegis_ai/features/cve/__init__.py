@@ -27,7 +27,6 @@ from aegis_ai.features.cve.data_models import (
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
     RULES_KERNEL_ADDENDUM,
-    apply_kpanic_cvss_override,
     check_kernel_output,
 )
 from aegis_ai.features.data_models import feature_deps
@@ -246,15 +245,12 @@ class SuggestImpact(Feature):
                 output.cvss3_score = f"{floor}"
 
     @staticmethod
-    def post_process(output, call_str, classifier_result=None):
+    def post_process(output, call_str):
         SuggestImpact.post_process_cvss(output, call_str)
         pre_reconcile_impact = output.impact
         trace = SuggestImpact.reconcile_severity(output, call_str)
 
-        override_trace = apply_kpanic_cvss_override(output, call_str, classifier_result)
-        if override_trace:
-            trace = f"{trace}; {override_trace}"
-        elif output.impact != pre_reconcile_impact:
+        if output.impact != pre_reconcile_impact:
             SuggestImpact.align_score_to_impact(output, call_str)
 
         return trace
@@ -504,11 +500,7 @@ class SuggestImpact(Feature):
         result.output._original_llm_score = original_score
         result.output._original_llm_vector = original_vector
 
-        trace = SuggestImpact.post_process(
-            result.output,
-            call_str,
-            classifier_result=classifier_result,
-        )
+        trace = SuggestImpact.post_process(result.output, call_str)
 
         vector_changed = result.output.cvss3_vector != original_vector
         if vector_changed:

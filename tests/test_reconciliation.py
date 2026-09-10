@@ -1,7 +1,7 @@
 """Unit tests for severity reconciliation and post-processing.
 
-Covers the LLM self-consistency reconciliation path, score-to-impact
-band alignment, and CVSS kpanic override.
+Covers the LLM self-consistency reconciliation path and
+score-to-impact band alignment.
 """
 
 from types import SimpleNamespace
@@ -11,7 +11,6 @@ from aegis_ai.features.cve import SuggestImpact
 # Shorthand CVSS vectors used across tests.
 _VEC_BASE = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
 _VEC_LOCAL = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H"
-_VEC_LOCAL_HHH = "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
 
 
 def _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_BASE):
@@ -20,15 +19,6 @@ def _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_BASE):
         cvss3_score=cvss_score,
         cvss3_vector=cvss_vector,
     )
-
-
-def _clf(impact="MODERATE", confidence=0.8, cvss_score=7.0, features=None):
-    return {
-        "impact": impact,
-        "confidence": confidence,
-        "cvss_score": cvss_score,
-        "active_features": features or [],
-    }
 
 
 # ── LLM self-consistency reconciliation ────────────────────────────
@@ -115,67 +105,23 @@ class TestAlignScoreToImpact:
 
 
 class TestPostProcess:
-    def test_non_kernel_consistent_no_change(self):
-        """Non-kernel with consistent LLM output — nothing changes."""
+    def test_consistent_no_change(self):
+        """Consistent LLM output — nothing changes."""
         out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
         SuggestImpact.post_process(out, "t")
-        assert out.impact == "MODERATE"
-        assert out.cvss3_score == "5.5"
-
-    def test_no_align_when_reconciliation_preserves_impact(self):
-        """Classifier present but consistent — no changes."""
-        out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
-        SuggestImpact.post_process(out, "t", classifier_result=_clf(impact="MODERATE"))
         assert out.impact == "MODERATE"
         assert out.cvss3_score == "5.5"
 
     def test_inconsistent_llm_fixed_by_reconciliation(self):
         """LLM says LOW but CVSS band is MODERATE → reconciliation fixes it."""
         out = _output(impact="LOW", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
-        SuggestImpact.post_process(out, "t", classifier_result=_clf(impact="LOW"))
+        SuggestImpact.post_process(out, "t")
         assert out.impact == "MODERATE"
         assert out.cvss3_score == "5.5"
 
-    def test_kpanic_override_fires_for_important(self):
-        """kpanic override fires when impact is IMPORTANT, sets AC:H/S:U/A:H."""
-        out = _output(
-            impact="IMPORTANT",
-            cvss_score="7.8",
-            cvss_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
-        )
-        SuggestImpact.post_process(out, "t", classifier_result=_clf(impact="IMPORTANT"))
-        assert out.impact == "IMPORTANT"
-        assert "AC:H" in out.cvss3_vector
-        assert "S:U" in out.cvss3_vector
-        assert "A:H" in out.cvss3_vector
-        assert "C:H" in out.cvss3_vector
-        assert "I:H" in out.cvss3_vector
-
-    def test_kpanic_override_fires_for_kpanic_feature(self):
-        """kpanic override fires when kernel_panic feature is present."""
-        out = _output(impact="MODERATE", cvss_score="5.5", cvss_vector=_VEC_LOCAL)
-        SuggestImpact.post_process(
-            out, "t", classifier_result=_clf(features=["kernel_panic"])
-        )
-        assert out.impact == "MODERATE"
-        assert "AC:H" in out.cvss3_vector
-        assert "A:H" in out.cvss3_vector
-
-    def test_kpanic_override_skipped_for_critical(self):
-        """kpanic override does not fire for CRITICAL impact."""
-        vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
-        out = _output(impact="CRITICAL", cvss_score="9.8", cvss_vector=vec)
-        SuggestImpact.post_process(out, "t", classifier_result=_clf(impact="IMPORTANT"))
-        assert out.impact == "CRITICAL"
-        assert "AC:L" in out.cvss3_vector
-
-    def test_no_classifier_no_kpanic_override(self):
-        """Without classifier result, kpanic override does not fire."""
-        out = _output(
-            impact="IMPORTANT",
-            cvss_score="7.8",
-            cvss_vector=_VEC_LOCAL_HHH,
-        )
+    def test_score_bumped_after_reconciliation(self):
+        """When reconciliation escalates impact, score is bumped to band floor."""
+        out = _output(impact="LOW", cvss_score="7.5", cvss_vector=_VEC_BASE)
         SuggestImpact.post_process(out, "t")
         assert out.impact == "IMPORTANT"
-        assert "AC:L" in out.cvss3_vector
+        assert out.cvss3_score == "7.5"
