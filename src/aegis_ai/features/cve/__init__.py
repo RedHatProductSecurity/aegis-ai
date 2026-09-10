@@ -29,7 +29,6 @@ from aegis_ai.features.cve.kernel import (
     RULES_KERNEL,
     apply_kpanic_cvss_override,
     check_kernel_output,
-    reconcile_kernel,
 )
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.kernel_classifier import is_kernel_component
@@ -149,33 +148,15 @@ class SuggestImpact(Feature):
         return check_kernel_output(result.output, deps)
 
     @staticmethod
-    def reconcile_severity(output, call_str, classifier_result=None) -> str:
-        """Bidirectional severity reconciliation.
+    def reconcile_severity(output, call_str) -> str:
+        """LLM self-consistency check.
 
-        Dispatches to one of two paths:
-
-        **Kernel path** (classifier_result present): threshold-based
-        reconciliation ported from al-kernel.  The classifier's
-        cascade-adjusted prediction is the starting severity; the LLM's
-        own CVSS score drives deterministic threshold rules (H1–H11).
-
-        **Non-kernel path** (no classifier): LLM self-consistency check.
-        If the LLM's stated impact matches its CVSS band, keep it.  If
-        they disagree, trust the CVSS band (quantitative > qualitative).
-        In both cases, CRITICAL is capped to IMPORTANT unless the
-        CVSS vector objectively supports it (AV:N/AC:L/PR:N/UI:N
-        with at least two of C:H, I:H, A:H).
-
-        The kernel path additionally applies specific guardrails
-        (G2–G5) based on classifier-provided feature flags (memory
-        corruption, network exposure, contained subsystems, etc.).
+        If the LLM's stated impact matches its CVSS band, keep it.
+        If they disagree, trust the CVSS band (quantitative >
+        qualitative).
 
         Returns a trace string explaining the decision.
         """
-        if classifier_result and isinstance(classifier_result, dict):
-            return reconcile_kernel(output, call_str, classifier_result)
-
-        # --- Non-kernel path: LLM self-consistency ---
         SEV = SEVERITY_ORDER
 
         try:
@@ -268,9 +249,7 @@ class SuggestImpact(Feature):
     def post_process(output, call_str, classifier_result=None):
         SuggestImpact.post_process_cvss(output, call_str)
         pre_reconcile_impact = output.impact
-        trace = SuggestImpact.reconcile_severity(
-            output, call_str, classifier_result=classifier_result
-        )
+        trace = SuggestImpact.reconcile_severity(output, call_str)
 
         override_trace = apply_kpanic_cvss_override(output, call_str, classifier_result)
         if override_trace:
@@ -529,12 +508,8 @@ class SuggestImpact(Feature):
             classifier_result=classifier_result,
         )
 
-        impact_changed = result.output.impact != original_impact
         vector_changed = result.output.cvss3_vector != original_vector
-        guardrail_fired = classifier_result is not None and (
-            impact_changed or vector_changed
-        )
-        if guardrail_fired:
+        if vector_changed:
             result.output._explanation_revised = await self._revise_explanation(
                 result,
                 original_score,
