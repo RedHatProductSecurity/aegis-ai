@@ -145,6 +145,11 @@ def _select_best_external_cvss3(cvss_scores: list[dict]) -> tuple[str, float, st
 
 _PATCH_SIZE_LIMIT = 1_000_000
 _HTML_SIZE_LIMIT = 5_000_000
+# Minimum body length a fetched response must exceed to count as a real hit
+# rather than an error page or empty stub. Patches are terse; rendered commit
+# HTML carries far more boilerplate, so it needs a higher floor.
+_PATCH_MIN_LENGTH = 100
+_HTML_MIN_LENGTH = 200
 _MAX_COMMIT_HASHES = 20
 
 _BACKPORT_SIMILARITY_THRESHOLD = 0.75
@@ -504,7 +509,7 @@ class KernelImpactClassifier:
                     commit_hash,
                     PATCH_URL_TEMPLATES,
                     size_limit=_PATCH_SIZE_LIMIT,
-                    min_length=100,
+                    min_length=_PATCH_MIN_LENGTH,
                     content_type="patch",
                 )
                 if text is None:
@@ -540,7 +545,7 @@ class KernelImpactClassifier:
                     commit_hash,
                     HTML_COMMIT_URL_TEMPLATES,
                     size_limit=_HTML_SIZE_LIMIT,
-                    min_length=200,
+                    min_length=_HTML_MIN_LENGTH,
                     content_type="commit HTML",
                 )
                 if text is None:
