@@ -93,6 +93,92 @@ def _make_session(*flaws, index_delay=0.0):
     return session
 
 
+def _make_component_session(by_component):
+    """Mock OSIDB session whose index phase honors ``affects__ps_component``.
+
+    ``by_component`` maps a component name to the flaws the server would return
+    for that filter (mirroring OSIDB's server-side ``affects__ps_component``).
+    An index request with no component filter returns every flaw; the batch
+    phase returns full data for any requested CVE regardless of component.
+    """
+    all_flaws = [flaw for flaws in by_component.values() for flaw in flaws]
+    by_cve = {flaw["cve_id"]: flaw for flaw in all_flaws}
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        component = kwargs.get("affects__ps_component")
+        flaws = by_component.get(component, []) if component else all_flaws
+        stubs = []
+        for flaw in flaws:
+            stub = MagicMock()
+            stub.to_dict.return_value = {
+                "cve_id": flaw["cve_id"],
+                "updated_dt": flaw["updated_dt"],
+            }
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
+def _make_filtering_session(*flaws):
+    """Mock OSIDB session whose index honors ``affects__ps_component`` AND the
+    ``updated_dt`` bounds, like the real server.
+
+    Each flaw declares its component membership via a test-only ``_components``
+    key. The index phase returns only flaws matching the requested component
+    (when given) whose ``updated_dt`` falls within any ``updated_dt_gte`` /
+    ``updated_dt_lte`` bounds. The batch phase returns full data for requested
+    CVEs. This lets a test prove that date scoping is applied per suggestion
+    timestamp, not via the flaw's ``updated_dt``.
+    """
+    by_cve = {flaw["cve_id"]: flaw for flaw in flaws}
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        component = kwargs.get("affects__ps_component")
+        gte = kwargs.get("updated_dt_gte")
+        lte = kwargs.get("updated_dt_lte")
+        stubs = []
+        for flaw in flaws:
+            if component is not None and component not in flaw.get("_components", []):
+                continue
+            updated = datetime.fromisoformat(flaw["updated_dt"])
+            if gte is not None and updated < gte:
+                continue
+            if lte is not None and updated > lte:
+                continue
+            stub = MagicMock()
+            stub.to_dict.return_value = {
+                "cve_id": flaw["cve_id"],
+                "updated_dt": flaw["updated_dt"],
+            }
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
 def _seed_cache(cache_path: Path, flaws: dict[str, FlawCacheData]) -> None:
     """Write a per-flaw cache directly from ``FlawCacheData`` entries."""
     entry = BotKPICacheEntry(flaws=flaws)
@@ -162,6 +248,15 @@ class TestFlawIndexQuery:
         assert kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
         assert kwargs["updated_dt_lte"] == before
         assert "updated_dt_gte" not in kwargs
+
+    def test_pushes_component_as_affects_filter(self):
+        kwargs = self._captured_kwargs(component="kernel")
+        assert kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
+        assert kwargs["affects__ps_component"] == "kernel"
+
+    def test_no_component_filter_when_absent(self):
+        kwargs = self._captured_kwargs()
+        assert "affects__ps_component" not in kwargs
 
 
 class TestGetCachePath:
@@ -635,6 +730,87 @@ class TestGetOsidbBotKpiCaching:
         )
         assert response.total_flaws_processed == 1
         assert session_a2.flaws.retrieve_list_iterator.call_count == 1
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_component_query_scopes_result_and_retains_cache(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A component-scoped request counts only that component's flaws and, like
+        a date filter, never prunes the shared cache of other components' flaws."""
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+
+        _seed_cache(
+            cache_dir,
+            {
+                "CVE-2025-0001": _cached_flaw(),  # kernel
+                "CVE-2025-0002": _cached_flaw(),  # a different component
+            },
+        )
+        cached_json_before = cache_dir.read_text()
+
+        # The component-filtered index lists only the kernel flaw (OSIDB applied
+        # affects__ps_component server-side); its watermark is unchanged.
+        kernel_flaw = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            cve_id="CVE-2025-0001",
+        )
+        session = _make_component_session({"kernel": [kernel_flaw]})
+        mock_bindings.new_session.return_value = session
+
+        response = get_osidb_bot_kpi(component="kernel")
+
+        # Only the kernel flaw is counted, even though both are cached...
+        assert response.total_flaws_processed == 1
+        # ...and the other component's flaw is retained (a component index is a
+        # subset, so it must not prune the shared cache).
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert set(cached.flaws) == {"CVE-2025-0001", "CVE-2025-0002"}
+        assert cache_dir.read_text() == cached_json_before
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_component_scopes_dates_by_suggestion_timestamp_not_updated_dt(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A component + changed_before query must scope dates by each
+        suggestion's own timestamp (like the date-only path), not by the flaw's
+        updated_dt. A kernel flaw whose bot suggestion is in-window but which was
+        edited after the window (bumping updated_dt past changed_before) must
+        still be counted -- otherwise the component path undercounts relative to
+        the date-only path."""
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+
+        # Suggestion made in-window (May); an analyst edited the flaw in August,
+        # pushing updated_dt past the June cutoff.
+        _seed_cache(
+            cache_dir,
+            {
+                "CVE-2025-0001": _cached_flaw(
+                    updated_dt="2025-08-01T00:00:00+00:00",
+                    suggestion_dt="2025-05-15T00:00:00",
+                )
+            },
+        )
+        flaw = _make_flaw_dict(
+            {
+                "processed": True,
+                "impact": [_make_bot_entry("LOW", timestamp="2025-05-15T00:00:00")],
+            },
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+            updated_dt="2025-08-01T00:00:00+00:00",
+        )
+        flaw["_components"] = ["kernel"]
+        mock_bindings.new_session.return_value = _make_filtering_session(flaw)
+
+        response = get_osidb_bot_kpi(
+            component="kernel", changed_before=datetime(2025, 6, 1, tzinfo=UTC)
+        )
+        assert response.total_flaws_processed == 1
+        assert response.features["impact"].suggested == 1
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")

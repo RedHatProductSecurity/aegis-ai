@@ -820,6 +820,10 @@ async def osidb_bot_kpi(
         default=None,
         description="Only include flaws updated before this ISO 8601 datetime.",
     ),
+    component: str | None = Query(
+        default=None,
+        description="Scope KPI metrics to flaws affecting this component, e.g. 'kernel'.",
+    ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
     if changed_after and changed_before and changed_after > changed_before:
@@ -831,6 +835,7 @@ async def osidb_bot_kpi(
         get_osidb_bot_kpi,
         changed_after=changed_after,
         changed_before=changed_before,
+        component=component or None,
     )
 
 
