@@ -1,11 +1,9 @@
-"""Kernel-specific CVSS overrides and LLM prompt rules.
+"""Kernel-specific LLM prompt rules and output checks.
 
 This module provides:
 
 - ``RULES_KERNEL_ADDENDUM`` — extra LLM prompt rules appended to the
   base rules when the CVE is a kernel component.
-- ``apply_kpanic_cvss_override()`` — forces AC:H, S:U, A:H when kernel
-  panic is detected or impact is IMPORTANT.
 - ``check_kernel_output()`` — retry enforcement ensuring the LLM calls
   ``kernel_impact_tool`` for kernel CVEs.
 """
@@ -13,8 +11,6 @@ This module provides:
 from __future__ import annotations
 
 import logging
-
-import cvss
 
 from aegis_ai import get_settings
 
@@ -40,69 +36,6 @@ RULES_KERNEL_ADDENDUM = """
                     - Always use kernel_cve tool if the component is the Linux kernel.
                     - If kernel_impact_tool is available, you MUST call it to obtain patch-level analysis (active feature flags and severity class probabilities). Treat the returned signals as informative context alongside your own technical assessment. Report any disagreement in classifier_disagreement_rationale.
             """
-
-
-# ===========================================================================
-# CVSS override for kernel panic / IMPORTANT impact
-# ===========================================================================
-
-#: Canonical ordering of CVSS v3.1 base metric keys used when
-#: reconstructing a vector string from individual metric values.
-_CVSS_BASE_KEYS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
-
-
-def apply_kpanic_cvss_override(
-    output, call_str: str, classifier_result: dict | None
-) -> str | None:
-    """Override CVSS components when kernel_panic is detected or impact
-    is IMPORTANT.
-
-    Forces ``AC:H``, ``S:U``, ``A:H`` to reflect kernel-panic
-    reachability without assuming user-data exposure.  All other
-    metrics (``C``, ``I``, ``PR``, ``AV``, ``UI``) are preserved
-    from the LLM's assessment — the prompt already requires a
-    concrete user-data impact path for ``C:H``/``I:H`` and uses
-    ``PR:H`` when admin-class capabilities are needed.
-
-    Returns a trace fragment when the override fires, or ``None``.
-    """
-    if not classifier_result or not isinstance(classifier_result, dict):
-        return None
-
-    active_features: set[str] = set(classifier_result.get("active_features", []))
-    has_kpanic = "kernel_panic" in active_features
-    is_important = output.impact == "IMPORTANT"
-
-    if output.impact == "CRITICAL":
-        return None
-
-    if not (has_kpanic or is_important):
-        return None
-
-    original_vector = output.cvss3_vector or ""
-    original_score = output.cvss3_score
-
-    parsed = cvss.CVSS3(original_vector)
-    parsed.metrics.update({"AC": "H", "S": "U", "A": "H"})
-    output.cvss3_vector = "CVSS:3.1/" + "/".join(
-        f"{k}:{parsed.metrics[k]}" for k in _CVSS_BASE_KEYS
-    )
-    output.cvss3_score = str(cvss.CVSS3(output.cvss3_vector).scores()[0])
-
-    reason = "kernel_panic" if has_kpanic else "important_impact"
-    trace = (
-        f"kpanic_cvss_override({reason},"
-        f" llm_vector={original_vector},"
-        f" llm_score={original_score})"
-    )
-    logger.info(
-        "%s: CVSS overridden to %s (%s) — %s",
-        call_str,
-        output.cvss3_score,
-        output.cvss3_vector,
-        trace,
-    )
-    return trace
 
 
 # ===========================================================================
