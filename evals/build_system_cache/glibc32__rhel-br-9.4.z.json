@@ -1,0 +1,10 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "glibc32",
+    "ps_update_stream": "rhel-br-9.4.z",
+    "binary_rpms": [
+        "glibc32"
+    ],
+    "build_nvr": "glibc32-2.32-1.1.el9.4"
+}
