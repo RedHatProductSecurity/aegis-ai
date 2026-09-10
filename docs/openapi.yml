@@ -717,6 +717,16 @@ paths:
           - type: 'null'
           description: Only include flaws updated before this ISO 8601 datetime.
           title: Changed Before
+      - description: Scope KPI metrics to flaws affecting this component, e.g. 'kernel'.
+        in: query
+        name: component
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Scope KPI metrics to flaws affecting this component, e.g. 'kernel'.
+          title: Component
       responses:
         '200':
           content:
