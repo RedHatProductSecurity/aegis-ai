@@ -26,7 +26,7 @@ from aegis_ai.features.cve.data_models import (
 )
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
-    RULES_KERNEL,
+    RULES_KERNEL_ADDENDUM,
     apply_kpanic_cvss_override,
     check_kernel_output,
 )
@@ -442,9 +442,9 @@ class SuggestImpact(Feature):
             is_kernel = is_kernel_component(components)
 
         # Eagerly run the kernel classifier so the result is available on
-        # deps for both the tool fast-path and post-processing (reconciliation,
-        # guardrails).  kernel_impact_tool will return this cached result
-        # instantly when the LLM calls it.
+        # deps for both the tool fast-path and post-processing.
+        # kernel_impact_tool will return this cached result instantly when
+        # the LLM calls it.
         if use_kernel_classifier and is_kernel:
             from aegis_ai.toolsets.tools.kernel_classifier import kernel_impact_classify
 
@@ -478,7 +478,9 @@ class SuggestImpact(Feature):
                 - Do not base metric choices on which RH products are affected; reason from technical preconditions and exploit mechanics.
                 - Pick impact (Critical/Important/Moderate/Low) from the computed score.
             """,
-            rules=RULES_KERNEL if is_kernel else self._RULES_BASE,
+            rules=self._RULES_BASE + RULES_KERNEL_ADDENDUM
+            if is_kernel
+            else self._RULES_BASE,
             context=_build_cve_input(cve_id, static_context),
             output_schema=output_schema,
         )
