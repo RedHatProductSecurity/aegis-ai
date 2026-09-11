@@ -351,6 +351,13 @@ KNOWN_FAILURES: dict[str, dict] = {
             "MODERATE (conf=0.80) but escalated — kpanic overestimation signal."
         ),
     },
+    "CVE-2026-23003": {
+        "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
+        "reason": (
+            "Overestimation: predicted IMPORTANT, expected MODERATE. "
+            "kpanic-driven overescalation."
+        ),
+    },
     "CVE-2026-23011": {
         "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
         "reason": (
@@ -413,7 +420,6 @@ KPANIC_CVES: set[str] = {
     "CVE-2025-39682",
     "CVE-2025-39905",
     "CVE-2025-40248",
-    "CVE-2026-23003",
     "CVE-2026-23074",
     "CVE-2026-23097",
     # waived kpanic overestimations (keep in sync with KNOWN_FAILURES)
@@ -423,6 +429,7 @@ KPANIC_CVES: set[str] = {
     "CVE-2025-37803",
     "CVE-2025-38718",
     "CVE-2025-68305",
+    "CVE-2026-23003",
     "CVE-2026-22998",
     "CVE-2026-23011",
 }
