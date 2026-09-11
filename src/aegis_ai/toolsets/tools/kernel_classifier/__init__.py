@@ -3,15 +3,14 @@
 Wraps :class:`KernelImpactClassifier` as a pydantic-ai ``@Tool`` so that
 the LLM can request a patch-feature analysis during its reasoning loop.
 
-The tool returns active patch-feature flags, per-class severity
-probabilities, and **raw patch diffs** so the LLM can reason about
-the actual code changes when producing its CVSS assessment.  It
-deliberately omits the predicted impact label and any CVSS vector to
-avoid anchoring the LLM on the classifier's output.
+The tool returns the classifier's predicted impact label, active
+patch-feature flags, and **raw patch diffs** so the LLM can reason
+about the actual code changes when producing its CVSS assessment.
 """
 
 import logging
 import re
+from typing import Literal
 
 from pydantic import Field
 from pydantic_ai import RunContext, Tool
@@ -33,15 +32,18 @@ class KernelImpactToolInput(BaseToolInput):
 class KernelImpactToolResponse(BaseToolOutput):
     """Patch-level analysis of a kernel CVE.
 
-    Contains factual signals derived from the fix patches — the active
-    feature flags (e.g. ``uaf``, ``networking``, ``kernel_panic``), the
-    XGBoost severity class probabilities, and raw patch diffs.  No CVSS
-    vector or single impact label is included to avoid anchoring the LLM.
+    Contains the classifier's predicted impact label, active feature flags
+    (e.g. ``uaf``, ``networking``, ``kernel_panic``), and raw patch diffs.
+    The LLM is instructed to use the classified impact and assign a CVSS
+    vector whose score falls within the matching severity band.
     """
 
     cve_id: CVEID = Field(
         ...,
         description="The CVE identifier that was analysed.",
+    )
+    impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] | None = Field(
+        description="The classification result",
     )
     active_features: list[str] = Field(
         default_factory=list,
@@ -50,13 +52,6 @@ class KernelImpactToolResponse(BaseToolOutput):
             "(e.g. 'uaf', 'networking', 'kernel_panic', 'bpf'). "
             "If 'kernel_panic' is present, the bug can crash the kernel — "
             "the CVSS base score should typically be at least 7.0."
-        ),
-    )
-    severity_probabilities: dict[str, float] = Field(
-        default_factory=dict,
-        description=(
-            "Per-class probabilities from the XGBoost model, "
-            "e.g. {'IMPORTANT': 0.78, 'MODERATE': 0.15, 'LOW': 0.07}."
         ),
     )
     patches_analyzed: int = Field(
@@ -156,8 +151,8 @@ def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolRespon
     patch_summaries = result.get("patch_summaries", [])
     return KernelImpactToolResponse(
         cve_id=cve_id,
+        impact=result.get("impact"),
         active_features=result.get("active_features", []),
-        severity_probabilities=result.get("probabilities", {}),
         patches_analyzed=result.get("patches_analyzed", 0),
         patch_context="\n---\n".join(patch_summaries),
     )
@@ -167,15 +162,16 @@ def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolRespon
 async def kernel_impact_tool(
     ctx: RunContext[feature_deps], input: KernelImpactToolInput
 ) -> KernelImpactToolResponse:
-    """Analyse fix patches for a Linux kernel CVE and return security-relevant
-    signals: which patch feature flags fired and the model's per-class severity
-    probabilities.  Use this when the CVE component is the Linux kernel."""
+    """Analyse fix patches for a Linux kernel CVE and return the classified
+    impact label and active patch feature flags.
+    Use this when the CVE component is the Linux kernel."""
 
     ctx.deps.classifier_attempts += 1
 
     if not ctx.deps.is_kernel_cve:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,
+            impact=None,
             status="error",
             error_message="Not a kernel CVE; tool not applicable.",
         )
@@ -195,6 +191,7 @@ async def kernel_impact_tool(
     if result is None:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,
+            impact=None,
             status="error",
             error_message="Kernel classifier could not produce a result for this CVE.",
         )
