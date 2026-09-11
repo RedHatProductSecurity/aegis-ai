@@ -451,7 +451,7 @@ class SuggestImpact(Feature):
             pre_clf = None
 
         deps = feature_deps(
-            exclude_osidb_fields=["impact", "rh_cvss_score"],
+            exclude_osidb_fields=["affects", "impact", "rh_cvss_score"],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
         )
