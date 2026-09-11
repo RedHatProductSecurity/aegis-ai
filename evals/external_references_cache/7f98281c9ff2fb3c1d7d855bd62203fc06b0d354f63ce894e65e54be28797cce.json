@@ -1,0 +1,10 @@
+{
+    "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-54258",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-54258",
+        "content_type": "text/html",
+        "extracted_text": ""
+    }
+}

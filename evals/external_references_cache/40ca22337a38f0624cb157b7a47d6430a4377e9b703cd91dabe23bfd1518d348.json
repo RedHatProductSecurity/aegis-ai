@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/CVEProject/cvelistV5/tree/main/cves/2026/23xxx/CVE-2026-23003.json",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/CVEProject/cvelistV5/tree/main/cves/2026/23xxx/CVE-2026-23003.json",
+        "url": "https://github.com/CVEProject/cvelistV5/tree/main/cves/2026/23xxx/CVE-2026-23003.json",
+        "content_type": null,
+        "extracted_text": null
+    }
+}
