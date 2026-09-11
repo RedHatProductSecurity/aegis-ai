@@ -58,8 +58,8 @@ def check_kernel_output(output, deps) -> str | None:
 
     attempts = getattr(deps, "classifier_attempts", 0)
     if attempts > 0:
-        logger.warning(
-            "kernel_impact_tool was called but returned no classifier data for this CVE"
+        logger.info(
+            f"[kernel_impact_tool] no classifier data returned for {output.cve_id}"
         )
         return None
 

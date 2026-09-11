@@ -24,6 +24,10 @@ from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 logger = logging.getLogger(__name__)
 
 
+# classifier results with `confidence` below this threshold are discarded
+CONFIDENCE_THR = 0.1
+
+
 class KernelImpactToolInput(BaseToolInput):
     cve_id: CVEID = Field(
         ...,
@@ -135,11 +139,21 @@ async def kernel_impact_classify(
 
     cvss_scores = await _resolve_cvss_scores(cve_id, static_context)
 
-    return await classifier.classify(
+    result = await classifier.classify(
         cve_id=cve_id,
         commit_hashes=commit_hashes,
         cvss_scores=cvss_scores,
     )
+    if result is None:
+        return None
+
+    confidence = result.get("confidence", 0.0)
+    if confidence < CONFIDENCE_THR:
+        reason = f"confidence is below threshold: {confidence} < {CONFIDENCE_THR}"
+        logger.info(f"kernel_impact_classify: discarding result for {cve_id}: {reason}")
+        return None
+
+    return result
 
 
 def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolResponse:
