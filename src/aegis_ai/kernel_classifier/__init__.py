@@ -18,6 +18,7 @@ Configuration (environment variables):
   AEGIS_USE_KERNEL_CLASSIFIER  — set to "true" to enable (default: false)
 """
 
+import asyncio
 import difflib
 import importlib.util
 import json
@@ -68,6 +69,18 @@ HTML_COMMIT_URL_TEMPLATES = [
     "https://github.com/gregkh/linux/commit/{hash}",
     "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?id={hash}",
 ]
+
+_git_fetch_sem: asyncio.Semaphore | None = None
+
+
+def _get_git_fetch_sem() -> asyncio.Semaphore:
+    """Lazy-init semaphore limiting concurrent git.kernel.org connections."""
+    global _git_fetch_sem
+    if _git_fetch_sem is None:
+        from aegis_ai import get_settings
+
+        _git_fetch_sem = asyncio.Semaphore(get_settings().llm_max_jobs)
+    return _git_fetch_sem
 
 
 def is_kernel_component(components: list | str | None) -> bool:
@@ -402,6 +415,8 @@ class KernelImpactClassifier:
     def available(self) -> bool:
         return self.model is not None and self._feature_extractor is not None
 
+    _503_RETRY_DELAYS = (3, 6)
+
     @staticmethod
     async def _fetch_with_limit(
         client: "httpx.AsyncClient",
@@ -413,46 +428,61 @@ class KernelImpactClassifier:
         """Stream-fetch a URL, aborting before buffering if oversized.
 
         Returns the response text if it's within *size_limit*, or ``None``
-        if the response was too large, non-200, or failed.
+        if the response was too large, non-200, or failed.  Retries once
+        on 503 (git.kernel.org rate-limiting) after a short delay.
         """
-        async with client.stream("GET", url, follow_redirects=True) as resp:
-            if resp.status_code != 200:
-                return None
+        for attempt, delay in enumerate(
+            (*KernelImpactClassifier._503_RETRY_DELAYS, None)
+        ):
+            async with client.stream("GET", url, follow_redirects=True) as resp:
+                if resp.status_code == 503 and delay is not None:
+                    logger.info(
+                        "503 for %s %s (attempt %d), retrying in %ds",
+                        content_type,
+                        commit_hash[:12],
+                        attempt + 1,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                if resp.status_code != 200:
+                    return None
 
-            content_length = resp.headers.get("content-length")
-            if content_length:
-                try:
-                    if int(content_length) > size_limit:
+                content_length = resp.headers.get("content-length")
+                if content_length:
+                    try:
+                        if int(content_length) > size_limit:
+                            logger.warning(
+                                "Skipping oversized %s %s (%s bytes via Content-Length)",
+                                content_type,
+                                commit_hash[:12],
+                                content_length,
+                            )
+                            return None
+                    except ValueError:
                         logger.warning(
-                            "Skipping oversized %s %s (%s bytes via Content-Length)",
+                            "Malformed Content-Length for %s %s: %r",
                             content_type,
                             commit_hash[:12],
                             content_length,
                         )
+
+                chunks: list[bytes] = []
+                total = 0
+                async for chunk in resp.aiter_bytes():
+                    total += len(chunk)
+                    if total > size_limit:
+                        logger.warning(
+                            "Dropping oversized %s %s (%d bytes streamed)",
+                            content_type,
+                            commit_hash[:12],
+                            total,
+                        )
                         return None
-                except ValueError:
-                    logger.warning(
-                        "Malformed Content-Length for %s %s: %r",
-                        content_type,
-                        commit_hash[:12],
-                        content_length,
-                    )
+                    chunks.append(chunk)
 
-            chunks: list[bytes] = []
-            total = 0
-            async for chunk in resp.aiter_bytes():
-                total += len(chunk)
-                if total > size_limit:
-                    logger.warning(
-                        "Dropping oversized %s %s (%d bytes streamed)",
-                        content_type,
-                        commit_hash[:12],
-                        total,
-                    )
-                    return None
-                chunks.append(chunk)
-
-        return b"".join(chunks).decode("utf-8", errors="replace")
+                return b"".join(chunks).decode("utf-8", errors="replace")
+        return None
 
     async def _fetch_patches(self, commit_hashes: list[str]) -> list[tuple[str, str]]:
         """Fetch raw patches from git.kernel.org for given commit hashes.
@@ -465,42 +495,44 @@ class KernelImpactClassifier:
         Returns list of (commit_hash, patch_content) tuples.
         """
         patches = []
+        sem = _get_git_fetch_sem()
         async with httpx.AsyncClient(timeout=30.0) as client:
             for commit_hash in commit_hashes:
-                fetched = False
-                used_template = None
-                for tmpl in PATCH_URL_TEMPLATES:
-                    url = tmpl.format(hash=commit_hash)
-                    try:
-                        text = await self._fetch_with_limit(
-                            client, url, commit_hash, _PATCH_SIZE_LIMIT, "patch"
-                        )
-                        if text is None:
-                            continue
+                async with sem:
+                    fetched = False
+                    used_template = None
+                    for tmpl in PATCH_URL_TEMPLATES:
+                        url = tmpl.format(hash=commit_hash)
+                        try:
+                            text = await self._fetch_with_limit(
+                                client, url, commit_hash, _PATCH_SIZE_LIMIT, "patch"
+                            )
+                            if text is None:
+                                continue
 
-                        # Reject trivially small responses (error pages, empty diffs)
-                        if len(text) > 100:
-                            patches.append((commit_hash, text))
-                            logger.debug("Fetched patch for %s", commit_hash[:12])
-                            fetched = True
-                            used_template = tmpl
-                            break
-                    except Exception:  # noqa: S112
-                        continue
-                if not fetched:
-                    logger.warning(
-                        "Could not fetch patch %s from any source "
-                        "(including gregkh/linux fallback for resolving "
-                        "backport patches) — commit may not exist in "
-                        "any known tree",
-                        commit_hash[:12],
-                    )
-                elif used_template == _GREGKH_FALLBACK_TEMPLATE:
-                    logger.debug(
-                        "Patch %s resolved via gregkh/linux fallback "
-                        "(stable-backport commit)",
-                        commit_hash[:12],
-                    )
+                            # Reject trivially small responses (error pages, empty diffs)
+                            if len(text) > 100:
+                                patches.append((commit_hash, text))
+                                logger.debug("Fetched patch for %s", commit_hash[:12])
+                                fetched = True
+                                used_template = tmpl
+                                break
+                        except Exception:  # noqa: S112
+                            continue
+                    if not fetched:
+                        logger.warning(
+                            "Could not fetch patch %s from any source "
+                            "(including gregkh/linux fallback for resolving "
+                            "backport patches) — commit may not exist in "
+                            "any known tree",
+                            commit_hash[:12],
+                        )
+                    elif used_template == _GREGKH_FALLBACK_TEMPLATE:
+                        logger.debug(
+                            "Patch %s resolved via gregkh/linux fallback "
+                            "(stable-backport commit)",
+                            commit_hash[:12],
+                        )
         return patches
 
     async def _fetch_commit_html(
@@ -517,31 +549,39 @@ class KernelImpactClassifier:
         Returns list of (commit_hash, html_content) tuples.
         """
         pages: list[tuple[str, str]] = []
+        sem = _get_git_fetch_sem()
         async with httpx.AsyncClient(timeout=30.0) as client:
             for commit_hash in commit_hashes:
-                fetched = False
-                for tmpl in HTML_COMMIT_URL_TEMPLATES:
-                    url = tmpl.format(hash=commit_hash)
-                    try:
-                        text = await self._fetch_with_limit(
-                            client, url, commit_hash, _HTML_SIZE_LIMIT, "commit HTML"
-                        )
-                        if text is None:
-                            continue
+                async with sem:
+                    fetched = False
+                    for tmpl in HTML_COMMIT_URL_TEMPLATES:
+                        url = tmpl.format(hash=commit_hash)
+                        try:
+                            text = await self._fetch_with_limit(
+                                client,
+                                url,
+                                commit_hash,
+                                _HTML_SIZE_LIMIT,
+                                "commit HTML",
+                            )
+                            if text is None:
+                                continue
 
-                        # Reject trivially small responses (error pages, empty content);
-                        # HTML pages have more boilerplate overhead than raw patches
-                        if len(text) > 200:
-                            pages.append((commit_hash, text))
-                            logger.debug("Fetched commit HTML for %s", commit_hash[:12])
-                            fetched = True
-                            break
-                    except Exception:  # noqa: S112
-                        continue
-                if not fetched:
-                    logger.warning(
-                        "Could not fetch commit HTML for %s", commit_hash[:12]
-                    )
+                            # Reject trivially small responses (error pages, empty content);
+                            # HTML pages have more boilerplate overhead than raw patches
+                            if len(text) > 200:
+                                pages.append((commit_hash, text))
+                                logger.debug(
+                                    "Fetched commit HTML for %s", commit_hash[:12]
+                                )
+                                fetched = True
+                                break
+                        except Exception:  # noqa: S112
+                            continue
+                    if not fetched:
+                        logger.warning(
+                            "Could not fetch commit HTML for %s", commit_hash[:12]
+                        )
         return pages
 
     @staticmethod

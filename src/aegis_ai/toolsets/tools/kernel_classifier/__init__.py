@@ -12,6 +12,7 @@ avoid anchoring the LLM on the classifier's output.
 
 import logging
 import re
+from typing import Literal
 
 from pydantic import Field
 from pydantic_ai import RunContext, Tool
@@ -21,6 +22,10 @@ from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
 logger = logging.getLogger(__name__)
+
+
+# classifier results with `confidence` below this threshold are discarded
+CONFIDENCE_THR = 0.1
 
 
 class KernelImpactToolInput(BaseToolInput):
@@ -43,6 +48,9 @@ class KernelImpactToolResponse(BaseToolOutput):
         ...,
         description="The CVE identifier that was analysed.",
     )
+    impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] | None = Field(
+        description="The classification result",
+    )
     active_features: list[str] = Field(
         default_factory=list,
         description=(
@@ -50,13 +58,6 @@ class KernelImpactToolResponse(BaseToolOutput):
             "(e.g. 'uaf', 'networking', 'kernel_panic', 'bpf'). "
             "If 'kernel_panic' is present, the bug can crash the kernel — "
             "the CVSS base score should typically be at least 7.0."
-        ),
-    )
-    severity_probabilities: dict[str, float] = Field(
-        default_factory=dict,
-        description=(
-            "Per-class probabilities from the XGBoost model, "
-            "e.g. {'IMPORTANT': 0.78, 'MODERATE': 0.15, 'LOW': 0.07}."
         ),
     )
     patches_analyzed: int = Field(
@@ -138,11 +139,21 @@ async def kernel_impact_classify(
 
     cvss_scores = await _resolve_cvss_scores(cve_id, static_context)
 
-    return await classifier.classify(
+    result = await classifier.classify(
         cve_id=cve_id,
         commit_hashes=commit_hashes,
         cvss_scores=cvss_scores,
     )
+    if result is None:
+        return None
+
+    confidence = result.get("confidence", 0.0)
+    if confidence < CONFIDENCE_THR:
+        reason = f"confidence is below threshold: {confidence} < {CONFIDENCE_THR}"
+        logger.info(f"kernel_impact_classify: discarding result for {cve_id}: {reason}")
+        return None
+
+    return result
 
 
 def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolResponse:
@@ -150,8 +161,8 @@ def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolRespon
     patch_summaries = result.get("patch_summaries", [])
     return KernelImpactToolResponse(
         cve_id=cve_id,
+        impact=result.get("impact"),
         active_features=result.get("active_features", []),
-        severity_probabilities=result.get("probabilities", {}),
         patches_analyzed=result.get("patches_analyzed", 0),
         patch_context="\n---\n".join(patch_summaries),
     )
@@ -170,6 +181,7 @@ async def kernel_impact_tool(
     if not ctx.deps.is_kernel_cve:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,
+            impact=None,
             status="error",
             error_message="Not a kernel CVE; tool not applicable.",
         )
@@ -189,6 +201,7 @@ async def kernel_impact_tool(
     if result is None:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,
+            impact=None,
             status="error",
             error_message="Kernel classifier could not produce a result for this CVE.",
         )

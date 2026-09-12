@@ -28,7 +28,17 @@ import sys
 from pathlib import Path
 
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
-from aegis_ai.features.cve.kernel import MEMORY_CORRUPTION_FLAGS, NETWORK_EXPOSURE_FLAGS
+
+MEMORY_CORRUPTION_FLAGS = {
+    "uaf",
+    "kernel_panic_plus_uaf",
+    "danger",
+    "write",
+    "outofbounds",
+    "memory",
+}
+
+NETWORK_EXPOSURE_FLAGS = {"remote", "networking", "servertoclientfail"}
 
 ESCALATION_FEATURES = {
     "uaf",
