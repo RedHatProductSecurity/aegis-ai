@@ -16,6 +16,7 @@ from pydantic_ai import RunContext, Tool
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.data_models import feature_deps
+from aegis_ai.kernel_vulns_repo import describe_git_error, sync_vulns_repo
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,6 @@ logger = logging.getLogger(__name__)
 REPO_LOCK = Lock()
 # Cache git pull to avoid excessive network calls
 REPO_UPDATE_INTERVAL = 600  # seconds
-GIT_CLONE_TIMEOUT = 300  # seconds
-GIT_PULL_TIMEOUT = 60  # seconds
 
 # Single-flight repo setup at the async level — only one to_thread worker
 # runs setup() at a time; other callers await without pinning a thread pool slot.
@@ -116,51 +115,32 @@ class KernelVulnsRepo:
         from aegis_ai.osidb_bot.util import log_memory
 
         with REPO_LOCK:
-            if not self.repo_path.exists():
+            repo_exists = self.repo_path.exists()
+
+            if repo_exists:
+                # Repo exists — only pull if the staleness interval has elapsed
+                last_updated = (
+                    self.lock_file.stat().st_mtime if self.lock_file.exists() else 0
+                )
+                if time.time() - last_updated <= REPO_UPDATE_INTERVAL:
+                    return
+                logger.info("Updating security vulnerabilities repo...")
+            else:
                 logger.info(
                     "Cloning Linux security vulnerabilities repo for the first time..."
                 )
                 log_memory("pre_clone")
-                try:
-                    subprocess.run(
-                        [
-                            "git",
-                            "clone",
-                            "https://git.kernel.org/pub/scm/linux/security/vulns.git",
-                            str(self.repo_path),
-                        ],
-                        check=True,
-                        capture_output=True,
-                        text=True,
-                        timeout=GIT_CLONE_TIMEOUT,
-                    )
-                    self.lock_file.touch()
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"Failed to clone vulns repo: {e.stderr}")
-                    raise
-                log_memory("post_clone")
-                return
 
-            # If repo exists, check if it needs an update
-            last_updated = (
-                self.lock_file.stat().st_mtime if self.lock_file.exists() else 0
-            )
-            if time.time() - last_updated > REPO_UPDATE_INTERVAL:
-                logger.info("Updating security vulnerabilities repo...")
-                try:
-                    subprocess.run(
-                        ["git", "pull"],
-                        cwd=self.repo_path,
-                        check=True,
-                        capture_output=True,
-                        text=True,
-                        timeout=GIT_PULL_TIMEOUT,
-                    )
-                    self.lock_file.touch()
-                except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-                    logger.warning(
-                        f"Git pull failed for vulns repo, using stale data: {e}"
-                    )
+            try:
+                synced = sync_vulns_repo(self.repo_path)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                logger.error(f"Failed to clone vulns repo: {describe_git_error(e)}")
+                raise
+
+            if synced:
+                self.lock_file.touch()
+            if not repo_exists:
+                log_memory("post_clone")
 
 
 _STABLE_URL_RE = re.compile(r"https://git\.kernel\.org/stable/c/([0-9a-fA-F]{40})")

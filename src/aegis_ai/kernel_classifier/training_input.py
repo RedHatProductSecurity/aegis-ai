@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from aegis_ai.kernel_classifier import is_kernel_component
+from aegis_ai.kernel_vulns_repo import describe_git_error, sync_vulns_repo
 
 __all__ = [
     "CVSS_ISSUER_PRIORITY",
@@ -427,41 +428,18 @@ class LinuxVulnsResolver:
 
     def ensure_repo(self) -> None:
         self.logger.info("Setting up Linux security vulnerabilities repository...")
-        if not self.repo_path.exists():
-            self.repo_path.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                subprocess.run(
-                    [
-                        "git",
-                        "clone",
-                        "https://git.kernel.org/pub/scm/linux/security/vulns.git",
-                        str(self.repo_path),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-            except subprocess.CalledProcessError as exc:
-                raise RuntimeError(
-                    f"Failed to clone linux-security-vulns repo to "
-                    f"{self.repo_path}: {exc.stderr.strip() or exc}"
-                ) from exc
-            return
-
+        repo_existed = self.repo_path.exists()
         try:
-            subprocess.run(
-                ["git", "pull"],
-                cwd=self.repo_path,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+            synced = sync_vulns_repo(self.repo_path)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            raise RuntimeError(
+                f"Failed to clone linux-security-vulns repo to "
+                f"{self.repo_path}: {describe_git_error(exc)}"
+            ) from exc
+        if synced and repo_existed:
             self.logger.info("Security vulnerabilities repository updated successfully")
-        except subprocess.CalledProcessError as exc:
-            self.logger.warning(
-                "Git pull failed for vulns repo: %s. Continuing with existing repo...",
-                exc,
-            )
+        elif synced:
+            self.logger.info("Security vulnerabilities repository cloned successfully")
 
     def json_paths(self, cve_id: str) -> list[Path]:
         """Return candidate JSON file paths for *cve_id* in the vulns repo."""
