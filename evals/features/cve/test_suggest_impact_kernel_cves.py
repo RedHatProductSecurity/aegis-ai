@@ -227,6 +227,20 @@ KNOWN_FAILURES: dict[str, dict] = {
             "a plausible user-data impact path as required by the rubric."
         ),
     },
+    "CVE-2025-38352": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": (
+            "Underestimation: predicted MODERATE, expected IMPORTANT. "
+            "LLM consistently underscores CIA for posix-cpu-timers UAF."
+        ),
+    },
+    "CVE-2025-38590": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": (
+            "Underestimation: predicted MODERATE, expected IMPORTANT. "
+            "LLM underestimates net/mlx5e network driver IPsec path flaw."
+        ),
+    },
     "CVE-2025-38718": {
         "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
         "reason": (
@@ -388,8 +402,7 @@ if not get_settings().use_kernel_classifier:
             "requires kernel classifier to reach correct impact."
         ),
     }
-    for _cve in ("CVE-2025-38590", "CVE-2023-53186"):
-        KNOWN_FAILURES[_cve] = _NO_CLF_WAIVER
+    KNOWN_FAILURES["CVE-2023-53186"] = _NO_CLF_WAIVER
     KNOWN_FAILURES["CVE-2026-23074"]["known_to_fail_evaluators"].append(
         "UnderestimationEvaluator"
     )
