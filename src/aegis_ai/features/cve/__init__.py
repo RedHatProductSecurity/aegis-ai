@@ -457,8 +457,6 @@ class SuggestImpact(Feature):
             if not components and self.agent.name == "RHFeatureAgent":
                 cve_data = await osidb_tool.cve_retrieve(cve_id)
                 components = cve_data.components
-                resolved_static_context = cve_data.model_dump()
-                use_static = True
 
             is_kernel = is_kernel_component(components)
 
