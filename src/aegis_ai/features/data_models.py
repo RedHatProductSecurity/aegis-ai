@@ -35,6 +35,10 @@ class feature_deps:
     # (triggers retry), >0 means it tried (accept, even if classifier_result
     # is None).
     classifier_attempts: int = field(default=0)
+    # True once exec() has eagerly run kernel_impact_classify, regardless of
+    # the outcome.  The tool checks this to avoid re-running the classifier
+    # when the eager path returned None (e.g. low confidence).
+    classifier_attempted: bool = field(default=False)
     # Pre-computed classifier result from kernel_impact_classify.  Set by
     # exec() before the LLM run; kernel_impact_tool returns it immediately
     # via its fast-path cache (mirrors the flaw_tool static_context pattern).
