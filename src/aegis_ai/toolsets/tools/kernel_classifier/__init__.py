@@ -197,11 +197,22 @@ async def kernel_impact_tool(
         logger.info("Using pre-computed classifier result for %s", input.cve_id)
         return _response_from_result(input.cve_id, ctx.deps.classifier_result)
 
-    # Slow path: run classifier on demand
+    # The eager path already ran but produced no usable result (e.g. low
+    # confidence or no patches).  Return an error without re-running.
+    if ctx.deps.classifier_attempted:
+        return KernelImpactToolResponse(
+            cve_id=input.cve_id,
+            impact=None,
+            status="error",
+            error_message="Kernel classifier could not produce a result for this CVE.",
+        )
+
+    # Slow path: run classifier on demand (no eager attempt was made)
     logger.info("Analysing kernel patch features for %s...", input.cve_id)
     static_context = getattr(ctx.deps, "static_context", None)
     result = await kernel_impact_classify(input.cve_id, static_context=static_context)
 
+    ctx.deps.classifier_attempted = True
     if result is None:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,

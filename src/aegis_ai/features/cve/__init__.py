@@ -452,6 +452,7 @@ class SuggestImpact(Feature):
             exclude_osidb_fields=["affects", "impact", "rh_cvss_score"],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
+            classifier_attempted=use_kernel_classifier and is_kernel,
         )
         if pre_clf is not None:
             deps.classifier_result = pre_clf
