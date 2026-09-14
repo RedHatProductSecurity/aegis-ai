@@ -540,22 +540,6 @@ class ConfidenceEvaluator(Evaluator[str, AegisFeatureModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
-def _parse_trace(trace: str | None) -> tuple[list[str], list[str]]:
-    """Extract rules_fired and guardrails_fired lists from a reconciliation trace."""
-    import re
-
-    rules: list[str] = []
-    guardrails: list[str] = []
-    if trace:
-        m = re.search(r"rules=\[([^\]]*)\]", trace)
-        if m:
-            rules = [r.strip() for r in m.group(1).split(",") if r.strip()]
-        m = re.search(r"guardrails=\[([^\]]*)\]", trace)
-        if m:
-            guardrails = [g.strip() for g in m.group(1).split(",") if g.strip()]
-    return rules, guardrails
-
-
 def export_eval_results(
     report: EvaluationReport,
     output_path: Path,
@@ -593,12 +577,10 @@ def export_eval_results(
         diag = classifier_diagnostics.get(ecase.inputs)
         if diag is None and hasattr(output, "_classifier_diagnostics"):
             diag = output._classifier_diagnostics
-        escalation = getattr(output, "_escalation_floor_applied", False)
         reconciliation_trace = getattr(output, "_reconciliation_trace", None)
 
         case_data["classifier"] = None
         if diag:
-            rules_fired, guardrails_fired = _parse_trace(reconciliation_trace)
             case_data["classifier"] = {
                 "impact": diag.get("impact"),
                 "confidence": diag.get("confidence"),
@@ -607,10 +589,7 @@ def export_eval_results(
                 "cvss_score": diag.get("cvss_score"),
                 "cvss_vector": diag.get("cvss_vector"),
                 "patches_analyzed": diag.get("patches_analyzed"),
-                "escalation_floor_applied": escalation,
                 "reconciliation_trace": reconciliation_trace,
-                "rules_fired": rules_fired,
-                "guardrails_fired": guardrails_fired,
             }
 
         evaluators: dict[str, Any] = {}
