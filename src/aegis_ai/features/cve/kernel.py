@@ -781,6 +781,12 @@ def check_kernel_output(output, deps) -> str | None:
     if clf_result is not None:
         return None
 
+    # The eager path already ran but produced no result (low confidence,
+    # no patches, etc.).  Don't force the LLM to call the tool just to
+    # get an error back.
+    if getattr(deps, "classifier_attempted", False):
+        return None
+
     attempts = getattr(deps, "classifier_attempts", 0)
     if attempts > 0:
         logger.warning(

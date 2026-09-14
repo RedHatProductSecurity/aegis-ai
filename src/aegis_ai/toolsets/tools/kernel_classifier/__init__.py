@@ -86,13 +86,19 @@ async def _fetch_osidb_cvss(cve_id: str) -> list[dict]:
 
 
 async def _resolve_cvss_scores(cve_id: str, static_context: dict | None) -> list[dict]:
-    """Return CVSS scores from static_context when available, else OSIDB."""
+    """Return CVSS scores from static_context when available, else OSIDB.
+
+    RH-issued scores are excluded because in production the bot runs before
+    an analyst sets the RH score — including it would let the classifier
+    use ground truth during re-evaluation.
+    """
     if static_context and isinstance(static_context, dict):
         scores = static_context.get("cvss_scores")
         if scores is not None:
             logger.debug("Using CVSS scores from static_context for %s", cve_id)
-            return scores
-    return await _fetch_osidb_cvss(cve_id)
+            return [s for s in scores if s.get("issuer") != "RH"]
+    scores = await _fetch_osidb_cvss(cve_id)
+    return [s for s in scores if s.get("issuer") != "RH"]
 
 
 async def kernel_impact_classify(
