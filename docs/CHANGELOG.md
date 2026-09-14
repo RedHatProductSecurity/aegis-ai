@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- KPI endpoint filters for component feedback: `cve_id`, `source_component`, and `multiple_source_components` query parameters on `GET /api/v1/analysis/kpi/cve`. Component matching is case-sensitive.
+- KPI endpoint reports feedback under canonical public feature names, so manual and programmatic (osidb-bot) log entries unify under `feature=all`: `source_component` collapses into `suggest-affected-components` and `cve_description` into `suggest-description`. Either raw key is still accepted as a query alias for its canonical feature.
+
+
 ## [0.9.0] - 2026-08-12
 
 ### Changed
