@@ -1,0 +1,17 @@
+{
+    "status": "success",
+    "error_message": null,
+    "package": "glibc",
+    "ps_update_stream": "rhel-7-els",
+    "binary_rpms": [
+        "glibc",
+        "glibc-common",
+        "glibc-debuginfo-common",
+        "glibc-devel",
+        "glibc-headers",
+        "glibc-static",
+        "glibc-utils",
+        "nscd"
+    ],
+    "build_nvr": "glibc-2.17-326.el7_9.6"
+}

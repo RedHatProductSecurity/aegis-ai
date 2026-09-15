@@ -17,6 +17,18 @@ from aegis_ai.toolsets.tools.osv_dev_ghsa import (
     extract_ghsa_ids,
 )
 from evals.features.common import eval_metrics, eval_summary
+from evals.utils.build_system_cache import (
+    build_system_cache_retrieve,
+)
+from evals.utils.build_system_cache import (
+    cache_misses as build_system_cache_misses,
+)
+from evals.utils.build_system_cache import (
+    get_miss_files as get_build_system_miss_files,
+)
+from evals.utils.build_system_cache import (
+    write_misses_report as write_build_system_misses_report,
+)
 from evals.utils.external_references_cache import (
     cache_misses as extref_cache_misses,
 )
@@ -165,6 +177,16 @@ def _patch_external_references(_monkeypatch_session):
     _monkeypatch_session.setattr(extref_mod, "fetch_reference", extref_cache_retrieve)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _patch_build_system_lookup(_monkeypatch_session):
+    """Route build system lookups through disk cache during evals."""
+    import aegis_ai.toolsets.tools.build_system as build_system_mod
+
+    _monkeypatch_session.setattr(
+        build_system_mod, "_lookup_binary_rpms", build_system_cache_retrieve
+    )
+
+
 # enable logging to see progress
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging_for_session():
@@ -295,8 +317,18 @@ def pytest_sessionfinish(session, exitstatus):
             osidb_misses_file,
         )
 
+    build_system_misses_file = write_build_system_misses_report()
+    if build_system_misses_file:
+        logging.warning(
+            "[build_system_cache] %d cache miss(es) written to %s — "
+            "commit the new evals/build_system_cache/*.json files",
+            len(build_system_cache_misses),
+            build_system_misses_file,
+        )
+
     # Dump cache-miss file contents as base64 so they can be imported from CI logs
     cache_types = {
+        "build_system": get_build_system_miss_files,
         "external_references": get_extref_miss_files,
         "ghsa": get_ghsa_miss_files,
         "osidb": get_osidb_miss_files,
