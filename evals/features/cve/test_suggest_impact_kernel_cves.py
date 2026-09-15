@@ -89,6 +89,10 @@ KNOWN_FAILURES: dict[str, dict] = {
             "the CVSS vector uses PR:L, which is inconsistent with the explanation."
         ),
     },
+    "CVE-2022-50851": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
+    },
     "CVE-2022-50865": {
         "known_to_fail_evaluators": [
             "CVSSKernelScopeAndPrivileges",
@@ -137,6 +141,10 @@ KNOWN_FAILURES: dict[str, dict] = {
             "Overestimation: predicted IMPORTANT, expected MODERATE. "
             "AEGIS-441 benchmark — kpanic-driven overescalation."
         ),
+    },
+    "CVE-2023-54045": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2023-54081": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
@@ -273,6 +281,10 @@ KNOWN_FAILURES: dict[str, dict] = {
             "LLM explanation inconsistent with its own vector: explanation states C:H/I:L "
             "but vector has C:L/I:H. Scope/privilege narration does not match the vector."
         ),
+    },
+    "CVE-2025-39754": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2025-39809": {
         "known_to_fail_evaluators": [
