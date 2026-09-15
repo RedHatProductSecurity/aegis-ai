@@ -1,0 +1,10 @@
+{
+    "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-23003",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-23003",
+        "content_type": "text/html",
+        "extracted_text": ""
+    }
+}

@@ -89,6 +89,10 @@ KNOWN_FAILURES: dict[str, dict] = {
             "the CVSS vector uses PR:L, which is inconsistent with the explanation."
         ),
     },
+    "CVE-2022-50851": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
+    },
     "CVE-2022-50865": {
         "known_to_fail_evaluators": [
             "CVSSKernelScopeAndPrivileges",
@@ -132,11 +136,19 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
     "CVE-2023-53764": {
-        "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
+        "known_to_fail_evaluators": [
+            "KpanicOverestimationEvaluator",
+            "UnderestimationEvaluator",
+        ],
         "reason": (
             "Overestimation: predicted IMPORTANT, expected MODERATE. "
-            "AEGIS-441 benchmark — kpanic-driven overescalation."
+            "AEGIS-441 benchmark — kpanic-driven overescalation. "
+            "Also underestimates to LOW without classifier."
         ),
+    },
+    "CVE-2023-54045": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2023-54081": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
@@ -227,6 +239,20 @@ KNOWN_FAILURES: dict[str, dict] = {
             "a plausible user-data impact path as required by the rubric."
         ),
     },
+    "CVE-2025-38352": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": (
+            "Underestimation: predicted MODERATE, expected IMPORTANT. "
+            "LLM consistently underscores CIA for posix-cpu-timers UAF."
+        ),
+    },
+    "CVE-2025-38590": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": (
+            "Underestimation: predicted MODERATE, expected IMPORTANT. "
+            "LLM underestimates net/mlx5e network driver IPsec path flaw."
+        ),
+    },
     "CVE-2025-38718": {
         "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
         "reason": (
@@ -259,6 +285,10 @@ KNOWN_FAILURES: dict[str, dict] = {
             "LLM explanation inconsistent with its own vector: explanation states C:H/I:L "
             "but vector has C:L/I:H. Scope/privilege narration does not match the vector."
         ),
+    },
+    "CVE-2025-39754": {
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2025-39809": {
         "known_to_fail_evaluators": [
@@ -351,6 +381,13 @@ KNOWN_FAILURES: dict[str, dict] = {
             "MODERATE (conf=0.80) but escalated — kpanic overestimation signal."
         ),
     },
+    "CVE-2026-23003": {
+        "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
+        "reason": (
+            "Overestimation: predicted IMPORTANT, expected MODERATE. "
+            "kpanic-driven overescalation."
+        ),
+    },
     "CVE-2026-23011": {
         "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
         "reason": (
@@ -381,8 +418,7 @@ if not get_settings().use_kernel_classifier:
             "requires kernel classifier to reach correct impact."
         ),
     }
-    for _cve in ("CVE-2025-38590", "CVE-2023-53186"):
-        KNOWN_FAILURES[_cve] = _NO_CLF_WAIVER
+    KNOWN_FAILURES["CVE-2023-53186"] = _NO_CLF_WAIVER
     KNOWN_FAILURES["CVE-2026-23074"]["known_to_fail_evaluators"].append(
         "UnderestimationEvaluator"
     )
@@ -413,7 +449,6 @@ KPANIC_CVES: set[str] = {
     "CVE-2025-39682",
     "CVE-2025-39905",
     "CVE-2025-40248",
-    "CVE-2026-23003",
     "CVE-2026-23074",
     "CVE-2026-23097",
     # waived kpanic overestimations (keep in sync with KNOWN_FAILURES)
@@ -423,6 +458,7 @@ KPANIC_CVES: set[str] = {
     "CVE-2025-37803",
     "CVE-2025-38718",
     "CVE-2025-68305",
+    "CVE-2026-23003",
     "CVE-2026-22998",
     "CVE-2026-23011",
 }

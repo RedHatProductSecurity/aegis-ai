@@ -224,7 +224,6 @@ class SuggestImpactModel(AegisFeatureModel):
     _flags: list[str] = PrivateAttr(default_factory=list)
     _classifier_diagnostics: dict[str, Any] | None = PrivateAttr(default=None)
     _reconciliation_trace: str | None = PrivateAttr(default=None)
-    _escalation_floor_applied: bool = PrivateAttr(default=False)
     _original_llm_impact: str | None = PrivateAttr(default=None)
     _original_llm_score: str | None = PrivateAttr(default=None)
     _original_llm_vector: str | None = PrivateAttr(default=None)

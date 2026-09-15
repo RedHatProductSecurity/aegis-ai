@@ -3,15 +3,14 @@
 Wraps :class:`KernelImpactClassifier` as a pydantic-ai ``@Tool`` so that
 the LLM can request a patch-feature analysis during its reasoning loop.
 
-The tool returns active patch-feature flags, per-class severity
-probabilities, and **raw patch diffs** so the LLM can reason about
-the actual code changes when producing its CVSS assessment.  It
-deliberately omits the predicted impact label and any CVSS vector to
-avoid anchoring the LLM on the classifier's output.
+The tool returns the classifier's predicted impact label, active
+patch-feature flags, and **raw patch diffs** so the LLM can reason
+about the actual code changes when producing its CVSS assessment.
 """
 
 import logging
 import re
+from typing import Literal
 
 from pydantic import Field
 from pydantic_ai import RunContext, Tool
@@ -21,6 +20,10 @@ from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
 
 logger = logging.getLogger(__name__)
+
+
+# classifier results with `confidence` below this threshold are discarded
+CONFIDENCE_THR = 0.1
 
 
 class KernelImpactToolInput(BaseToolInput):
@@ -33,15 +36,18 @@ class KernelImpactToolInput(BaseToolInput):
 class KernelImpactToolResponse(BaseToolOutput):
     """Patch-level analysis of a kernel CVE.
 
-    Contains factual signals derived from the fix patches — the active
-    feature flags (e.g. ``uaf``, ``networking``, ``kernel_panic``), the
-    XGBoost severity class probabilities, and raw patch diffs.  No CVSS
-    vector or single impact label is included to avoid anchoring the LLM.
+    Contains the classifier's predicted impact label, active feature flags
+    (e.g. ``uaf``, ``networking``, ``kernel_panic``), and raw patch diffs.
+    The LLM is instructed to use the classified impact and assign a CVSS
+    vector whose score falls within the matching severity band.
     """
 
     cve_id: CVEID = Field(
         ...,
         description="The CVE identifier that was analysed.",
+    )
+    impact: Literal["LOW", "MODERATE", "IMPORTANT", "CRITICAL"] | None = Field(
+        description="The classification result",
     )
     active_features: list[str] = Field(
         default_factory=list,
@@ -50,13 +56,6 @@ class KernelImpactToolResponse(BaseToolOutput):
             "(e.g. 'uaf', 'networking', 'kernel_panic', 'bpf'). "
             "If 'kernel_panic' is present, the bug can crash the kernel — "
             "the CVSS base score should typically be at least 7.0."
-        ),
-    )
-    severity_probabilities: dict[str, float] = Field(
-        default_factory=dict,
-        description=(
-            "Per-class probabilities from the XGBoost model, "
-            "e.g. {'IMPORTANT': 0.78, 'MODERATE': 0.15, 'LOW': 0.07}."
         ),
     )
     patches_analyzed: int = Field(
@@ -86,13 +85,19 @@ async def _fetch_osidb_cvss(cve_id: str) -> list[dict]:
 
 
 async def _resolve_cvss_scores(cve_id: str, static_context: dict | None) -> list[dict]:
-    """Return CVSS scores from static_context when available, else OSIDB."""
+    """Return CVSS scores from static_context when available, else OSIDB.
+
+    RH-issued scores are excluded because in production the bot runs before
+    an analyst sets the RH score — including it would let the classifier
+    use ground truth during re-evaluation.
+    """
     if static_context and isinstance(static_context, dict):
         scores = static_context.get("cvss_scores")
         if scores is not None:
             logger.debug("Using CVSS scores from static_context for %s", cve_id)
-            return scores
-    return await _fetch_osidb_cvss(cve_id)
+            return [s for s in scores if s.get("issuer") != "RH"]
+    scores = await _fetch_osidb_cvss(cve_id)
+    return [s for s in scores if s.get("issuer") != "RH"]
 
 
 async def kernel_impact_classify(
@@ -138,11 +143,21 @@ async def kernel_impact_classify(
 
     cvss_scores = await _resolve_cvss_scores(cve_id, static_context)
 
-    return await classifier.classify(
+    result = await classifier.classify(
         cve_id=cve_id,
         commit_hashes=commit_hashes,
         cvss_scores=cvss_scores,
     )
+    if result is None:
+        return None
+
+    confidence = result.get("confidence", 0.0)
+    if confidence < CONFIDENCE_THR:
+        reason = f"confidence is below threshold: {confidence} < {CONFIDENCE_THR}"
+        logger.info(f"kernel_impact_classify: discarding result for {cve_id}: {reason}")
+        return None
+
+    return result
 
 
 def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolResponse:
@@ -150,8 +165,8 @@ def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolRespon
     patch_summaries = result.get("patch_summaries", [])
     return KernelImpactToolResponse(
         cve_id=cve_id,
+        impact=result.get("impact"),
         active_features=result.get("active_features", []),
-        severity_probabilities=result.get("probabilities", {}),
         patches_analyzed=result.get("patches_analyzed", 0),
         patch_context="\n---\n".join(patch_summaries),
     )
@@ -161,15 +176,16 @@ def _response_from_result(cve_id: CVEID, result: dict) -> KernelImpactToolRespon
 async def kernel_impact_tool(
     ctx: RunContext[feature_deps], input: KernelImpactToolInput
 ) -> KernelImpactToolResponse:
-    """Analyse fix patches for a Linux kernel CVE and return security-relevant
-    signals: which patch feature flags fired and the model's per-class severity
-    probabilities.  Use this when the CVE component is the Linux kernel."""
+    """Analyse fix patches for a Linux kernel CVE and return the classified
+    impact label and active patch feature flags.
+    Use this when the CVE component is the Linux kernel."""
 
     ctx.deps.classifier_attempts += 1
 
     if not ctx.deps.is_kernel_cve:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,
+            impact=None,
             status="error",
             error_message="Not a kernel CVE; tool not applicable.",
         )
@@ -181,14 +197,26 @@ async def kernel_impact_tool(
         logger.info("Using pre-computed classifier result for %s", input.cve_id)
         return _response_from_result(input.cve_id, ctx.deps.classifier_result)
 
-    # Slow path: run classifier on demand
+    # The eager path already ran but produced no usable result (e.g. low
+    # confidence or no patches).  Return an error without re-running.
+    if ctx.deps.classifier_attempted:
+        return KernelImpactToolResponse(
+            cve_id=input.cve_id,
+            impact=None,
+            status="error",
+            error_message="Kernel classifier could not produce a result for this CVE.",
+        )
+
+    # Slow path: run classifier on demand (no eager attempt was made)
     logger.info("Analysing kernel patch features for %s...", input.cve_id)
     static_context = getattr(ctx.deps, "static_context", None)
     result = await kernel_impact_classify(input.cve_id, static_context=static_context)
 
+    ctx.deps.classifier_attempted = True
     if result is None:
         return KernelImpactToolResponse(
             cve_id=input.cve_id,
+            impact=None,
             status="error",
             error_message="Kernel classifier could not produce a result for this CVE.",
         )
