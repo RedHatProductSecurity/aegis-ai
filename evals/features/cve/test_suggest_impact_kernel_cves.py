@@ -136,10 +136,14 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
     "CVE-2023-53764": {
-        "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
+        "known_to_fail_evaluators": [
+            "KpanicOverestimationEvaluator",
+            "UnderestimationEvaluator",
+        ],
         "reason": (
             "Overestimation: predicted IMPORTANT, expected MODERATE. "
-            "AEGIS-441 benchmark — kpanic-driven overescalation."
+            "AEGIS-441 benchmark — kpanic-driven overescalation. "
+            "Also underestimates to LOW without classifier."
         ),
     },
     "CVE-2023-54045": {
