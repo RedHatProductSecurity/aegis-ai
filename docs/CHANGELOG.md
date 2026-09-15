@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-09-15
+
+### Changed
+- migrated pydantic-ai provider HTTP client to `httpx2`
+
+### Added
+- added `suggest-affected-packages` feature to CLI and REST API — suggests SRPM-level affectedness per update stream [\[AEGIS-490\]](https://redhat.atlassian.net/browse/AEGIS-490)
+- added `query-affected-components` deterministic feature to CLI and REST API — returns known affected components from OSIDB [\[AEGIS-489\]](https://redhat.atlassian.net/browse/AEGIS-489)
+- added `GET /api/v1/analysis/kpi/osidb-bot` endpoint with CVSS tracking, distance metrics, and incremental caching
+- included `purl` and `ps_update_stream` in OSIDB tool affect data [\[AEGIS-489\]](https://redhat.atlassian.net/browse/AEGIS-489)
+- added bound mode to `DataQualityEvaluator` and `ConfidenceEvaluator` [\[AEGIS-490\]](https://redhat.atlassian.net/browse/AEGIS-490)
+
+### Fixed
+- `osidb-bot` now reliably records `aegis_meta` entries even when suggestion matches the current value or is empty [\[AEGIS-488\]](https://redhat.atlassian.net/browse/AEGIS-488)
+- prevented product edition abbreviations from being extracted as components in `suggest-affected-components` [\[AEGIS-498\]](https://redhat.atlassian.net/browse/AEGIS-498)
+- allowed fetching GHSA advisories from `open-telemetry/opentelemetry-go` [\[AEGIS-495\]](https://redhat.atlassian.net/browse/AEGIS-495)
+- retry LLM prompts on `httpx2.ReadError`
+
+
 ## [0.9.0] - 2026-08-12
 
 ### Changed
