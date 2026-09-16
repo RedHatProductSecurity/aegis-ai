@@ -47,11 +47,15 @@ def sync_vulns_repo(
     """Clone *git_url* into *repo_path* if missing or incomplete, else pull the
     latest history.
 
-    A *repo_path* that exists but has no ``.git`` subdirectory is treated as
+    A *repo_path* that exists but has no ``.git/index`` file is treated as
     an incomplete clone (e.g. left behind by a clone that was interrupted or
     timed out) and is removed and re-cloned rather than pulled — pulling
     inside a non-repo directory would fail and get misreported as "stale
-    data" when there was never any valid data there.
+    data" when there was never any valid data there. The presence of a
+    ``.git`` directory alone is not sufficient: git creates it early, so an
+    interrupted clone can leave a ``.git`` directory without a completed
+    checkout. ``.git/index`` is only written once the clone/checkout
+    finishes, making it a reliable completeness marker.
 
     Raises ``subprocess.CalledProcessError`` or ``subprocess.TimeoutExpired``
     if the initial clone fails — callers decide how to react to a repo that
@@ -62,9 +66,21 @@ def sync_vulns_repo(
     Returns True if the repo is confirmed current (clone or pull succeeded),
     False if a pull failed and the existing clone was left as-is.
     """
-    if repo_path.exists() and not (repo_path / ".git").exists():
+    if repo_path.exists() and not (repo_path / ".git" / "index").exists():
         logger.warning("Removing incomplete clone at %s and re-cloning", repo_path)
         shutil.rmtree(repo_path)
+
+    # Concurrency limitation: this function is not safe to run against the same
+    # repo_path from two processes at once. The exists()/mkdir()/clone sequence
+    # below is a TOCTOU race, and running two git pull/clone processes against
+    # the same working tree is unsupported by git and can corrupt the clone —
+    # especially if XDG_CONFIG_HOME points at a shared directory. Callers must
+    # serialize access to a given repo_path themselves.
+    logger.warning(
+        "Concurrent access to the vulns repo at %s is not supported; "
+        "callers must ensure only one sync runs against it at a time",
+        repo_path,
+    )
 
     if not repo_path.exists():
         repo_path.parent.mkdir(parents=True, exist_ok=True)
