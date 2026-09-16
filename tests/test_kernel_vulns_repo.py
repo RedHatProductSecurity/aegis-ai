@@ -29,6 +29,7 @@ def test_sync_vulns_repo_pulls_when_present(tmp_path: Path, monkeypatch) -> None
     repo_path = tmp_path / "vulns"
     repo_path.mkdir()
     (repo_path / ".git").mkdir()
+    (repo_path / ".git" / "index").touch()
     calls = []
 
     def fake_run(cmd, **kwargs):
@@ -59,6 +60,7 @@ def test_sync_vulns_repo_pull_failure_is_swallowed(tmp_path: Path, monkeypatch) 
     repo_path = tmp_path / "vulns"
     repo_path.mkdir()
     (repo_path / ".git").mkdir()
+    (repo_path / ".git" / "index").touch()
 
     def fake_run(cmd, **kwargs):
         raise subprocess.CalledProcessError(1, cmd, stderr="pull exploded")
@@ -74,6 +76,7 @@ def test_sync_vulns_repo_pull_timeout_is_swallowed(tmp_path: Path, monkeypatch) 
     repo_path = tmp_path / "vulns"
     repo_path.mkdir()
     (repo_path / ".git").mkdir()
+    (repo_path / ".git" / "index").touch()
 
     def fake_run(cmd, **kwargs):
         raise subprocess.TimeoutExpired(cmd, timeout=1)
@@ -101,6 +104,7 @@ def test_sync_vulns_repo_reclones_when_existing_path_is_not_a_git_repo(
             dest = Path(cmd[3])
             dest.mkdir(parents=True, exist_ok=True)
             (dest / ".git").mkdir(parents=True, exist_ok=True)
+            (dest / ".git" / "index").touch()
         return MagicMock(returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -109,8 +113,35 @@ def test_sync_vulns_repo_reclones_when_existing_path_is_not_a_git_repo(
 
     assert result is True
     assert repo_path.exists()
-    assert (repo_path / ".git").exists()
+    assert (repo_path / ".git" / "index").exists()
     assert not (repo_path / "partial-file").exists()  # old contents were removed
+    assert calls == [["git", "clone", "https://example.com/vulns", str(repo_path)]]
+
+
+def test_sync_vulns_repo_reclones_when_git_dir_has_no_index(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # A .git directory without .git/index is an interrupted clone: git creates
+    # .git early but only writes .git/index once the checkout completes.
+    repo_path = tmp_path / "vulns"
+    repo_path.mkdir()
+    (repo_path / ".git").mkdir()  # no .git/index -> incomplete
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[:2] == ["git", "clone"]:
+            dest = Path(cmd[3])
+            (dest / ".git").mkdir(parents=True, exist_ok=True)
+            (dest / ".git" / "index").touch()
+        return MagicMock(returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = sync_vulns_repo(repo_path, "https://example.com/vulns")
+
+    assert result is True
+    assert (repo_path / ".git" / "index").exists()
     assert calls == [["git", "clone", "https://example.com/vulns", str(repo_path)]]
 
 
