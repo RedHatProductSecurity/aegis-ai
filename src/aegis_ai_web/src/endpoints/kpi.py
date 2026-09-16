@@ -76,24 +76,6 @@ def clean_components(components: list[str]) -> list[str]:
     return cleaned
 
 
-def component_diff(
-    suggested: list[str], submitted: list[str]
-) -> tuple[list[str], list[str], list[str]]:
-    """Return accepted, rejected, and added component lists.
-
-    Comparison is case-sensitive (``Glib`` and ``glib`` are distinct components)
-    and each list preserves the original feedback-log ordering.
-    """
-    suggested_clean = clean_components(suggested)
-    submitted_clean = clean_components(submitted)
-    suggested_set = set(suggested_clean)
-    submitted_set = set(submitted_clean)
-    accepted = [c for c in suggested_clean if c in submitted_set]
-    rejected = [c for c in suggested_clean if c not in submitted_set]
-    added = [c for c in submitted_clean if c not in suggested_set]
-    return accepted, rejected, added
-
-
 def _deduplicate_programmatic_feedback(
     entries: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -257,17 +239,10 @@ def to_kpi_entry(entry: dict[str, Any], detail: bool) -> KPIEntry:
         )
 
     suggested = parse_components(entry.get("suggested_raw", ""))
-    submitted = parse_components(entry.get("submitted_raw", ""))
-    accepted_components, rejected, added = component_diff(suggested, submitted)
-
     components = None
-    if suggested or submitted:
+    if suggested:
         components = KPIComponentDetails(
             suggested_components=suggested or None,
-            submitted_components=submitted or None,
-            accepted_components=accepted_components or None,
-            rejected_suggestions=rejected or None,
-            added_components=added or None,
         )
 
     return KPIEntry(

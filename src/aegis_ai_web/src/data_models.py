@@ -433,22 +433,6 @@ class KPIComponentDetails(BaseModel):
         default=None,
         description="Components suggested by AEGIS",
     )
-    submitted_components: list[str] | None = Field(
-        default=None,
-        description="Components submitted by the user",
-    )
-    accepted_components: list[str] | None = Field(
-        default=None,
-        description="Suggested components also present in submission",
-    )
-    rejected_suggestions: list[str] | None = Field(
-        default=None,
-        description="Suggested components not present in submission",
-    )
-    added_components: list[str] | None = Field(
-        default=None,
-        description="Submitted components not in the suggestion",
-    )
 
 
 class KPIEntry(BaseModel):

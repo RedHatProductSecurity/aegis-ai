@@ -7,7 +7,9 @@ import csv
 from fastapi.testclient import TestClient
 
 from aegis_ai_web.src.data_models import FEEDBACK_SCHEMA, PROGRAMMATIC_FEEDBACK_SCHEMA
-from aegis_ai_web.src.feedback_logger import feedback_logger
+from aegis_ai_web.src.feedback_logger import (
+    feedback_logger,
+)
 from aegis_ai_web.src.main import app
 
 client = TestClient(app)
@@ -1178,62 +1180,6 @@ class TestComponentKpiHelpers:
         assert canonical_feature("suggest-impact") == "suggest-impact"
 
 
-class TestComponentDiff:
-    """Tests for the component_diff helper used by detail enrichment."""
-
-    def test_component_diff_exact_match(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(["kernel"], ["kernel"])
-        assert accepted == ["kernel"]
-        assert rejected == []
-        assert added == []
-
-    def test_component_diff_replacement(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(["kernel"], ["linux-kernel"])
-        assert accepted == []
-        assert rejected == ["kernel"]
-        assert added == ["linux-kernel"]
-
-    def test_component_diff_case_sensitive(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        # Aegis treats components as case-sensitive: Kernel != kernel.
-        accepted, rejected, added = component_diff(["Kernel"], ["kernel"])
-        assert accepted == []
-        assert rejected == ["Kernel"]
-        assert added == ["kernel"]
-
-    def test_component_diff_empty_lists(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        assert component_diff([], []) == ([], [], [])
-        assert component_diff([], ["curl"]) == ([], [], ["curl"])
-        assert component_diff(["curl"], []) == ([], ["curl"], [])
-
-    def test_component_diff_ignores_empty_and_whitespace(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(
-            ["", "  ", "kernel"], ["  ", "", "curl"]
-        )
-        assert accepted == []
-        assert rejected == ["kernel"]
-        assert added == ["curl"]
-
-    def test_component_diff_dedupes_preserving_order(self):
-        from aegis_ai_web.src.endpoints.kpi import component_diff
-
-        accepted, rejected, added = component_diff(
-            ["kernel", "kernel", "curl"], ["curl", "curl", "openssl"]
-        )
-        assert accepted == ["curl"]
-        assert rejected == ["kernel"]
-        assert added == ["openssl"]
-
-
 class TestComponentKpiFilters:
     """Tests for source_component KPI filters."""
 
@@ -1405,9 +1351,6 @@ class TestComponentKpiFilters:
         assert entry.feedback_source == "manual"
         assert entry.components is not None
         assert entry.components.suggested_components == ["kernel"]
-        assert entry.components.submitted_components == ["linux-kernel"]
-        assert entry.components.rejected_suggestions == ["kernel"]
-        assert entry.components.added_components == ["linux-kernel"]
 
     def test_feature_alias_suggest_affected_components(self, feedback_log_setup):
         from aegis_ai_web.src.endpoints.kpi import get_cve_kpi

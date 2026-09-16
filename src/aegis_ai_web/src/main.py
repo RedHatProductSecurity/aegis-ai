@@ -731,11 +731,10 @@ async def component_analysis(
 async def cve_kpi(
     feature: str = Query(
         ...,
-        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', 'quality-review', 'source_component', 'suggest-affected-components', or 'all' to get KPIs for all features.",
+        description="Feature name to filter entries by. Valid values include: 'suggest-impact', 'suggest-cwe', 'suggest-description', 'suggest-statement', 'identify-pii', 'cvss-diff-explainer', 'quality-review', 'suggest-affected-components', or 'all' to get KPIs for all features.",
         examples=[
             "suggest-impact",
             "quality-review",
-            "source_component",
             "suggest-affected-components",
             "all",
         ],
@@ -772,7 +771,7 @@ async def cve_kpi(
     for a specific feature and returns all matching log entries sorted by datetime.
 
     **Parameters:**
-    - **feature**: Required. The feature name to filter by (e.g., 'source_component', 'suggest-impact', or 'all')
+    - **feature**: Required. The feature name to filter by (e.g., 'suggest-affected-components', 'suggest-impact', or 'all')
     - **order**: Optional. Sort order for entries by datetime ('asc' or 'desc'). Defaults to 'asc'.
     - **cve_id**: Optional. Restrict results to a single CVE.
     - **source_component**: Optional. Restrict results to entries suggesting this component.
@@ -786,10 +785,10 @@ async def cve_kpi(
 
     **Example:**
     ```
-    GET /api/v1/analysis/kpi/cve?feature=source_component&order=desc
-    GET /api/v1/analysis/kpi/cve?feature=source_component&source_component=kernel
-    GET /api/v1/analysis/kpi/cve?feature=source_component&cve_id=CVE-2025-1234
-    GET /api/v1/analysis/kpi/cve?feature=source_component&detail=true&source_component=kernel
+    GET /api/v1/analysis/kpi/cve?feature=suggest-affected-components&order=desc
+    GET /api/v1/analysis/kpi/cve?feature=suggest-affected-components&source_component=kernel
+    GET /api/v1/analysis/kpi/cve?feature=suggest-affected-components&cve_id=CVE-2025-1234
+    GET /api/v1/analysis/kpi/cve?feature=suggest-affected-components&detail=true&source_component=kernel
     GET /api/v1/analysis/kpi/cve?feature=all
     ```
     """
