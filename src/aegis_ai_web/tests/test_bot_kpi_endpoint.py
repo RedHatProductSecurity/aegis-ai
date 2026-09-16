@@ -116,6 +116,61 @@ def _make_session(*flaws):
     return session
 
 
+def _make_filtering_session(*flaws):
+    """Mock OSIDB session whose index honors the ``components`` filter and the
+    ``updated_dt`` bounds, like the real server.
+
+    Each flaw may declare its component membership via a test-only ``_components``
+    key. The index phase returns only flaws matching the requested component
+    (when given) whose ``updated_dt`` falls within any ``updated_dt_gte`` /
+    ``updated_dt_lte`` bounds; the batch phase returns full data for requested
+    CVEs. Lets a test prove the request's filters are pushed to the selection
+    query.
+    """
+    from datetime import UTC, datetime
+
+    def _aware(dt):
+        # The endpoint parses query dates as naive; normalize both sides to UTC
+        # so the comparison never mixes naive and aware datetimes.
+        return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
+
+    by_cve = {flaw["cve_id"]: flaw for flaw in flaws}
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        component = kwargs.get("components")
+        gte = kwargs.get("updated_dt_gte")
+        lte = kwargs.get("updated_dt_lte")
+        stubs = []
+        for flaw in flaws:
+            if component is not None and component not in flaw.get("_components", []):
+                continue
+            updated = _aware(datetime.fromisoformat(flaw["updated_dt"]))
+            if gte is not None and updated < _aware(gte):
+                continue
+            if lte is not None and updated > _aware(lte):
+                continue
+            stub = MagicMock()
+            stub.to_dict.return_value = {
+                "cve_id": flaw["cve_id"],
+                "updated_dt": flaw["updated_dt"],
+            }
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
 class TestOsidbBotKpiEndpoint:
     @_PATCH_HANDLER
     @_PATCH_READ
@@ -222,12 +277,11 @@ class TestOsidbBotKpiEndpoint:
     @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_changed_after_filters_from_cache(
+    def test_changed_after_filters_via_query(
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
-        """Filtering keys on each suggestion's own timestamp: the flaw whose
-        suggestion predates the window is excluded even though both flaws are
-        cached."""
+        """changed_after is pushed to the selection query as an updated_dt lower
+        bound: the flaw whose updated_dt predates the window is not selected."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         old_flaw = _make_flaw_dict(
@@ -249,7 +303,9 @@ class TestOsidbBotKpiEndpoint:
             cve_id="CVE-2025-0002",
             updated_dt="2025-07-01T00:00:00+00:00",
         )
-        mock_bindings.new_session.return_value = _make_session(old_flaw, new_flaw)
+        mock_bindings.new_session.return_value = _make_filtering_session(
+            old_flaw, new_flaw
+        )
 
         response = client.get(
             "/api/v1/analysis/kpi/osidb-bot?changed_after=2025-06-01T00:00:00"
@@ -263,11 +319,11 @@ class TestOsidbBotKpiEndpoint:
     @_PATCH_READ
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_changed_before_filters_from_cache(
+    def test_changed_before_filters_via_query(
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
-        """Same per-suggestion-timestamp filtering, upper bound: the flaw whose
-        suggestion postdates the window is excluded."""
+        """Same updated_dt selection, upper bound: the flaw whose updated_dt
+        postdates the window is not selected."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
 
         old_flaw = _make_flaw_dict(
@@ -289,7 +345,9 @@ class TestOsidbBotKpiEndpoint:
             cve_id="CVE-2025-0002",
             updated_dt="2025-07-01T00:00:00+00:00",
         )
-        mock_bindings.new_session.return_value = _make_session(old_flaw, new_flaw)
+        mock_bindings.new_session.return_value = _make_filtering_session(
+            old_flaw, new_flaw
+        )
 
         response = client.get(
             "/api/v1/analysis/kpi/osidb-bot?changed_before=2025-06-01T00:00:00"
@@ -323,16 +381,19 @@ class TestOsidbBotKpiEndpoint:
     def test_component_param_scopes_osidb_query(
         self, mock_settings, mock_bindings, _mock_read, _mock_handler
     ):
-        """The component query param is pushed to OSIDB as an affects filter so
-        the KPI is scoped to flaws affecting that component."""
+        """The component query param is pushed to OSIDB as a ``components`` filter
+        on the single selection index."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         session = _make_session()
         mock_bindings.new_session.return_value = session
 
         response = client.get("/api/v1/analysis/kpi/osidb-bot?component=kernel")
         assert response.status_code == 200
-        index_call = session.flaws.retrieve_list_iterator.call_args_list[0]
-        assert index_call.kwargs["affects__ps_component"] == "kernel"
+
+        calls = session.flaws.retrieve_list_iterator.call_args_list
+        # The selection index carries the component filter.
+        component_calls = [c for c in calls if c.kwargs.get("components") == "kernel"]
+        assert component_calls
 
     @_PATCH_HANDLER
     @_PATCH_READ
