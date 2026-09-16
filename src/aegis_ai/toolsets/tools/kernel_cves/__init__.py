@@ -95,6 +95,50 @@ class LINUXCVEToolResponse(BaseToolOutput):
         )
 
 
+# Inserted by A.Larkin (on 9 Sept 2026), dirty hack:
+# that is POC only: cache kernel context already retrieved by kernel_cve_tool
+_KERNEL_CVE_CONTEXT_CACHE: dict[str, LINUXCVEToolResponse] = {}
+
+def get_cached_kernel_context(cve_id: str) -> LINUXCVEToolResponse | None:
+    return _KERNEL_CVE_CONTEXT_CACHE.get(cve_id)
+
+#def get_cached_kernel_context_text(cve_id: str) -> str | None:
+#    result = _KERNEL_CVE_CONTEXT_CACHE.get(cve_id)
+#    if result is None:
+#        return None
+#
+#    try:
+#        return result.model_dump_json(indent=2)
+#    except Exception:
+#        return str(result)
+# - this ver returns too much data (like json_data, vendor descr, CVSS, ready security conclustion), and need to omit all this data for second opinion call:
+
+def get_cached_kernel_context_text(cve_id: str) -> str | None:
+    result = _KERNEL_CVE_CONTEXT_CACHE.get(cve_id)
+    if result is None or result.metadata is None:
+        return None
+
+    metadata = result.metadata
+
+    parts = [
+        f"CVE: {cve_id}",
+        "",
+        "AFFECTED FILES:",
+        "\n".join(metadata.affected_files) if metadata.affected_files else "(none)",
+        "",
+        "FIX COMMIT REFERENCES:",
+        "\n".join(metadata.commit_hashes) if metadata.commit_hashes else "(none)",
+        "",
+        "KERNEL CVE MBOX / PATCH CONTEXT:",
+        metadata.mbox_data or "(none)",
+    ]
+
+    return "\n".join(parts)
+
+
+# end of "Inserted by A.Larkin, dirty hack"
+
+
 # --- Repository Management (Thread-Safe) ---
 class KernelVulnsRepo:
     """
@@ -289,6 +333,22 @@ async def kernel_cve_lookup(cve_id: CVEID) -> LINUXCVEToolResponse:
     return LINUXCVEToolResponse(cve_id=cve_id, metadata=metadata)
 
 
+# Instead of this one see below similar with addon (that is workaround):
+#@Tool
+#async def kernel_cve_tool(
+#    ctx: RunContext[feature_deps], input: LINUXCVEToolInput
+#) -> LINUXCVEToolResponse:
+#    """Looks up a Linux kernel CVE definition by its ID and returns structured data,
+#    including related commit hashes and affected files."""
+#    if not ctx.deps.is_kernel_cve:
+#        return LINUXCVEToolResponse.error(
+#            input.cve_id, "Not a kernel CVE; tool not applicable."
+#        )
+#    logger.info(f"Looking up kernel context for {input.cve_id}...")
+#    return await kernel_cve_lookup(input.cve_id)
+
+
+# Inserted by A.Larkin (on 9 Sept 2026), dirty hack:
 @Tool
 async def kernel_cve_tool(
     ctx: RunContext[feature_deps], input: LINUXCVEToolInput
@@ -299,5 +359,19 @@ async def kernel_cve_tool(
         return LINUXCVEToolResponse.error(
             input.cve_id, "Not a kernel CVE; tool not applicable."
         )
+
     logger.info(f"Looking up kernel context for {input.cve_id}...")
-    return await kernel_cve_lookup(input.cve_id)
+
+    result = await kernel_cve_lookup(input.cve_id)
+
+    # POC only: cache exactly the context returned to the LLM
+    _KERNEL_CVE_CONTEXT_CACHE[str(input.cve_id)] = result
+
+    logger.info(
+        "Cached kernel context for %s",
+        input.cve_id,
+    )
+
+    return result
+# end of "Inserted by A.Larkin, dirty hack"
+
