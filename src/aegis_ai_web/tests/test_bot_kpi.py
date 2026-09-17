@@ -1,5 +1,7 @@
 """Unit tests for osidb-bot KPI computation logic."""
 
+from datetime import UTC, datetime
+
 import pytest
 
 from aegis_ai.features.cve.impact_mappings import (
@@ -738,28 +740,31 @@ class TestBotKPICacheEntry:
         assert result.total_flaws_processed == 1
         assert result.features["impact"].suggested == 1
 
-    def test_selection_scopes_result_not_per_suggestion_dates(self):
-        """Date scoping is applied server-side on the flaw's updated_dt by the
-        selection query (see the cache tests), not per suggestion timestamp
-        during scoring. So a selected flaw contributes every field it was given a
-        suggestion for, regardless of when each suggestion was made."""
+    def test_scoring_scopes_selected_flaw_by_suggestion_dates(self):
+        """A selected flaw contributes only suggestions in the request window."""
         flaw = _cache_flaw(
             "2025-07-15T00:00:00+00:00",
             {
                 "components": [
                     _make_bot_entry(["old"], timestamp="2025-04-01T00:00:00")
                 ],
-                "impact": [_make_bot_entry("LOW", timestamp="2025-07-10T00:00:00")],
+                "impact": [
+                    _make_bot_entry("MODERATE", timestamp="2025-04-01T00:00:00"),
+                    _make_bot_entry("LOW", timestamp="2025-07-10T00:00:00"),
+                ],
             },
             components=["old"],
             impact="LOW",
         )
         entry = BotKPICacheEntry(flaws={"CVE-2025-0001": flaw})
 
-        result = entry.to_kpi_result()
-        # Both fields count -- scoring no longer filters by suggestion timestamp.
+        result = entry.to_kpi_result(
+            changed_after=datetime(2025, 7, 1, tzinfo=UTC),
+            changed_before=datetime(2025, 7, 31, tzinfo=UTC),
+        )
         assert "impact" in result.features
-        assert "components" in result.features
+        assert result.features["impact"].total_entries == 1
+        assert "components" not in result.features
 
     def test_overwriting_a_flaw_reflects_its_latest_scoring_not_the_sum(self):
         """Regression test for the staleness bug: re-scoring a flaw (e.g.

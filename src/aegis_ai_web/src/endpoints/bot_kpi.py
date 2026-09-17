@@ -212,16 +212,27 @@ def _compact_fields(
     return fields
 
 
-def _score_records(records: list[SuggestionRecord]) -> FeatureStats | None:
+def _score_records(
+    records: list[SuggestionRecord],
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+) -> FeatureStats | None:
     """Aggregate one field's suggestion records into a ``FeatureStats``.
 
-    Date scoping is applied server-side via the flaw's ``updated_dt`` on the
-    OSIDB selection query (see :func:`_fetch_flaw_index`), so every record of a
-    selected flaw is scored here. A field with no records drops out entirely
-    (returns None). Only the latest AI-Bot suggestion is compared against the
-    current value (via its pre-computed deviation), matching the single
-    accept/modify decision an analyst made.
+    The OSIDB selection query (see :func:`_fetch_flaw_index`) selects flaws by
+    their ``updated_dt``. The request bounds are also applied here so a
+    selected flaw contributes only suggestions recorded in the KPI interval.
+    A field with no records drops out entirely (returns None). Only the latest
+    AI-Bot suggestion is compared against the current value (via its
+    pre-computed deviation), matching the single accept/modify decision an
+    analyst made.
     """
+    records = [
+        record
+        for record in records
+        if _timestamp_in_range(record.timestamp, changed_after, changed_before)
+    ]
     if not records:
         return None
 
@@ -259,13 +270,43 @@ def _score_records(records: list[SuggestionRecord]) -> FeatureStats | None:
     return stats
 
 
+def _timestamp_in_range(
+    timestamp: str | None,
+    changed_after: datetime | None,
+    changed_before: datetime | None,
+) -> bool:
+    if changed_after is None and changed_before is None:
+        return True
+    if timestamp is None:
+        return False
+    try:
+        value = datetime.fromisoformat(timestamp)
+    except ValueError:
+        return False
+
+    def _utc(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+
+    value = _utc(value)
+    return (changed_after is None or value >= _utc(changed_after)) and (
+        changed_before is None or value <= _utc(changed_before)
+    )
+
+
 def _score_fields(
     fields: dict[str, list[SuggestionRecord]],
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
 ) -> dict[str, FeatureStats]:
     """Score every field's records, keyed by display name; skip empty fields."""
     result: dict[str, FeatureStats] = {}
     for field_name, records in fields.items():
-        stats = _score_records(records)
+        stats = _score_records(
+            records, changed_after=changed_after, changed_before=changed_before
+        )
         if stats is not None:
             result[_display_name(field_name)] = stats
     return result
@@ -274,17 +315,21 @@ def _score_fields(
 def extract_flaw_kpi(
     aegis_meta: dict[str, Any],
     flaw_data: dict[str, Any],
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
 ) -> dict[str, FeatureStats]:
     """Extract per-feature stats from a single flaw's raw aegis_meta.
 
     Compacts the raw suggestion history (see :func:`_compact_fields`) and scores
-    it (see :func:`_score_records`). Date scoping is applied server-side on the
-    flaw's ``updated_dt`` by the OSIDB selection query, so a flaw reaching here
-    has already been selected and all its suggestions are scored. A field with
-    no suggestion contributes nothing.
+    it (see :func:`_score_records`). Flaw selection is applied server-side on
+    the flaw's ``updated_dt``; suggestion timestamps are scoped here to the
+    request interval. A field with no in-range suggestion contributes nothing.
     """
     fields = _compact_fields(aegis_meta, flaw_data)
-    return _score_fields(fields)
+    return _score_fields(
+        fields, changed_after=changed_after, changed_before=changed_before
+    )
 
 
 def _merge_feature_stats(target: FeatureStats, source: FeatureStats) -> None:
@@ -559,15 +604,17 @@ class BotKPICacheEntry(BaseModel):
         self,
         *,
         only_cve_ids: set[str] | None = None,
+        changed_after: datetime | None = None,
+        changed_before: datetime | None = None,
     ) -> BotKPIResult:
         """Re-score the bot-processed flaws restricted to the selected CVE IDs.
 
-        Non-bot-processed skip markers never contribute. Date and component
-        scoping are applied server-side by the selection query (see
-        :func:`_fetch_flaw_index`), whose CVE IDs are passed as ``only_cve_ids``
-        so only the selected flaws are counted -- the cache may hold flaws from
-        other windows or components, which are simply not scored. ``None`` (used
-        only in tests) scores every cached flaw.
+        Non-bot-processed skip markers never contribute. Flaw-level date and
+        component scoping are applied server-side by the selection query (see
+        :func:`_fetch_flaw_index`), while suggestion-level date scoping is
+        applied during scoring. The cache may hold flaws from other windows or
+        components, which are simply not scored. ``None`` (used only in tests)
+        scores every cached flaw.
         """
         per_flaw: dict[str, dict[str, FeatureStats]] = {}
         for cve_id, flaw in self.flaws.items():
@@ -575,7 +622,11 @@ class BotKPICacheEntry(BaseModel):
                 continue
             if not flaw.bot_processed:
                 continue
-            stats_by_field = _score_fields(flaw.fields)
+            stats_by_field = _score_fields(
+                flaw.fields,
+                changed_after=changed_after,
+                changed_before=changed_before,
+            )
             if stats_by_field:
                 per_flaw[cve_id] = stats_by_field
         return _resum(per_flaw)
@@ -738,7 +789,11 @@ def _fetch_with_cache(
             )
             handler.write(entry)
 
-    return entry.to_kpi_result(only_cve_ids=set(index))
+    return entry.to_kpi_result(
+        only_cve_ids=set(index),
+        changed_after=changed_after,
+        changed_before=changed_before,
+    )
 
 
 def get_osidb_bot_kpi(
