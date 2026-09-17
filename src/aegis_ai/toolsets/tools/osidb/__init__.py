@@ -364,7 +364,7 @@ async def component_flaw_tool(
     async for flaw in client.list_component_flaws(component_name):
         if not OSIDB_RETRIEVE_EMBARGOED and getattr(flaw, "embargoed", False):
             continue
-        flaws.append(flaw)
+        flaws.append(flaw.to_dict())
         if len(flaws) >= limit:
             break
     return flaws
