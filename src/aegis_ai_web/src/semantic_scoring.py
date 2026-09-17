@@ -40,7 +40,7 @@ def get_semantic_scored_features() -> list[str]:
     ]
 
 
-def _parse_json_list(value: str) -> list[str] | None:
+def parse_json_list(value: str) -> list[str] | None:
     """
     Parse a JSON list from a string value.
 
@@ -281,8 +281,8 @@ async def calculate_semantic_proximity_score(
         explanation: str | None = None
         # Handle component list scoring
         if feature == "suggest-affected-components":
-            suggested_list = _parse_json_list(suggested)
-            submitted_list = _parse_json_list(submitted)
+            suggested_list = parse_json_list(suggested)
+            submitted_list = parse_json_list(submitted)
 
             if suggested_list is None or submitted_list is None:
                 logger.warning(
@@ -295,8 +295,8 @@ async def calculate_semantic_proximity_score(
 
         # Handle CWE list scoring
         elif feature == "suggest-cwe":
-            suggested_list = _parse_json_list(suggested)
-            submitted_list = _parse_json_list(submitted)
+            suggested_list = parse_json_list(suggested)
+            submitted_list = parse_json_list(submitted)
 
             if suggested_list is None or submitted_list is None:
                 logger.warning(
