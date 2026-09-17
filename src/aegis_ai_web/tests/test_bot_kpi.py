@@ -740,51 +740,31 @@ class TestBotKPICacheEntry:
         assert result.total_flaws_processed == 1
         assert result.features["impact"].suggested == 1
 
-    def test_date_filters_restrict_by_suggestion_timestamp(self):
-        """Filtering keys on each suggestion's own timestamp, not the flaw's
-        updated_dt: a flaw edited inside the window whose suggestion predates it
-        must not be counted."""
-        flaws = {
-            "CVE-2025-0001": _cache_flaw(
-                # edited recently, but its suggestion was made back in May
-                "2025-07-15T00:00:00+00:00",
-                {"impact": [_make_bot_entry("LOW", timestamp="2025-05-01T00:00:00")]},
-                impact="LOW",
-            ),
-            "CVE-2025-0002": _cache_flaw(
-                "2025-07-15T00:00:00+00:00",
-                {"impact": [_make_bot_entry("LOW", timestamp="2025-07-01T00:00:00")]},
-                impact="LOW",
-            ),
-        }
-        entry = BotKPICacheEntry(flaws=flaws)
-
-        after = entry.to_kpi_result(changed_after=datetime(2025, 6, 1, tzinfo=UTC))
-        assert after.total_flaws_processed == 1  # only the July suggestion
-
-        before = entry.to_kpi_result(changed_before=datetime(2025, 6, 1, tzinfo=UTC))
-        assert before.total_flaws_processed == 1  # only the May suggestion
-
-    def test_date_filter_drops_stale_field_but_keeps_recent_one(self):
-        """A single flaw contributes only the fields whose suggestion falls in
-        the window -- the reported bug where an old `components` suggestion
-        dragged down a "last N days" query."""
+    def test_scoring_scopes_selected_flaw_by_suggestion_dates(self):
+        """A selected flaw contributes only suggestions in the request window."""
         flaw = _cache_flaw(
             "2025-07-15T00:00:00+00:00",
             {
                 "components": [
                     _make_bot_entry(["old"], timestamp="2025-04-01T00:00:00")
                 ],
-                "impact": [_make_bot_entry("LOW", timestamp="2025-07-10T00:00:00")],
+                "impact": [
+                    _make_bot_entry("MODERATE", timestamp="2025-04-01T00:00:00"),
+                    _make_bot_entry("LOW", timestamp="2025-07-10T00:00:00"),
+                ],
             },
             components=["old"],
             impact="LOW",
         )
         entry = BotKPICacheEntry(flaws={"CVE-2025-0001": flaw})
 
-        result = entry.to_kpi_result(changed_after=datetime(2025, 7, 1, tzinfo=UTC))
+        result = entry.to_kpi_result(
+            changed_after=datetime(2025, 7, 1, tzinfo=UTC),
+            changed_before=datetime(2025, 7, 31, tzinfo=UTC),
+        )
         assert "impact" in result.features
-        assert "components" not in result.features  # April suggestion excluded
+        assert result.features["impact"].total_entries == 1
+        assert "components" not in result.features
 
     def test_overwriting_a_flaw_reflects_its_latest_scoring_not_the_sum(self):
         """Regression test for the staleness bug: re-scoring a flaw (e.g.

@@ -16,6 +16,8 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     _fetch_flaw_index,
     _flaw_cache_data,
     _get_cache_path,
+    _merge_fetched,
+    _needs_fetch,
     _read_cache,
     get_osidb_bot_kpi,
 )
@@ -93,6 +95,92 @@ def _make_session(*flaws, index_delay=0.0):
     return session
 
 
+def _make_component_session(by_component):
+    """Mock OSIDB session whose index phase honors the ``components`` filter.
+
+    ``by_component`` maps a component name to the flaws the server would return
+    for that filter (mirroring OSIDB's server-side ``components`` filter).
+    An index request with no component filter returns every flaw; the batch
+    phase returns full data for any requested CVE regardless of component.
+    """
+    all_flaws = [flaw for flaws in by_component.values() for flaw in flaws]
+    by_cve = {flaw["cve_id"]: flaw for flaw in all_flaws}
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        component = kwargs.get("components")
+        flaws = by_component.get(component, []) if component else all_flaws
+        stubs = []
+        for flaw in flaws:
+            stub = MagicMock()
+            stub.to_dict.return_value = {
+                "cve_id": flaw["cve_id"],
+                "updated_dt": flaw["updated_dt"],
+            }
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
+def _make_filtering_session(*flaws):
+    """Mock OSIDB session whose index honors the ``components`` filter AND the
+    ``updated_dt`` bounds, like the real server.
+
+    Each flaw declares its component membership via a test-only ``_components``
+    key. The index phase returns only flaws matching the requested component
+    (when given) whose ``updated_dt`` falls within any ``updated_dt_gte`` /
+    ``updated_dt_lte`` bounds. The batch phase returns full data for requested
+    CVEs. This lets a test prove that the request's date range and component are
+    pushed to the selection query and scope which flaws are returned.
+    """
+    by_cve = {flaw["cve_id"]: flaw for flaw in flaws}
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        component = kwargs.get("components")
+        gte = kwargs.get("updated_dt_gte")
+        lte = kwargs.get("updated_dt_lte")
+        stubs = []
+        for flaw in flaws:
+            if component is not None and component not in flaw.get("_components", []):
+                continue
+            updated = datetime.fromisoformat(flaw["updated_dt"])
+            if gte is not None and updated < gte:
+                continue
+            if lte is not None and updated > lte:
+                continue
+            stub = MagicMock()
+            stub.to_dict.return_value = {
+                "cve_id": flaw["cve_id"],
+                "updated_dt": flaw["updated_dt"],
+            }
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
 def _seed_cache(cache_path: Path, flaws: dict[str, FlawCacheData]) -> None:
     """Write a per-flaw cache directly from ``FlawCacheData`` entries."""
     entry = BotKPICacheEntry(flaws=flaws)
@@ -145,23 +233,32 @@ class TestFlawIndexQuery:
         kwargs = self._captured_kwargs()
         assert kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
         assert kwargs["cve_id__isempty"] is False
-        # no update-date filter given, so none is pushed down
+
+    def test_pushes_date_bounds_when_given(self):
+        # The request's date range drives selection: it is pushed to the index
+        # as updated_dt bounds so the query returns exactly the selected flaws.
+        after = datetime(2025, 6, 1, tzinfo=UTC)
+        before = datetime(2025, 7, 1, tzinfo=UTC)
+        kwargs = self._captured_kwargs(changed_after=after, changed_before=before)
+        assert kwargs["updated_dt_gte"] == after
+        assert kwargs["updated_dt_lte"] == before
+
+    def test_no_date_bounds_when_absent(self):
+        kwargs = self._captured_kwargs()
         assert "updated_dt_gte" not in kwargs
         assert "updated_dt_lte" not in kwargs
 
-    def test_pushes_changed_after_as_update_lower_bound(self):
-        after = datetime(2026, 6, 1, tzinfo=UTC)
-        kwargs = self._captured_kwargs(changed_after=after)
-        # creation bound stays; changed_after applies to updated_dt
+    def test_pushes_component_as_components_filter(self):
+        kwargs = self._captured_kwargs(component="kernel")
         assert kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
-        assert kwargs["updated_dt_gte"] == after
+        # Filter on the flaw-level ``components`` field the KPI scores against,
+        # not the affects-level ps_component.
+        assert kwargs["components"] == "kernel"
+        assert "affects__ps_component" not in kwargs
 
-    def test_pushes_changed_before_as_update_upper_bound(self):
-        before = datetime(2026, 6, 1, tzinfo=UTC)
-        kwargs = self._captured_kwargs(changed_before=before)
-        assert kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
-        assert kwargs["updated_dt_lte"] == before
-        assert "updated_dt_gte" not in kwargs
+    def test_no_component_filter_when_absent(self):
+        kwargs = self._captured_kwargs()
+        assert "components" not in kwargs
 
 
 class TestGetCachePath:
@@ -251,6 +348,62 @@ class TestCacheIO:
         assert _read_cache() is None
 
 
+class TestMergeFetched:
+    """``_merge_fetched`` applies fetched entries onto the live cache per CVE,
+    without discarding concurrent writes it never observed and without evicting
+    unselected entries."""
+
+    def test_applies_fetched_and_keeps_concurrent_insert(self):
+        # This request indexed an empty cache (snapshot == {}) and fetched flaw
+        # A; a concurrent request has since written flaw B into the live cache.
+        # Both must survive -- selection never evicts.
+        snapshot: dict[str, FlawCacheData] = {}
+        existing = {"CVE-B": _cached_flaw()}  # concurrent insert
+        fetched = {"CVE-A": _cached_flaw()}
+
+        merged = _merge_fetched(existing, fetched, snapshot)
+
+        assert set(merged) == {"CVE-A", "CVE-B"}
+
+    def test_does_not_evict_unselected_cached_flaw(self):
+        # Flaw A is cached but not in this request's fetched set; it is retained,
+        # not pruned -- a narrow request never drops another selection's flaws.
+        snapshot = {"CVE-A": _cached_flaw()}
+        existing = {"CVE-A": _cached_flaw()}
+        fetched: dict[str, FlawCacheData] = {}
+
+        merged = _merge_fetched(existing, fetched, snapshot)
+
+        assert set(merged) == {"CVE-A"}
+
+    def test_stale_fetch_does_not_clobber_newer_concurrent_write(self):
+        # We fetched flaw A at an old watermark; a concurrent request has since
+        # written a newer watermark. Our stale fetch must not overwrite it.
+        old = "2025-05-01T00:00:00+00:00"
+        new = "2025-07-01T00:00:00+00:00"
+        snapshot = {"CVE-A": _cached_flaw(updated_dt=old)}
+        existing = {"CVE-A": _cached_flaw(updated_dt=new)}  # concurrent update
+        fetched = {"CVE-A": _cached_flaw(updated_dt=old)}
+
+        merged = _merge_fetched(existing, fetched, snapshot)
+
+        assert merged["CVE-A"].updated_dt == new
+
+
+class TestNeedsFetch:
+    def test_fetches_when_osidb_watermark_is_newer(self):
+        cached = _cached_flaw(updated_dt="2025-06-01T00:00:00+00:00")
+        assert _needs_fetch(cached, "2025-07-01T00:00:00+00:00")
+
+    def test_does_not_fetch_when_cache_watermark_is_newer(self):
+        cached = _cached_flaw(updated_dt="2025-07-01T00:00:00+00:00")
+        assert not _needs_fetch(cached, "2025-06-01T00:00:00+00:00")
+
+    def test_does_not_fetch_when_watermarks_match(self):
+        cached = _cached_flaw(updated_dt="2025-06-01T00:00:00+00:00")
+        assert not _needs_fetch(cached, "2025-06-01T00:00:00+00:00")
+
+
 class TestGetOsidbBotKpiCaching:
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
@@ -309,9 +462,12 @@ class TestGetOsidbBotKpiCaching:
 
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
-    def test_date_filter_returns_subset_without_altering_cache(
+    def test_date_filter_selects_subset_via_query_without_altering_cache(
         self, mock_settings, mock_bindings, cache_dir
     ):
+        """The date range is pushed to the OSIDB query as updated_dt bounds, so
+        only in-window flaws are selected. Selected flaws already cached at the
+        same watermark are served from the cache without a re-fetch or a write."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
 
@@ -324,9 +480,9 @@ class TestGetOsidbBotKpiCaching:
         )
         cached_json_before = cache_dir.read_text()
 
-        # Index returns the same two flaws with identical watermarks: nothing to
-        # re-fetch, and the set is unchanged, so the cache is served as-is.
-        session = _make_session(
+        # The filtering session honors updated_dt bounds like the real server, so
+        # changed_after=June selects only the July flaw.
+        session = _make_filtering_session(
             _make_flaw_dict(
                 {"processed": True, "impact": [_make_bot_entry("LOW")]},
                 cve_id="CVE-2025-0001",
@@ -340,12 +496,10 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = session
 
-        from datetime import UTC, datetime
-
         response = get_osidb_bot_kpi(changed_after=datetime(2025, 6, 1, tzinfo=UTC))
         assert response.total_flaws_processed == 1
 
-        # Only the index call; no batch fetch for unchanged flaws.
+        # Only the index call; the selected flaw is already cached, so no batch.
         assert session.flaws.retrieve_list_iterator.call_count == 1
         assert cache_dir.read_text() == cached_json_before
 
@@ -473,12 +627,13 @@ class TestGetOsidbBotKpiCaching:
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
-    def test_unfiltered_query_prunes_departed_flaw(
+    def test_flaw_absent_from_index_is_not_selected_nor_evicted(
         self, mock_settings, mock_bindings, cache_dir
     ):
-        """An unfiltered request sees a complete index (every DONE flaw), so a
-        cached flaw absent from it has left DONE and is pruned -- and no longer
-        counted."""
+        """A cached flaw absent from the selection index (it left DONE, or falls
+        outside the request's window) is simply not counted. Selection never
+        evicts, so its cache entry is retained for a later request that does
+        select it."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
 
@@ -490,8 +645,7 @@ class TestGetOsidbBotKpiCaching:
             },
         )
 
-        # Complete (unfiltered) index now lists only CVE-2025-0001; the other has
-        # left DONE.
+        # The index lists only CVE-2025-0001; CVE-2025-0002 is not selected.
         session = _make_session(
             _make_flaw_dict(
                 {"processed": True, "impact": [_make_bot_entry("LOW")]},
@@ -502,45 +656,9 @@ class TestGetOsidbBotKpiCaching:
 
         response = get_osidb_bot_kpi()
 
-        # The departed flaw is pruned and no longer counted.
+        # Only the selected flaw is counted...
         assert response.total_flaws_processed == 1
-        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
-        assert set(cached.flaws) == {"CVE-2025-0001"}
-
-    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
-    @patch(f"{_BOT_KPI_MODULE}.get_settings")
-    def test_date_bounded_query_retains_out_of_window_flaw(
-        self, mock_settings, mock_bindings, cache_dir
-    ):
-        """A date-bounded index is only a window, so a cached flaw absent from it
-        is retained (it may simply be outside the window), not pruned -- pruning
-        would evict flaws from other windows and force a full re-fetch on every
-        alternation (see ``_reconcile_flaws``)."""
-        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
-        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
-
-        _seed_cache(
-            cache_dir,
-            {
-                "CVE-2025-0001": _cached_flaw(),
-                "CVE-2025-0002": _cached_flaw(),
-            },
-        )
-
-        # Date-bounded index lists only CVE-2025-0001.
-        session = _make_session(
-            _make_flaw_dict(
-                {"processed": True, "impact": [_make_bot_entry("LOW")]},
-                cve_id="CVE-2025-0001",
-            )
-        )
-        mock_bindings.new_session.return_value = session
-
-        get_osidb_bot_kpi(changed_after=datetime(2025, 1, 1, tzinfo=UTC))
-
-        # Both flaws survive; the absent one is kept, not deleted, and not
-        # re-fetched (index call only, no batch fetch).
-        assert session.flaws.retrieve_list_iterator.call_count == 1
+        # ...but the unselected flaw is retained in the cache, not pruned.
         cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
         assert set(cached.flaws) == {"CVE-2025-0001", "CVE-2025-0002"}
 
@@ -580,13 +698,13 @@ class TestGetOsidbBotKpiCaching:
     def test_disjoint_date_ranges_do_not_evict_each_other(
         self, mock_settings, mock_bindings, cache_dir
     ):
-        """Regression test: querying two non-overlapping date ranges in turn must
-        not flush each other's flaws from the shared cache.
+        """Querying two non-overlapping date ranges in turn must not flush each
+        other's flaws from the shared cache.
 
-        A flaw's single ``updated_dt`` cannot fall in two disjoint windows, so
-        each window's index is a disjoint set. Rebuilding the cache to the current
-        index (the old behavior) evicted the other window entirely, forcing a full
-        re-fetch on every alternation. Merging retains both.
+        Each request's index is date-scoped (updated_dt bounds pushed to the
+        query), so range A selects only flaw A and range B only flaw B. Selection
+        never evicts, so flaw A remains cached after range B's request, and a
+        repeat of range A is served from the cache without a re-fetch.
         """
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
@@ -613,28 +731,119 @@ class TestGetOsidbBotKpiCaching:
             updated_dt="2026-08-28T10:00:00+00:00",
         )
 
-        # A fresh session per request; each window's index lists only its own
-        # flaw, because a flaw's updated_dt cannot fall in both windows.
-        session_a1 = _make_session(flaw_a)
-        session_b = _make_session(flaw_b)
-        session_a2 = _make_session(flaw_a)
+        # A fresh session per request; the filtering session honors updated_dt
+        # bounds, so each range selects only its own flaw.
+        session_a1 = _make_filtering_session(flaw_a, flaw_b)
+        session_b = _make_filtering_session(flaw_a, flaw_b)
+        session_a2 = _make_filtering_session(flaw_a, flaw_b)
         mock_bindings.new_session.side_effect = [session_a1, session_b, session_a2]
 
-        # 1. Range A fetches flaw A in full.
-        get_osidb_bot_kpi(changed_after=range_a[0], changed_before=range_a[1])
-        # 2. Range B fetches flaw B; it must not evict flaw A.
+        # 1. Range A selects and fetches only flaw A.
+        response_a = get_osidb_bot_kpi(
+            changed_after=range_a[0], changed_before=range_a[1]
+        )
+        assert response_a.total_flaws_processed == 1
+        # 2. Range B selects only flaw B; it must not evict flaw A.
         get_osidb_bot_kpi(changed_after=range_b[0], changed_before=range_b[1])
 
         cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
         assert set(cached.flaws) == {"CVE-2026-0001", "CVE-2026-0002"}
 
-        # 3. Range A again: flaw A is still cached, so only the index is queried --
-        # no full re-fetch. The date filter still scopes the result to range A.
+        # 3. Range A again: flaw A still cached, so only the index is queried --
+        # no full re-fetch.
         response = get_osidb_bot_kpi(
             changed_after=range_a[0], changed_before=range_a[1]
         )
         assert response.total_flaws_processed == 1
         assert session_a2.flaws.retrieve_list_iterator.call_count == 1
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_component_query_scopes_result_and_retains_cache(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A component-scoped request counts only that component's flaws and, like
+        a date filter, never prunes the shared cache of other components' flaws."""
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+
+        _seed_cache(
+            cache_dir,
+            {
+                "CVE-2025-0001": _cached_flaw(),  # kernel
+                "CVE-2025-0002": _cached_flaw(),  # a different component
+            },
+        )
+        cached_json_before = cache_dir.read_text()
+
+        # The single selection query carries the ``components`` filter, so OSIDB
+        # returns only the kernel flaw; it is cached at the same watermark, so no
+        # re-fetch or write occurs.
+        kernel_flaw = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            cve_id="CVE-2025-0001",
+        )
+        other_flaw = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            cve_id="CVE-2025-0002",
+        )
+        session = _make_component_session(
+            {"kernel": [kernel_flaw], "other": [other_flaw]}
+        )
+        mock_bindings.new_session.return_value = session
+
+        response = get_osidb_bot_kpi(component="kernel")
+
+        # Only the kernel flaw is counted, even though both are cached...
+        assert response.total_flaws_processed == 1
+        # ...and the other component's flaw is retained (component filtering only
+        # selects which flaws to score, it never prunes the shared cache).
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert set(cached.flaws) == {"CVE-2025-0001", "CVE-2025-0002"}
+        assert cache_dir.read_text() == cached_json_before
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_component_and_date_select_by_updated_dt_via_query(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A component + date query composes both filters in the selection query
+        and scopes dates by the flaw's ``updated_dt``. Of two kernel flaws, only
+        the one whose updated_dt falls in the window is selected and counted."""
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+
+        may_flaw = _make_flaw_dict(
+            {
+                "processed": True,
+                "impact": [_make_bot_entry("LOW", timestamp="2025-05-15T00:00:00")],
+            },
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+            updated_dt="2025-05-15T00:00:00+00:00",
+        )
+        may_flaw["_components"] = ["kernel"]
+        july_flaw = _make_flaw_dict(
+            {
+                "processed": True,
+                "impact": [_make_bot_entry("LOW", timestamp="2025-07-15T00:00:00")],
+            },
+            impact="LOW",
+            cve_id="CVE-2025-0002",
+            updated_dt="2025-07-15T00:00:00+00:00",
+        )
+        july_flaw["_components"] = ["kernel"]
+        mock_bindings.new_session.return_value = _make_filtering_session(
+            may_flaw, july_flaw
+        )
+
+        response = get_osidb_bot_kpi(
+            component="kernel", changed_after=datetime(2025, 6, 1, tzinfo=UTC)
+        )
+        # Only the July flaw (updated_dt in window) is selected; the May flaw is
+        # excluded by the query's updated_dt lower bound.
+        assert response.total_flaws_processed == 1
+        assert response.features["impact"].suggested == 1
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
