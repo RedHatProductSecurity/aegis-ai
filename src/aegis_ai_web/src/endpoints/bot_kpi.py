@@ -471,8 +471,20 @@ def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheDat
 
 
 def _needs_fetch(cached: FlawCacheData | None, updated_dt: str) -> bool:
-    """A flaw needs a full fetch when it's uncached or its watermark advanced."""
-    return cached is None or cached.updated_dt != updated_dt
+    """A flaw needs a full fetch when OSIDB's watermark is newer."""
+    if cached is None:
+        return True
+    try:
+        cached_dt = datetime.fromisoformat(cached.updated_dt)
+        osidb_dt = datetime.fromisoformat(updated_dt)
+    except ValueError:
+        # A malformed watermark cannot establish freshness safely.
+        return True
+    if cached_dt.tzinfo is None:
+        cached_dt = cached_dt.replace(tzinfo=UTC)
+    if osidb_dt.tzinfo is None:
+        osidb_dt = osidb_dt.replace(tzinfo=UTC)
+    return cached_dt < osidb_dt
 
 
 class SuggestionRecord(BaseModel):
