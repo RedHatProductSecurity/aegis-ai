@@ -17,6 +17,7 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     _flaw_cache_data,
     _get_cache_path,
     _merge_fetched,
+    _needs_fetch,
     _read_cache,
     get_osidb_bot_kpi,
 )
@@ -387,6 +388,20 @@ class TestMergeFetched:
         merged = _merge_fetched(existing, fetched, snapshot)
 
         assert merged["CVE-A"].updated_dt == new
+
+
+class TestNeedsFetch:
+    def test_fetches_when_osidb_watermark_is_newer(self):
+        cached = _cached_flaw(updated_dt="2025-06-01T00:00:00+00:00")
+        assert _needs_fetch(cached, "2025-07-01T00:00:00+00:00")
+
+    def test_does_not_fetch_when_cache_watermark_is_newer(self):
+        cached = _cached_flaw(updated_dt="2025-07-01T00:00:00+00:00")
+        assert not _needs_fetch(cached, "2025-06-01T00:00:00+00:00")
+
+    def test_does_not_fetch_when_watermarks_match(self):
+        cached = _cached_flaw(updated_dt="2025-06-01T00:00:00+00:00")
+        assert not _needs_fetch(cached, "2025-06-01T00:00:00+00:00")
 
 
 class TestGetOsidbBotKpiCaching:
