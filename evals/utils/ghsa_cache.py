@@ -19,11 +19,25 @@ cache_misses: list[str] = []
 _inflight: dict[str, asyncio.Task[dict[str, Any]]] = {}
 
 
+def _strip_versions(data: dict[str, Any]) -> dict[str, Any]:
+    """Remove ``affected[].versions`` to keep cache files small."""
+    if not data or "affected" not in data:
+        return data
+    stripped = dict(data)
+    stripped["affected"] = [
+        {k: v for k, v in entry.items() if k != "versions"}
+        for entry in data["affected"]
+    ]
+    return stripped
+
+
 def write_ghsa_cache_entry(vuln_id: str, data: dict[str, Any]) -> Path:
     """Serialize a raw OSV.dev response to the GHSA cache."""
     cache_file = Path(GHSA_CACHE_DIR) / f"{vuln_id}.json"
     cache_file.parent.mkdir(parents=True, exist_ok=True)
-    cache_file.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
+    cache_file.write_text(
+        json.dumps(_strip_versions(data), indent=4) + "\n", encoding="utf-8"
+    )
     return cache_file
 
 
