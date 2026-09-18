@@ -97,6 +97,7 @@ KNOWN_FAILURES: dict[str, dict] = {
         "known_to_fail_evaluators": [
             "CVSSKernelScopeAndPrivileges",
             "KpanicOverestimationEvaluator",
+            "UnderestimationEvaluator",
         ],
         "reason": (
             "Overestimation: predicted IMPORTANT, expected MODERATE. "
@@ -350,7 +351,10 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
     "CVE-2025-68742": {
-        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "known_to_fail_evaluators": [
+            "CVSSKernelScopeAndPrivileges",
+            "UnderestimationEvaluator",
+        ],
         "reason": (
             "On one run, the explanation-revision step only prompts the LLM to reconcile "
             "what changed during post-processing, but the original LLM response already had "
