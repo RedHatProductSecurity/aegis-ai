@@ -494,7 +494,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-22822",
         expected_mitigation="To mitigate this issue, implement a policy engine such as Kubernetes, Kyverno, Kubewarden, or OPA. Configure the policy engine to prevent the usage of the `getSecretKey` function within any ExternalSecret resource. This will block the insecure cross-namespace secret retrieval capability.",
-        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "MitigationEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-24450",
