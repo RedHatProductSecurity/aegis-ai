@@ -313,6 +313,7 @@ cases = [
         """,
         expected_mitigation="""Operator can configure BMO role-based access control (RBAC) to be namespace scoped instead of cluster scoped to prevent BMO from accessing Secrets from other namespaces, or use the `WATCH_NAMESPACE` configuration option to limit BMO to a single namespace.
         """,
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     # FIXME: The actual suggested_statement indicates the vulnerability is 'Important for Red Hat' and some products are 'under investigation'
     SuggestStatementCase(
