@@ -106,7 +106,8 @@ async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
 @Tool
 async def osv_dev_cve_tool(ctx: RunContext, input: OSVCVEToolInput):
     """wrapper around osv_dev_cve that caches OSV.dev responses"""
-    return await ghsa_cache_retrieve(str(input.cve_id))
+    raw = await ghsa_cache_retrieve(str(input.cve_id))
+    return filter_osv_response(raw)
 
 
 # pytest's built-in monkeypatch fixture is function-scoped, so session-scoped
