@@ -21,6 +21,7 @@ from aegis_ai.toolsets.tools import (
     BaseToolOutput,
     default_tool_http_headers,
 )
+from aegis_ai.toolsets.tools.osv_common import filter_osv_response
 
 # timeout in seconds for GET requests
 REQUEST_TIMEOUT_GET = 5
@@ -173,4 +174,5 @@ async def osv_dev_cve_tool(ctx: RunContext, input: OSVToolInput):
     Lookup CVE definition in osv.dev and return as much metadata as possible.
     """
     logger.info(f"Looking up osv.dev vulnerability for {input.cve_id}...")
-    return await osv_vulnerability_lookup(input.cve_id)
+    raw = await osv_vulnerability_lookup(input.cve_id)
+    return filter_osv_response(raw)
