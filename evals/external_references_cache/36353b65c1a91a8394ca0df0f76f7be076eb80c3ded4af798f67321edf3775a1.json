@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-23050",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-23050",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"QLowEnergyController in Qt before 6.8.2 mishandles malformed Bluetooth ATT commands, leading to an out-of-bounds read (or division by zero). This is fixed in 5.15.19, 6.5.9, and 6.8.2.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"baseScore\": 3.1,\n        \"baseSeverity\": \"LOW\",\n        \"vectorString\": \"CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"Qt\",\n      \"vendor\": \"Qt\",\n      \"versions\": [\n        {\n          \"lessThan\": \"5.15.19\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"custom\"\n        },\n        {\n          \"lessThan\": \"6.5.9\",\n          \"status\": \"affected\",\n          \"version\": \"6.0.0\",\n          \"versionType\": \"custom\"\n        },\n        {\n          \"lessThan\": \"6.8.2\",\n          \"status\": \"affected\",\n          \"version\": \"6.6.0\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

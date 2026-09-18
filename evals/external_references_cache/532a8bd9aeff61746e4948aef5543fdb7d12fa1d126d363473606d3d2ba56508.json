@@ -1,0 +1,10 @@
+{
+    "url": "https://issues.chromium.org/issues/498725213",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://issues.chromium.org/issues/498725213",
+        "url": "https://issues.chromium.org/issues/498725213",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

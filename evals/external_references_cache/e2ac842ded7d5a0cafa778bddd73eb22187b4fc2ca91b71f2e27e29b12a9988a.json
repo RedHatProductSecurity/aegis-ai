@@ -1,0 +1,10 @@
+{
+    "url": "https://docs.powerdns.com/recursor/security-advisories/powerdns-advisory-2026-03.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://docs.powerdns.com/recursor/security-advisories/powerdns-advisory-2026-03.html",
+        "url": "https://docs.powerdns.com/recursor/security-advisories/powerdns-advisory-2026-03.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

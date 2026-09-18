@@ -1,0 +1,10 @@
+{
+    "url": "https://savannah.gnu.org/bugs/?67049",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://savannah.gnu.org/bugs/?67049",
+        "url": "https://savannah.gnu.org/bugs/?67049",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

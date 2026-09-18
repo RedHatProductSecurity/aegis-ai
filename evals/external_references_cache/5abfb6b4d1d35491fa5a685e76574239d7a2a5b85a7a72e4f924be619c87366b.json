@@ -1,0 +1,10 @@
+{
+    "url": "https://patch.msgid.link/20250403211636.166257-1-xiyou.wangcong@gmail.com",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://patch.msgid.link/20250403211636.166257-1-xiyou.wangcong@gmail.com",
+        "url": "https://patch.msgid.link/20250403211636.166257-1-xiyou.wangcong@gmail.com",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://spring.io/security/cve-2026-41843",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://spring.io/security/cve-2026-41843",
+        "url": "https://spring.io/security/cve-2026-41843",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

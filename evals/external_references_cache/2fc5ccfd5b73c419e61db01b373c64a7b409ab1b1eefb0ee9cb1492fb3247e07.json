@@ -1,0 +1,10 @@
+{
+    "url": "https://access.redhat.com/errata/RHSA-2024:0606",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://access.redhat.com/errata/RHSA-2024:0606",
+        "url": "https://access.redhat.com/errata/RHSA-2024:0606",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

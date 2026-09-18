@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/python/cpython/pull/146212",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/python/cpython/pull/146212",
+        "url": "https://github.com/python/cpython/pull/146212",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

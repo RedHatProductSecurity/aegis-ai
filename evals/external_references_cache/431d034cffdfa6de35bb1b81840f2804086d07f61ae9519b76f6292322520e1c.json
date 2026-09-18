@@ -1,0 +1,10 @@
+{
+    "url": "https://chromereleases.googleblog.com/2026/09/stable-channel-update-for-desktop.html",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://chromereleases.googleblog.com/2026/09/stable-channel-update-for-desktop.html",
+        "url": "https://chromereleases.googleblog.com/2026/09/stable-channel-update-for-desktop.html",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://support.apple.com/en-us/127115",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://support.apple.com/en-us/127115",
+        "url": "https://support.apple.com/en-us/127115",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

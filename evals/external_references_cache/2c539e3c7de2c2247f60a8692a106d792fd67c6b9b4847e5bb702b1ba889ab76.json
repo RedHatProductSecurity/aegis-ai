@@ -1,0 +1,10 @@
+{
+    "url": "https://security.access.redhat.com/data/csaf/v2/vex/2026/cve-2026-34444.json",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://security.access.redhat.com/data/csaf/v2/vex/2026/cve-2026-34444.json",
+        "url": "https://security.access.redhat.com/data/csaf/v2/vex/2026/cve-2026-34444.json",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

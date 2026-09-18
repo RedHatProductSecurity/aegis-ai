@@ -1,0 +1,121 @@
+{
+    "id": "GHSA-jc85-fpwf-qm7x",
+    "summary": "expr-eval does not restrict functions passed to the evaluate function",
+    "details": "The expr-eval library is a JavaScript expression parser and evaluator designed to safely evaluate mathematical expressions with user-defined variables. However, due to insufficient input validation, an attacker can pass a crafted variables object into the evaluate() function and trigger arbitrary code execution.",
+    "aliases": [
+        "CVE-2025-12735"
+    ],
+    "modified": "2026-09-10T03:50:31.031027873Z",
+    "published": "2025-11-05T03:30:23Z",
+    "database_specific": {
+        "github_reviewed_at": "2025-11-05T18:46:50Z",
+        "nvd_published_at": "2025-11-05T01:15:33Z",
+        "cwe_ids": [
+            "CWE-94"
+        ],
+        "severity": "HIGH",
+        "github_reviewed": true
+    },
+    "references": [
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-12735"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/silentmatt/expr-eval/pull/288"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/silentmatt/expr-eval/pull/289"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jorenbroekema/expr-eval/commit/1d71bb2ca8f98df8de00e9cc4de8fdd468a7ad43"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jorenbroekema/expr-eval"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jorenbroekema/expr-eval/blob/460b820ba01c5aca6c5d84a7d4f1fa5d1913c67b/test/security.js"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/silentmatt/expr-eval"
+        },
+        {
+            "type": "WEB",
+            "url": "https://kb.cert.org/vuls/id/263614"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.kb.cert.org/vuls/id/263614"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.npmjs.com/package/expr-eval"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.npmjs.com/package/expr-eval-fork"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "expr-eval",
+                "ecosystem": "npm",
+                "purl": "pkg:npm/expr-eval"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "last_affected": "2.0.2"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/11/GHSA-jc85-fpwf-qm7x/GHSA-jc85-fpwf-qm7x.json"
+            }
+        },
+        {
+            "package": {
+                "name": "expr-eval-fork",
+                "ecosystem": "npm",
+                "purl": "pkg:npm/expr-eval-fork"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "3.0.1"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "last_known_affected_version_range": "<= 3.0.0",
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/11/GHSA-jc85-fpwf-qm7x/GHSA-jc85-fpwf-qm7x.json"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V4",
+            "score": "CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
+        }
+    ]
+}

@@ -1,0 +1,77 @@
+{
+    "id": "GHSA-2w8r-9xj7-69j5",
+    "summary": "mktemp: empty TMPDIR creates temp files in CWD instead of /tmp",
+    "details": "The mktemp utility in uutils coreutils fails to properly handle an empty TMPDIR environment variable. Unlike GNU mktemp, which falls back to /tmp when TMPDIR is an empty string, the uutils implementation treats the empty string as a valid path. This causes temporary files to be created in the current working directory (CWD) instead of the intended secure temporary directory. If the CWD is more permissive or accessible to other users than /tmp, it may lead to unintended information disclosure or unauthorized access to temporary data.\n\n---\n_Zellic finding 3.11. Reported in the Zellic *uutils coreutils Program Security Assessment* (for Canonical, Jan 2026), audited commit `3a07ffc5a9bd4c283e75afa548ba1f1957bad242`._",
+    "aliases": [
+        "CVE-2026-35342"
+    ],
+    "modified": "2026-07-06T20:11:14.809889Z",
+    "published": "2026-07-06T19:50:41Z",
+    "database_specific": {
+        "nvd_published_at": null,
+        "cwe_ids": [
+            "CWE-377"
+        ],
+        "severity": "LOW",
+        "github_reviewed": true,
+        "github_reviewed_at": "2026-07-06T19:50:41Z"
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/uutils/coreutils/security/advisories/GHSA-2w8r-9xj7-69j5"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-35342"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/uutils/coreutils/pull/10566"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/uutils/coreutils/commit/eb25ec328b226d8fbbaa4058bf9187165bf06d51"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/uutils/coreutils"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/uutils/coreutils/releases/tag/0.6.0"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "uu_mktemp",
+                "ecosystem": "crates.io",
+                "purl": "pkg:cargo/uu_mktemp"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "0.6.0"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/07/GHSA-2w8r-9xj7-69j5/GHSA-2w8r-9xj7-69j5.json"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N"
+        }
+    ]
+}
