@@ -7,13 +7,13 @@ from the OSV.dev API.
 """
 
 import re
-from typing import Any
 
 from pydantic import Field
 from pydantic_ai import RunContext, Tool
 
 from aegis_ai import logger
 from aegis_ai.toolsets.tools import BaseToolInput
+from aegis_ai.toolsets.tools.osv_common import filter_osv_response
 from aegis_ai.toolsets.tools.osv_dev_cve import OSVClient
 
 _GHSA_RE = re.compile(r"GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}")
@@ -39,32 +39,6 @@ def extract_ghsa_ids(urls: list[str]) -> list[str]:
     return result
 
 
-def _filter_osv_response(data: dict[str, Any]) -> dict[str, Any]:
-    """Return a focused subset of an OSV.dev vulnerability response."""
-    if not data:
-        return {}
-
-    affected = []
-    for entry in data.get("affected", []):
-        filtered: dict[str, Any] = {}
-        if "package" in entry:
-            filtered["package"] = entry["package"]
-        if "ranges" in entry:
-            filtered["ranges"] = entry["ranges"]
-        if "database_specific" in entry:
-            filtered["database_specific"] = entry["database_specific"]
-        if filtered:
-            affected.append(filtered)
-
-    return {
-        "id": data.get("id", ""),
-        "summary": data.get("summary", ""),
-        "details": data.get("details", ""),
-        "affected": affected,
-        "database_specific": data.get("database_specific", {}),
-    }
-
-
 @Tool
 async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
     """
@@ -84,7 +58,7 @@ async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
     for ghsa_id in ghsa_ids:
         logger.info(f"Fetching GHSA data from OSV.dev for {ghsa_id}...")
         raw = client.get_vuln_by_id(ghsa_id)
-        filtered = _filter_osv_response(raw)
+        filtered = filter_osv_response(raw)
         if filtered:
             results.append(filtered)
 
