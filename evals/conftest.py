@@ -12,10 +12,10 @@ import aegis_ai.toolsets as ts
 from aegis_ai import config_logging
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools.osidb import CVE, OSIDBToolInput, cve_exclude_fields
+from aegis_ai.toolsets.tools.osv_common import filter_osv_response
 from aegis_ai.toolsets.tools.osv_dev_cve import OSVToolInput as OSVCVEToolInput
 from aegis_ai.toolsets.tools.osv_dev_ghsa import (
     GHSAToolInput,
-    _filter_osv_response,
     extract_ghsa_ids,
 )
 from evals.features.common import eval_metrics, eval_summary
@@ -97,7 +97,7 @@ async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
     results = []
     for ghsa_id in ghsa_ids:
         raw = await ghsa_cache_retrieve(ghsa_id)
-        filtered = _filter_osv_response(raw)
+        filtered = filter_osv_response(raw)
         if filtered:
             results.append(filtered)
     return results
