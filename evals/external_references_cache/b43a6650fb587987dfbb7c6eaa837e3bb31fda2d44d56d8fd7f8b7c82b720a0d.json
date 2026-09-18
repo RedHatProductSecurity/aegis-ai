@@ -1,0 +1,10 @@
+{
+    "url": "https://sourceware.org/bugzilla/show_bug.cgi?id=29863",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://sourceware.org/bugzilla/show_bug.cgi?id=29863",
+        "url": "https://sourceware.org/bugzilla/show_bug.cgi?id=29863",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

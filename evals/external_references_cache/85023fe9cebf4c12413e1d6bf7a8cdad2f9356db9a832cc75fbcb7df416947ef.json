@@ -1,0 +1,10 @@
+{
+    "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-4718",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-4718",
+        "url": "https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2026-4718",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

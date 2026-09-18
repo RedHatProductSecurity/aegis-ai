@@ -1,0 +1,10 @@
+{
+    "url": "https://access.redhat.com/security/cve/CVE-2026-33001",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://access.redhat.com/security/cve/CVE-2026-33001",
+        "url": "https://access.redhat.com/security/cve/CVE-2026-33001",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

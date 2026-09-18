@@ -1,0 +1,10 @@
+{
+    "url": "https://go.dev/issue/75677",
+    "result": {
+        "status": "blocked",
+        "error_message": "Redirect to non-allowed URL: https://github.com/golang/go/issues/75677",
+        "url": "https://go.dev/issue/75677",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://lore.kernel.org/netdev/20250403211636.166257-1-xiyou.wangcong@gmail.com/T/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://lore.kernel.org/netdev/20250403211636.166257-1-xiyou.wangcong@gmail.com/T/",
+        "url": "https://lore.kernel.org/netdev/20250403211636.166257-1-xiyou.wangcong@gmail.com/T/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

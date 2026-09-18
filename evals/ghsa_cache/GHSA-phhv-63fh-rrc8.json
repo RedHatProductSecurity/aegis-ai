@@ -1,0 +1,210 @@
+{
+    "id": "GHSA-phhv-63fh-rrc8",
+    "summary": "Jenkins has a DNS rebinding vulnerability in WebSocket CLI origin validation",
+    "details": "Jenkins 2.442 through 2.554 (both inclusive), LTS 2.426.3 through LTS 2.541.2 (both inclusive) performs origin validation of requests made through the CLI WebSocket endpoint by computing the expected origin for comparison using the Host or X-Forwarded-Host HTTP request headers, making it vulnerable to DNS rebinding attacks that allow bypassing origin validation.",
+    "aliases": [
+        "BIT-jenkins-2026-33002",
+        "CVE-2026-33002"
+    ],
+    "modified": "2026-04-16T02:14:28.647144919Z",
+    "published": "2026-03-18T18:31:16Z",
+    "database_specific": {
+        "cwe_ids": [
+            "CWE-346",
+            "CWE-350"
+        ],
+        "severity": "HIGH",
+        "github_reviewed": true,
+        "github_reviewed_at": "2026-03-19T12:46:29Z",
+        "nvd_published_at": "2026-03-18T16:16:28Z"
+    },
+    "references": [
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-33002"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jenkinsci/jenkins/commit/348666da7136ef8270f88c0a7350562b0ba7f8ce"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/jenkinsci/jenkins"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.jenkins.io/security/advisory/2026-03-18/#SECURITY-3674"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "org.jenkins-ci.main:jenkins-core",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/org.jenkins-ci.main/jenkins-core"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "2.442"
+                        },
+                        {
+                            "fixed": "2.555"
+                        }
+                    ]
+                }
+            ],
+            "versions": [
+                "2.442",
+                "2.443",
+                "2.444",
+                "2.445",
+                "2.446",
+                "2.447",
+                "2.448",
+                "2.449",
+                "2.450",
+                "2.451",
+                "2.452",
+                "2.452.1",
+                "2.452.2",
+                "2.452.3",
+                "2.452.4",
+                "2.453",
+                "2.454",
+                "2.455",
+                "2.456",
+                "2.457",
+                "2.458",
+                "2.459",
+                "2.460",
+                "2.461",
+                "2.462",
+                "2.462.1",
+                "2.462.2",
+                "2.462.3",
+                "2.463",
+                "2.464",
+                "2.466",
+                "2.467",
+                "2.468",
+                "2.469",
+                "2.470",
+                "2.471",
+                "2.472",
+                "2.473",
+                "2.474",
+                "2.475",
+                "2.476",
+                "2.477",
+                "2.478",
+                "2.479",
+                "2.479.1",
+                "2.479.2",
+                "2.479.3",
+                "2.480",
+                "2.481",
+                "2.482",
+                "2.483",
+                "2.484",
+                "2.485",
+                "2.486",
+                "2.487",
+                "2.488",
+                "2.489",
+                "2.490",
+                "2.491",
+                "2.492",
+                "2.492.1",
+                "2.492.2",
+                "2.492.3",
+                "2.493",
+                "2.494",
+                "2.495",
+                "2.496",
+                "2.497",
+                "2.498",
+                "2.499",
+                "2.500",
+                "2.501",
+                "2.502",
+                "2.503",
+                "2.504",
+                "2.504.1",
+                "2.504.2",
+                "2.504.3",
+                "2.505",
+                "2.506",
+                "2.507",
+                "2.508",
+                "2.509",
+                "2.510",
+                "2.511",
+                "2.512",
+                "2.513",
+                "2.514",
+                "2.515",
+                "2.516",
+                "2.516.1",
+                "2.516.2",
+                "2.516.3",
+                "2.517",
+                "2.518",
+                "2.519",
+                "2.520",
+                "2.521",
+                "2.522",
+                "2.523",
+                "2.524",
+                "2.525",
+                "2.526",
+                "2.527",
+                "2.528",
+                "2.528.1",
+                "2.528.2",
+                "2.528.3",
+                "2.529",
+                "2.530",
+                "2.531",
+                "2.532",
+                "2.533",
+                "2.534",
+                "2.535",
+                "2.536",
+                "2.537",
+                "2.538",
+                "2.539",
+                "2.540",
+                "2.541",
+                "2.541.1",
+                "2.541.2",
+                "2.541.3",
+                "2.542",
+                "2.543",
+                "2.544",
+                "2.545",
+                "2.546",
+                "2.547",
+                "2.548",
+                "2.549",
+                "2.550",
+                "2.551",
+                "2.552",
+                "2.553",
+                "2.554"
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/03/GHSA-phhv-63fh-rrc8/GHSA-phhv-63fh-rrc8.json"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H"
+        }
+    ]
+}

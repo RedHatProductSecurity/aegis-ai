@@ -1,0 +1,10 @@
+{
+    "url": "https://gitlab.gnome.org/GNOME/glib/-/issues/3851",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://gitlab.gnome.org/GNOME/glib/-/issues/3851",
+        "content_type": "text/html",
+        "extracted_text": "(CVE-2026-0988) Integer overflow in g_buffered_input_stream_peek() leads to segmentation fault\n\n(rating: low)\n\nDescription\n\nThe g_buffered_input_stream_peek() function copies count bytes of data into buffer, starting from the provided offset.\n\nTo avoid out-of-bounds accesses, the count value is calculated as follows:\n\nend = MIN (offset + count, available);\ncount = end - offset;\n\nBoth offset and count are function parameters and no validation is performed on the count value. Because of these missing checks, it is possible to supply offset and count values that cause the expression offset + count to overflow, resulting in count being set to count - offset.\n\nLater, count is used as the size argument to a memcpy() call. For example, if offset = 1 and count = 2^64 - 1, the memcpy() will attempt to copy 2^64 - 2 bytes. If the caller-supplied destination buffer is smaller than this computed count, the result is a buffer overflow.\n\nA proof of concept script that showcases the stack overflow scenario can be found in the attachment.\n\nuint_overflow_g_buffered_input_stream_peek.c\n\nImpact\n\nA user controlling the values of offset and count is able to trigger a potential heap or stack buffer overflow under the strict precondition that the destination buffer has a size smaller than count - offset.\n\nRecommended solution\n\nCalculate the offset + count sum using glib's bounds-checking integer arithmetic features in order to detect potential overflows.\n\nAssignee\nLoading\n\nTime tracking\nLoading"
+    }
+}

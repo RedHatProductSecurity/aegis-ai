@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-84327",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-84327",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Incorrect authorization in Autofill in Google Chrome on on Android prior to 152.0.7977.75 allowed a remote attacker leveraging social engineering to obtain sensitive information via a crafted HTML page. (Chromium security severity: Low)\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Google\",\n      \"product\": \"Chrome\",\n      \"versions\": [\n        {\n          \"version\": \"152.0.7977.75\",\n          \"status\": \"affected\",\n          \"lessThan\": \"152.0.7977.75\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

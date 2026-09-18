@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/vim/vim/commit/75661a66a1db1e1f3f1245c615",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/vim/vim/commit/75661a66a1db1e1f3f1245c615",
+        "url": "https://github.com/vim/vim/commit/75661a66a1db1e1f3f1245c615",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

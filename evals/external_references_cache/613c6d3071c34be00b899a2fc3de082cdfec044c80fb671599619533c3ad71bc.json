@@ -1,0 +1,10 @@
+{
+    "url": "https://codereview.qt-project.org/c/qt/qtbase/+/643777",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://codereview.qt-project.org/c/qt/qtbase/+/643777",
+        "url": "https://codereview.qt-project.org/c/qt/qtbase/+/643777",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/golang/vulndb/issues/4441",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/golang/vulndb/issues/4441",
+        "url": "https://github.com/golang/vulndb/issues/4441",
+        "content_type": null,
+        "extracted_text": null
+    }
+}
