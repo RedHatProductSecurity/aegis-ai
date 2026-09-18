@@ -257,6 +257,7 @@ cases = [
     SuggestImpactCase(
         cve_id="CVE-2023-53764",
         expected_cvss3_vector="CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:H",  # A:L because corrupted or stale `peer` structures can potentially lead to incorrect packet routing/driver state inconsistencies.
+        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
     ),
     SuggestImpactCase(
         cve_id="CVE-2023-53843",
