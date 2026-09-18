@@ -56,14 +56,6 @@
                     ]
                 }
             ],
-            "versions": [
-                "0.1.0",
-                "0.2.0",
-                "0.2.1",
-                "0.3.0",
-                "0.3.1",
-                "0.4.0"
-            ],
             "database_specific": {
                 "last_known_affected_version_range": "<= 0.4.0",
                 "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/05/GHSA-qqcj-rghw-829x/GHSA-qqcj-rghw-829x.json"

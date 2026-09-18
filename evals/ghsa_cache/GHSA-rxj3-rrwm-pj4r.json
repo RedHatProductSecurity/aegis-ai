@@ -78,14 +78,6 @@
                     ]
                 }
             ],
-            "versions": [
-                "1.7-beta",
-                "1.7-beta2",
-                "1.7-rc",
-                "1.7-rc2",
-                "1.7-rc3",
-                "1.7-rc4"
-            ],
             "database_specific": {
                 "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-rxj3-rrwm-pj4r/GHSA-rxj3-rrwm-pj4r.json"
             }
