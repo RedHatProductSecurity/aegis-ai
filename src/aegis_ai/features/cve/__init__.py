@@ -1244,6 +1244,7 @@ class SuggestAffectedPackages(Feature):
 - Use the osidb_tool with the provided cve_id to retrieve CVE flaw data, including affects with PURLs.
 - The affects array is valid in PRE_SECONDARY_ASSESSMENT and later flaw states. In earlier states, the array can be empty or incomplete — this does NOT mean no packages are affected, only that the data is not yet available.
 - If the affects array is empty or appears incomplete (e.g., flaw is in an early state like NEW or TRIAGE), set low data_quality and explain that affects data is not yet available.
+- If affect entries exist but have null or missing PURLs, treat this as incomplete data — the affected source RPM packages cannot be determined without PURLs. Set low confidence and data_quality, and explain that PURL data is not available.
 - Analyze CVE description, references, patches, and comments to understand the technical scope of the vulnerability.
 - For each source RPM package identified by PURL in the affects list:
   - Determine whether the package contains the vulnerable code or functionality.
