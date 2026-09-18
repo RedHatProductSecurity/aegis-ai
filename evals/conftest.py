@@ -3,6 +3,8 @@ import logging
 import os
 
 import pytest
+
+logger = logging.getLogger(__name__)
 from pydantic_ai.tools import RunContext, Tool
 from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
 
@@ -70,7 +72,15 @@ from evals.utils.osidb_cache import (
 @Tool
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
-    cve = await osidb_cache_retrieve(input.cve_id)
+    try:
+        cve = await osidb_cache_retrieve(input.cve_id)
+    except Exception:
+        logger.info(f"OSIDB cache miss for {input.cve_id}, returning empty CVE")
+        return CVE(
+            cve_id=input.cve_id,
+            title=f"Flaw {input.cve_id} was not found in OSIDB cache",
+            description="",
+        )
     return cve_exclude_fields(
         cve,
         ctx.deps.exclude_osidb_fields,
