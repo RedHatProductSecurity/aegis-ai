@@ -241,6 +241,13 @@ KNOWN_FAILURES: dict[str, dict] = {
             "Also: PR:L inconsistent with requiring /dev/udmabuf access."
         ),
     },
+    "CVE-2025-38052": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The vector sets C:H and I:H for an internal kernel slab use-after-free "
+            "read issue without providing a plausible user-data impact path."
+        ),
+    },
     "CVE-2025-38089": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
