@@ -1,0 +1,10 @@
+{
+    "url": "https://gitlab.gnome.org/GNOME/glib/-/merge_requests/4655",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://gitlab.gnome.org/GNOME/glib/-/merge_requests/4655",
+        "content_type": "text/html",
+        "extracted_text": "(CVE-2025-6052) gstring: Fix overflow check when expanding the string\n\nCode\n\nCheck out branch\n\nPatches\n\nPlain diff\n\nExpand sidebar\n\n(CVE-2025-6052) gstring: Fix overflow check when expanding the string\n\nPhilip Withnallrequested to merge \n pwithnall/glib:string-overflow-check \n\n into main   Jun 03, 2025\n\nOverview\n5\n\nCommits\n1\n\nPipelines\n1\n\nChanges\n1\n\nAfter commit 34b7992f the overflow check\nwas only done when expanding the string, but we need to do it before\nchecking whether to expand the string, otherwise that calculation could\noverflow and falsely decide that the string is big enough already.\n\nAs a concrete example, consider a GString which has:\n\n.len = G_MAXSIZE / 2 + 1\n\n.allocated_len = G_MAXSIZE / 2 + 1\nand g_string_append() is called on it with an input string of length\nG_MAXSIZE / 2.\n\nThis results in a call g_string_maybe_expand (string, G_MAXSIZE / 2),\nwhich calculates string->len + len as (G_MAXSIZE / 2 + 1) + (G_MAXSIZE / 2) which evaluates to 1 as it overflows. This is not\ngreater than string->allocated_len (which is G_MAXSIZE / 2 + 1), so\ng_string_expand() is not called, and g_string_maybe_expand()\nreturns successfully. The caller then assumes that there\u2019s enough space\nin the buffer, and happily continues to cause a buffer overflow.\n\nIt\u2019s unlikely anyone could hit this in practice because it requires\nludicrously big strings and GString allocations, which likely would\nhave been blocked by other code, but if we\u2019re going to have the overflow\nchecks in GString then they should be effective.\n\nSpotted by code inspection.\n\nSigned-off-by: Philip Withnall [email]\n\nMerge request reports\n\nAssignee\nLoading\n\nReviewers\nLoading\n\nRequest review from\n\nRequest review from\n\nLoading\n\nTime tracking\nLoading\n\nLoading"
+    }
+}

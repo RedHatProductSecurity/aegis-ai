@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-59032",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-59032",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"ManageSieve AUTHENTICATE command crashes when using literal as SASL initial response. This can be used to crash ManageSieve service repeatedly, making it unavailable for other users. Control access to ManageSieve port, or disable the service if it's not needed. Alternatively upgrade to a fixed version. No publicly available exploits are known.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"HIGH\",\n        \"baseScore\": 7.5,\n        \"baseSeverity\": \"HIGH\",\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\",\n        \"version\": \"3.1\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"OX Dovecot Pro\",\n      \"vendor\": \"Open-Xchange GmbH\",\n      \"versions\": [\n        {\n          \"lessThanOrEqual\": \"3.1.0\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"lessThanOrEqual\": \"2.4.0\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

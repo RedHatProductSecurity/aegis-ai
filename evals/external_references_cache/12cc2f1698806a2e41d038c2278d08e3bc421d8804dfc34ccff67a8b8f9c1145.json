@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-32285",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-32285",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The Delete function fails to properly validate offsets when processing malformed JSON input. This can lead to a negative slice index and a runtime panic, allowing a denial of service attack.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"github.com/buger/jsonparser\",\n      \"product\": \"github.com/buger/jsonparser\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"1.1.2\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

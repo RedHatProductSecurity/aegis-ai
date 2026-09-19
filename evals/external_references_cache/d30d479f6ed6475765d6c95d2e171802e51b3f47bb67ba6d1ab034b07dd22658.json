@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-59956",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-59956",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"AgentAPI is an HTTP API for Claude Code, Goose, Aider, Gemini, Amp, and Codex. Versions 0.3.3 and below are susceptible to a client-side DNS rebinding attack when hosted over plain HTTP on localhost. An attacker can gain access to the /messages endpoint served by the Agent API. This allows for the unauthorized exfiltration of sensitive user data, specifically local message history, which can include secret keys, file system contents, and intellectual property the user was working on locally. This issue is fixed in version 0.4.0.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 6.5,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"coder\",\n      \"product\": \"agentapi\",\n      \"versions\": [\n        {\n          \"version\": \"< 0.4.0\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

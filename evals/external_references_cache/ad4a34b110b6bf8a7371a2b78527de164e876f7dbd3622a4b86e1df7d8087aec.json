@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-67639",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-67639",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"A cross-site request forgery (CSRF) vulnerability in Jenkins 2.540 and earlier, LTS 2.528.2 and earlier allows attackers to trick users into logging in to the attacker's account.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Jenkins Project\",\n      \"product\": \"Jenkins\",\n      \"versions\": [\n        {\n          \"version\": \"2.541\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"*\",\n          \"status\": \"unaffected\"\n        },\n        {\n          \"version\": \"2.528.3\",\n          \"versionType\": \"maven\",\n          \"lessThan\": \"2.528.*\",\n          \"status\": \"unaffected\"\n        }\n      ],\n      \"defaultStatus\": \"affected\"\n    }\n  ]\n}"
+    }
+}

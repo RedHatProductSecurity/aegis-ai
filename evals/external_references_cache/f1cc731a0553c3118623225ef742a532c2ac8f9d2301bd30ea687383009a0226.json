@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-61727",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-61727",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An excluded subdomain constraint in a certificate chain does not restrict the usage of wildcard SANs in the leaf certificate. For example a constraint that excludes the subdomain test.example.com does not prevent a leaf certificate from claiming the SAN *.example.com.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Go standard library\",\n      \"product\": \"crypto/x509\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"1.24.11\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"1.25.0\",\n          \"lessThan\": \"1.25.5\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

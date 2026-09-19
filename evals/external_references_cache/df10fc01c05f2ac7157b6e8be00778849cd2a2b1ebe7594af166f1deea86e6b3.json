@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-5918",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-5918",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Inappropriate implementation in Navigation in Google Chrome prior to 147.0.7727.55 allowed a remote attacker who had compromised the renderer process to leak cross-origin data via a crafted HTML page. (Chromium security severity: Low)\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Google\",\n      \"product\": \"Chrome\",\n      \"versions\": [\n        {\n          \"version\": \"147.0.7727.55\",\n          \"status\": \"affected\",\n          \"lessThan\": \"147.0.7727.55\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

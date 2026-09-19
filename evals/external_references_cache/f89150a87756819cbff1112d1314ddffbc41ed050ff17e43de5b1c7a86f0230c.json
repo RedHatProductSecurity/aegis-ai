@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-58190",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-58190",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The html.Parse function in golang.org/x/net/html has an infinite parsing loop when processing certain inputs, which can lead to denial of service (DoS) if an attacker provides specially crafted HTML content.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"golang.org/x/net\",\n      \"product\": \"golang.org/x/net/html\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"0.45.0\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

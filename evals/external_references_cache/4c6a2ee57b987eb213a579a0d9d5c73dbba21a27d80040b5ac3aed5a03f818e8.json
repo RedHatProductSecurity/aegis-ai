@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-61985",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-61985",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"ssh in OpenSSH before 10.1 allows the '\\\\0' character in an ssh:// URI, potentially leading to code execution when a ProxyCommand is used.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"baseScore\": 3.6,\n        \"baseSeverity\": \"LOW\",\n        \"vectorString\": \"CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:N\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"OpenSSH\",\n      \"vendor\": \"OpenBSD\",\n      \"versions\": [\n        {\n          \"lessThan\": \"10.1\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

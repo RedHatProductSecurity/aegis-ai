@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-47912",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-47912",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The Parse function permits values other than IPv6 addresses to be included in square brackets within the host component of a URL. RFC 3986 permits IPv6 addresses to be included within the host component, enclosed within square brackets. For example: \\\"http://[::1]/\\\". IPv4 addresses and hostnames must not appear within square brackets. Parse did not enforce this requirement.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Go standard library\",\n      \"product\": \"net/url\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"1.24.8\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"1.25.0\",\n          \"lessThan\": \"1.25.2\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

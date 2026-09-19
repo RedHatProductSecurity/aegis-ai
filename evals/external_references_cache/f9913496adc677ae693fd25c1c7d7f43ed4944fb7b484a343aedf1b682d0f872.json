@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-55062",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-55062",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"CWE-79 Improper Neutralization of Input During Web Page Generation (XSS or 'Cross-site Scripting')\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 4.8,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"HIGH\",\n        \"scope\": \"CHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:H/UI:R/S:C/C:L/I:L/A:N\",\n        \"version\": \"3.1\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"Web\",\n      \"vendor\": \"Priority\",\n      \"versions\": [\n        {\n          \"status\": \"affected\",\n          \"version\": \"23.0 and below\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

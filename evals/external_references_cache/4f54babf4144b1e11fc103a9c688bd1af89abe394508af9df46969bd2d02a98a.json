@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-7647",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-7647",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The llama-index-core package, up to version 0.12.44, contains a vulnerability in the `get_cache_dir()` function where a predictable, hardcoded directory path `/tmp/llama_index` is used on Linux systems without proper security controls. This vulnerability allows attackers on multi-user systems to steal proprietary models, poison cached embeddings, or conduct symlink attacks. The issue affects all Linux deployments where multiple users share the same system. The vulnerability is classified under CWE-379, CWE-377, and CWE-367, indicating insecure temporary file creation and potential race conditions.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_0\": {\n        \"version\": \"3.0\",\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"LOCAL\",\n        \"availabilityImpact\": \"LOW\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"HIGH\",\n        \"privilegesRequired\": \"LOW\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:L\",\n        \"baseScore\": 7.3,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"run-llama\",\n      \"product\": \"run-llama/llama_index\",\n      \"versions\": [\n        {\n          \"version\": \"unspecified\",\n          \"lessThan\": \"v0.13.0\",\n          \"status\": \"affected\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

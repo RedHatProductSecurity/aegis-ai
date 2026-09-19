@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/alexcrichton/tar-rs/security/advisories/GHSA-j4xf-2g29-59ph",
+    "result": {
+        "status": "blocked",
+        "error_message": "Redirect to non-allowed URL: https://github.com/composefs/tar-rs/security/advisories/GHSA-j4xf-2g29-59ph",
+        "url": "https://github.com/alexcrichton/tar-rs/security/advisories/GHSA-j4xf-2g29-59ph",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

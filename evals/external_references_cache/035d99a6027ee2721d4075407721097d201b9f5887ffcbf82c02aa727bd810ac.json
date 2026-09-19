@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-27447",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-27447",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"OpenPrinting CUPS is an open source printing system for Linux and other Unix-like operating systems. In versions 2.4.16 and prior, CUPS daemon (cupsd) contains an authorization bypass vulnerability due to case-insensitive username comparison during authorization checks. The vulnerability allows an unprivileged user to gain unauthorized access to restricted operations by using a user with a username that differs only in case from an authorized user. At time of publication, there are no publicly available patches.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"HIGH\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 4.8,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"HIGH\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"HIGH\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"REQUIRED\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:H/I:L/A:N\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"OpenPrinting\",\n      \"product\": \"cups\",\n      \"versions\": [\n        {\n          \"version\": \"<= 2.4.16\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

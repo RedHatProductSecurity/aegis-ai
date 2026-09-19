@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-22868",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-22868",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An attacker can pass a malicious malformed token which causes unexpected memory to be consumed during parsing.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"golang.org/x/oauth2\",\n      \"product\": \"golang.org/x/oauth2/jws\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"0.27.0\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

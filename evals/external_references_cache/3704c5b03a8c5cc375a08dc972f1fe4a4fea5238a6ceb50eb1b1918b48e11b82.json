@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-2320",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-2320",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Inappropriate implementation in File input in Google Chrome prior to 145.0.7632.45 allowed a remote attacker who convinced a user to engage in specific UI gestures to perform UI spoofing via a crafted HTML page. (Chromium security severity: Medium)\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Google\",\n      \"product\": \"Chrome\",\n      \"versions\": [\n        {\n          \"version\": \"145.0.7632.45\",\n          \"status\": \"affected\",\n          \"lessThan\": \"145.0.7632.45\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

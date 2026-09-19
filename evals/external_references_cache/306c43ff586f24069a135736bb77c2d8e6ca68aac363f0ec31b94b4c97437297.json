@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/containers/podman/security/advisories/GHSA-hc8w-h2mf-hp59",
+    "result": {
+        "status": "blocked",
+        "error_message": "Redirect to non-allowed URL: https://github.com/podman-container-tools/podman/security/advisories/GHSA-hc8w-h2mf-hp59",
+        "url": "https://github.com/containers/podman/security/advisories/GHSA-hc8w-h2mf-hp59",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

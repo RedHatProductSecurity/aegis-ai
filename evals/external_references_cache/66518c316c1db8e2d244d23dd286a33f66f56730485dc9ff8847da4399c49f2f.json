@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-3608",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-3608",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Sending a maliciously crafted message to the kea-ctrl-agent, kea-dhcp-ddns, kea-dhcp4, or kea-dhcp6 daemons over any configured API socket or HA listener can cause the receiving daemon to exit with a stack overflow error.\\nThis issue affects Kea versions 2.6.0 through 2.6.4 and 3.0.0 through 3.0.2.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"NONE\",\n        \"availabilityImpact\": \"HIGH\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H\",\n        \"baseScore\": 7.5,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"ISC\",\n      \"product\": \"Kea\",\n      \"versions\": [\n        {\n          \"version\": \"2.6.0\",\n          \"lessThanOrEqual\": \"2.6.4\",\n          \"status\": \"affected\",\n          \"versionType\": \"custom\"\n        },\n        {\n          \"version\": \"3.0.0\",\n          \"lessThanOrEqual\": \"3.0.2\",\n          \"status\": \"affected\",\n          \"versionType\": \"custom\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-35536",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-35536",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"In Tornado before 6.5.5, cookie attribute injection could occur because the domain, path, and samesite arguments to .RequestHandler.set_cookie were not checked for crafted characters.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 7.2,\n        \"baseSeverity\": \"HIGH\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"CHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:N\",\n        \"version\": \"3.1\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"Tornado\",\n      \"vendor\": \"tornadoweb\",\n      \"versions\": [\n        {\n          \"lessThan\": \"6.5.5\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}
