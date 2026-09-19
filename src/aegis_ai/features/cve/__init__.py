@@ -449,6 +449,7 @@ class SuggestImpact(Feature):
             pre_clf = None
 
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["affects", "impact", "rh_cvss_score"],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
@@ -532,6 +533,7 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["cwe_id"],
             static_context=static_context,
         )
@@ -586,7 +588,7 @@ class IdentifyPII(Feature):
     """Based on current CVE information (public comments, description, statement) and context assert if it contains any PII."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=[])
+        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=[])
         prompt = AegisPrompt(
             user_instruction="Examine the CVE JSON and identify any PII (names, emails, phone numbers, IDs, IPs, health/genetic info, etc.).",
             goals="""
@@ -616,6 +618,7 @@ class SuggestDescriptionText(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["title", "cve_description"],
             static_context=static_context,
         )
@@ -669,6 +672,7 @@ class SuggestStatementText(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["statement", "mitigation"],
             static_context=static_context,
         )
@@ -764,6 +768,7 @@ class SuggestAffectedComponents(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["affects", "components"],
             static_context=static_context if use_static else None,
         )
@@ -814,7 +819,7 @@ class CVSSDiffExplainer(Feature):
     """Based on current CVE information and context explain CVSS score diff between nvd and rh."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=[])
+        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=[])
         prompt = AegisPrompt(
             user_instruction="Compare Red Hat CVSS3 vs NVD CVSS3 for the CVE and explain any differences.",
             goals="""
@@ -924,6 +929,7 @@ class QualityReview(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         """Run the quality review rubric against the given CVE flaw content."""
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=[],
             static_context=static_context,
         )
@@ -1226,7 +1232,9 @@ class SuggestAffectedPackages(Feature):
             if isinstance(static_context, dict) and "affects" in static_context
             else None
         )
-        deps = feature_deps(exclude_osidb_fields=[], static_context=deps_context)
+        deps = feature_deps(
+            cve_id=str(cve_id), exclude_osidb_fields=[], static_context=deps_context
+        )
         prompt = AegisPrompt(
             user_instruction=(
                 "Analyze the CVE and its OSIDB affects data (including PURLs and "

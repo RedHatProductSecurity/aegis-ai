@@ -135,7 +135,7 @@ pypi_mcp_toolset = MCPToolset(
 ).prefixed("pypi-mcp")
 
 # Enable public function tools
-public_toolset_list = []
+public_toolset_list: list[AbstractToolset[Any]] = []
 
 if get_settings().use_cwe_tool:
     from aegis_ai.toolsets.tools.cwe import cwe_toolset

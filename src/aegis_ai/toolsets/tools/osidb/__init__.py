@@ -324,6 +324,13 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
     if is_kernel_component(cve.components):
         ctx.deps.is_kernel_cve = True
 
+    if ctx.deps.allowed_reference_urls is None and cve.references:
+        ctx.deps.allowed_reference_urls = {
+            ref["url"]
+            for ref in cve.references
+            if isinstance(ref, dict) and ref.get("url")
+        }
+
     # exclude CVE fields according to feature_deps
     return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
 
