@@ -316,7 +316,7 @@ spec:
       stepTemplate: {volumeMounts: [{name: workdir, mountPath: /var/workdir}]}
       steps:
       - name: use-trusted-artifact
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:dba00133c3f4d6a7b071c6b83977729da2c4b7469ee5e3e9acdf4ef6d1c6b3e2
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:d4155ab6553b406bd5ab96b98bb10ab97a38a6f9dcb7c39dd18678428e8b2e64
         args: [use, $(params.SOURCE_ARTIFACT)=/var/workdir/source]
       - name: git-tags-to-image-labels
         image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:3e1b3a9e5ddaba2d239fc7ffa270507b7e6ace032f5c7c8763997793910899bf
@@ -653,7 +653,7 @@ spec:
           mountPath: /var/workdir
       steps:
       - name: pull-sarif
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:dba00133c3f4d6a7b071c6b83977729da2c4b7469ee5e3e9acdf4ef6d1c6b3e2
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:d4155ab6553b406bd5ab96b98bb10ab97a38a6f9dcb7c39dd18678428e8b2e64
         env:
         - name: IMAGE_URL
           value: $(params.image-url)
@@ -758,7 +758,7 @@ spec:
           fi
           echo "$GATE_EXIT" > "$SARIF_DIR/gate_exit"
       - name: upload-sarif
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:dba00133c3f4d6a7b071c6b83977729da2c4b7469ee5e3e9acdf4ef6d1c6b3e2
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:d4155ab6553b406bd5ab96b98bb10ab97a38a6f9dcb7c39dd18678428e8b2e64
         env:
         - name: GIT_URL
           value: $(params.git-url)
