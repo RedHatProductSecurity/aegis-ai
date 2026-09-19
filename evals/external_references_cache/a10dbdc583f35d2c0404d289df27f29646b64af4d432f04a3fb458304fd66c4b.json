@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-6547",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-6547",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Improper Input Validation vulnerability in pbkdf2 allows Signature Spoofing by Improper Validation.This issue affects pbkdf2: <=3.1.2.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"Automatable\": \"NOT_DEFINED\",\n        \"Recovery\": \"NOT_DEFINED\",\n        \"Safety\": \"NOT_DEFINED\",\n        \"attackComplexity\": \"HIGH\",\n        \"attackRequirements\": \"PRESENT\",\n        \"attackVector\": \"NETWORK\",\n        \"baseScore\": 9.1,\n        \"baseSeverity\": \"CRITICAL\",\n        \"exploitMaturity\": \"NOT_DEFINED\",\n        \"privilegesRequired\": \"NONE\",\n        \"providerUrgency\": \"NOT_DEFINED\",\n        \"subAvailabilityImpact\": \"HIGH\",\n        \"subConfidentialityImpact\": \"HIGH\",\n        \"subIntegrityImpact\": \"HIGH\",\n        \"userInteraction\": \"NONE\",\n        \"valueDensity\": \"NOT_DEFINED\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:N/VI:H/VA:N/SC:H/SI:H/SA:H\",\n        \"version\": \"4.0\",\n        \"vulnAvailabilityImpact\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"NONE\",\n        \"vulnIntegrityImpact\": \"HIGH\",\n        \"vulnerabilityResponseEffort\": \"NOT_DEFINED\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"versions\": [\n        {\n          \"status\": \"affected\",\n          \"version\": \">= 1 <=3.1.2\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

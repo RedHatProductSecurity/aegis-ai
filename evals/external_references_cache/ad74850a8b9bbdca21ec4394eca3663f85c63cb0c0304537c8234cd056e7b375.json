@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-32935",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-32935",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"phpseclib is a PHP secure communications library. Projects using versions 0.1.1 through 1.0.26, 2.0.0 through 2.0.51, and 3.0.0 through 3.0.49 are vulnerable to a to padding oracle timing attack when using AES in CBC mode. This issue has been fixed in versions 1.0.27, 2.0.52 and 3.0.50.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV4_0\": {\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"HIGH\",\n        \"attackRequirements\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"vulnConfidentialityImpact\": \"HIGH\",\n        \"vulnIntegrityImpact\": \"NONE\",\n        \"vulnAvailabilityImpact\": \"NONE\",\n        \"subConfidentialityImpact\": \"NONE\",\n        \"subIntegrityImpact\": \"NONE\",\n        \"subAvailabilityImpact\": \"NONE\",\n        \"baseScore\": 8.2,\n        \"baseSeverity\": \"HIGH\",\n        \"vectorString\": \"CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N\",\n        \"version\": \"4.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"phpseclib\",\n      \"product\": \"phpseclib\",\n      \"versions\": [\n        {\n          \"version\": \">= 3.0.0, < 3.0.50\",\n          \"status\": \"affected\"\n        },\n        {\n          \"version\": \">= 2.0.0, < 2.0.52\",\n          \"status\": \"affected\"\n        },\n        {\n          \"version\": \">= 0.1.1, < 1.0.27\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

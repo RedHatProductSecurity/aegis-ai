@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-0900",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-0900",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Inappropriate implementation in V8 in Google Chrome prior to 144.0.7559.59 allowed a remote attacker to potentially exploit object corruption via a crafted HTML page. (Chromium security severity: High)\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Google\",\n      \"product\": \"Chrome\",\n      \"versions\": [\n        {\n          \"version\": \"144.0.7559.59\",\n          \"status\": \"affected\",\n          \"lessThan\": \"144.0.7559.59\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

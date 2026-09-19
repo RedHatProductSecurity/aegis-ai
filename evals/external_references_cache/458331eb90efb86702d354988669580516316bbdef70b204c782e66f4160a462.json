@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-26939",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-26939",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Missing Authorization (CWE-862) in Kibana\u2019s server-side Detection Rule Management can lead to Unauthorized Endpoint Response Action Configuration (host isolation, process termination, and process suspension) via CAPEC-1 (Accessing Functionality Not Properly Constrained by ACLs). This requires an authenticated attacker with rule management privileges.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseSeverity\": \"MEDIUM\",\n        \"baseScore\": 6.5,\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"HIGH\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"privilegesRequired\": \"LOW\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N\",\n        \"version\": \"3.1\"\n      },\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"Kibana\",\n      \"vendor\": \"Elastic\",\n      \"versions\": [\n        {\n          \"lessThanOrEqual\": \"9.2.5\",\n          \"status\": \"affected\",\n          \"version\": \"9.0.0\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"lessThanOrEqual\": \"9.3.0\",\n          \"status\": \"affected\",\n          \"version\": \"9.3.0\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"lessThanOrEqual\": \"8.19.11\",\n          \"status\": \"affected\",\n          \"version\": \"8.0.0\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

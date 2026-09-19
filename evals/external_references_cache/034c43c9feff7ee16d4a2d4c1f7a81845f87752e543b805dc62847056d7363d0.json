@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-26962",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-26962",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Rack is a modular Ruby web server interface. From version 3.2.0 to before version 3.2.6, Rack::Multipart::Parser unfolds folded multipart part headers incorrectly. When a multipart header contains an obs-fold sequence, Rack preserves the embedded CRLF in parsed parameter values such as filename or name instead of removing the folded line break during unfolding. As a result, applications that later reuse those parsed values in HTTP response headers may be vulnerable to downstream header injection or response splitting. This issue has been patched in version 3.2.6.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"HIGH\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseScore\": 4.8,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"rack\",\n      \"product\": \"rack\",\n      \"versions\": [\n        {\n          \"version\": \">= 3.2.0, < 3.2.6\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

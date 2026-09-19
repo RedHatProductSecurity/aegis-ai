@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-23555",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-23555",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Any guest issuing a Xenstore command accessing a node using the\\n(illegal) node path \\\"/local/domain/\\\", will crash xenstored due to a\\nclobbered error indicator in xenstored when verifying the node path.\\n\\nNote that the crash is forced via a failing assert() statement in\\nxenstored. In case xenstored is being built with NDEBUG #defined,\\nan unprivileged guest trying to access the node path \\\"/local/domain/\\\"\\nwill result in it no longer being serviced by xenstored, other guests\\n(including dom0) will still be serviced, but xenstored will use up\\nall cpu time it can get.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unknown\",\n      \"product\": \"Xen\",\n      \"vendor\": \"Xen\",\n      \"versions\": [\n        {\n          \"status\": \"unknown\",\n          \"version\": \"consult Xen advisory XSA-481\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

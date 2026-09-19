@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-22866",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-22866",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Due to the usage of a variable time instruction in the assembly implementation of an internal function, a small number of bits of secret scalars are leaked on the ppc64le architecture. Due to the way this function is used, we do not believe this leakage is enough to allow recovery of the private key when P-256 is used in any well known protocols.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Go standard library\",\n      \"product\": \"crypto/internal/nistec\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"1.22.12\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"1.23.0-0\",\n          \"lessThan\": \"1.23.6\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"1.24.0-0\",\n          \"lessThan\": \"1.24.0-rc.3\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

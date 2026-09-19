@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-32289",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-32289",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Context was not properly tracked across template branches for JS template literals, leading to possibly incorrect escaping of content when branches were used. Additionally template actions within JS template literals did not properly track the brace depth, leading to incorrect escaping being applied. These issues could cause actions within JS template literals to be incorrectly or improperly escaped, leading to XSS vulnerabilities.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Go standard library\",\n      \"product\": \"html/template\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"1.25.9\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"1.26.0-0\",\n          \"lessThan\": \"1.26.2\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}
