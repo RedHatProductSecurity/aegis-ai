@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/uutils/coreutils/pull/9793",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/uutils/coreutils/pull/9793",
+        "url": "https://github.com/uutils/coreutils/pull/9793",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

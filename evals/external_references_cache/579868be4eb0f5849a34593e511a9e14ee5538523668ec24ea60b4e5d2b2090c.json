@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/openssl/openssl/commit/07e727d304746edb49a98ee8f6ab00256e1f012b",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/openssl/openssl/commit/07e727d304746edb49a98ee8f6ab00256e1f012b",
+        "url": "https://github.com/openssl/openssl/commit/07e727d304746edb49a98ee8f6ab00256e1f012b",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

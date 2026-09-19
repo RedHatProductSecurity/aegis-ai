@@ -1,0 +1,93 @@
+{
+    "id": "GHSA-6837-qgrc-x5p6",
+    "summary": "Jenkins has a CSRF vulnerability on the login form",
+    "details": "A cross-site request forgery (CSRF) vulnerability in Jenkins 2.540 and earlier, LTS 2.528.2 and earlier allows attackers to trick users into logging in to the attacker's account.",
+    "aliases": [
+        "BIT-jenkins-2025-67639",
+        "CVE-2025-67639"
+    ],
+    "modified": "2026-09-10T03:50:31.691142015Z",
+    "published": "2025-12-10T18:30:26Z",
+    "database_specific": {
+        "severity": "LOW",
+        "github_reviewed": true,
+        "github_reviewed_at": "2025-12-10T20:14:45Z",
+        "nvd_published_at": "2025-12-10T17:15:56Z",
+        "cwe_ids": [
+            "CWE-352"
+        ]
+    },
+    "references": [
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-67639"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jenkinsci/jenkins/commit/31598feb0aa514d8978d2c27a4c9a5a9b8d80a57"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/jenkinsci/jenkins"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.jenkins.io/security/advisory/2025-12-10/#SECURITY-1166"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "org.jenkins-ci.main:jenkins-core",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/org.jenkins-ci.main/jenkins-core"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "2.529"
+                        },
+                        {
+                            "fixed": "2.541"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/12/GHSA-6837-qgrc-x5p6/GHSA-6837-qgrc-x5p6.json"
+            }
+        },
+        {
+            "package": {
+                "name": "org.jenkins-ci.main:jenkins-core",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/org.jenkins-ci.main/jenkins-core"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "2.528.3"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/12/GHSA-6837-qgrc-x5p6/GHSA-6837-qgrc-x5p6.json"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:N/A:N"
+        }
+    ]
+}

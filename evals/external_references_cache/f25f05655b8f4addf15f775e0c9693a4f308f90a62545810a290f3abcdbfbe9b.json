@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/python/cpython/commit/05ed7ce7ae9e17c23a04085b2539fe6d6d3cef69",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/python/cpython/commit/05ed7ce7ae9e17c23a04085b2539fe6d6d3cef69",
+        "url": "https://github.com/python/cpython/commit/05ed7ce7ae9e17c23a04085b2539fe6d6d3cef69",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

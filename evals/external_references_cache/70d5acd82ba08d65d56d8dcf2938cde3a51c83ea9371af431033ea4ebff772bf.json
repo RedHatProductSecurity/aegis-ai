@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-28925",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-28925",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"A buffer overflow was addressed with improved bounds checking. This issue is fixed in macOS Sequoia 15.7.7, macOS Sonoma 14.8.7, macOS Tahoe 26.5. An app may be able to cause unexpected system termination or write kernel memory.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Apple\",\n      \"product\": \"macOS\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"status\": \"affected\",\n          \"lessThan\": \"14.8.7\",\n          \"versionType\": \"custom\"\n        },\n        {\n          \"version\": \"0\",\n          \"status\": \"affected\",\n          \"lessThan\": \"15.7.7\",\n          \"versionType\": \"custom\"\n        },\n        {\n          \"version\": \"0\",\n          \"status\": \"affected\",\n          \"lessThan\": \"26.5\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

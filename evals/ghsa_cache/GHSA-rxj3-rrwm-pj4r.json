@@ -1,0 +1,93 @@
+{
+    "id": "GHSA-rxj3-rrwm-pj4r",
+    "summary": "Roundcube Webmail: Unsafe deserialization in the redis/memcache session handler",
+    "details": "An issue was discovered in Roundcube Webmail before 1.5.14 and 1.6.14. Unsafe deserialization in the redis/memcache session handler may lead to arbitrary file write operations by unauthenticated attackers via crafted session data.",
+    "aliases": [
+        "CVE-2026-35537"
+    ],
+    "modified": "2026-04-14T22:20:49.698656Z",
+    "published": "2026-04-03T06:31:32Z",
+    "database_specific": {
+        "severity": "LOW",
+        "github_reviewed": true,
+        "github_reviewed_at": "2026-04-04T06:50:14Z",
+        "nvd_published_at": "2026-04-03T04:17:10Z",
+        "cwe_ids": [
+            "CWE-502"
+        ]
+    },
+    "references": [
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-35537"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/roundcube/roundcubemail/commit/618c5428edc69fb088e7ac6c89e506dd39df3"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/roundcube/roundcubemail/commit/6d586cfa4d8a31f7957f7a445aaedd52592a0e74"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/roundcube/roundcubemail/commit/a4ead994d2f0ea92e4a1603196a197e0d5df1620"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/roundcube/roundcubemail"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/roundcube/roundcubemail/releases/tag/1.5.14"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/roundcube/roundcubemail/releases/tag/1.6.14"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/roundcube/roundcubemail/releases/tag/1.7-rc5"
+        },
+        {
+            "type": "WEB",
+            "url": "https://roundcube.net/news/2026/03/18/security-updates-1.7-rc5-1.6.14-1.5.14"
+        },
+        {
+            "type": "WEB",
+            "url": "http://www.openwall.com/lists/oss-security/2026/04/11/6"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "roundcube/roundcubemail",
+                "ecosystem": "Packagist",
+                "purl": "pkg:composer/roundcube/roundcubemail"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "1.7-beta"
+                        },
+                        {
+                            "fixed": "1.7-rc5"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/04/GHSA-rxj3-rrwm-pj4r/GHSA-rxj3-rrwm-pj4r.json"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N"
+        }
+    ]
+}

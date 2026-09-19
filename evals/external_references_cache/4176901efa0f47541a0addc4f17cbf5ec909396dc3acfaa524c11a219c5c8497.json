@@ -1,0 +1,10 @@
+{
+    "url": "https://go.dev/cl/709875",
+    "result": {
+        "status": "blocked",
+        "error_message": "Redirect to non-allowed URL: https://go-review.googlesource.com/c/net/+/709875/",
+        "url": "https://go.dev/cl/709875",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

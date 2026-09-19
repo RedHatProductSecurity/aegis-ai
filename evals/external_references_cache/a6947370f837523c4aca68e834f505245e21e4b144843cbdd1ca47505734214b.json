@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/rust-lang/rust/pull/141864",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/rust-lang/rust/pull/141864",
+        "url": "https://github.com/rust-lang/rust/pull/141864",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://groups.google.com/g/golang-announce/c/4Emdl2iQ_bI",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://groups.google.com/g/golang-announce/c/4Emdl2iQ_bI",
+        "url": "https://groups.google.com/g/golang-announce/c/4Emdl2iQ_bI",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

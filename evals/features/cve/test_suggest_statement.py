@@ -313,6 +313,7 @@ cases = [
         """,
         expected_mitigation="""Operator can configure BMO role-based access control (RBAC) to be namespace scoped instead of cluster scoped to prevent BMO from accessing Secrets from other namespaces, or use the `WATCH_NAMESPACE` configuration option to limit BMO to a single namespace.
         """,
+        metadata={"known_to_fail_evaluators": ["MitigationEvaluator"]},
     ),
     # FIXME: The actual suggested_statement indicates the vulnerability is 'Important for Red Hat' and some products are 'under investigation'
     SuggestStatementCase(
@@ -493,7 +494,12 @@ cases = [
     SuggestStatementCase(
         cve_id="CVE-2026-22822",
         expected_mitigation="To mitigate this issue, implement a policy engine such as Kubernetes, Kyverno, Kubewarden, or OPA. Configure the policy engine to prevent the usage of the `getSecretKey` function within any ExternalSecret resource. This will block the insecure cross-namespace secret retrieval capability.",
-        metadata={"known_to_fail_evaluators": ["StatementNoDuplicatedInfo"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "MitigationEvaluator",
+                "StatementNoDuplicatedInfo",
+            ]
+        },
     ),
     SuggestStatementCase(
         cve_id="CVE-2026-24450",

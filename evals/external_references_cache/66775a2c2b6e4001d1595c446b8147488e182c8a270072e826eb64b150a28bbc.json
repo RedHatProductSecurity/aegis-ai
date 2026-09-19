@@ -1,0 +1,10 @@
+{
+    "url": "https://www.qt.io/blog/security-advisory-qlowenergycontroller-on-linux",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://www.qt.io/blog/security-advisory-qlowenergycontroller-on-linux",
+        "url": "https://www.qt.io/blog/security-advisory-qlowenergycontroller-on-linux",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

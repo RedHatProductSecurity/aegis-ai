@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-26010",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-26010",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"OpenMetadata is a unified metadata platform. Prior to 1.11.8, calls issued by the UI against /api/v1/ingestionPipelines leak JWTs used by ingestion-bot for certain services (Glue / Redshift / Postgres). Any read-only user can gain access to a highly privileged account, typically which has the Ingestion Bot Role. This enables destructive changes in OpenMetadata instances, and potential data leakage (e.g. sample data, or service metadata which would be unavailable per roles/policies). This vulnerability is fixed in 1.11.8.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_0\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"LOW\",\n        \"baseScore\": 7.6,\n        \"baseSeverity\": \"HIGH\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"HIGH\",\n        \"privilegesRequired\": \"LOW\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:H/A:L\",\n        \"version\": \"3.0\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"open-metadata\",\n      \"product\": \"OpenMetadata\",\n      \"versions\": [\n        {\n          \"version\": \"< 1.11.8\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

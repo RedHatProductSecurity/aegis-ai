@@ -1,0 +1,10 @@
+{
+    "url": "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/2024",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/2024",
+        "url": "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/2024",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

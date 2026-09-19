@@ -1094,7 +1094,7 @@ spec:
                 - name: AEGIS_LLM_HOST
                   value: "https://generativelanguage.googleapis.com"
                 - name: AEGIS_LLM_MODEL
-                  value: "gemini-2.5-flash"
+                  value: "gemini-3.8-flash"
                 - name: AEGIS_LLM_MAX_JOBS
                   value: "8"
                 - name: GEMINI_API_KEY

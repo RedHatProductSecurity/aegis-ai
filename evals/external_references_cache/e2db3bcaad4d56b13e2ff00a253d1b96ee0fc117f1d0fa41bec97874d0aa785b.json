@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-40200",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-40200",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An issue was discovered in musl libc 0.7.10 through 1.2.6. Stack-based memory corruption can occur during qsort of very large arrays, due to incorrectly implemented double-word primitives. The number of elements must exceed about seven million, i.e., the 32nd Leonardo number on 32-bit platforms (or the 64th Leonardo number on 64-bit platforms, which is not practical).\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"baseScore\": 8.1,\n        \"baseSeverity\": \"HIGH\",\n        \"vectorString\": \"CVSS:3.1/AV:L/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unknown\",\n      \"product\": \"musl\",\n      \"vendor\": \"musl-libc\",\n      \"versions\": [\n        {\n          \"lessThanOrEqual\": \"1.2.6\",\n          \"status\": \"affected\",\n          \"version\": \"0.7.10\",\n          \"versionType\": \"semver\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

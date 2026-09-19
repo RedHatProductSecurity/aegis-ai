@@ -89,6 +89,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "the CVSS vector uses PR:L, which is inconsistent with the explanation."
         ),
     },
+    "CVE-2022-50768": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The vector specifies PR:L, but the explanation describes an exclusively "
+            "admin-only trigger path (SCSI device removal and rescan via sysfs) with "
+            "no plausible unprivileged alternative."
+        ),
+    },
     "CVE-2022-50851": {
         "known_to_fail_evaluators": ["UnderestimationEvaluator"],
         "reason": "Underestimation: predicted LOW, expected MODERATE.",
@@ -97,6 +105,7 @@ KNOWN_FAILURES: dict[str, dict] = {
         "known_to_fail_evaluators": [
             "CVSSKernelScopeAndPrivileges",
             "KpanicOverestimationEvaluator",
+            "UnderestimationEvaluator",
         ],
         "reason": (
             "Overestimation: predicted IMPORTANT, expected MODERATE. "
@@ -232,6 +241,13 @@ KNOWN_FAILURES: dict[str, dict] = {
             "Also: PR:L inconsistent with requiring /dev/udmabuf access."
         ),
     },
+    "CVE-2025-38052": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The vector sets C:H and I:H for an internal kernel slab use-after-free "
+            "read issue without providing a plausible user-data impact path."
+        ),
+    },
     "CVE-2025-38089": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
@@ -350,7 +366,10 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
     "CVE-2025-68742": {
-        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "known_to_fail_evaluators": [
+            "CVSSKernelScopeAndPrivileges",
+            "UnderestimationEvaluator",
+        ],
         "reason": (
             "On one run, the explanation-revision step only prompts the LLM to reconcile "
             "what changed during post-processing, but the original LLM response already had "

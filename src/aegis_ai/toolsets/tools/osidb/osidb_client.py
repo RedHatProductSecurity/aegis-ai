@@ -296,7 +296,7 @@ class OSIDBClient:
         if session is None:
             session = await self._get_process_session()
         session = cast(Any, session)  # _get_process_session never returns None
-        async for flaw in session.flaws.retrieve_list_iterator_async(
+        for flaw in session.flaws.retrieve_list_iterator(
             affects__ps_component=component_name,
             include_fields=_FLAW_LIST_FIELDS,
         ):

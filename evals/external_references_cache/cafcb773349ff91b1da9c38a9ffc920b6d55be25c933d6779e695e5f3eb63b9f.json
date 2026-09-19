@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/openssl/openssl/commit/7a4e08cee62a728d32e60b0de89e6764339df0a7.patch",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/openssl/openssl/commit/7a4e08cee62a728d32e60b0de89e6764339df0a7.patch",
+        "url": "https://github.com/openssl/openssl/commit/7a4e08cee62a728d32e60b0de89e6764339df0a7.patch",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

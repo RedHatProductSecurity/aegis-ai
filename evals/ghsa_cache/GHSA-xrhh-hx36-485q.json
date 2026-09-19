@@ -55,15 +55,6 @@
                     ]
                 }
             ],
-            "versions": [
-                "0.47.0",
-                "0.48.0",
-                "0.48.0-RC1",
-                "0.49.0",
-                "0.49.0-RC1",
-                "0.49.0-RC2",
-                "0.49.1-RC1"
-            ],
             "database_specific": {
                 "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/12/GHSA-xrhh-hx36-485q/GHSA-xrhh-hx36-485q.json"
             }

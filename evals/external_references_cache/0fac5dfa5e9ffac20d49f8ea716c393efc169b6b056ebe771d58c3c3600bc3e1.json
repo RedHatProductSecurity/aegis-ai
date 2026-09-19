@@ -1,0 +1,10 @@
+{
+    "url": "https://vuln.go.dev/ID/GO-2023-2382.json",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://vuln.go.dev/ID/GO-2023-2382.json",
+        "url": "https://vuln.go.dev/ID/GO-2023-2382.json",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

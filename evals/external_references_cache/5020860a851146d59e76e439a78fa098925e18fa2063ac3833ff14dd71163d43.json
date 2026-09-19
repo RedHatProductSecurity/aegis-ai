@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cert.si/en/cve-2025-42611/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://www.cert.si/en/cve-2025-42611/",
+        "url": "https://www.cert.si/en/cve-2025-42611/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

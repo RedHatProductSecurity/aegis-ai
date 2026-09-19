@@ -449,6 +449,7 @@ class SuggestImpact(Feature):
             pre_clf = None
 
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["affects", "impact", "rh_cvss_score"],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
@@ -532,6 +533,7 @@ class SuggestCWE(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["cwe_id"],
             static_context=static_context,
         )
@@ -586,7 +588,7 @@ class IdentifyPII(Feature):
     """Based on current CVE information (public comments, description, statement) and context assert if it contains any PII."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=[])
+        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=[])
         prompt = AegisPrompt(
             user_instruction="Examine the CVE JSON and identify any PII (names, emails, phone numbers, IDs, IPs, health/genetic info, etc.).",
             goals="""
@@ -616,6 +618,7 @@ class SuggestDescriptionText(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["title", "cve_description"],
             static_context=static_context,
         )
@@ -669,6 +672,7 @@ class SuggestStatementText(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["statement", "mitigation"],
             static_context=static_context,
         )
@@ -764,6 +768,7 @@ class SuggestAffectedComponents(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=["affects", "components"],
             static_context=static_context if use_static else None,
         )
@@ -779,6 +784,7 @@ class SuggestAffectedComponents(Feature):
                 - If the component is from the Python standard library, use 'python' as the component name.
                 - If the component is from the Go standard library, keep the full stdlib path (e.g. 'crypto/internal/nistec', 'crypto/x509', 'cmd/go', 'net/http/internal') and return it first in the components array in addition to the component 'golang'.
                 - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', OpenSSL Rust bindings → 'rust-openssl', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet', GLib/GLib2 → 'glib', `XML::Parser` → 'perl-xml-parser'. Exception: for Go packages in the golang ecosystem, the full module path (see above) takes precedence over the Red Hat distro name.
+                - For the Qt framework, use the Red Hat umbrella component names 'qt', 'qt5', or 'qt6' — not individual sub-module packages (e.g. 'qt6-qtbase', 'qt5-qtconnectivity'). If the CVE affects Qt5, use 'qt5'; if Qt6, use 'qt6'; if Qt in general or both, use 'qt' (or include all applicable: 'qt', 'qt5', 'qt6').
                 - Use the source component name, not binary or subpackage names. Examples: Redis → 'redis' not 'redis-server', Apache HTTP Server → 'httpd' not 'httpd-core'.
                 - When the CVE title or GitHub repository name differs from the actual package name in the ecosystem registry (npm, PyPI, crates.io, etc.), always use the registry name (e.g. GitHub repo 'node-tar' is published to npm as 'tar' → use 'tar'; GitHub repo 'forge' is published to npm as 'node-forge' → use 'node-forge'; GitHub repo 'tar-rs' is published to crates.io as 'tar' → use 'tar').
                 - For proprietary OS kernel vulnerabilities (macOS, iOS, Windows, etc.), use the OS name as the component (e.g. 'macOS', 'iOS', 'Windows'), not 'kernel'. Only use 'kernel' for the Linux kernel.
@@ -813,7 +819,7 @@ class CVSSDiffExplainer(Feature):
     """Based on current CVE information and context explain CVSS score diff between nvd and rh."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(exclude_osidb_fields=[])
+        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=[])
         prompt = AegisPrompt(
             user_instruction="Compare Red Hat CVSS3 vs NVD CVSS3 for the CVE and explain any differences.",
             goals="""
@@ -923,6 +929,7 @@ class QualityReview(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         """Run the quality review rubric against the given CVE flaw content."""
         deps = feature_deps(
+            cve_id=str(cve_id),
             exclude_osidb_fields=[],
             static_context=static_context,
         )
@@ -1225,7 +1232,9 @@ class SuggestAffectedPackages(Feature):
             if isinstance(static_context, dict) and "affects" in static_context
             else None
         )
-        deps = feature_deps(exclude_osidb_fields=[], static_context=deps_context)
+        deps = feature_deps(
+            cve_id=str(cve_id), exclude_osidb_fields=[], static_context=deps_context
+        )
         prompt = AegisPrompt(
             user_instruction=(
                 "Analyze the CVE and its OSIDB affects data (including PURLs and "
@@ -1243,6 +1252,7 @@ class SuggestAffectedPackages(Feature):
 - Use the osidb_tool with the provided cve_id to retrieve CVE flaw data, including affects with PURLs.
 - The affects array is valid in PRE_SECONDARY_ASSESSMENT and later flaw states. In earlier states, the array can be empty or incomplete — this does NOT mean no packages are affected, only that the data is not yet available.
 - If the affects array is empty or appears incomplete (e.g., flaw is in an early state like NEW or TRIAGE), set low data_quality and explain that affects data is not yet available.
+- If affect entries exist but have null or missing PURLs, treat this as incomplete data — the affected source RPM packages cannot be determined without PURLs. Set low confidence and data_quality, and explain that PURL data is not available.
 - Analyze CVE description, references, patches, and comments to understand the technical scope of the vulnerability.
 - For each source RPM package identified by PURL in the affects list:
   - Determine whether the package contains the vulnerable code or functionality.

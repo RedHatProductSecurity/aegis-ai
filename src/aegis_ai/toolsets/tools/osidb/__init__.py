@@ -294,27 +294,42 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
     """
     logger.debug(input.cve_id)
 
-    static_ctx = getattr(ctx.deps, "static_context", None)
-    if (
-        static_ctx
-        and isinstance(static_ctx, dict)
-        and _has_sufficient_static_context(static_ctx)
-    ):
-        cve = _cve_from_static_context(input.cve_id, static_ctx)
-        logger.info(f"Using static context for {input.cve_id} (skipping OSIDB)")
-    elif static_ctx and isinstance(static_ctx, dict):
-        # Insufficient context — fetch from OSIDB, then let request-provided
-        # fields take precedence over the OSIDB data.
-        cve = await cve_retrieve(input.cve_id)
-        cve = _apply_static_overrides(cve, static_ctx)
-        logger.info(
-            f"Enriched OSIDB data for {input.cve_id} with static context overrides"
+    try:
+        static_ctx = getattr(ctx.deps, "static_context", None)
+        if (
+            static_ctx
+            and isinstance(static_ctx, dict)
+            and _has_sufficient_static_context(static_ctx)
+        ):
+            cve = _cve_from_static_context(input.cve_id, static_ctx)
+            logger.info(f"Using static context for {input.cve_id} (skipping OSIDB)")
+        elif static_ctx and isinstance(static_ctx, dict):
+            # Insufficient context — fetch from OSIDB, then let request-provided
+            # fields take precedence over the OSIDB data.
+            cve = await cve_retrieve(input.cve_id)
+            cve = _apply_static_overrides(cve, static_ctx)
+            logger.info(
+                f"Enriched OSIDB data for {input.cve_id} with static context overrides"
+            )
+        else:
+            cve = await cve_retrieve(input.cve_id)
+    except OSIDBFlawNotFoundError:
+        logger.info(f"Flaw {input.cve_id} not found in OSIDB, returning empty CVE")
+        return CVE(
+            cve_id=input.cve_id,
+            title=f"Flaw {input.cve_id} was not found in OSIDB",
+            description="",
         )
-    else:
-        cve = await cve_retrieve(input.cve_id)
 
     if is_kernel_component(cve.components):
         ctx.deps.is_kernel_cve = True
+
+    if ctx.deps.allowed_reference_urls is None and cve.references:
+        ctx.deps.allowed_reference_urls = {
+            ref["url"]
+            for ref in cve.references
+            if isinstance(ref, dict) and ref.get("url")
+        }
 
     # exclude CVE fields according to feature_deps
     return cve_exclude_fields(cve, ctx.deps.exclude_osidb_fields)
@@ -362,7 +377,9 @@ async def component_flaw_tool(
     logger.debug(component_name)
     flaws = []
     async for flaw in client.list_component_flaws(component_name):
-        flaws.append(flaw)
+        if not OSIDB_RETRIEVE_EMBARGOED and getattr(flaw, "embargoed", False):
+            continue
+        flaws.append(flaw.to_dict())
         if len(flaws) >= limit:
             break
     return flaws

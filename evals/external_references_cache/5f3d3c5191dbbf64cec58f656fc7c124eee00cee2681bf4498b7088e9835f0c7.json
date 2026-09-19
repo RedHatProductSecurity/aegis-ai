@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-42611",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-42611",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"RouterOS provides various services that rely on correct\\nverification of client and server certificates to secure confidentiality and\\nintegrity of communications. This includes OpenVPN, CAPsMAN, Dot1x (802.1X),\\namong others.\\n\\n\\n\\nThe vulnerability lies in shared certificate validation\\nlogic which uses the system certificate store that is shared and equally\\ntrusted by all system services. This causes confusion of scope, allowing any\\ncertificate authority present in the system-wide trust store to be trusted in\\nany context (with some exceptions), allowing partial or full authentication\\nbypass in CAPsMAN, OpenVPN, Dot1X and potentially others.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ],\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseSeverity\": \"MEDIUM\",\n        \"baseScore\": 6.5,\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Mikrotik\",\n      \"product\": \"RouterOS\",\n      \"versions\": [\n        {\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"lessThanOrEqual\": \"7.20.x\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

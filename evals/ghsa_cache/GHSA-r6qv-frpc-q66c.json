@@ -1,0 +1,76 @@
+{
+    "id": "GHSA-r6qv-frpc-q66c",
+    "summary": "Jenkins has a link following vulnerability allows arbitrary file creation",
+    "details": "Jenkins 2.554 and earlier, LTS 2.541.2 and earlier does not safely handle symbolic links during the extraction of .tar and .tar.gz archives, allowing crafted archives to write files to arbitrary locations on the filesystem, restricted only by file system access permissions of the user running Jenkins.\nThis can be exploited to deploy malicious scripts or plugins on the controller by attackers with Item/Configure permission, or able to control agent processes.",
+    "aliases": [
+        "BIT-jenkins-2026-33001",
+        "CVE-2026-33001"
+    ],
+    "modified": "2026-09-10T03:50:40.816432925Z",
+    "published": "2026-03-18T18:31:16Z",
+    "database_specific": {
+        "severity": "HIGH",
+        "github_reviewed": true,
+        "github_reviewed_at": "2026-03-19T12:46:21Z",
+        "nvd_published_at": "2026-03-18T16:16:28Z",
+        "cwe_ids": [
+            "CWE-59",
+            "CWE-61"
+        ]
+    },
+    "references": [
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-33001"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jenkinsci/jenkins/commit/6dc99937605d5bddfeaae43a4cd14c2571e23adc"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/jenkinsci/jenkins"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/jenkinsci/jenkins/releases/tag/jenkins-2.555"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.jenkins.io/security/advisory/2026-03-18/#SECURITY-3657"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "org.jenkins-ci.main:jenkins-core",
+                "ecosystem": "Maven",
+                "purl": "pkg:maven/org.jenkins-ci.main/jenkins-core"
+            },
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "2.555"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "last_known_affected_version_range": "<= 2.554",
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2026/03/GHSA-r6qv-frpc-q66c/GHSA-r6qv-frpc-q66c.json"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+        }
+    ]
+}

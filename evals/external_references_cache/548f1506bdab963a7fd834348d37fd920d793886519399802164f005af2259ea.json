@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-33256",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-33256",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"An attacker can send a web request that causes unlimited memory allocation in the internal web server, leading to a denial of service. The internal web server is disabled by default.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ],\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"attackVector\": \"NETWORK\",\n        \"attackComplexity\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"userInteraction\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"NONE\",\n        \"availabilityImpact\": \"LOW\",\n        \"baseSeverity\": \"MEDIUM\",\n        \"baseScore\": 5.3,\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"PowerDNS\",\n      \"product\": \"Recursor\",\n      \"versions\": [\n        {\n          \"status\": \"affected\",\n          \"version\": \"5.4.0\",\n          \"lessThan\": \"5.4.1\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"status\": \"affected\",\n          \"version\": \"5.3.0\",\n          \"lessThan\": \"5.3.6\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"status\": \"affected\",\n          \"version\": \"5.2.0\",\n          \"lessThan\": \"5.2.9\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

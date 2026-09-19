@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-33995",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-33995",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"FreeRDP is a free implementation of the Remote Desktop Protocol. Prior to version 3.24.2, a double-free vulnerability in kerberos_AcceptSecurityContext() and kerberos_InitializeSecurityContextA() (WinPR, winpr/libwinpr/sspi/Kerberos/kerberos.c) can cause a crash in any FreeRDP clients on systems where Kerberos and/or Kerberos U2U is configured (Samba AD member, or krb5 for NFS). The crash is triggered during NLA connection teardown and requires a failed authentication attempt. This issue has been patched in version 3.24.2.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_1\": {\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"LOW\",\n        \"baseScore\": 5.3,\n        \"baseSeverity\": \"MEDIUM\",\n        \"confidentialityImpact\": \"NONE\",\n        \"integrityImpact\": \"NONE\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L\",\n        \"version\": \"3.1\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"FreeRDP\",\n      \"product\": \"FreeRDP\",\n      \"versions\": [\n        {\n          \"version\": \"< 3.24.2\",\n          \"status\": \"affected\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=advisories/GLIBC-SA-2026-0004;hb=HEAD",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=advisories/GLIBC-SA-2026-0004;hb=HEAD",
+        "url": "https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=advisories/GLIBC-SA-2026-0004;hb=HEAD",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

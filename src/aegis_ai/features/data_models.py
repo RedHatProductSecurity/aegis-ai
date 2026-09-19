@@ -44,6 +44,15 @@ class feature_deps:
     # via its fast-path cache (mirrors the flaw_tool static_context pattern).
     # Also read by post-processing (reconciliation, guardrails).
     classifier_result: dict | None = field(default=None)
+    # CVE ID being analyzed.  Tools use this to reject lookups for unrelated
+    # CVEs (e.g. osv_dev_cve_tool refuses to query OSV.dev for a CVE ID that
+    # doesn't match).  None means no restriction.
+    cve_id: str | None = field(default=None)
+    # Reference URLs from OSIDB flaw data.  The external_references_tool uses
+    # this to reject URLs not present in the flaw's references list, preventing
+    # the LLM from fetching invented or cross-referenced URLs.  None means no
+    # restriction.
+    allowed_reference_urls: set[str] | None = field(default=None)
 
 
 class FeatureQueryInput(BaseModel):

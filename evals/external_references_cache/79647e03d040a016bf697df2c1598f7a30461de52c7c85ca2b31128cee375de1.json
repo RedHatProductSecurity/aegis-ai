@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/dvsekhvalnov/jose2go/commit/0a0673dd7f2820a446de5b04b9094b2291d77d5d",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/dvsekhvalnov/jose2go/commit/0a0673dd7f2820a446de5b04b9094b2291d77d5d",
+        "url": "https://github.com/dvsekhvalnov/jose2go/commit/0a0673dd7f2820a446de5b04b9094b2291d77d5d",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

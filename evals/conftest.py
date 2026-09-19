@@ -3,6 +3,8 @@ import logging
 import os
 
 import pytest
+
+logger = logging.getLogger(__name__)
 from pydantic_ai.tools import RunContext, Tool
 from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
 
@@ -10,10 +12,10 @@ import aegis_ai.toolsets as ts
 from aegis_ai import config_logging
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools.osidb import CVE, OSIDBToolInput, cve_exclude_fields
+from aegis_ai.toolsets.tools.osv_common import filter_osv_response
 from aegis_ai.toolsets.tools.osv_dev_cve import OSVToolInput as OSVCVEToolInput
 from aegis_ai.toolsets.tools.osv_dev_ghsa import (
     GHSAToolInput,
-    _filter_osv_response,
     extract_ghsa_ids,
 )
 from evals.features.common import eval_metrics, eval_summary
@@ -70,7 +72,22 @@ from evals.utils.osidb_cache import (
 @Tool
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
-    cve = await osidb_cache_retrieve(input.cve_id)
+    try:
+        cve = await osidb_cache_retrieve(input.cve_id)
+    except Exception:
+        logger.info(f"OSIDB cache miss for {input.cve_id}, returning empty CVE")
+        return CVE(
+            cve_id=input.cve_id,
+            title=f"Flaw {input.cve_id} was not found in OSIDB cache",
+            description="",
+        )
+    if ctx.deps.allowed_reference_urls is None and cve.references:
+        ctx.deps.allowed_reference_urls = {
+            ref["url"]
+            for ref in cve.references
+            if isinstance(ref, dict) and ref.get("url")
+        }
+
     return cve_exclude_fields(
         cve,
         ctx.deps.exclude_osidb_fields,
@@ -87,7 +104,7 @@ async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
     results = []
     for ghsa_id in ghsa_ids:
         raw = await ghsa_cache_retrieve(ghsa_id)
-        filtered = _filter_osv_response(raw)
+        filtered = filter_osv_response(raw)
         if filtered:
             results.append(filtered)
     return results
@@ -96,7 +113,8 @@ async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
 @Tool
 async def osv_dev_cve_tool(ctx: RunContext, input: OSVCVEToolInput):
     """wrapper around osv_dev_cve that caches OSV.dev responses"""
-    return await ghsa_cache_retrieve(str(input.cve_id))
+    raw = await ghsa_cache_retrieve(str(input.cve_id))
+    return filter_osv_response(raw)
 
 
 # pytest's built-in monkeypatch fixture is function-scoped, so session-scoped

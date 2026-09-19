@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/jupyter/nbconvert/commit/c9ac1d1040459ed1ff9eb34e9918ce5a87cf9d71",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/jupyter/nbconvert/commit/c9ac1d1040459ed1ff9eb34e9918ce5a87cf9d71",
+        "url": "https://github.com/jupyter/nbconvert/commit/c9ac1d1040459ed1ff9eb34e9918ce5a87cf9d71",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

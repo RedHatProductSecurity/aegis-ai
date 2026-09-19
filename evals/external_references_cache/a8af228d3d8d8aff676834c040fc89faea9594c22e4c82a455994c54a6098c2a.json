@@ -1,0 +1,10 @@
+{
+    "url": "https://mail.python.org/archives/list/security-announce@python.org/thread/2IVPAEQWUJBCTQZEJEVTYCIKSMQPGRZ3/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://mail.python.org/archives/list/security-announce@python.org/thread/2IVPAEQWUJBCTQZEJEVTYCIKSMQPGRZ3/",
+        "url": "https://mail.python.org/archives/list/security-announce@python.org/thread/2IVPAEQWUJBCTQZEJEVTYCIKSMQPGRZ3/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://www.x.org/wiki/Development/Security/",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://www.x.org/wiki/Development/Security/",
+        "url": "https://www.x.org/wiki/Development/Security/",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

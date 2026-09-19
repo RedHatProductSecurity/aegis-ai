@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-58183",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-58183",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"tar.Reader does not set a maximum size on the number of sparse region data blocks in GNU tar pax 1.0 sparse files. A maliciously-crafted archive containing a large number of sparse regions can cause a Reader to read an unbounded amount of data from the archive into memory. When reading from a compressed source, a small compressed input can result in large allocations.\"\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Go standard library\",\n      \"product\": \"archive/tar\",\n      \"versions\": [\n        {\n          \"version\": \"0\",\n          \"lessThan\": \"1.24.8\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"version\": \"1.25.0\",\n          \"lessThan\": \"1.25.2\",\n          \"status\": \"affected\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

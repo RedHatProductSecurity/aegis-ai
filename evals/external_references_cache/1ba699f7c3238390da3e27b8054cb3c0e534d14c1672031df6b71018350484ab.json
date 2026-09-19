@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-35342",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-35342",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"The mktemp utility in uutils coreutils fails to properly handle an empty TMPDIR environment variable. Unlike GNU mktemp, which falls back to /tmp when TMPDIR is an empty string, the uutils implementation treats the empty string as a valid path. This causes temporary files to be created in the current working directory (CWD) instead of the intended secure temporary directory. If the CWD is more permissive or accessible to other users than /tmp, it may lead to unintended information disclosure or unauthorized access to temporary data.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"format\": \"CVSS\",\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ],\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"attackVector\": \"LOCAL\",\n        \"attackComplexity\": \"LOW\",\n        \"privilegesRequired\": \"LOW\",\n        \"userInteraction\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"NONE\",\n        \"availabilityImpact\": \"NONE\",\n        \"baseSeverity\": \"LOW\",\n        \"baseScore\": 3.3,\n        \"vectorString\": \"CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Uutils\",\n      \"product\": \"coreutils\",\n      \"versions\": [\n        {\n          \"status\": \"affected\",\n          \"lessThan\": \"0.6.0\",\n          \"version\": \"0\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

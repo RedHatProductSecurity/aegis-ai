@@ -16,11 +16,13 @@ from requests import RequestException
 
 from aegis_ai import logger
 from aegis_ai.data_models import CVEID
+from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import (
     BaseToolInput,
     BaseToolOutput,
     default_tool_http_headers,
 )
+from aegis_ai.toolsets.tools.osv_common import filter_osv_response
 
 # timeout in seconds for GET requests
 REQUEST_TIMEOUT_GET = 5
@@ -168,9 +170,17 @@ async def osv_vulnerability_lookup(cve_id: CVEID):
 
 
 @Tool
-async def osv_dev_cve_tool(ctx: RunContext, input: OSVToolInput):
+async def osv_dev_cve_tool(ctx: RunContext[feature_deps], input: OSVToolInput):
     """
     Lookup CVE definition in osv.dev and return as much metadata as possible.
     """
+    deps = ctx.deps
+    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+        logger.info(
+            f"osv_dev_cve_tool: rejecting lookup for {input.cve_id} "
+            f"(expected {deps.cve_id})"
+        )
+        return {}
     logger.info(f"Looking up osv.dev vulnerability for {input.cve_id}...")
-    return await osv_vulnerability_lookup(input.cve_id)
+    raw = await osv_vulnerability_lookup(input.cve_id)
+    return filter_osv_response(raw)

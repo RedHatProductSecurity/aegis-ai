@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/pmd/pmd/commit/c140c0e1de5853a08efb84c9f91dfeb015882442",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/pmd/pmd/commit/c140c0e1de5853a08efb84c9f91dfeb015882442",
+        "url": "https://github.com/pmd/pmd/commit/c140c0e1de5853a08efb84c9f91dfeb015882442",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/opencontainers/selinux/pull/237",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/opencontainers/selinux/pull/237",
+        "url": "https://github.com/opencontainers/selinux/pull/237",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

@@ -68,9 +68,6 @@
                     ]
                 }
             ],
-            "versions": [
-                "0.9.0"
-            ],
             "database_specific": {
                 "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/03/GHSA-c98h-7hp9-v9hq/GHSA-c98h-7hp9-v9hq.json"
             }

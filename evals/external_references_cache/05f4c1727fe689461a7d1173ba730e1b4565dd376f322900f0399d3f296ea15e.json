@@ -1,0 +1,10 @@
+{
+    "url": "https://www.mozilla.org/security/advisories/mfsa2026-21/#CVE-2026-4718",
+    "result": {
+        "status": "blocked",
+        "error_message": "Redirect to non-allowed URL: https://www.mozilla.org/en-US/security/advisories/mfsa2026-21/#CVE-2026-4718",
+        "url": "https://www.mozilla.org/security/advisories/mfsa2026-21/#CVE-2026-4718",
+        "content_type": null,
+        "extracted_text": null
+    }
+}

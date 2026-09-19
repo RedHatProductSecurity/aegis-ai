@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2025-5302",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2025-5302",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"A denial of service vulnerability exists in the JSONReader component of the run-llama/llama_index repository, specifically in version v0.12.37. The vulnerability is caused by uncontrolled recursion when parsing deeply nested JSON files, which can lead to Python hitting its maximum recursion depth limit. This results in high resource consumption and potential crashes of the Python process. The issue is resolved in version 0.12.38.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"cvssV3_0\": {\n        \"version\": \"3.0\",\n        \"attackComplexity\": \"LOW\",\n        \"attackVector\": \"NETWORK\",\n        \"availabilityImpact\": \"HIGH\",\n        \"confidentialityImpact\": \"LOW\",\n        \"integrityImpact\": \"LOW\",\n        \"privilegesRequired\": \"NONE\",\n        \"scope\": \"UNCHANGED\",\n        \"userInteraction\": \"NONE\",\n        \"vectorString\": \"CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:H\",\n        \"baseScore\": 8.6,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"run-llama\",\n      \"product\": \"run-llama/llama_index\",\n      \"versions\": [\n        {\n          \"version\": \"unspecified\",\n          \"lessThan\": \"0.12.38\",\n          \"status\": \"affected\",\n          \"versionType\": \"custom\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}
