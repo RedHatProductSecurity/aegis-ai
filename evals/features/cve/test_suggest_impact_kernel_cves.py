@@ -89,6 +89,14 @@ KNOWN_FAILURES: dict[str, dict] = {
             "the CVSS vector uses PR:L, which is inconsistent with the explanation."
         ),
     },
+    "CVE-2022-50768": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": (
+            "The vector specifies PR:L, but the explanation describes an exclusively "
+            "admin-only trigger path (SCSI device removal and rescan via sysfs) with "
+            "no plausible unprivileged alternative."
+        ),
+    },
     "CVE-2022-50851": {
         "known_to_fail_evaluators": ["UnderestimationEvaluator"],
         "reason": "Underestimation: predicted LOW, expected MODERATE.",
