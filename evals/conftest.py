@@ -81,6 +81,13 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
             title=f"Flaw {input.cve_id} was not found in OSIDB cache",
             description="",
         )
+    if ctx.deps.allowed_reference_urls is None and cve.references:
+        ctx.deps.allowed_reference_urls = {
+            ref["url"]
+            for ref in cve.references
+            if isinstance(ref, dict) and ref.get("url")
+        }
+
     return cve_exclude_fields(
         cve,
         ctx.deps.exclude_osidb_fields,

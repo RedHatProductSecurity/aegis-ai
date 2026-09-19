@@ -20,6 +20,7 @@ from pydantic import Field
 from pydantic_ai import RunContext, Tool
 from pydantic_ai.toolsets import FunctionToolset
 
+from aegis_ai.features.data_models import feature_deps
 from aegis_ai.toolsets.tools import (
     BaseToolInput,
     BaseToolOutput,
@@ -497,7 +498,7 @@ def cache_key_for_url(url: str) -> str:
 
 @Tool
 async def external_references_tool(
-    ctx: RunContext, input: ExternalReferenceInput
+    ctx: RunContext[feature_deps], input: ExternalReferenceInput
 ) -> list[ExternalReferenceResult]:
     """
     Fetch and extract content from external reference URLs found in CVE/OSIDB
@@ -507,12 +508,19 @@ async def external_references_tool(
     including upstream CVSS vectors, security advisories, product info,
     and commit details.
     """
+    allowed = ctx.deps.allowed_reference_urls
     seen: set[str] = set()
     unique_urls: list[str] = []
     for u in input.references:
-        if u not in seen:
-            seen.add(u)
-            unique_urls.append(u)
+        if u in seen:
+            continue
+        seen.add(u)
+        if allowed is not None and u not in allowed:
+            logger.info(
+                f"external_references_tool: rejecting URL not in flaw references: {u}"
+            )
+            continue
+        unique_urls.append(u)
 
     sem = asyncio.Semaphore(MAX_CONCURRENT_FETCHES)
 
@@ -543,4 +551,6 @@ async def external_references_tool(
     return results
 
 
-external_references_toolset = FunctionToolset(tools=[external_references_tool])
+external_references_toolset: FunctionToolset[feature_deps] = FunctionToolset(
+    tools=[external_references_tool]
+)
