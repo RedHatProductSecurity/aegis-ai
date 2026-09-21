@@ -501,34 +501,34 @@ class TestGetSemanticScoredFeatures:
 
 
 class TestParseJsonList:
-    """Tests for _parse_json_list helper function."""
+    """Tests for parse_json_list helper function."""
 
     def test_valid_json_array(self):
         """Test parsing valid JSON array."""
-        from aegis_ai_web.src.semantic_scoring import _parse_json_list
+        from aegis_ai_web.src.semantic_scoring import parse_json_list
 
-        result = _parse_json_list('["CWE-79", "CWE-89"]')
+        result = parse_json_list('["CWE-79", "CWE-89"]')
         assert result == ["CWE-79", "CWE-89"]
 
     def test_empty_json_array(self):
         """Test parsing empty JSON array."""
-        from aegis_ai_web.src.semantic_scoring import _parse_json_list
+        from aegis_ai_web.src.semantic_scoring import parse_json_list
 
-        result = _parse_json_list("[]")
+        result = parse_json_list("[]")
         assert result == []
 
     def test_malformed_json(self):
         """Test that malformed JSON returns None."""
-        from aegis_ai_web.src.semantic_scoring import _parse_json_list
+        from aegis_ai_web.src.semantic_scoring import parse_json_list
 
-        result = _parse_json_list("not-json")
+        result = parse_json_list("not-json")
         assert result is None
 
     def test_json_object_instead_of_array(self):
         """Test that JSON object returns None (not an array)."""
-        from aegis_ai_web.src.semantic_scoring import _parse_json_list
+        from aegis_ai_web.src.semantic_scoring import parse_json_list
 
-        result = _parse_json_list('{"key": "value"}')
+        result = parse_json_list('{"key": "value"}')
         assert result is None
 
 
