@@ -389,6 +389,17 @@ class TestMergeFetched:
 
         assert merged["CVE-A"].updated_dt == new
 
+    def test_newer_fetch_replaces_older_concurrent_write(self):
+        old = "2025-05-01T00:00:00+00:00"
+        new = "2025-07-01T00:00:00+00:00"
+        snapshot = {"CVE-A": _cached_flaw(updated_dt=old)}
+        existing = {"CVE-A": _cached_flaw(updated_dt="2025-06-01T00:00:00+00:00")}
+        fetched = {"CVE-A": _cached_flaw(updated_dt=new)}
+
+        merged = _merge_fetched(existing, fetched, snapshot)
+
+        assert merged["CVE-A"].updated_dt == new
+
 
 class TestNeedsFetch:
     def test_fetches_when_osidb_watermark_is_newer(self):

@@ -705,11 +705,10 @@ def _merge_fetched(
     """Apply freshly fetched entries onto the live cache, per CVE.
 
     ``fetched`` is captured from OSIDB *before* the cache lock, so ``existing``
-    (re-read under the lock) may already carry newer work from a concurrent
-    request. A fetched entry is applied only when the live ``existing`` watermark
-    still matches ``snapshot`` -- the cache state this request indexed against;
-    if a concurrent request already advanced it, our fetch may be stale, so we
-    leave theirs in place (self-heals on the next request, which re-indexes).
+    (re-read under the lock) may already carry work from a concurrent request. A
+    fetched entry is skipped when the live ``existing`` watermark differs from
+    ``snapshot`` and is at least as new as the fetched watermark; if the fetched
+    entry is newer, it is applied.
 
     Entries outside ``fetched`` are left untouched: selection never evicts, so a
     narrow request never drops another window's or component's cached flaws.
@@ -720,9 +719,8 @@ def _merge_fetched(
         live = merged.get(cve_id)
         prior_dt = prior.updated_dt if prior is not None else None
         live_dt = live.updated_dt if live is not None else None
-        if live_dt != prior_dt:
-            # A concurrent request changed this entry since we indexed it; our
-            # fetched copy may be stale, so keep theirs (self-heals next request).
+        if live_dt != prior_dt and not _needs_fetch(live, flaw.updated_dt):
+            # Keep a concurrent entry when it is at least as new as our fetch.
             continue
         merged[cve_id] = flaw
     return merged
