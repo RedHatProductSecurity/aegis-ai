@@ -299,7 +299,7 @@ class TestExtractFlawKpi:
     def test_ecosystems_excluded(self):
         aegis_meta = {
             "processed": True,
-            "_ecosystems": [_make_bot_entry(["upstream"])],
+            "_ecosystems": [_make_bot_entry(["generic"])],
         }
         flaw = _make_flaw(aegis_meta)
         result = extract_flaw_kpi(aegis_meta, flaw)
