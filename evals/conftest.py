@@ -72,6 +72,16 @@ from evals.utils.osidb_cache import (
 @Tool
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
+    deps = ctx.deps
+    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+        logger.info(
+            f"osidb_tool: rejecting lookup for {input.cve_id} (expected {deps.cve_id})"
+        )
+        return CVE(
+            cve_id=input.cve_id,
+            title=f"Flaw {input.cve_id} lookup rejected (unrelated to {deps.cve_id})",
+            description="",
+        )
     try:
         cve = await osidb_cache_retrieve(input.cve_id)
     except Exception:
@@ -96,7 +106,7 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
 
 
 @Tool
-async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
+async def osv_dev_ghsa_tool(ctx: RunContext[feature_deps], input: GHSAToolInput):
     """wrapper around osv_dev_ghsa that caches OSV.dev responses"""
     ghsa_ids = extract_ghsa_ids(input.references)
     if not ghsa_ids:
@@ -111,8 +121,15 @@ async def osv_dev_ghsa_tool(ctx: RunContext, input: GHSAToolInput):
 
 
 @Tool
-async def osv_dev_cve_tool(ctx: RunContext, input: OSVCVEToolInput):
+async def osv_dev_cve_tool(ctx: RunContext[feature_deps], input: OSVCVEToolInput):
     """wrapper around osv_dev_cve that caches OSV.dev responses"""
+    deps = ctx.deps
+    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+        logger.info(
+            f"osv_dev_cve_tool: rejecting lookup for {input.cve_id} "
+            f"(expected {deps.cve_id})"
+        )
+        return {}
     raw = await ghsa_cache_retrieve(str(input.cve_id))
     return filter_osv_response(raw)
 
@@ -220,7 +237,9 @@ def override_osidb_toolset():
 
 @pytest.fixture(scope="session", autouse=True)
 def override_public_cve_toolset():
-    cached = FunctionToolset(tools=[osv_dev_cve_tool, osv_dev_ghsa_tool])
+    cached: FunctionToolset[feature_deps] = FunctionToolset(
+        tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]
+    )
     wrapped = ts.public_cve_toolset.wrapped
     if isinstance(wrapped, CombinedToolset):
         wrapped.toolsets[0] = cached  # type:ignore
