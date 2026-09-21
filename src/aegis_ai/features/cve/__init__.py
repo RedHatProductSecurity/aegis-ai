@@ -1287,7 +1287,7 @@ class SuggestAffectedPackages(Feature):
   - Provide a concise per-package explanation.
   - If you can identify specific sub-components (kernel modules, libraries, binaries) within the package that are affected, include them in affected_subcomponents.
 - Use github MCP tool to inspect commit diffs or repository structure when reference URLs are available.
-- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. Use this data to identify which specific binaries within the package are affected and record them in affected_subcomponents. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream.
+- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. Use this data to identify which specific binaries within the package are affected and record them in affected_subcomponents. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream. If an affect entry has binary_rpms_not_found set to true, no build was found for that package/stream combination — do not call list_binary_rpms_tool for it again.
 - The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
@@ -1313,10 +1313,14 @@ class SuggestAffectedPackages(Feature):
 
     @staticmethod
     async def _enrich_affects_with_binary_rpms(affects: list) -> bool:
-        """Pre-compute binary RPMs for unique (package, stream) pairs and
-        inject results into each affect dict as a ``binary_rpms`` key.
+        """Pre-compute binary RPMs for unique (package, stream) pairs.
 
-        Returns True if at least one affect was enriched.
+        Successful lookups inject a ``binary_rpms`` list into the affect
+        dict.  Completed ``not_found`` lookups set ``binary_rpms_not_found``
+        to ``True`` so the LLM prompt skips them.  Retryable errors leave
+        no marker, keeping the tool-call path open.
+
+        Returns True if at least one lookup was attempted.
         """
         from packageurl import PackageURL
 
@@ -1345,9 +1349,14 @@ class SuggestAffectedPackages(Feature):
             len(affects),
         )
 
+        _NOT_FOUND: list[str] = []
+
         async def _lookup(
             pkg: str, stream: str
         ) -> tuple[tuple[str, str], list[str] | None]:
+            """Return binary RPM list on success, ``_NOT_FOUND`` (empty
+            sentinel) for completed not-found lookups, ``None`` for
+            retryable errors."""
             try:
                 result = await asyncio.to_thread(_lookup_binary_rpms, pkg, stream)
             except Exception:
@@ -1363,21 +1372,21 @@ class SuggestAffectedPackages(Feature):
                     len(result.binary_rpms),
                 )
                 return (pkg, stream), result.binary_rpms
-            msg = result.error_message
-            if msg and not msg.startswith("No builds found for package"):
-                logger.warning(
-                    "[list_binary_rpms] %s/%s failed: %s",
-                    pkg,
-                    stream,
-                    result.error_message,
-                )
+            if result.status == "not_found":
+                return (pkg, stream), _NOT_FOUND
+            logger.warning(
+                "[list_binary_rpms] %s/%s failed: %s",
+                pkg,
+                stream,
+                result.error_message,
+            )
             return (pkg, stream), None
 
         results = await asyncio.gather(
             *[_lookup(pkg, stream) for pkg, stream in unique_keys]
         )
-        rpm_cache: dict[tuple[str, str], list[str]] = {
-            k: rpms for k, rpms in results if rpms is not None
+        rpm_cache: dict[tuple[str, str], list[str] | None] = {
+            k: rpms for k, rpms in results
         }
 
         enriched = 0
@@ -1393,12 +1402,17 @@ class SuggestAffectedPackages(Feature):
             except ValueError:
                 continue
             key = (pkg_name, stream)
-            if key in rpm_cache:
-                a["binary_rpms"] = rpm_cache[key]
-                enriched += 1
+            rpms = rpm_cache.get(key)
+            if rpms is None:
+                continue
+            if rpms is _NOT_FOUND:
+                a["binary_rpms_not_found"] = True
+            else:
+                a["binary_rpms"] = rpms
+            enriched += 1
 
         logger.info("[list_binary_rpms] enriched %d/%d affects", enriched, len(affects))
-        return enriched > 0
+        return bool(unique_keys)
 
 
 class QueryAffectedComponents(DeterministicFeature):
