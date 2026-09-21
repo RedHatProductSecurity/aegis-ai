@@ -68,7 +68,6 @@ def search_manual_flaws(
         "include_fields": ["cve_id", "classification"],
         "cve_id__isempty": False,
         "order": ["created_dt"],
-        "source_in": list(ELIGIBLE_FLAWS["source"]),
         "workflow_state_in": list(ALLOWED_STATES),
         "limit": 1000,
     }

@@ -22,32 +22,6 @@ class FlawValidationError(RuntimeError):
 
 
 ELIGIBLE_FLAWS = {
-    # only flaws coming from the following sources
-    "source": (
-        "APPLE",
-        "CERT",
-        "CUSTOMER",
-        "CVE",
-        "CVEORG",
-        "DEBIAN",
-        "DISTROS",
-        "GENTOO",
-        "GOOGLE",
-        "HW_VENDOR",
-        "INTERNET",
-        "MAGEIA",
-        "MOZILLA",
-        "NVD",
-        "OPENSSL",
-        "OSSSECURITY",
-        "OSV",
-        "REDHAT",
-        "RESEARCHER",
-        "SECUNIA",
-        "SUSE",
-        "UBUNTU",
-        "UPSTREAM",
-    ),
     # only flaws with the DEFAULT workflow in the NEW state
     "classification": ({"workflow": "DEFAULT", "state": "NEW"},),
     # only flaws with no affects
@@ -79,7 +53,6 @@ FLAW_FIELDS = [
     "mitigation",
     "owner",
     "references",
-    "source",
     "statement",
     "title",
     "updated_dt",
@@ -117,7 +90,6 @@ class FlawFinder:
             "include_fields": ["cve_id", "updated_dt"],
             "cve_id__isempty": False,  # only flaws with a CVE ID
             "order": ["updated_dt"],
-            "source_in": [s for s in ELIGIBLE_FLAWS["source"]],
             **{
                 f"workflow_{predicate}_in": list(
                     dict.fromkeys(
