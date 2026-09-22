@@ -158,7 +158,7 @@ Set:
     high_severity_still_supported_without_kpanic=false
     allow_high_to_moderate7_downgrade=false
 This outcome is SELECTIVE, not the default for unresolved bugs.
-Use it when one of the narrowly defined B1-B7 preservation profiles is
+Use it when one of the narrowly defined B1-B8 preservation profiles is
 positively established.  B5 intentionally covers a small middle class of
 compound memory-safety primitives that are materially stronger than generic
 UAF/OOB uncertainty but do not yet reach full Outcome A exploitation strength:
@@ -289,6 +289,35 @@ underflow/sign-extension copy lacking useful payload/target control.
 For B5: independent_high_impact_strength="moderate";
 high_severity_still_supported_without_kpanic=false;
 allow_high_to_moderate7_downgrade=false.
+NEW37 B5-OOB CONSISTENCY WITH PRIOR TECHNICAL TRIAGE
+When prior ActionableScore technical triage positively establishes the canonical
+old-allocation / new-bound B5-OOB mechanics and reports ALL of:
+    PrimitiveClass=CLASS_B
+    ImportantCandidate=YES
+    ManualReview=REQUIRED
+    AutoDowngradeAllowed=NO
+the current KPANIC false-positive filter MUST independently verify those mechanics
+against the supplied patch/trace, but MUST NOT then downgrade solely because:
+- each individual OOB store is only 4, 8, or another small fixed width;
+- no arbitrary-write primitive is demonstrated;
+- no specific sensitive adjacent victim is identified;
+- no completed LPE/exploit chain is demonstrated; or
+- the immediately demonstrated outcome is a kernel crash.
+
+If the evidence confirms that attacker-influenced N is committed/applied before
+the old M-sized allocation is retired/resized and N>M then deterministically
+drives multiple writes/accesses beyond that old allocation, this is the B5-OOB
+preservation profile defined above. In that case set:
+    independent_high_impact_strength="moderate"
+    high_severity_still_supported_without_kpanic=false
+    allow_high_to_moderate7_downgrade=false
+
+This remains Outcome B, not Outcome A: it does not assert demonstrated LPE,
+arbitrary write, or independently proven HIGH non-crash impact. It only vetoes
+automatic HIGH -> MODERATE7 downgrade for the positively established B5-OOB
+profile. If the underlying B5-OOB mechanics are NOT established, apply the normal
+Outcome C / bounded-adjacent / crash-dominant rules.
+
 B6. USER-MAPPABLE FREED-PAGE / ADDRESS-SPACE LIFETIME ESCAPE
 This profile covers a narrow local page-lifetime case that is stronger than an
 ordinary local UAF.
@@ -354,11 +383,89 @@ Do NOT apply B7 to:
   the writer's still-authorized physical mapping;
 - speculative statements that another file "might" be corrupted without a
   concrete stale physical mapping/COW transition in the patch mechanics.
+B8. DIRECT UNAUTHENTICATED REMOTE KERNEL-CRASH PRESERVATION
+
+This is a narrow operational exception to the normal rule that crash/DoS alone
+does not preserve HIGH. Use it when ALL or nearly all of the following are
+positively established by the supplied commit/advisory/trace:
+
+- the vulnerable kernel service/path is directly network reachable when that
+  service is enabled in a valid supported configuration;
+- an unauthenticated remote peer can directly supply the triggering
+  packet/request;
+- the supplied evidence explicitly or demonstrably establishes a kernel oops,
+  panic, fatal fault, or equivalent kernel-level crash from that remote input;
+- no local account, host-admin-equivalent privilege, physical access, prior
+  memory corruption, separate privileged setup by the attacker, or another
+  vulnerability is required for the trigger.
+
+Attack complexity does NOT by itself defeat B8. A race, timing dependency,
+protocol-state requirement, malformed packet construction, or other AC:H-like
+condition may reduce CVSS independently, but if an unauthenticated remote peer
+can directly and repeatedly drive the complete trigger to a demonstrated kernel
+crash, preserve HIGH.
+
+Normal service applicability is NOT an unusual prerequisite: requiring an
+affected kernel RPC/NFS/network service to be running and reachable does not by
+itself defeat B8.
+
+Do NOT apply B8 when:
+- remote reachability is indirect or hypothetical;
+- a separate intermediary service not established by the evidence is required;
+- the attacker requires authentication or local access;
+- host-admin-equivalent attacker privilege or physical access is required;
+- the crash itself is only speculative rather than demonstrated/explicit; or
+- the remote input cannot drive the complete crash path without a separate
+  privileged actor or another vulnerability.
+
+For B8 set:
+    independent_high_impact_strength="moderate"
+    high_severity_still_supported_without_kpanic=false
+    preservation_profile="B8"
+    allow_high_to_moderate7_downgrade=false
+
+NEW44 B8 OVERRIDES THE NORMAL CRASH/NON-CRASH SEPARATION RULE.
+
+B8 is intentionally different from B1-B7. It is an operational
+IMPORTANT-preservation rule based on a demonstrated direct unauthenticated
+remote kernel crash itself. It does NOT require an independent non-crash
+IMPORTANT-grade primitive.
+
+Therefore, when B8 is satisfied, DO NOT remove the demonstrated remote crash
+from consideration when deciding allow_high_to_moderate7_downgrade.
+
+If ALL are established:
+- direct network reachability;
+- unauthenticated remote attacker;
+- demonstrated or explicit kernel-level crash from attacker-supplied input;
+- no local account, host-admin-equivalent privilege, physical access, separate
+  privileged attacker setup, or another vulnerability is required;
+
+then B8 applies and the REQUIRED result is:
+
+    independent_high_impact_strength="moderate"
+    high_severity_still_supported_without_kpanic=false
+    allow_high_to_moderate7_downgrade=false
+
+This remains true even when:
+- C:H and I:H are not demonstrated;
+- the only demonstrated CIA consequence is A:H;
+- the memory-corruption primitive is constrained;
+- no arbitrary write, LPE, controlled reclaim, or protected-object corruption
+  is demonstrated;
+- Outcome A is not satisfied.
+
+Do NOT classify such a case as Outcome C merely because the non-crash primitive
+alone would be insufficient for HIGH.
+
+B8 does NOT infer C:H or I:H. Confidentiality and integrity must still be
+scored independently.
+
 OUTCOME C — MODERATE7 is safe
 Set:
     high_severity_still_supported_without_kpanic=false
     allow_high_to_moderate7_downgrade=true
-This is the DEFAULT when Outcome A is not established and no B1-B7
+This is the DEFAULT when Outcome A is not established and no B1-B8
 preservation profile is positively established.
 MODERATE7 is specifically appropriate for unresolved security-relevant cases.
 MANDATORY MODERATE7 CALIBRATION RULES
@@ -473,7 +580,7 @@ If ALL or nearly all are true:
 - final demonstrated impact is primarily availability/crash;
 - confidentiality/integrity/LPE remain speculative;
 - no Outcome A primitive exists;
-- no B1-B7 preservation profile exists;
+- no B1-B8 preservation profile exists;
 - remaining memory-safety evidence is generic, bounded, cleanup-oriented,
   repeated-free/crash-oriented, or otherwise insufficient for independent
   IMPORTANT;
@@ -512,7 +619,7 @@ and the only remaining argument for KEEP is wording like:
 then:
     allow_high_to_moderate7_downgrade=true
 because MODERATE7 already provides manual review.
-Outcome B requires a positively matched B1-B7 preservation profile, not
+Outcome B requires a positively matched B1-B8 preservation profile, not
 generic uncertainty.
 BALANCED CONSISTENCY WITH PRIOR TECHNICAL TRIAGE
 Previous ActionableScore NUMBERS remain non-authoritative.
@@ -525,7 +632,7 @@ However, when prior technical triage explicitly identifies ALL of:
 do not dismiss those technical findings merely because the current filter has
 a stronger downgrade bias.
 Re-evaluate the underlying mechanics independently.  If they really satisfy
-B1-B7, preserve.  If they do not, downgrade.
+B1-B8, preserve.  If they do not, downgrade.
 This is a consistency check, not a numeric-score rule.
 FINAL SELF-CHECK
 Before returning JSON:
@@ -533,7 +640,7 @@ Before returning JSON:
    allow_high_to_moderate7_downgrade=false?
    If yes, recompute.  TRUE panic + downgrade=true is a valid result and maps
    to MODERATE_KPANIC.
-0b. Did I separately remove crash/DoS and ask whether a non-crash A/B1-B7
+0b. Did I separately remove crash/DoS and ask whether a non-crash A/B1-B8
     primitive remains? If no, recompute severity independently.
 1. Did I keep KERNEL_PANIC from generic bug class? If yes, remove it.
 2. Did I preserve HIGH simply because corruption is real? If yes, downgrade
@@ -560,7 +667,7 @@ Before returning JSON:
    only DoS/speculative LPE? If yes, strongly consider MODERATE7.
 10. If allow_high_to_moderate7_downgrade=false while
     high_severity_still_supported_without_kpanic=false, name exactly which
-    B1-B7 preservation profile applies. If none applies, the result is invalid
+    B1-B8 preservation profile applies. If none applies, the result is invalid
     and must be recomputed.
 11. Did I downgrade a direct remote actual UAF even though the demonstrated
     stale operation includes a post-free WRITE/state mutation and the attacker
@@ -584,6 +691,398 @@ Before returning JSON:
 16. Do not apply B6 merely to an immediate NULL/crash path, and do not apply B7
     merely because a filesystem bug can corrupt data. Require the specific
     mapping/lifetime mechanics above.
+17. Did I downgrade an explicitly demonstrated unauthenticated remote kernel crash
+    that is directly triggered by attacker-supplied network input without local,
+    host-admin-equivalent, physical, or separate privileged-attacker requirements?
+    If yes, explicitly evaluate B8 before allowing HIGH -> MODERATE7. Attack
+    complexity, race/timing, protocol state, malformed-packet construction, or the
+    normal requirement that the affected service be enabled/reachable do NOT by
+    themselves defeat B8.
+18. If B8 is satisfied, did I still set allow_high_to_moderate7_downgrade=true
+    because no independent non-crash HIGH primitive exists? If yes, the result is
+    invalid: B8 explicitly overrides that normal crash/non-crash separation rule.
+
+NEW56 — INDEPENDENT LOW AUTO-CLOSE REVIEW
+
+This review is now also used when no operational KERNEL_PANIC marker is present.
+In addition to the panic/HIGH questions above, make a THIRD, independent decision:
+
+    "Does the supplied technical evidence positively establish that this CVE is
+     safe for automatic LOW closure without human review?"
+
+LOW is a destructive operational transition: LOW CVEs may be automatically closed
+and may no longer receive analyst attention. Therefore LOW MUST be fail-closed.
+Absence of evidence for IMPORTANT or MODERATE is NOT positive evidence for LOW.
+
+Set:
+    low_auto_close_supported=true
+ONLY when the supplied patch/commit/advisory evidence positively establishes a
+bounded, low-security-impact condition and there is no material unresolved
+security-significant mechanism requiring MODERATE/MODERATE7/IMPORTANT review.
+
+Strong examples favoring low_auto_close_supported=true include:
+- a clearly bounded correctness defect with no meaningful confidentiality,
+  integrity, privilege, cross-boundary, memory-lifetime, or fatal-kernel effect;
+- a harmless validation/accounting/state inconsistency whose reachable consequence
+  is concretely limited and security impact is negligible;
+- a trigger requiring conditions that make the demonstrated security consequence
+  itself negligible, provided no stronger primitive remains unresolved.
+
+Set:
+    low_auto_close_supported=false
+when ANY material uncertainty remains about a security-significant consequence,
+including:
+- real or plausible UAF, double-free, OOB write, stale mapping/page/PTE,
+  ownership/COW violation, authorization bypass, or protected-resource effect;
+- supported or plausibly review-worthy kernel crash/oops/fatal behavior;
+- remote/adjacent attack surface combined with unresolved memory-safety behavior;
+- unresolved privilege or boundary consequences;
+- contradictory evidence where LOW depends on choosing the optimistic reading;
+- evidence that independently supports MODERATE, MODERATE7, or IMPORTANT.
+
+INDEPENDENCE REQUIREMENT
+
+The following previous ActionableScore outputs are CONTEXT ONLY and MUST NOT by
+themselves justify low_auto_close_supported=true:
+- a low ActionableScore or ActionableScoreLower;
+- PrimitiveClass=NONE/C/B;
+- ImportantCandidate=NO;
+- ManualReview=NO or RECOMMENDED;
+- AutoDowngradeAllowed=YES;
+- the Actionable final bucket;
+- the Actionable-selected CVSS score/vector.
+
+Likewise, a low primary CVSS or a weak classifier probability is not sufficient
+by itself. The LOW decision must be supported by the underlying technical
+evidence supplied to THIS review.
+
+A previous ActionableScore may identify facts worth independently verifying.
+After verification, rely on the patch/advisory mechanics themselves, not on the
+previous model's conclusion.
+
+CONFIDENCE CALIBRATION FOR LOW
+
+low_auto_close_confidence is confidence specifically in SAFE AUTOMATIC LOW
+CLOSURE, not confidence in the panic decision.
+
+Use:
+- >= 0.85 only when positive technical evidence makes automatic LOW closure safe;
+- 0.60-0.84 when LOW seems plausible but a material point is not firmly resolved;
+- < 0.60 when evidence is incomplete, contradictory, or security-significant
+  uncertainty remains.
+
+The deterministic caller requires at least 0.85 and applies additional independent
+blockers. Therefore do not inflate confidence merely to make LOW reachable.
+
+low_auto_close_reason must briefly state the concrete technical reason LOW is or
+is not safe. Do not answer only "low score", "no Important evidence", "auto
+downgrade allowed", or equivalent absence-of-evidence reasoning.
+
+
+NEW56.3 — BOUNDED RESOURCE / REFERENCE-LEAK LOW CALIBRATION
+
+A concrete resource or reference leak is NOT by itself a reason to require
+MODERATE7/manual review and is NOT by itself a veto on automatic LOW closure.
+
+For the independent LOW decision, distinguish a bounded resource-management
+defect from an unresolved memory-safety or security-boundary primitive.
+
+A resource/reference leak MAY positively satisfy:
+    low_auto_close_supported=true
+when ALL or nearly all of the following are established by the supplied
+technical evidence:
+- the concrete primitive is a missing put/release/drop or equivalent resource
+  accounting/lifetime-reference leak, rather than a use-after-free, double-free,
+  stale dereference, OOB access/write, or corruption primitive;
+- leaked references/resources remain valid/pinned rather than becoming freed
+  objects that are subsequently accessed;
+- no attacker-controlled kernel read/write, protected-object modification,
+  confidentiality loss, integrity loss, authorization bypass, ownership/COW
+  violation, privilege-boundary crossing, or privilege escalation is established;
+- the demonstrated/plausible consequence is limited to resource retention,
+  gradual memory/reference exhaustion, or local availability degradation;
+- triggering requires ordinary local access to the affected resource/subsystem,
+  or is otherwise practically bounded, and no direct unauthenticated remote
+  system-wide exhaustion path is established;
+- no kernel panic/oops/fatal mechanism is independently supported or materially
+  unresolved;
+- no separate technical evidence independently requires MODERATE7/IMPORTANT
+  review.
+
+IMPORTANT: the mere possibility that repeated leaking could eventually exhaust
+memory/resources or cause denial of service does NOT automatically make the case
+manual-review-worthy. Resource exhaustion is the expected consequence of many
+reference/resource leaks and must be evaluated for concrete security leverage,
+reachability, amplification, and scope.
+
+Do NOT reason:
+    persistent reference leak -> possible exhaustion -> manual review required
+or:
+    local DoS/resource exhaustion is possible -> low_auto_close_supported=false
+
+Instead ask whether the leak supplies any security-significant mechanism beyond
+bounded resource retention/exhaustion. If no such mechanism is established and
+the conditions above are satisfied, automatic LOW closure may be positively
+supported with confidence >= 0.85.
+
+Examples that MAY favor LOW auto-close:
+- a missing folio/page/object put on a local filesystem error/writeback path,
+  where the retained object remains valid and the only consequence is gradual
+  reference/memory retention;
+- a missing release of a non-sensitive kernel resource that can accumulate only
+  through ordinary local use and has no corruption, disclosure, or privilege
+  consequence;
+- a cleanup/error-path reference leak whose practical consequence is bounded
+  resource pressure without a fatal-kernel mechanism.
+
+This calibration is NOT a blanket "resource leak = LOW" rule. Set
+low_auto_close_supported=false when any materially stronger condition exists,
+including:
+- the leak is directly unauthenticated-remotely triggerable with credible
+  high-amplification or system-wide exhaustion;
+- leaked resources expose protected data/state or cross an authorization,
+  ownership, namespace, tenant, or privilege boundary;
+- the reference-count defect can instead cause premature free, UAF, double-free,
+  stale access, object reuse, or other memory-safety behavior;
+- a supported or materially plausible kernel panic/oops/fatal path remains;
+- attacker-controlled corruption/read/write or another exploitation-relevant
+  primitive exists;
+- triggerability, lifetime semantics, or final security consequence is materially
+  contradictory or unresolved.
+
+When this bounded-resource profile positively supports LOW and
+kernel_panic_supported=false, apply NEW56.2 normally: if
+low_auto_close_confidence >= 0.85 and no separate review-worthy mechanism
+remains, remove_operational_kpanic must be true.
+
+NEW57 — INDEPENDENT MANUAL-REVIEW ROUTING
+
+Perform a FOURTH independent decision:
+    Does the supplied technical evidence still require human analyst review,
+    independently of whether KERNEL_PANIC is supported, independently of whether
+    HIGH/IMPORTANT is preserved, and independently of whether LOW auto-close is
+    otherwise being considered?
+
+Emit:
+    manual_review_still_required
+    manual_review_confidence
+    manual_review_reason
+
+This is an OPERATIONAL REVIEW-ROUTING verdict. It is NOT:
+- a factual KERNEL_PANIC verdict;
+- an IMPORTANT/HIGH preservation verdict;
+- a severity promotion;
+- a restatement of the previous ActionableScore ManualReview field.
+
+Set manual_review_still_required=true when the independent reread establishes a
+concrete security-significant reason that should remain visible to a human analyst
+even if regular MODERATE severity is technically appropriate. Examples include:
+- a concrete authorization or ownership violation across a real security boundary,
+  such as one namespace/tenant/security principal modifying a resource protected
+  from it;
+- unauthorized modification/read of a protected resource or security-sensitive
+  state where the exact deployment consequence or scope requires analyst judgment;
+- unresolved real memory-safety/lifetime/corruption mechanics whose final security
+  leverage is not established strongly enough for IMPORTANT but is too meaningful
+  to disappear from review;
+- supported kernel crash/fatal behavior that operational policy should retain for
+  review even when crash alone does not justify IMPORTANT;
+- contradictory patch/advisory/reachability/privilege evidence that materially
+  changes safe disposition;
+- another concrete non-LOW security mechanism for which automated ordinary
+  MODERATE disposition would hide a meaningful analyst decision.
+
+A limited cross-network-namespace tunnel/link/configuration authorization bypass
+is an important calibration example:
+- it does NOT automatically preserve IMPORTANT;
+- it may correctly remain Outcome C for HIGH -> MODERATE7 severity purposes;
+- but if the patch establishes that a caller authorized only in one namespace can
+  modify a tunnel/configuration object protected by another namespace, this is a
+  concrete security-boundary authorization defect and may independently require
+  manual review even when kernel_panic_supported=false.
+
+Do NOT set manual_review_still_required=true merely because:
+- the previous ActionableScore says ManualReview=RECOMMENDED or REQUIRED;
+- the primary model says YES REQUIRES MANUAL CHECK;
+- an operational KPANIC/MODERATE7 marker already exists;
+- CVSS is Moderate/Important or a classifier disagrees;
+- the bug is complex, unusual, or uncertain in a generic sense;
+- a bounded resource/reference leak has only ordinary local resource-exhaustion
+  consequences and NEW56.3 otherwise positively supports LOW.
+
+The previous manual-review fields are CONTEXT ONLY. Re-establish the reason from
+patch/commit/advisory/reproducer evidence at this specialized reread.
+
+Confidence calibration:
+- >= 0.85 only when a concrete review-worthy mechanism is positively established;
+- 0.60-0.84 when review may be useful but the technical reason is materially
+  incomplete or ambiguous;
+- < 0.60 when there is no strong independent basis for mandatory review routing.
+
+manual_review_reason must name the concrete technical reason. Do not write merely
+"previous model recommended review", "CVSS is high", or "uncertainty exists".
+
+NEW58 — FINAL LOW SAFETY AND OUTCOME-B PRESERVATION PRECEDENCE
+
+These are deterministic downstream semantics of the verdicts you emit. They do
+NOT create new positive severity evidence and MUST NOT change how you decide the
+underlying fields.
+
+1. FINAL LOW SAFETY VETO
+
+LOW is destructive because it can auto-close the CVE.  The specialized reread
+therefore has final veto authority over LOW even when an earlier reconciliation
+rule reached LOW before this review ran.
+
+When:
+    low_auto_close_supported=false
+    low_auto_close_confidence>=0.85
+the final pipeline MUST NOT export LOW.  The deterministic consumer restores at
+least ordinary MODERATE.
+
+When:
+    manual_review_still_required=true
+    manual_review_confidence>=0.85
+the final pipeline MUST NOT export LOW and MUST preserve operational
+MODERATE7/manual-review routing.
+
+This is a one-way safety invariant:
+- low_auto_close_supported=true does not itself force LOW; the existing NEW56
+  deterministic eligibility gates still own creation of LOW;
+- low_auto_close_supported=false does not promote to IMPORTANT;
+- manual_review_still_required=true does not promote to IMPORTANT;
+- do not set either field merely to manipulate the final bucket.  Decide both
+  from the technical evidence under their existing independent rules.
+
+2. OUTCOME-B IMPORTANT PRESERVATION PRECEDENCE
+
+The PART 2 contract intentionally defines Outcome B as:
+    preservation_profile=B1|B2|B3|B4|B5|B6|B7|B8
+    high_severity_still_supported_without_kpanic=false
+    allow_high_to_moderate7_downgrade=false
+
+That combination is NOT contradictory.  The named B1-B8 profile is the narrow
+preservation exception, while high_severity_still_supported_without_kpanic=false
+correctly says that full Outcome-A HIGH evidence is absent.
+
+Therefore, when you positively establish a named B1-B8 profile and set
+allow_high_to_moderate7_downgrade=false, that pair is the explicit specialized
+IMPORTANT-retention verdict for downstream precedence.  A later generic
+AFTERPUSHED false-positive pass must not reinterpret
+high_severity_still_supported_without_kpanic=false as permission to downgrade.
+
+Conversely:
+- preservation_profile!=NONE alone is NOT a retention verdict;
+- allow_high_to_moderate7_downgrade must also be false;
+- if the B-profile requirements are not positively established, use
+  preservation_profile=NONE and apply Outcome A/C normally;
+- do not manufacture a B-profile merely because IMPORTANT was previously chosen.
+
+NEW57 CONSISTENCY / PRECEDENCE
+
+manual_review_still_required is independent from remove_operational_kpanic.
+
+The following combination is VALID:
+    kernel_panic_supported=false
+    remove_operational_kpanic=true
+    manual_review_still_required=true
+    manual_review_confidence>=0.85
+    low_auto_close_supported=false
+
+Its meaning is:
+- the panic-based reason for the marker is removable;
+- but a separate independently established security reason still requires
+  operational MODERATE7/manual review.
+
+When manual_review_still_required=true with confidence >= 0.85:
+- do NOT treat remove_operational_kpanic=true as permission to erase the final
+  operational review marker;
+- do NOT auto-close LOW;
+- do NOT promote to IMPORTANT merely from this verdict.
+
+Conversely:
+- manual_review_still_required=false does NOT imply LOW;
+- manual_review_still_required=false does NOT imply remove_operational_kpanic=true;
+- manual_review_still_required=true does NOT imply kernel_panic_supported=true;
+- manual_review_still_required=true does NOT imply HIGH/IMPORTANT preservation.
+
+NEW56.2 — LOW AUTO-CLOSE / OPERATIONAL KPANIC CONSISTENCY
+
+The LOW auto-close decision and operational KERNEL_PANIC removal decision are
+separate, but their final outputs MUST be internally consistent.
+
+If ALL of the following are true:
+- kernel_panic_supported=false;
+- low_auto_close_supported=true;
+- low_auto_close_confidence >= 0.85;
+- no unresolved crash/fatal-kernel mechanism remains;
+- no unresolved memory-safety, lifetime, corruption, authorization, ownership,
+  protected-resource, privilege-boundary, or other security-significant evidence
+  remains that independently requires MODERATE7/manual review;
+- manual_review_still_required=false, or manual_review_confidence < 0.85;
+
+then:
+    remove_operational_kpanic=true
+
+Rationale: approving automatic LOW closure positively asserts that no material
+review-worthy mechanism remains. Retaining an operational MODERATE7/KPANIC marker
+at the same time is internally inconsistent unless a concrete reason for retaining
+that marker is identified.
+
+Therefore, when low_auto_close_supported=true with confidence >= 0.85 and
+kernel_panic_supported=false, do NOT leave remove_operational_kpanic=false merely
+because an earlier heuristic set KERNEL_PANIC, because the primary assessment used
+a high availability CVSS, or because MODERATE7 existed earlier in the pipeline.
+
+The implication above is ONE-WAY only:
+- remove_operational_kpanic=true does NOT imply that LOW is safe;
+- kernel_panic_supported=false does NOT imply that LOW is safe;
+- low_auto_close_supported=false does NOT require removing the operational marker.
+
+If a concrete unresolved reason requires retaining operational KERNEL_PANIC or
+MODERATE7 review, set low_auto_close_supported=false instead and state that reason
+in low_auto_close_reason. Do not return the contradictory combination:
+    kernel_panic_supported=false
+    low_auto_close_supported=true
+    low_auto_close_confidence>=0.85
+    remove_operational_kpanic=false
+
+LOW SELF-CHECK
+
+Before returning JSON:
+19. Am I setting low_auto_close_supported=true mainly because ActionableScore,
+    CVSS, classifier, or another model already called the issue low? If yes, set
+    it false and re-evaluate the underlying mechanics.
+20. Does a real memory/lifetime/corruption/authorization/ownership primitive remain
+    unresolved? If yes, normally set low_auto_close_supported=false.
+21. Is kernel crash/fatal behavior supported or still materially plausible from
+    concrete mechanics? If yes, LOW automatic closure is normally unsafe.
+22. Would choosing LOW cause a security-significant uncertainty to disappear from
+    analyst review? If yes, set low_auto_close_supported=false.
+23. Can I name a positive bounded technical reason why this is safely LOW, rather
+    than merely list reasons it is not HIGH? If no, set
+    low_auto_close_supported=false.
+
+23b. If I rejected LOW only because a valid resource/reference leak could
+     accumulate into memory/resource exhaustion or local DoS, did I first apply
+     NEW56.3 and identify a concrete stronger security mechanism? If no stronger
+     mechanism exists, resource exhaustion alone must not automatically veto LOW.
+
+23c. Independently of the previous ActionableScore ManualReview value, does the
+     patch/advisory evidence establish a concrete security-boundary, protected-
+     resource, corruption/lifetime, crash, or other mechanism that must remain
+     visible to a human analyst? If yes with confidence >=0.85, set
+     manual_review_still_required=true and name that mechanism.
+
+23d. If I set manual_review_still_required=true, am I accidentally using it to
+     preserve IMPORTANT/HIGH? Do not: it preserves review routing only.
+
+24. CONSISTENCY CHECK: If kernel_panic_supported=false AND
+    low_auto_close_supported=true AND low_auto_close_confidence>=0.85, have I set
+    remove_operational_kpanic=true? If not, either set it true or change
+    low_auto_close_supported=false and name the concrete unresolved reason that
+    still requires operational MODERATE7/KPANIC review.
+
 MACHINE-PARSING CONTRACT
 This response is consumed programmatically.
 Return exactly ONE JSON object and nothing else:
@@ -592,10 +1091,22 @@ Return exactly ONE JSON object and nothing else:
 - use JSON booleans true/false, not strings;
 - emit every key shown below on every response;
 - confidence must be a JSON number from 0.0 through 1.0;
+- low_auto_close_supported must be a JSON boolean;
+- low_auto_close_confidence must be a JSON number from 0.0 through 1.0;
+- low_auto_close_reason must be a JSON string explaining the independent LOW decision;
+- manual_review_still_required must be a JSON boolean;
+- manual_review_confidence must be a JSON number from 0.0 through 1.0;
+- manual_review_reason must be a JSON string naming the independent technical
+  reason review is or is not still required;
 - evidence_level must be exactly one of:
   demonstrated, explicit, strongly_implied, speculative, none;
 - independent_high_impact_strength must be exactly one of:
-  strong, moderate, weak, none.
+  strong, moderate, weak, none;
+- preservation_profile must be exactly one of:
+  NONE, B1, B2, B3, B4, B5, B6, B7, B8.
+  Use the matching B-profile only when that profile is positively established
+  by the rules above. Use NONE for Outcome A, Outcome C, or when no B-profile
+  is established. Never infer a B-profile merely from downgrade_reason prose.
 The caller separately consumes kernel_panic_supported and
 allow_high_to_moderate7_downgrade.  Do not collapse these two decisions into
 one answer.  In particular, a supported panic may coexist with
@@ -612,6 +1123,7 @@ Return JSON only:
   ],
   "independent_high_impact_strength": "strong|moderate|weak|none",
   "high_severity_still_supported_without_kpanic": false,
+  "preservation_profile": "NONE|B1|B2|B3|B4|B5|B6|B7|B8",
   "independent_high_impact": [
     "concrete non-crash security impact"
   ],
@@ -620,6 +1132,50 @@ Return JSON only:
     "relevant technical findings only; do not use the numeric score as evidence"
   ],
   "allow_high_to_moderate7_downgrade": true,
+  "low_auto_close_supported": false,
+  "low_auto_close_confidence": 0.0,
+  "low_auto_close_reason": "brief independent evidence-based explanation of whether automatic LOW closure is safe",
+  "manual_review_still_required": false,
+  "manual_review_confidence": 0.0,
+  "manual_review_reason": "brief independent technical explanation of whether analyst review must remain routed",
   "reason": "brief evidence-based KERNEL_PANIC explanation",
-  "downgrade_reason": "state Outcome A, B1-B7, or C and explain why"
+  "downgrade_reason": "state Outcome A, B1-B8, or C and explain why"
 }
+
+NEW46 — STRUCTURED B5OOB PRESERVATION CONSISTENCY
+
+The upstream ActionableScore stage now emits a machine field `B5OOB=YES|NO`.
+When the supplied previous ActionableScore header contains ALL of:
+    PrimitiveClass=CLASS_B
+    B5OOB=YES
+    ImportantCandidate=YES
+    ManualReview=REQUIRED
+    AutoDowngradeAllowed=NO
+    HostAdminRequired=NO
+treat this as a specific prior B5-OOB claim that MUST be independently checked
+against the patch/commit mechanics.  It is not a generic OOB retention rule.
+
+If the patch confirms a real attacker-driven heap/slab OOB write with the
+old-allocation/new-bound mismatch described by B5-OOB, then use Outcome B and:
+    independent_high_impact_strength="moderate"
+    high_severity_still_supported_without_kpanic=false
+    allow_high_to_moderate7_downgrade=false
+
+IMPORTANT NEW46 CALIBRATION FOR PHYSICAL/PERIPHERAL REACHABILITY:
+For this exact structured B5OOB gate, AV:P, malicious USB/peripheral delivery,
+or special hardware exposure is a reachability/CVSS constraint but MUST NOT by
+itself reverse the B5-OOB preservation decision after the B5 mechanics are
+independently confirmed.  Do not require network reachability, arbitrary write,
+controlled reclaim, a named adjacent victim, or demonstrated LPE merely to veto
+automatic IMPORTANT -> MODERATE7.  Those facts remain relevant to CVSS and to
+whether Outcome A is proven.
+
+This exception does NOT apply when B5OOB=NO/absent, when the old-allocation/new-
+bound mechanics are not confirmed, to OOB READ, fixed constrained adjacent/stack
+overwrites, generic parser OOB, or crash-dominant runaway copies without the
+canonical B5 transition.  Never infer B5OOB from the classifier `outofbounds`
+flag alone.
+
+For a confirmed exact NEW46 case, `downgrade_reason` MUST explicitly contain
+the token `B5-OOB`, so deterministic reconciliation can distinguish this narrow
+profile from other Outcome-B reasons.

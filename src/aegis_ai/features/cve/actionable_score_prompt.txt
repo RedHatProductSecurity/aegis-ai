@@ -103,6 +103,64 @@ A score of 3 requires at least one independent reason beyond the crash/correctne
 fact itself, such as positively established unauthenticated remote reachability,
 a meaningful security-boundary effect, or another distinct actionable signal.
 Do not use "manual review recommended" as that extra reason.
+B0. CONCRETE CROSS-OBJECT LIVE-STATE INTERFERENCE IS NOT LOW-END CORRECTNESS
+Do NOT equate "no Important-grade primitive" with LOW severity.
+
+When supplied non-generated technical evidence establishes that an attacker-driven
+operation on one live kernel/userspace-managed object can replace, erase, redirect,
+or otherwise interfere with a mapping, ownership association, event-routing
+association, or other active state belonging to a different concurrently live
+object, evaluate that interference as a distinct Moderate-grade integrity signal
+rather than ordinary correctness-only state.
+
+Award +1 "Concrete cross-object live-state integrity interference" when ALL or
+nearly all are true:
+* at least two distinct live objects/contexts are involved;
+* the vulnerable operation on object B can overwrite, remove, redirect, or collide
+  with active state already reserved/owned/used by object A;
+* the patch/commit directly establishes the cross-object collision or wrong-object
+  processing, rather than merely hypothesizing it;
+* the consequence can affect object A's active processing, event routing, cleanup,
+  ownership/bookkeeping, or availability in a security-relevant way;
+* the complete trigger path is available below host-admin-equivalent privilege, or
+  the supplied evidence otherwise establishes a meaningful security principal.
+
+Examples of qualifying mechanics include:
+* a newly created object overwriting an already-reserved live mapping for another
+  object, causing events/completions to be associated with the wrong object;
+* cleanup of one object erasing a live mapping still used by another object;
+* attacker-driven identifier/mapping collision causing concrete wrong-object
+  processing or meaningful cross-object state disruption.
+
+This signal does NOT require arbitrary memory write, privilege escalation,
+controlled reclaim, or a completed exploit chain. Those stronger properties are
+still required by the existing CLASS_A/Important rules.
+
+When this is the strongest established non-crash primitive:
+* PrimitiveClass may remain CLASS_C if no memory-corruption/lifetime primitive is
+  present;
+* ImportantCandidate should normally remain NO;
+* AutoDowngradeAllowed may remain YES because this rule does NOT preserve IMPORTANT;
+* ManualReview may be RECOMMENDED or REQUIRED according to the existing review
+  rules;
+* the final ActionableScore should normally not remain below 3 after arithmetic,
+  unless a separately established negative signal legitimately reduces it.
+
+Do NOT apply this +1 merely because:
+* two objects share an identifier or resource but no live cross-object interference
+  is established;
+* the bug is ordinary duplicate insertion rejected only for robustness;
+* only the attacker's own object/state is affected;
+* the consequence is hypothetical and absent from patch/commit/advisory evidence;
+* a previous LLM, CVSS vector, or generic security prose is the only evidence.
+
+This rule separates:
+LOW-like bounded correctness of one object
+from
+MODERATE-grade demonstrated interference with another live object's active state.
+It MUST NOT be used to manufacture ImportantCandidate=YES or
+AutoDowngradeAllowed=NO.
+
 B1. COMMON DEPLOYMENT / BROAD SUBSYSTEM IS EXPOSURE, NOT PRIMITIVE STRENGTH
 For a CLASS_C/NONE crash/correctness-only case that satisfies the low-end anchor
 above, do NOT add a separate broad/default/common-subsystem point merely because
@@ -181,6 +239,89 @@ with no identified sensitive neighbor, target selection, reclaim, directed
 write, or demonstrated non-crash consequence, retain the constrained CLASS_B
 treatment. Do not invent C/I/LPE. Meaningful below-host-admin reachability can
 still justify Borderline/Actionable-Moderate review, but not CLASS_A by itself.
+
+D1. OLD-ALLOCATION / NEW-BOUND OOB WRITE (B5-OOB)
+Do NOT classify an overwrite as a merely small fixed-adjacent write solely because
+each individual loop iteration stores only 4, 8, or another small fixed number of
+bytes. Evaluate the TOTAL attacker-influenced out-of-bounds extent and the bound
+transition that drives the loop.
+
+Treat the case as a strong unresolved CLASS_B B5-OOB profile when ALL or nearly
+all of the following are established from patch/control flow/context:
+* storage was allocated or sized for an older count/bound M;
+* an attacker can materially influence a later count/bound N;
+* vulnerable code commits/applies N before the old M-sized storage is replaced,
+  resized, or safely retired;
+* subsequent code iterates/indexes using N while still operating on the old
+  M-sized allocation;
+* N can exceed M and therefore causes REAL heap/slab OOB WRITE operations;
+* the attacker can repeat or meaningfully drive the transition below
+  host-admin-equivalent privilege, or another concrete security principal can do
+  so across the complete trigger path.
+
+Canonical shape:
+    old allocation sized for M
+        -> attacker-influenced state/count becomes N, where N > M
+        -> code walks/processes old allocation using N
+        -> one or more writes occur beyond the M-sized object
+
+The fact that each store is only a few bytes does NOT make this equivalent to one
+fixed adjacent overwrite. The attacker-influenced N controls how many elements are
+processed beyond the old allocation and therefore controls the OOB extent. Do not
+require arbitrary-write proof, a named victim object, or demonstrated LPE merely
+to recognize this as stronger than the SMALL FIXED ADJACENT OVERWRITE case.
+
+When this B5-OOB profile is positively established and no host-admin-equivalent
+requirement or other strong reducing condition is established, use:
+PrimitiveClass=CLASS_B
+B5OOB=YES
+ImportantCandidate=YES
+ManualReview=REQUIRED
+AutoDowngradeAllowed=NO
+HostAdminRequired=NO
+This is an Important-preserving / Important-vs-Moderate review signal, NOT an
+automatic CLASS_A classification and NOT automatic proof of C/I/LPE. Numeric score
+still follows independent arithmetic and reachability evidence.
+
+NEW45 STRUCTURED B5-OOB OUTPUT CONSISTENCY:
+B5OOB is a mandatory machine-readable subtype flag and MUST be decided from the
+technical mechanics before CVSS is computed.
+
+Set B5OOB=YES only when the canonical old-M/new-N profile is positively
+established: old storage remains sized for M; attacker-influenced N is committed
+or applied before that storage is safely replaced; vulnerable code uses N
+against the old M-sized storage; N can exceed M; and REAL OOB WRITES follow.
+The complete trigger path must establish HostAdminRequired=NO.
+
+Set B5OOB=NO for every other OOB shape. Generic OOB write, attacker-controlled
+length, one fixed adjacent store, stack OOB, OOB read, runaway memcpy, unknown
+old allocation size, or storage resized before use MUST NOT produce B5OOB=YES.
+
+Once B5OOB=YES is emitted, the same response MUST also emit:
+PrimitiveClass=CLASS_B
+ImportantCandidate=YES
+ManualReview=REQUIRED
+AutoDowngradeAllowed=NO
+HostAdminRequired=NO
+
+Conversely, do not emit B5OOB=YES merely to make those fields consistent: the
+old-allocation/new-bound mechanics themselves must first be established.
+
+Once the canonical B5-OOB profile above is positively established and no strong
+reducing condition is established, later generic "small/fixed/adjacent write",
+"unknown victim", "no arbitrary write", "no demonstrated LPE", or "crash may be
+likely" reasoning MUST NOT change:
+PrimitiveClass=CLASS_B
+ImportantCandidate=YES
+ManualReview=REQUIRED
+AutoDowngradeAllowed=NO
+Those facts may prevent CLASS_A and may limit C/I scoring, but they do not erase
+the established attacker-influenced old-allocation/new-bound corruption primitive.
+
+Do not apply B5-OOB merely because a length/count exists. If N is not attacker
+influenced, the old allocation is already resized before use, only reads occur,
+or evidence establishes exactly one bounded adjacent store independent of N, use
+the ordinary constrained/read-only rules instead.
 E. AUTHORIZATION / BOUNDARY CONSEQUENCE DISCIPLINE
 A missing capability/namespace/security check may establish an authorization
 primitive. Score additional confidentiality, credential/resource theft, IPsec
@@ -233,6 +374,80 @@ Unless this CVE independently supplies an attacker-triggerable fatal condition:
 * for CVSS, do not use A:H solely from the prerequisite panic; use A:L/A:N as
   supported by the vulnerability's incremental effect.
 A prerequisite panic is context, not an impact caused by this CVE.
+NEW46 NARROW H1-PROTECTION SIGNALS
+These fields exist only to protect an already strong CLASS_A result from the
+legacy H1 CVSS<6.5 downgrade. They MUST NOT be used to manufacture CLASS_A,
+ImportantCandidate=YES, or AutoDowngradeAllowed=NO.
+
+CleanFixProtection=YES only when ALL are true:
+* PrimitiveClass=CLASS_A is independently established from technical evidence;
+* ImportantCandidate=YES, ManualReview=REQUIRED, AutoDowngradeAllowed=NO;
+* the patch/commit is a direct, technically clean correction of the SAME
+  concrete CLASS_A security mechanism (for example it restores the missing
+  ownership/lifetime/authorization/isolation operation at the point where the
+  primitive is created);
+* the fix itself makes the security mechanism clear without relying on CVSS,
+  generic severity prose, speculative exploitation, or merely the small size
+  or simplicity of the patch.
+A one-line, minimal, obvious, or clean-looking patch is NOT enough. A fix that
+only prevents a crash, adds defensive validation, avoids an error path, or
+bounds a generic corruption without exposing a concrete CLASS_A mechanism MUST
+use CleanFixProtection=NO.
+
+COWOwnershipViolation=YES only when the supplied technical evidence establishes
+a concrete ownership/COW/shared-backing isolation failure in which a write
+authorized for A reaches backing still owned/referenced by independently
+permissioned B, or an equivalent cross-boundary shared-page/file-backed write.
+Require the established COW/ownership mechanism itself; reflink, clone, shared
+pages, page cache, stale mapping, filesystem corruption, or the word COW alone
+are insufficient. For NEW46 H1 protection this signal is effective only in the
+same strong CLASS_A context:
+PrimitiveClass=CLASS_A, ImportantCandidate=YES, ManualReview=REQUIRED,
+AutoDowngradeAllowed=NO.
+
+The two NEW46 signals are independent. Do not set CleanFixProtection=YES merely
+because COWOwnershipViolation=YES, and do not set COWOwnershipViolation=YES
+merely because the fix is clean/minimal.
+
+NEW48 NARROW AUTHORIZATION-BYPASS PRESERVATION SIGNAL
+AuthorizationBypass=YES only when ALL are positively established from supplied
+non-generated technical evidence:
+* PrimitiveClass=CLASS_A is independently justified;
+* ImportantCandidate=YES, ManualReview=REQUIRED, AutoDowngradeAllowed=NO;
+* a concrete EXISTING authorization decision, permission/capability check,
+  credential/security-state gate, or equivalent security check is actually
+  bypassed, skipped, incorrectly treated as satisfied, or lost;
+* the vulnerable behavior permits an operation/access that this SAME check is
+  specifically intended to deny or restrict;
+* the patch directly restores, re-applies, or correctly evaluates that SAME
+  authorization/security check at the vulnerable decision point or lifetime
+  transition.
+
+AuthorizationBypass=NO when the evidence shows only:
+* missing validation, correctness checking, bounds checking, architectural
+  exception/fault injection, or generic defensive checking;
+* a crash/UAF/OOB/corruption path without a concrete authorization decision;
+* a namespace/configuration mistake whose protected-resource consequence is
+  merely hypothetical;
+* the word "bypass" in prose without identification of the actual security
+  decision/check and the unauthorized operation it gates;
+* a newly added restriction/hardening check where the evidence does not establish
+  that an existing authorization invariant was violated;
+* CVSS, classifier severity, PRIMARY LLM HINTS, or previous generated analysis
+  as the only support.
+
+HostAdminRequired=YES does NOT by itself force AuthorizationBypass=NO. A uid-0
+or capability-bearing process can still be subject to a distinct capability or
+authorization check. However, the high-privilege requirement must still be
+reflected independently in ActionableScore and CVSS; AuthorizationBypass MUST
+NOT erase that penalty or manufacture additional C/I/LPE consequences.
+
+AuthorizationBypass is independent of CleanFixProtection and
+COWOwnershipViolation. A case may therefore emit AuthorizationBypass=YES while
+CleanFixProtection=NO when the concrete authorization bypass and restored check
+are technically established but the stricter clean-fix characterization is not.
+This signal does not create CLASS_A by itself.
+
 MANDATORY MACHINE-PARSABLE OUTPUT
 The answer MUST start with one complete machine-readable header containing all
 ActionableScore and CVSS fields below; no Markdown/prose may precede it.
@@ -244,6 +459,10 @@ ActionableScore=NUM
 ActionableScoreLower=NUM        # only when conservative != paranoid
 PrimitiveClass=NONE|CLASS_A|CLASS_B|CLASS_C
 RealUAF=YES|NO
+B5OOB=YES|NO
+CleanFixProtection=YES|NO
+COWOwnershipViolation=YES|NO
+AuthorizationBypass=YES|NO
 HostAdminRequired=YES|NO|UNKNOWN
 NamespaceScopedPrivilege=YES|NO|UNKNOWN
 ImportantCandidate=YES|NO
@@ -262,6 +481,13 @@ CLASS_A=strong Important-preserving primitive; CLASS_B=real corruption/lifetime
 primitive needing leverage analysis; CLASS_C=primarily crash/DoS/invalid state
 without independently useful corruption; NONE=no meaningful primitive.
 RealUAF=YES only for actual/directly implied post-lifetime/stale-object use.
+B5OOB=YES only when the canonical OLD-ALLOCATION / NEW-BOUND OOB WRITE profile
+in D1 is positively established from technical evidence. It is a narrow
+structured primitive subtype, not a synonym for generic OOB write. Output NO
+for fixed-adjacent overwrite, stack overwrite, OOB read, runaway huge memcpy,
+generic attacker-controlled length, already-resized storage, or any case where
+the old-M/new-N mismatch and real writes beyond the old allocation are not
+established.
 HostAdminRequired must be evidenced; absence of proof != NO.
 NamespaceScopedPrivilege=YES requires the complete security-relevant operation
 reachable in that namespace; partial chain => UNKNOWN.
@@ -289,7 +515,47 @@ For bounded fixed/adjacent CLASS_B overwrite with no sensitive target, target
 selection, arbitrary/directed write, controlled reclaim, or demonstrated non-crash
 consequence: no Strong LPE, hypothetical Weak LPE, C/I, or paranoid CLASS_A;
 AutoDowngradeAllowed MUST be YES. ManualReview/ImportantCandidate may still request
-human review.
+human review. EXCEPTION: this fixed-adjacent rule MUST NOT override a positively
+established OLD-ALLOCATION / NEW-BOUND B5-OOB profile, where attacker-influenced N
+drives multiple accesses beyond older M-sized storage.
+NEW45 B5OOB FINAL SELF-CHECK:
+Before emitting the machine header:
+* B5OOB=YES requires the exact companion state CLASS_B,
+  ImportantCandidate=YES, ManualReview=REQUIRED, AutoDowngradeAllowed=NO,
+  HostAdminRequired=NO.
+* If that companion state conflicts with the technical evidence, set B5OOB=NO;
+  never force other fields merely to reach a desired severity.
+* Never infer B5OOB=YES from CVSS, classifier severity, PRIMARY LLM HINTS, the
+  word "OOB", or generic attacker-controlled length alone.
+* B5OOB=NO does not imply Low/Moderate or safe auto-downgrade; other primitive
+  rules remain independent.
+NEW46 H1-PROTECTION FINAL SELF-CHECK:
+* CleanFixProtection=YES requires CLASS_A + ImportantCandidate=YES +
+  ManualReview=REQUIRED + AutoDowngradeAllowed=NO and a patch/commit that directly
+  exposes and corrects the same concrete CLASS_A security mechanism.
+* Never set CleanFixProtection=YES merely because the patch is small, simple,
+  obvious, clean-looking, or removes the crashing operation.
+* COWOwnershipViolation=YES requires a concrete cross-boundary COW/shared-backing
+  ownership violation; COW/reflink/page-cache vocabulary alone is insufficient.
+* COWOwnershipViolation=YES used for H1 protection requires the same strong
+  CLASS_A companion state. Neither NEW46 flag creates CLASS_A by itself.
+* Keep the two reasons independent so deterministic logs can distinguish
+  H1_GUARD:clean_fix_protection from H1_GUARD:COW_ownership_violation.
+NEW48 AUTHORIZATION-BYPASS FINAL SELF-CHECK:
+* AuthorizationBypass=YES requires the same strong CLASS_A companion state:
+  ImportantCandidate=YES, ManualReview=REQUIRED, AutoDowngradeAllowed=NO.
+* Require an identified existing authorization/security decision AND an
+  identified unauthorized operation/access caused by bypassing that decision.
+* Require the patch to directly restore/re-apply/correct that same decision.
+* Do not use generic validation, missing fault/exception behavior, correctness,
+  hardening, namespace vocabulary, CVSS, or model-generated speculation.
+* HostAdminRequired=YES is compatible with AuthorizationBypass=YES when the
+  attacker is still meaningfully constrained by the distinct bypassed check;
+  retain the host-admin penalty independently.
+* AuthorizationBypass is independent of CleanFixProtection and
+  COWOwnershipViolation. It may be YES when CleanFixProtection=NO.
+* AuthorizationBypass never creates CLASS_A or AutoDowngradeAllowed=NO by itself.
+
 Human-readable output must contain exactly:
 Final recommended bucket: **...**::
 Allowed buckets: Ordinary Moderate; Borderline / manual review recommended;
@@ -1150,6 +1416,28 @@ HostAdminRequired=NO
 when below-host-admin reachability is positively established.
 HostAdminRequired=UNKNOWN
 when evidence does not resolve the complete privilege boundary.
+
+REPRODUCER / TRACE PRIVILEGE IS NOT A REQUIREMENT (NEW38)
+Do NOT infer HostAdminRequired=YES, PR:H, or another high-privilege requirement
+merely because a reproducer, KASAN report, syzkaller trace, test program, shell,
+task, or crash log happened to run as UID 0/root or under an administrator
+account.
+Observed reproducer privilege and REQUIRED trigger privilege are different facts.
+HostAdminRequired=YES requires positive evidence that the COMPLETE vulnerable
+operation itself requires host-admin-equivalent privilege, for example a required
+CAP_SYS_ADMIN/CAP_NET_ADMIN check, root-only control operation, privileged
+device/configuration setup that the attacker must perform, or another demonstrated
+authorization barrier.
+If the vulnerable operation is reached through a userspace-facing kernel interface
+and the evidence does not establish that the attacker must be host admin, do not
+convert an observed UID 0 reproducer into HostAdminRequired=YES. Use UNKNOWN when
+the complete privilege boundary remains unresolved, and NO only when below-host-
+admin reachability is positively established.
+For B5-OOB specifically, an otherwise established old-allocation/new-bound
+corruption profile MUST NOT lose ImportantCandidate=YES, ManualReview=REQUIRED,
+or AutoDowngradeAllowed=NO solely because the demonstrating trace or reproducer
+was executed as root. First establish that root-equivalent privilege is actually
+required by the complete trigger path.
 For DRM/KMS/display-control paths:
 Do NOT infer HostAdminRequired=NO merely because a local desktop user exists.
 HostAdminRequired=NO is appropriate when supplied call-path/product context or
@@ -1401,6 +1689,31 @@ or another independently established consequence.
 A concrete repeatable reference leak reachable through ordinary runtime activity
 may therefore score above an otherwise harmless bookkeeping bug even when a
 reliable crash or host-wide exhaustion has not yet been demonstrated.
+RESOURCE-LEAK PRIMITIVE CALIBRATION (NEW35)
+A resource/reference leak or exhaustion-only bug, by itself, is CLASS_C, not
+CLASS_B. Repetition and eventual memory/resource exhaustion do NOT create a
+corruption/lifetime exploitation primitive. Do not set ImportantCandidate=YES
+merely because repeated triggering could exhaust kernel resources.
+
+Promote a leak case to CLASS_B only when the SAME vulnerability independently
+establishes a distinct exploitation-relevant primitive beyond resource
+exhaustion, such as use-after-free/stale-object use, attacker-influenced memory
+corruption, cross-boundary ownership violation, protected-state modification,
+or another concrete non-exhaustion security primitive.
+
+Error-path-only reachability, initialization/probe-only behavior,
+disconnect/teardown-only behavior, special or uncommon hardware requirements,
+and required privileged setup are reducing constraints when positively
+established. Apply the normal scoring rules for those constraints; do not
+counteract them merely because the leak can theoretically accumulate.
+
+NEW36 LEAK CONSISTENCY:
+The NEW35 resource-leak rule is a final primitive-class calibration. If the only
+established harmful mechanism is accumulation/exhaustion of references, memory,
+descriptors, or another resource, do not later promote CLASS_C to CLASS_B merely
+because the exhaustion is repeatable, remotely requested through an already
+established path, or capable of eventual DoS. CLASS_B still requires a separate
+non-exhaustion exploitation-relevant primitive named in the evidence.
 Do NOT confuse:
 missing release -> persistent reference leak
 with:
@@ -2078,6 +2391,10 @@ ActionableScore=NUM
 ActionableScoreLower=NUM        # only when conservative != paranoid
 PrimitiveClass=NONE|CLASS_A|CLASS_B|CLASS_C
 RealUAF=YES|NO
+B5OOB=YES|NO
+CleanFixProtection=YES|NO
+COWOwnershipViolation=YES|NO
+AuthorizationBypass=YES|NO
 HostAdminRequired=YES|NO|UNKNOWN
 NamespaceScopedPrivilege=YES|NO|UNKNOWN
 ImportantCandidate=YES|NO
@@ -2136,6 +2453,15 @@ PRIVILEGE / REACHABILITY
 CORRUPTION / OOB / IMPACT
 10. OOB read gets Confidentiality only with a disclosure path. OOB write gets C/I/LPE only with a concrete mechanism beyond generic corruption.
 11. A bounded fixed-adjacent CLASS_B overwrite with no sensitive target/selection/directed write/reclaim/non-crash consequence MUST have AutoDowngradeAllowed=YES; ManualReview may remain REQUIRED.
+B5-OOB EXCEPTION TO SMALL FIXED-ADJACENT OVERRIDE:
+Before applying rule 11, first test whether the old-allocation/new-bound B5-OOB
+profile is established. If it is, the per-store width (for example 4 or 8 bytes)
+does not define the primitive as one bounded adjacent overwrite: attacker-
+influenced N defines the number and total extent of accesses beyond M-sized
+storage. Therefore rule 11 MUST NOT reset AutoDowngradeAllowed to YES or clear
+ImportantCandidate/REQUIRED review solely because each individual store is small.
+
+11b. Do not apply rule 11 to canonical old-allocation/new-bound B5-OOB: if attacker-influenced N>M is committed before old M-sized storage is retired/resized and N then drives real OOB writes over that old allocation, treat the total OOB extent as attacker-influenced CLASS_B; absent host-admin/strong reducing evidence use ImportantCandidate=YES, ManualReview=REQUIRED, AutoDowngradeAllowed=NO.
 12. Attacker-controlled source bytes alone are not high-control API evidence and do not create CLASS_A.
 13. Device-local hang is not host crash; raw resource use is not Important without persistence/isolation/boundary consequence.
 UAF / LIFETIME
@@ -2273,6 +2599,29 @@ fabric where topology matters; AV:L for local syscall/device/KVM-VMM/procfs/io_u
 style triggers; AV:P only for physical interaction. Networking code != AV:N.
 Do not broaden AV:A to AV:N in Paranoid without evidence. NVMe/TCP/iSER-like storage
 fabrics normally favor AV:A unless ordinary remote exposure is established.
+INDIRECT / HYPOTHETICAL NETWORK EXPOSURE RULE (NEW35)
+Do NOT assign AV:N, PR:N, a remote-reachability ActionableScore signal, or a
+stronger attacker model merely because the affected local filesystem, device,
+driver, kernel interface, or service COULD be re-exported or indirectly exposed
+through another service or deployment layer (for example NFS, SMB, a proxy,
+gateway, network filesystem server, container service, or management service).
+
+AV:N requires a demonstrated direct attacker-controlled trigger path from the
+vulnerable code's actual exposed attack surface. An optional or hypothetical
+deployment topology is not evidence of remote reachability. Do not turn a local
+kernel operation into a network attack by inventing an intermediary service not
+established by the supplied CVE/commit/patch/advisory/call-path evidence.
+
+If a network-facing intermediary is positively established, score the COMPLETE
+demonstrated chain and its real privilege/authentication requirements. Otherwise
+retain the directly supported local/adjacent/physical vector and state that the
+indirect remote scenario is speculative.
+
+NEW36 INDIRECT-NETWORK CONSISTENCY:
+This rule also constrains CVSSBaseVector, CVSSParanoidVector, and
+CVSSSelectedVector. A hypothetical NFS/SMB/proxy/gateway/re-export layer MUST NOT
+be used to select AV:N or PR:N unless that intermediary and the complete
+attacker-controlled trigger chain are positively established by evidence.
 ATTACK COMPLEXITY (AC) -- HARD CALIBRATION
 AC:H for race/narrow timing/unusual ordering/probabilistic state materially outside
 direct attacker control. Cheap/repeated attempts or looping reproducers do not make

@@ -32,6 +32,8 @@ from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
     RULES_KERNEL,
     apply_afterpushed_llm_review,
+    apply_deferred_low_review,
+    apply_final_low_safety_invariant,
     apply_kpanic_cvss_override,
     apply_kpanic_llm_review,
     check_kernel_output,
@@ -70,10 +72,43 @@ class KernelKpanicReviewModel(BaseModel):
         "none",
     ]
     high_severity_still_supported_without_kpanic: bool
+    # NEW51: machine-readable preservation profile.  Default NONE keeps the
+    # parser fail-open compatible with an older/stochastic response that omits
+    # the newly introduced field.
+    preservation_profile: Literal[
+        "NONE",
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6",
+        "B7",
+        "B8",
+    ] = "NONE"
     independent_high_impact: list[str]
     previous_actionable_score_considered: bool
     previous_actionable_score_basis: list[str]
     allow_high_to_moderate7_downgrade: bool
+    # NEW53: independent operational decision.  ``kernel_panic_supported`` is a
+    # factual/evidence conclusion and MUST NOT by itself erase MODERATE7.  This
+    # flag answers the separate policy question whether the extended
+    # KPANIC/MODERATE7 review marker is no longer warranted and regular
+    # MODERATE is safe.  Default False is intentionally fail-open.
+    remove_operational_kpanic: bool = False
+    # NEW56: independent safe-auto-close decision.  Defaults deliberately
+    # fail closed so older/stochastic responses can never create LOW merely by
+    # omitting the new fields.
+    low_auto_close_supported: bool = False
+    low_auto_close_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    low_auto_close_reason: str = ""
+    # NEW57: third independent decision axis.  This is review routing, not
+    # factual panic evidence and not an IMPORTANT-preservation verdict.
+    # Defaults fail closed with respect to *creating* a new requirement: an
+    # omitted field cannot unexpectedly preserve review on older responses.
+    manual_review_still_required: bool = False
+    manual_review_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    manual_review_reason: str = ""
     reason: str
     downgrade_reason: str
 
@@ -421,14 +456,22 @@ def _parse_kpanic_review_response(
     logger.info(
         "%s: KPANIC_REVIEW parsed panic_supported=%s confidence=%.2f "
         "evidence_level=%s high_without_panic=%s strength=%s "
-        "allow_high_to_mod7=%s",
+        "preservation_profile=%s allow_high_to_mod7=%s remove_operational_kpanic=%s "
+        "low_auto_close=%s low_auto_close_confidence=%.2f "
+        "manual_review_still_required=%s manual_review_confidence=%.2f",
         call_str,
         review.kernel_panic_supported,
         review.confidence,
         review.evidence_level,
         review.high_severity_still_supported_without_kpanic,
         review.independent_high_impact_strength,
+        review.preservation_profile,
         review.allow_high_to_moderate7_downgrade,
+        review.remove_operational_kpanic,
+        review.low_auto_close_supported,
+        review.low_auto_close_confidence,
+        review.manual_review_still_required,
+        review.manual_review_confidence,
     )
     return review
 
@@ -522,8 +565,30 @@ def _parse_actionable_score_response(
             selected_vector_raw is not None,
         )
 
+    # NEW49: tolerate the same documented bucket line when Gemini omits the
+    # historical trailing "::" after Markdown bold.  Keep the parser narrow:
+    # require the exact "Final recommended bucket:" label, require **...**,
+    # and capture only the contents of that single line.  This fixes outputs
+    # such as:
+    #
+    #   Final recommended bucket: **Borderline / manual review recommended**
+    #
+    # while preserving compatibility with the older:
+    #
+    #   Final recommended bucket: **Borderline / manual review recommended**::
+    #
+    # NEW49.1: also tolerate harmless leading indentation before the exact
+    # label. Gemini sometimes emits the numbered-section body indented by spaces.
+    # NEW49.2: Gemini 3.x may render the same exact label as a Markdown bullet:
+    #
+    #   * Final recommended bucket: **Borderline / manual review recommended**::
+    #
+    # Accept one optional Markdown ``*`` bullet plus following horizontal
+    # whitespace, while still requiring the exact label, Markdown bold bucket,
+    # a single-line value, and only the historical optional trailing ``::``.
+    # No prompt, bucket mapping, or severity rule is changed.
     bucket_match = re.search(
-        r"Final recommended bucket:\s*\*\*(.+?)\*\*::",
+        r"(?m)Final recommended bucket:\s*\*\*([^\r\n*]+?)\*\*\s*(?:::)?\s*$",
         text,
     )
     if not bucket_match:
@@ -1138,7 +1203,7 @@ class SuggestImpact(Feature):
         call_str: str,
         kernel_context: str | None,
     ) -> KernelKpanicReviewModel | None:
-        """Run the NN+LLM KPANIC false-positive filter after H1-H15/AS1-AS7.
+        """Run the NN+LLM KPANIC false-positive filter after the deterministic H/AS cascade.
 
         Ordering mirrors the supplied Perl daemon:
             primary triage
@@ -1149,12 +1214,10 @@ class SuggestImpact(Feature):
         The later request_llm_afterpushedtohigh() stage is intentionally not
         implemented here.
         """
-        if getattr(result.output, "_kernel_kpanic_marked", None) is not True:
-            logger.info(
-                "%s: KPANIC_REVIEW skipped because operational kpanic_marked=NO",
-                call_str,
-            )
-            return None
+        # NEW56: run this specialized evidence review for every kernel CVE
+        # that reached ActionableScore, even when no operational KPANIC marker
+        # currently exists.  Besides panic/Important precision, it now provides
+        # an independent positive safe-auto-close vote used by deferred AS7.
 
         if second_opinion is None:
             logger.warning(
@@ -1241,7 +1304,56 @@ class SuggestImpact(Feature):
             "including attacker-influenced kernel memory/object corruption, "
             "validation-to-use semantic reinterpretation, ownership/lifetime "
             "violations, protected-data boundary violations, or other serious "
-            "kernel exploitation primitives."
+            "kernel exploitation primitives.\n\n"
+            "NEW53 OPERATIONAL KPANIC DECISION: In the JSON object also emit "
+            "remove_operational_kpanic as a JSON boolean. This is a SEPARATE "
+            "decision from kernel_panic_supported and from "
+            "allow_high_to_moderate7_downgrade. Set "
+            "remove_operational_kpanic=true ONLY when the supplied evidence "
+            "affirmatively establishes that regular MODERATE is sufficient and "
+            "the extended KPANIC/MODERATE7 manual-review state is no longer "
+            "warranted. kernel_panic_supported=false alone is NOT sufficient. "
+            "Keep it false when a documented kernel race, lifetime/list/object "
+            "corruption, credible crash/fatal-failure consequence, contradictory "
+            "evidence, or other unresolved kernel-security uncertainty still "
+            "justifies extended review. A trigger condition explicitly stated by "
+            "the upstream patch is part of the vulnerability mechanism, not an "
+            "additional speculative assumption merely because it is a race. "
+            "For backward compatibility, omission is parsed as false.\n\n"
+            "NEW56 SAFE AUTO-CLOSE DECISION: Regardless of whether an operational "
+            "KPANIC marker is currently present, also emit these THREE JSON fields: "
+            "low_auto_close_supported (boolean), low_auto_close_confidence (0.0..1.0), "
+            "and low_auto_close_reason (string). Set low_auto_close_supported=true "
+            "ONLY when the patch/kernel evidence positively establishes a bounded "
+            "LOW-impact bug that is safe to auto-close without analyst review. "
+            "Absence of evidence for Important is NOT evidence for LOW. Return false "
+            "for unresolved races/lifetime/list/object corruption, UAF/OOB/write or "
+            "ownership/authorization primitives, contradictory evidence, plausible "
+            "confidentiality/integrity or privilege-boundary effects, or when the "
+            "trigger/reachability/impact remains materially uncertain. A mere low "
+            "ActionableScore, low selected CVSS, ImportantCandidate=NO, or "
+            "AutoDowngradeAllowed=YES is NOT sufficient because those fields came "
+            "from the same earlier LLM turn. true should mean this independent "
+            "specialized reread affirmatively agrees that LOW auto-close is safe. "
+            "Use confidence >=0.85 only when that conclusion is well supported.\n\n"
+            "NEW57 INDEPENDENT MANUAL-REVIEW ROUTING: Also emit "
+            "manual_review_still_required (boolean), manual_review_confidence "
+            "(0.0..1.0), and manual_review_reason (string). Re-read the supplied "
+            "technical evidence independently of the previous ActionableScore "
+            "ManualReview field. Set manual_review_still_required=true when a "
+            "concrete security-significant mechanism still requires analyst "
+            "judgment even if kernel_panic_supported=false and even if regular "
+            "MODERATE severity is otherwise appropriate. Examples include a "
+            "concrete cross-security-boundary authorization/ownership violation, "
+            "protected-resource modification, unresolved memory/lifetime/corruption "
+            "mechanics, supported crash/fatal behavior, or another specific "
+            "security consequence whose safe disposition requires human review. "
+            "Do NOT set it true merely because the previous ActionableScore said "
+            "RECOMMENDED/REQUIRED, because a CVSS score is Moderate, or because an "
+            "operational KPANIC marker already exists. This verdict controls review "
+            "routing only: it MUST NOT promote severity or preserve IMPORTANT by "
+            "itself. If manual_review_still_required=true with confidence >=0.85, "
+            "the operational MODERATE7 review marker must not be removed."
         )
 
         prompt = (
@@ -1256,7 +1368,13 @@ class SuggestImpact(Feature):
             + primary_triage
             + "\n\n=== CURRENT POST-CASCADE OPERATIONAL STATE ===\n"
             + f"Impact after H1-H15/AS1-AS7: {result.output.impact}\n"
-            + "Operational KPANIC marker: YES\n"
+            + "Operational KPANIC marker: "
+            + (
+                "YES"
+                if getattr(result.output, "_kernel_kpanic_marked", False)
+                else "NO"
+            )
+            + "\n"
             + "lowered: "
             + ("YES" if getattr(result.output, "_kernel_lowered", False) else "NO")
             + "\n"
@@ -1890,6 +2008,7 @@ class SuggestImpact(Feature):
         trace,
         call_str,
         *,
+        deps=None,
         cve_context: dict | None = None,
     ):
         """Ask the LLM to revise its explanation after post-processing
@@ -1984,6 +2103,7 @@ class SuggestImpact(Feature):
                     self._run(
                         call_str,
                         revision_prompt,
+                        deps=deps,
                         output_type=RevisedExplanationModel,
                     ),
                     timeout=_REVISION_TIMEOUT,
@@ -2184,6 +2304,53 @@ class SuggestImpact(Feature):
             if afterpushed_trace:
                 trace = f"{trace}; {afterpushed_trace}"
 
+        # NEW56: AS7 is now a post-review, fail-closed auto-close decision.
+        # ActionableScore only makes a case eligible; the always-run specialized
+        # review must independently and positively approve LOW, and deterministic
+        # contradiction guards can still veto it.
+        deferred_low_trace = apply_deferred_low_review(
+            result.output,
+            call_str,
+            kpanic_review,
+            classifier_result,
+            second_opinion=second_opinion,
+        )
+        if deferred_low_trace:
+            trace = f"{trace}; {deferred_low_trace}"
+
+        # NEW58: LOW is destructive/auto-closing, so the independent specialized
+        # review gets a final deterministic veto even when an earlier H/AS path
+        # reached LOW before NEW56's deferred-low gate.  A strong manual-review
+        # verdict restores MODERATE7; a strong LOW-unsafety verdict alone restores
+        # ordinary MODERATE.  This invariant never promotes to IMPORTANT.
+        final_low_safety_trace = apply_final_low_safety_invariant(
+            result.output,
+            call_str,
+            kpanic_review,
+        )
+        if final_low_safety_trace:
+            trace = f"{trace}; {final_low_safety_trace}"
+
+        # NEW54: final operational-state consistency invariant.
+        #
+        # kpanic_marked is an operational MODERATE7/manual-review marker, not
+        # an assertion that a factual kernel panic was proven.  After all
+        # specialized reviews have had their vote, LOW + a live marker is an
+        # internally inconsistent representation.  Restore MODERATE7 here;
+        # this is not a new vulnerability-severity heuristic.
+        if (
+            result.output.impact == "LOW"
+            and getattr(result.output, "_kernel_kpanic_marked", False) is True
+        ):
+            result.output.impact = "MODERATE"
+            invariant_trace = "NEW54:OPERATIONAL_KPANIC_FLOOR_LOW_TO_MODERATE7"
+            trace = f"{trace}; {invariant_trace}"
+            logger.info(
+                "%s: %s",
+                call_str,
+                invariant_trace,
+            )
+
         override_trace = apply_kpanic_cvss_override(
             result.output,
             call_str,
@@ -2193,7 +2360,64 @@ class SuggestImpact(Feature):
         if override_trace:
             trace = f"{trace}; {override_trace}"
         elif result.output.impact != pre_reconcile_impact:
-            SuggestImpact.align_score_to_impact(result.output, call_str)
+            # NEW49.3: when downstream reconciliation lowers the impact and the
+            # independently parsed ActionableScore CVSS belongs to that final
+            # impact band, export that selected score/vector instead of leaving
+            # the stale primary IMPORTANT CVSS on a MODERATE result.
+            #
+            # This is deliberately narrow: it does not invent a vector and it
+            # does not alter severity.  Missing, malformed, or band-inconsistent
+            # selected CVSS falls back to the historical alignment behavior.
+            selected_cvss_applied = False
+            if second_opinion is not None:
+                selected_score = getattr(second_opinion, "cvss_selected_score", None)
+                selected_vector = getattr(second_opinion, "cvss_selected_vector", None)
+                if selected_score is not None and selected_vector:
+                    try:
+                        selected_vector = str(selected_vector).strip()
+                        selected_score_from_vector = float(
+                            cvss.CVSS3(selected_vector).scores()[0]
+                        )
+                        selected_band = score_to_band(selected_score_from_vector)
+                        if selected_band == result.output.impact:
+                            old_score = result.output.cvss3_score
+                            old_vector = result.output.cvss3_vector
+                            result.output.cvss3_score = str(selected_score_from_vector)
+                            result.output.cvss3_vector = selected_vector
+                            selected_cvss_applied = True
+                            sync_trace = (
+                                "selected_cvss_sync_after_downgrade("
+                                f"{old_score}/{old_vector}->"
+                                f"{result.output.cvss3_score}/{selected_vector})"
+                            )
+                            trace = f"{trace}; {sync_trace}"
+                            logger.info(
+                                "%s: synchronized downgraded impact %s with "
+                                "second-opinion selected CVSS %s (%s)",
+                                call_str,
+                                result.output.impact,
+                                result.output.cvss3_score,
+                                result.output.cvss3_vector,
+                            )
+                        else:
+                            logger.info(
+                                "%s: selected CVSS %.1f is band %s, not final "
+                                "impact %s; keeping historical alignment path",
+                                call_str,
+                                selected_score_from_vector,
+                                selected_band,
+                                result.output.impact,
+                            )
+                    except Exception as exc:
+                        logger.warning(
+                            "%s: selected CVSS unavailable for downgrade sync; "
+                            "keeping historical alignment path: %s",
+                            call_str,
+                            exc,
+                        )
+
+            if not selected_cvss_applied:
+                SuggestImpact.align_score_to_impact(result.output, call_str)
 
         # Older ver before ActionableScore check (that was much simplified):
         #        if (
@@ -2238,6 +2462,7 @@ class SuggestImpact(Feature):
                 original_vector,
                 trace,
                 call_str,
+                deps=deps,
                 cve_context=resolved_static_context,
             )
 
