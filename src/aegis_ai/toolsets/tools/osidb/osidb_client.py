@@ -113,17 +113,8 @@ class OSIDBClient:
             scope[_OSIDB_DELEGATED_TOKEN_KEY] = token
         return token
 
-    async def _get_session_or_token(
-        self,
-    ) -> tuple[object | None, str | None]:
-        """
-        Return (session, token). Exactly one is non-None.
-        session: process-level bindings session for API calls.
-        token: JWT from delegated Kerberos creds when web request has gssapi_context.
-        """
-        token = await self._get_delegated_token()
-        if token is not None:
-            return (None, token)
+    async def _ensure_session(self):
+        """Return the process-level osidb_bindings session, creating it if needed."""
         async with self._session_lock:
             if self._session is None:
                 osidb_server_url = get_settings().osidb_server_url
@@ -138,7 +129,21 @@ class OSIDBClient:
                     if _is_osidb_unauthorized(e):
                         raise OSIDBUnauthorizedError() from e
                     raise
-        return (self._session, None)
+        return self._session
+
+    async def _get_session_or_token(
+        self,
+    ) -> tuple[object | None, str | None]:
+        """
+        Return (session, token). Exactly one is non-None.
+        session: process-level bindings session for API calls.
+        token: JWT from delegated Kerberos creds when web request has gssapi_context.
+        """
+        token = await self._get_delegated_token()
+        if token is not None:
+            return (None, token)
+        session = await self._ensure_session()
+        return (session, None)
 
     async def get_flaw_data(self, cve_id: str, include_embargoed: bool):
         """
@@ -202,20 +207,6 @@ class OSIDBClient:
             raise ValueError(f"Could not retrieve {cve_id}")
 
         return flaw_data
-
-    async def _get_process_session(self):
-        """Return the process-level bindings session (used when delegated token path doesn't apply)."""
-        async with self._session_lock:
-            if self._session is None:
-                try:
-                    self._session = osidb_bindings.new_session(
-                        osidb_server_uri=get_settings().osidb_server_url
-                    )
-                except Exception as e:
-                    if _is_osidb_unauthorized(e):
-                        raise OSIDBUnauthorizedError() from e
-                    raise
-        return self._session
 
     async def _list_component_flaws_with_token(
         self, component_name: str, token: str
@@ -290,9 +281,7 @@ class OSIDBClient:
             ):
                 yield flaw
             return
-        if session is None:
-            session = await self._get_process_session()
-        session = cast(Any, session)  # _get_process_session never returns None
+        session = cast(Any, session)
         for flaw in session.flaws.retrieve_list_iterator(
             affects__ps_component=component_name,
             include_fields=_FLAW_LIST_FIELDS,
@@ -308,9 +297,7 @@ class OSIDBClient:
         session, token = await self._get_session_or_token()
         if token:
             return await self._count_component_flaws_with_token(component_name, token)
-        if session is None:
-            session = await self._get_process_session()
-        session = cast(Any, session)  # _get_process_session never returns None
+        session = cast(Any, session)
         return session.flaws.count(
             affects__ps_component=component_name,
             include_fields=_FLAW_LIST_FIELDS,
