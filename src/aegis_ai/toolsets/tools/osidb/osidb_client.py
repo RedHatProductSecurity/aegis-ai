@@ -145,6 +145,26 @@ class OSIDBClient:
         session = await self._ensure_session()
         return (session, None)
 
+    async def _token_get(
+        self,
+        *,
+        path: str,
+        params: dict[str, Any],
+        token: str,
+        timeout: float,
+    ) -> dict[str, Any]:
+        """Perform a GET against OSIDB with Bearer token auth and return parsed JSON."""
+        base = get_settings().osidb_server_url.rstrip("/")
+        url = f"{base}{path}"
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.get(
+                url,
+                params=params,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            resp.raise_for_status()
+            return resp.json()
+
     async def get_flaw_data(self, cve_id: str, include_embargoed: bool):
         """
         Retrieves raw flaw data from OSIDB for a given CVE ID.
@@ -162,27 +182,22 @@ class OSIDBClient:
             logger.info(
                 "Using delegated Kerberos credentials for OSIDB (pass-through auth)"
             )
-            base = get_settings().osidb_server_url.rstrip("/")
-            url = f"{base}/osidb/api/v2/flaws/{cve_id}"
-            params = {"include_fields": _FLAW_RETRIEVE_FIELDS}
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get(
-                    url,
-                    params=params,
-                    headers={"Authorization": f"Bearer {token}"},
+            try:
+                data = await self._token_get(
+                    path=f"/osidb/api/v2/flaws/{cve_id}",
+                    params={"include_fields": _FLAW_RETRIEVE_FIELDS},
+                    token=token,
+                    timeout=30.0,
                 )
-                try:
-                    resp.raise_for_status()
-                except httpx.HTTPStatusError as e:
-                    if e.response.status_code == 404:
-                        raise OSIDBFlawNotFoundError(cve_id) from e
-                    if e.response.status_code == 401:
-                        raise OSIDBUnauthorizedError(
-                            "OSIDB returned HTTP 401 Unauthorized. "
-                            "Verify Kerberos credentials, delegation, and OSIDB access."
-                        ) from e
-                    raise
-                data = resp.json()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise OSIDBFlawNotFoundError(cve_id) from e
+                if e.response.status_code == 401:
+                    raise OSIDBUnauthorizedError(
+                        "OSIDB returned HTTP 401 Unauthorized. "
+                        "Verify Kerberos credentials, delegation, and OSIDB access."
+                    ) from e
+                raise
             from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_retrieve_response_200 import (
                 OsidbApiV1FlawsRetrieveResponse200,
             )
@@ -250,22 +265,17 @@ class OSIDBClient:
         self, component_name: str, token: str
     ) -> int:
         """Return OSIDB flaw count for component using Bearer token."""
-        base = get_settings().osidb_server_url.rstrip("/")
-        url = f"{base}/osidb/api/v2/flaws"
-        params = {
-            "affects__ps_component": component_name,
-            "include_fields": _FLAW_COUNT_FIELDS,
-            "limit": 1,
-            "offset": 0,
-        }
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(
-                url,
-                params=params,
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        data = await self._token_get(
+            path="/osidb/api/v2/flaws",
+            params={
+                "affects__ps_component": component_name,
+                "include_fields": _FLAW_COUNT_FIELDS,
+                "limit": 1,
+                "offset": 0,
+            },
+            token=token,
+            timeout=30.0,
+        )
         return int(data.get("count", 0))
 
     async def list_component_flaws(self, component_name: str) -> AsyncGenerator:
