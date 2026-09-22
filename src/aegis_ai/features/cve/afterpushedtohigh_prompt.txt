@@ -1,0 +1,821 @@
+The vulnerability has already been automatically promoted from MODERATE to
+IMPORTANT.
+Your ONLY task is to decide whether IMPORTANT should be retained or downgraded
+back to MODERATE7.
+Do NOT downgrade below MODERATE7.
+Do NOT upgrade above IMPORTANT.
+MODERATE7 is a mandatory/manual-review bucket. It is intentionally appropriate
+for real, dangerous, unresolved kernel vulnerabilities whose evidence does not
+yet justify automatic IMPORTANT treatment.
+Operationally, IMPORTANT may trigger automatic remediation and broad product
+tracker creation. Therefore false IMPORTANT retention has a real cost.
+This filter MUST NOT use the rule:
+    "if exploitation remains unresolved, preserve IMPORTANT."
+Instead use:
+    "preserve IMPORTANT only when supplied evidence positively satisfies a
+     defined IMPORTANT retention condition."
+Generic uncertainty belongs in MODERATE7/manual review.
+EVIDENCE PRECEDENCE
+Patch/commit govern root cause, actual memory/lifetime operations, ordering, and
+object relationships. Authoritative advisory/exploit/trusted triage may establish
+reachability, privilege, protected victims, boundary consequences, or exploit/LPE.
+Do not invent consequences. Previous ActionableScore is context, not a retention
+rule; paranoid CVSS C:H/I:H is not evidence of actual high impact.
+DECISION MODEL — TWO PRIMARY STATES + NARROW EXCEPTION
+STATE A — full IMPORTANT-grade primitive:
+downgrade_to_moderate7=false; important_grade_primitive_demonstrated=true;
+important_preserving_class_b=false.
+STATE B — narrow B1-B7 preservation exception only:
+downgrade_to_moderate7=false; important_grade_primitive_demonstrated=false;
+important_preserving_class_b=true.
+STATE C — otherwise downgrade:
+downgrade_to_moderate7=true; important_grade_primitive_demonstrated=false;
+important_preserving_class_b=false.
+STATE C is the DEFAULT for:
+- real but constrained memory corruption;
+- real UAF without useful exploitation leverage;
+- remote memory-safety bugs without stronger primitive;
+- bounded writes;
+- double frees;
+- limited authorization bypasses;
+- uncertain file-backed corruption;
+- bugs where high C/I/LPE is speculative.
+"Requires manual review" supports MODERATE7. It does NOT support KEEP IMPORTANT.
+STATE A — FULL IMPORTANT-GRADE PRIMITIVE
+Set important_grade_primitive_demonstrated=true only when supplied evidence
+establishes at least one of the following:
+A1. Demonstrated privilege escalation/root/privileged code execution.
+A2. Arbitrary or substantially attacker-directed kernel memory write/read.
+A3. Materially controlled corruption:
+the attacker controls enough of TARGET/OFFSET/RANGE and useful CONTENTS or
+resulting security-sensitive state to provide a meaningful exploitation
+primitive, not merely the fact that corruption occurs.
+A4. Strong protected-object/security-boundary compromise:
+the attacker can read/modify a meaningful independently protected file,
+credential, process resource, tenant/container/guest resource, host resource,
+or equivalent outside normal authority, with scope sufficient for IMPORTANT.
+A5. Strong semantic reinterpretation:
+attacker-influenced bytes are validated under one representation and
+deterministically consumed as DIFFERENT active kernel operations/resources,
+such as executable actions, resource-owning entries, pointer/offset-bearing
+records, or lifetime-driving control structures.
+A6. Guest-to-host corruption with demonstrated guest influence over host state.
+A7. Serious remote confidentiality/integrity consequence is demonstrated.
+A8. An authoritative supplied exploit/advisory establishes a serious exploit
+chain technically connected to the patch primitive.
+A9. Strong escaping UAF with exploitation leverage:
+a stale active object survives lifetime end AND one or more are established:
+- controlled/materially influenced reclaim;
+- attacker-shaped replacement object;
+- later use consumes callback/ops/credential/security-sensitive pointer state;
+- attacker-directed stale write/read;
+- useful cross-layer structured-object substitution;
+- repeatable attacker control materially shapes reuse/corruption placement.
+A real UAF alone does NOT satisfy A9.
+STATE B — NARROW IMPORTANT-PRESERVING EXCEPTIONS
+State B exists to protect a SMALL set of mechanisms where final HIGH impact is
+not yet proven but automatic downgrade would destroy a particularly strong
+patch-established primitive.
+State B MUST NOT be used as a generic "uncertainty" bucket.
+If important_preserving_class_b=true, decision_reason MUST explicitly name
+B1, B2, B3, B4, B5, B6, or B7. Otherwise the result is invalid.
+B5 is intentionally a calibrated middle class: it captures a small set of
+compound concrete memory-safety primitives that are stronger than generic
+Class B uncertainty but still weaker than full State A exploit primitives.
+B1 — ACTIVE RCU REFERENCED-OBJECT LIFETIME MISMATCH
+Require ALL or nearly all:
+1. Parent/reference A remains published to RCU readers.
+2. A contains/exposes active structured object B.
+3. Destroy/unregister/delete can drop the reference specifically protecting B
+   BEFORE readers of A are quiescent.
+4. Concurrent readers are explicitly identified as still able to obtain/use
+   A->B after that release point.
+5. The fix moves B's put/release into/after A's RCU callback/grace period or
+   otherwise explicitly extends B lifetime through reader quiescence.
+6. The stale target is active structured state used after lookup, not fixed
+   cleanup storage or passive scalar data.
+7. The supplied evidence does NOT positively establish that the complete
+   primitive requires host-admin-equivalent privilege or a separate one-shot
+   privileged actor.
+Meaningful below-host-admin reachability of both sides strengthens B1, but
+UNKNOWN reachability alone MUST NOT defeat B1 when items 1-6 are directly
+established and the fix explicitly moves the protecting release through the
+RCU grace period.
+Do NOT apply merely because:
+- RCU appears;
+- call_rcu appears;
+- a put appears;
+- object is complex;
+- active_object_uaf_escape=true;
+- final free might occur;
+- controlled reclaim is absent.
+This exception is intentionally narrow.
+B2 — ACTIVE STATE RETIREMENT / TRANSLATION-DOMAIN INVARIANT
+Require ALL or nearly all:
+1. Old state is live/active and used for actual translation/execution.
+2. Normal replacement requires explicit drop/zap/retire/invalidate/synchronize.
+3. Vulnerable path bypasses that required retirement.
+4. New state has materially different semantic/translation meaning OR stale
+   reverse-map/index/secondary tracking remains active.
+5. The fix restores retirement/synchronization before replacement.
+6. Guest/below-host-admin actor can materially drive the transition.
+This includes strong MMU/KVM active-state cases.
+Do NOT apply to ordinary stale metadata, wrong value, passive mapping bugs, or
+virtualization code merely because KVM is involved.
+B3 — CONCRETE CROSS-BOUNDARY SHARED-BACKING WRITE
+Require ALL or nearly all:
+1. Attacker materially controls/chooses written bytes.
+2. Attacker can arrange/materially control the shared/file/pagecache/splice
+   backing relationship.
+3. Required copy/private/writable isolation is missing.
+4. Vulnerable operation directly modifies the shared backing.
+5. The triggering domain has meaningfully less authority than the backing
+   storage domain.
+6. The boundary is technically established, not inferred only from words such
+   as pagecache, splice, namespace, skb, or file-backed.
+If backing arrangement, authority difference, or protected scope is UNKNOWN,
+do NOT automatically apply B3.
+A mere possibility that a file-backed page could belong to something
+privileged is insufficient.
+B4 — CENTRAL AUTHORIZATION / SECURITY-STATE BYPASS
+Require ALL or nearly all:
+1. A central authorization decision or persisted security state is bypassed,
+   skipped, or lost across a lifetime transition.
+2. The bypass applies to meaningfully protected resources outside the
+   attacker's normal authority.
+3. Scope/fan-out is broad or security-sensitive, for example protected process
+   resources, privileged descriptors, credentials, protected files, or
+   equivalent.
+4. The effect is materially stronger than editing one delegated/scoped
+   configuration object.
+A limited cross-netns tunnel/link configuration rewrite does NOT automatically
+qualify. Such a bug may be real and manual-review worthy while still being
+MODERATE7.
+IMPORTANT B4/A4 ANTI-INFLATION RULE FOR LIMITED NETWORK-NAMESPACE CONFIGURATION
+Do NOT classify a limited cross-netns VTI/tunnel/link/configuration rewrite as
+State A/A4 or B4 merely because changing that configuration could plausibly
+redirect traffic, expose plaintext, weaken policy, inject traffic, or disrupt a
+VPN. Those are hypothetical downstream consequences unless the supplied
+patch/advisory/exploit evidence demonstrates them for this vulnerability.
+STRICT EVIDENCE-PROVENANCE RULE FOR THIS B4/A4 DECISION
+Statements found only in PREVIOUS ACTIONABLESCORE ANALYSIS, PREVIOUS TRIAGE/CVSS
+DESCRIPTION, PRIMARY LLM HINTS, a prior model's explanation, or another
+model-generated analysis are NOT authoritative evidence that traffic was
+actually redirected, plaintext was exposed, packets were injected, policy was
+bypassed, credentials/resources were accessed, or serious C/I/A impact occurred.
+Those previous generated analyses may be used as hypotheses to check, but they
+MUST NOT satisfy A4/B4 unless the claimed consequence is independently supported
+by the supplied patch/commit, raw CVE description, authoritative advisory,
+reproducer, exploit, trace, or equivalent non-generated technical evidence.
+For a limited VTI/tunnel/link/configuration bug, wording in a previous generated
+analysis such as "can redirect IPsec traffic", "can expose decrypted plaintext",
+"can inject traffic", "can disrupt the VPN", or a previous C:H/I:H/A:H
+interpretation MUST be discarded as retention evidence when the non-generated
+evidence establishes only the scoped cross-namespace configuration rewrite.
+Merely repeating or elaborating a previous model's speculation does not convert
+that speculation into "demonstrated" A4/B4 evidence.
+A caller having CAP_NET_ADMIN or equivalent authority in one namespace while
+being able to modify one tunnel/link/config object associated with another
+namespace is NOT by itself demonstrated privilege escalation and is NOT by
+itself broad protected-resource compromise.
+For A4/B4 retention, require positive evidence of at least one of:
+* broad protected-resource fan-out beyond the specific tunnel/link/config object;
+* actual access to/read or modification of independently protected resources;
+* demonstrated privilege/authority gain broader than the one scoped object;
+* an authoritative exploit/advisory demonstrating the claimed serious C/I
+  consequence for this bug.
+If the demonstrated primitive is only a scoped cross-netns configuration rewrite
+and those stronger facts are absent, set:
+    downgrade_to_moderate7=true
+    important_grade_primitive_demonstrated=false
+    important_preserving_class_b=false
+Do not label privilege_escalation="demonstrated" merely because a missing
+namespace capability check lets the caller alter that one scoped object.
+B5 — COMPOUND CONCRETE MEMORY-SAFETY PRIMITIVE
+B5 is the balancing category between over-retaining every unresolved UAF/OOB
+and over-downgrading every case that lacks controlled reclaim/arbitrary R/W.
+Use B5 ONLY for one of these two compound profiles.
+B5-UAF — DIRECT REMOTE POST-FREE ACTIVE-OBJECT USE
+Require ALL or nearly all:
+1. An ACTUAL UAF/post-free access is established by patch/trace/commit, not
+   merely "possible UAF".
+2. The stale target is an active structured kernel object.
+3. The demonstrated post-free operation is state-changing:
+   WRITE, lifetime/refcount mutation, or equivalent mutation of the freed
+   object/state.  A stale lookup/read/traversal alone is insufficient.
+4. An unauthenticated or adjacent remote peer can directly drive the vulnerable
+   protocol/connection path after normal service exposure.
+5. The remote actor can cheaply repeat the triggering sequence.
+6. Host-admin-equivalent attacker privilege is not required.
+7. The bug is not only a one-shot device removal/suspend/privileged teardown
+   condition.
+When B5-UAF applies:
+    active_object_uaf_escape=true
+    important_preserving_class_b=true
+    important_grade_primitive_demonstrated=false
+    downgrade_to_moderate7=false
+Controlled reclaim or arbitrary write is NOT required merely for this veto,
+BUT a post-free WRITE by itself is also NOT sufficient.  The state-changing
+operation must provide meaningful exploitation leverage beyond the bare fact
+that one fixed field is written through a stale pointer.
+For B5-UAF, require at least one additional exploitation-relevant property such
+as:
+* attacker materially controls the stale written contents, target, offset, or
+  range;
+* attacker can influence reclaim/replacement/layout of the freed object;
+* the post-free operation consumes or mutates callback/ops/refcount/credential/
+  security-sensitive structured state after reuse;
+* the stale write survives as a reusable corruption primitive rather than merely
+  touching old packet/storage bytes;
+* authoritative exploit/advisory evidence connects the stale write to a stronger
+  confidentiality/integrity/LPE consequence.
+A fixed-field stale write into an old freed packet/SKB data buffer does NOT
+automatically satisfy B5-UAF merely because the trigger is remote and repeatable.
+For example, writing one fixed UDP-header field (such as a destination port)
+through a stale pointer, with no controlled reclaim, no attacker-selected target
+or useful payload/range control, and no demonstrated stronger non-crash
+consequence, normally belongs in State C / MODERATE7.
+NARROW ACTIVE-CONTROL-OBJECT EXCEPTION TO THE FIXED-FIELD RULE
+Do NOT treat every fixed-value post-free write as equivalent to the passive
+packet/SKB case above.  A fixed-value write may still satisfy B5-UAF when ALL or
+nearly all of the following are positively established:
+* the stale pointer refers to the freed ACTIVE STRUCTURED CONTROL OBJECT itself,
+  not merely detached packet payload/data backing storage;
+* execution continues through that object's own connection/lifetime/control path
+  after the object has been freed;
+* the demonstrated post-free operation directly mutates a structured field of
+  that freed control object;
+* an unauthenticated or adjacent remote peer directly drives the object-lifetime
+  path and can repeat it;
+* host-admin-equivalent attacker privilege is not required.
+For this narrow profile, absence of controlled reclaim, attacker-selected write
+contents, or arbitrary target selection does NOT by itself force State C.  The
+important distinction is that the stale operation is a direct post-free mutation
+of the freed active control object's own structured state in its live lifecycle
+path.
+This exception is intended for cases such as a remotely driven endpoint/control
+object UAF where the post-free operation writes even a fixed value (for example
+NULL) into a field of that freed active object.
+PACKET-CARRIER EXCLUSION (FINAL FOR B5-UAF):
+`struct sk_buff` / SKB, `skb->data`, packet payload backing, and TCP/UDP/IP/other
+protocol-header storage are packet-carrier/data objects for this rule, NOT the
+"active structured control object" exception, even though `sk_buff` is itself a
+kernel struct with a lifetime and metadata. A stale fixed-field write into an SKB
+or its protocol headers (for example a UDP destination-port rewrite) MUST remain
+State C / MODERATE7 unless some OTHER A/B condition independently establishes
+controlled reclaim, useful target/content control, sensitive structured reuse,
+or a demonstrated stronger consequence.
+The active-control exception is reserved for a separately lifecycle-managed
+endpoint/session/connection/control object whose state persists semantically
+across packet processing (for example an endpoint/control block), where the
+post-free operation mutates that freed object's own control state. Packet objects
+being carried/processed are explicitly excluded.
+Do NOT apply B5-UAF to:
+- remote active-object UAF whose demonstrated stale use is only lookup/read;
+- remote list corruption where actual free + post-free mutation is not shown;
+- local-only post-free writes;
+- generic KASAN UAF without remote repeatable state-changing stale use.
+This distinction intentionally allows remote lookup-only UAF cases to remain
+MODERATE7 while retaining stronger remotely driven post-free mutation cases.
+B5-OOB — ATTACKER-DRIVEN HEAP/SLAB BOUNDS TRANSITION
+Require ALL or nearly all:
+1. A real kernel HEAP/SLAB out-of-bounds WRITE is directly established.
+2. Attacker-controlled or attacker-influenced input changes a size, bound,
+   count, or index used by the vulnerable code.
+3. The bug applies that NEW attacker-influenced bound/state while operating on
+   an OLD smaller allocation, so the attacker meaningfully influences how far
+   the write/update/cleanup operation proceeds beyond the allocation.
+4. The corruption is deterministic once the inconsistent old-allocation/new-
+   bound state is created.
+5. The attacker can repeat the relevant userspace/guest API below
+   host-admin-equivalent privilege once the subsystem/device is exposed.
+6. The attack is not primarily physical/peripheral-only.
+7. The primitive provides meaningful corruption leverage beyond a copy that
+   simply runs uncontrollably until fault.
+CRITICAL DISTINCTION:
+A bounds transition may satisfy B5-OOB when attacker influence changes the
+effective OOB extent/range in a way that produces a reusable corruption
+primitive.
+But a GIANT RUNAWAY COPY normally does NOT satisfy B5-OOB when:
+- malformed input causes signed underflow/sign extension to a huge size_t;
+- memcpy/memmove has a fixed source and fixed destination;
+- the attacker controls only the legitimate beginning of the source buffer;
+- bytes copied after the legitimate source are unrelated kernel memory rather
+  than attacker-selected payload;
+- the copy is not usefully stoppable/boundable by the attacker;
+- the demonstrated behavior is that the copy faults/crashes after running far
+  out of bounds;
+- no useful target, security-sensitive object, or post-corruption state is
+  established before fault.
+Remote or pre-auth reachability does NOT convert this crash-dominant runaway
+copy into an Important-preserving primitive by itself.
+For such a runaway-copy case, normally use:
+    important_preserving_class_b=false
+    important_grade_primitive_demonstrated=false
+    downgrade_to_moderate7=true
+while a separate KP classifier may keep KERNEL_PANIC=true, producing
+MODERATE_KPANIC operationally.
+When B5-OOB applies:
+    controlled_corruption_primitive may be false OR true depending on payload/
+    target control;
+    strong_uncontrolled_exploitation_primitive=false unless State A is met;
+    important_preserving_class_b=true;
+    important_grade_primitive_demonstrated=false;
+    downgrade_to_moderate7=false.
+Do NOT apply B5-OOB to:
+- fixed 8-byte/16-byte adjacent overwrite;
+- fixed constrained stack overwrite;
+- OOB READ only;
+- parser walk with merely possible later corruption;
+- physical/malicious-USB-only overflow;
+- giant underflow/sign-extension memcpy/memmove with fixed source/destination
+  and no useful out-of-bounds payload/target control;
+- cases where attacker controls the request but not meaningful exploitation
+  leverage from the mismatched bound/range.
+B5 does NOT claim final HIGH impact is proven.
+It means the compound primitive is strong enough that automatic downgrade is
+not appropriate, while manual Important-vs-Moderate review remains justified.
+B6 — USER-MAPPABLE FREED-PAGE / ADDRESS-SPACE LIFETIME ESCAPE
+Use B6 for a narrow local page-lifetime primitive stronger than ordinary UAF.
+Require ALL or nearly all:
+1. A kernel mapping path is installing/walking backing pages for a userspace
+   VMA.
+2. A concurrent attacker-driven lifetime-ending operation can free the same
+   backing object/page while that mapping operation is still in progress.
+3. The evidence establishes that a stale page/PTE may be inserted or retained
+   in the user VMA after the backing page has been freed.
+4. The stale userspace mapping can survive beyond the immediate vulnerable
+   call, rather than being only an internal transient pointer.
+5. The same local below-host-admin actor can drive both mapping and object
+   destruction/lifetime ending.
+6. The race is repeatable even if the window is narrow.
+When B6 applies:
+    active_object_uaf_escape=true
+    important_preserving_class_b=true
+    important_grade_primitive_demonstrated=false
+    downgrade_to_moderate7=false
+Controlled reclaim, demonstrated disclosure, arbitrary R/W, or LPE is NOT
+required merely for this preservation veto.
+Do NOT apply B6 when the only demonstrated consequence is an immediate
+vmalloc_to_page()/NULL/fault path and no user-visible stale mapping can escape.
+B7 — ACTIVE STORAGE MAPPING / COW OWNERSHIP INVARIANT
+Use B7 for a narrow filesystem/storage ownership primitive.
+Require ALL or nearly all:
+1. A below-host-admin local actor can perform the relevant file I/O.
+2. The affected path uses shared/reflink/COW extent state or equivalent
+   ownership-sensitive physical mapping.
+3. A lock drop/reacquire or concurrent transition allows the physical/extent
+   mapping to change.
+4. Vulnerable code later continues using the OLD mapping after a completed
+   COW/remap/refcount transition.
+5. The stale mapping is consumed for shared-block decisions, write placement,
+   or final iomap/direct-I/O mapping.
+6. The same actor/workload can repeatedly drive the racing I/O.
+7. The stale mapping can cause an authorized logical-file write to operate on
+   physical/shared storage whose current ownership/COW state no longer matches
+   that authorization.
+When B7 applies:
+    important_preserving_class_b=true
+    important_grade_primitive_demonstrated=false
+    downgrade_to_moderate7=false
+A named second victim file or completed privilege-escalation exploit is NOT
+required merely to veto automatic downgrade.
+Do NOT apply B7 merely because:
+- XFS/reflink/COW is mentioned;
+- generic filesystem corruption is possible;
+- a stale extent exists but is not used for an actual write/I/O decision;
+- cross-file corruption is only an abstract possibility unsupported by the
+  mapping/COW mechanics.
+MANDATORY DOWNGRADE CALIBRATION
+The following are normally STATE C / MODERATE7 unless a separate State A or
+B1-B7 condition is established.
+C1 — BOUNDED / ADJACENT OOB WRITE
+A fixed or bounded OOB write is NOT Important-grade merely because:
+- it is kernel memory;
+- an ordinary local user can trigger it;
+- it is deterministic;
+- the attacker influences input.
+Before classifying as merely fixed/constrained, explicitly ask whether B5-OOB
+applies: does attacker input control the NEW bound/count/index that is wrongly
+used to walk an OLD smaller heap/slab allocation, thereby influencing the
+overflow range itself?
+Examples:
+- 16-byte copy into an 8-byte IV -> fixed 8-byte adjacent overwrite;
+- fixed-length overwrite past a specific struct;
+- constrained stack overwrite near the end of a register array.
+For important_grade_primitive_demonstrated=true require materially stronger
+leverage:
+- attacker-selected or broad target/range;
+- useful attacker-controlled contents;
+- sensitive target;
+- substantially variable overwrite;
+- return/control data targeting;
+- another direct security primitive.
+Set:
+    memory_corruption="real_but_constrained"
+or, if primarily fatal:
+    memory_corruption="crash_oriented_corruption"
+Do NOT set:
+    controlled_corruption_primitive=true
+merely because attacker controls the triggering request.
+C2 — REMOTE / ADJACENT MEMORY SAFETY
+Remote reachability is an ATTACK VECTOR, not primitive strength.
+Normally downgrade absent stronger evidence:
+- remote UAF with no controlled reclaim/useful stale-field consumption;
+- remote list corruption whose demonstrated effect is crash;
+- Bluetooth/adjacent race affecting active list/object state;
+- remote OOB read with no demonstrated disclosure;
+- remote parser bounds bug with only possible later corruption.
+Do NOT set important_grade_primitive_demonstrated=true merely from:
+    remote + UAF
+    remote + OOB
+    remote + active object
+    unauthenticated + parser memory safety
+Do NOT use important_preserving_class_b merely because final remote
+exploitability is unresolved.
+HOWEVER, explicitly test B5-UAF before downgrade.  A direct remote actual UAF
+with a demonstrated post-free WRITE/state mutation and cheap repeatability is
+not the same as a remote lookup-only UAF or speculative list corruption.
+C3 — DOUBLE FREE / REPEATED RELEASE
+A concrete second free/release proves a real lifetime bug and may strongly
+support DoS/KERNEL_PANIC.
+It does NOT by itself preserve IMPORTANT.
+Normally downgrade when:
+- no controlled reclaim;
+- no attacker-shaped replacement;
+- no useful post-free structured read/write;
+- no callback/ops/credential influence;
+- second operation is another free/refcount mutation;
+- complete trigger includes error/cleanup/teardown conditions;
+- attacker control of complete trigger is unknown or constrained.
+Do NOT classify generic double-free uncertainty as State B.
+C4 — ACTIVE-OBJECT UAF / STALE WRITE
+A real active-object UAF, hlist/list operation, stale write into freed slab,
+or wrong-slab-free concern is still MODERATE7 when exploitation leverage is
+not demonstrated.
+"active structured object" is not itself a retention signal.
+Normally downgrade if:
+- controlled reclaim false;
+- arbitrary_write false;
+- attacker-shaped replacement false;
+- no security-sensitive field consumption;
+- no B1 RCU referenced-object mismatch;
+- no B5-UAF direct remote post-free state-changing profile.
+A LOCAL stale hlist_del_rcu() write or wrong-slab-free possibility can be
+serious and require review without automatically being IMPORTANT.  Do not
+generalize that local calibration to a directly remotely driven actual UAF
+whose post-free operation mutates the freed active object.
+C5 — REMOTE PARSER OOB READ / POTENTIAL CORRUPTION
+Attacker-controlled length causing OOB parsing is MODERATE7 when:
+- actual primitive is OOB read/walk;
+- disclosure to attacker is not established;
+- write target is not established;
+- later memory corruption is phrased as may/could/potential;
+- no A5 active semantic reinterpretation exists.
+Do NOT transform:
+    "attacker-controlled length + possible later corruption"
+into:
+    important_preserving_class_b=true.
+C6 — PHYSICAL / MALICIOUS DEVICE HEAP OVERFLOW
+A malicious USB/peripheral can provide substantial attacker-controlled data
+and length. This is a serious kernel attack surface.
+However physical/peripheral presentation is a material reachability constraint.
+Normally MODERATE7 when:
+- attack requires attaching/presenting a malicious peripheral;
+- no software-only below-host-admin trigger is shown;
+- final impact beyond crash is speculative;
+- no sensitive target/control-flow overwrite is established;
+- no A1-A9 exploit primitive is demonstrated.
+Do NOT treat:
+    "attacker needs no OS account"
+as equivalent to ordinary local software PR:L/PR:N reachability.
+A large raw overwrite may remain manual-review worthy without automatically
+being IMPORTANT.
+C7 — LIMITED CROSS-NAMESPACE AUTHORIZATION BYPASS
+A missing CAP_NET_ADMIN check across network namespaces is real.
+But normally downgrade when demonstrated consequence is limited to:
+- rewriting one tunnel/link/configuration object;
+- routing/tunnel disruption;
+- scoped policy manipulation;
+- low integrity/availability effect;
+- no root/LPE;
+- no protected data theft;
+- no broad cross-tenant resource compromise.
+Do NOT set demonstrated_security_boundary_compromise=true merely because any
+namespace boundary is crossed.
+Use true only when the demonstrated scope itself is IMPORTANT-grade.
+C8 — FILE/PAGECACHE/SHARED-BACKING CORRUPTION
+Do NOT retain IMPORTANT merely because a write can touch a file-backed or
+pagecache page.
+Normally downgrade if ANY central B3 fact is unresolved:
+- attacker arrangement of backing;
+- authority difference;
+- protected victim;
+- below-host-admin complete trigger;
+- attacker-controlled useful bytes.
+Prior privileged rule/policy setup is a meaningful constraint.
+B3 applies only when the cross-boundary backing relationship itself is
+positively established.
+C9 — STACK OOB WRITE
+"kernel stack overwrite" is not automatically Important-grade.
+Characterize:
+- write size;
+- content control;
+- offset/target control;
+- whether return address/control data or security-sensitive state is reachable.
+A fixed 16-byte overwrite with constrained register-derived destination and no
+useful payload/target proof may remain MODERATE7.
+C10 — GENERIC CLASS B UNCERTAINTY
+The following sentence is NOT a valid KEEP reason:
+    "A concrete unresolved Class B primitive remains and exploitation cannot be
+     ruled out."
+That is exactly what MODERATE7/manual review is for.
+State B requires B1-B7 specifically.
+HIGH IMPACT FIELDS
+high_impact_demonstrated=true only when final high-impact consequence itself
+is established, e.g. LPE, serious C/I, protected-object compromise.
+A strong primitive may justify State A even with:
+    high_impact_demonstrated=false
+    high_impact_speculative=true
+But the primitive itself must meet A1-A9.
+Do not label integrity "high" merely because arbitrary corruption is
+theoretically possible.
+Use privilege_escalation:
+demonstrated
+strongly_implied
+plausible_only
+not_supported
+"plausible_only" does not retain IMPORTANT.
+REACHABILITY AND CONSTRAINTS
+required_privilege:
+none
+ordinary_user
+reduced_or_namespaced_capability
+host_admin_equivalent
+unknown
+reachability:
+remote_unauthenticated
+remote_conditional
+guest_to_host
+local_unprivileged
+local_reduced_privilege
+local_admin
+physical_or_peripheral
+unknown
+If output schema cannot accept physical_or_peripheral in reachability, use
+"unknown" and state the physical/peripheral constraint explicitly in
+downgrade_constraints_reason.
+Rules:
+- UNKNOWN is neutral.
+- Remote does not equal strong primitive.
+- Reduced namespace capability does not equal host root.
+- A race does not automatically reduce severity, but repeatability also does
+  not automatically increase primitive strength.
+- Subsystem applicability is not rarity.
+- Physical/peripheral requirement IS a material constraint.
+- Prior privileged setup is material when a separate privileged actor must
+  configure the vulnerable path.
+- Do not triple-count one prerequisite.
+MEMORY CORRUPTION ENUM CALIBRATION
+Use:
+"strong_attacker_influenced"
+ONLY when attacker leverage over corruption is materially useful, not merely
+because attacker input causes corruption.
+"real_uaf_or_lifetime_violation"
+for established UAF/lifetime bugs without sufficient directed corruption.
+"real_but_constrained"
+for bounded/fixed OOB writes, constrained stale writes, or corruption with
+limited target/payload.
+"crash_oriented_corruption"
+for list poison/double free/invalid state whose demonstrated value is mainly
+DoS/fatal behavior.
+"generic_bug_class_only"
+when concrete corruption operation is not established.
+"none"
+when not memory safety.
+BOOLEAN FIELD CALIBRATION
+controlled_corruption_primitive=true requires meaningful exploitation control
+over target/range/content, not just trigger control.
+strong_uncontrolled_exploitation_primitive=true requires a strong structured
+primitive meeting A5/A9 or equivalent, not merely remote reachability or active
+object UAF.
+active_object_uaf_escape=true is structural only. It does NOT preserve
+IMPORTANT by itself.
+active_rcu_lifetime_mismatch=true only for B1 mechanics.
+semantic_reinterpretation_primitive=true only for A5/B2-like active semantic
+reinterpretation, not parser length bugs.
+demonstrated_security_boundary_compromise=true only when demonstrated scope
+itself is sufficiently serious for IMPORTANT.
+important_preserving_class_b=true ONLY for B1-B4.
+important_grade_primitive_demonstrated=true ONLY for State A.
+DECISION ORDER
+STEP 1
+Describe the exact demonstrated primitive without severity adjectives.
+STEP 2
+Remove crash/DoS and paranoid CVSS from consideration.
+STEP 3
+Test A1-A9.
+If YES -> State A / KEEP.
+STEP 4
+If State A absent, test B1-B7.
+If a SPECIFIC preservation profile is positively established -> State B / KEEP.
+STEP 5
+Apply C1-C10 calibration.
+If none of A/B survived -> State C / DOWNGRADE.
+STEP 6
+Apply reachability constraints to confidence and final decision.
+Reachability can strengthen or weaken an already identified primitive, but
+cannot substitute for primitive strength.
+MANDATORY DEFAULT-BIAS CHECK
+If all are true:
+    high_impact_demonstrated=false
+    important_grade_primitive_demonstrated=false
+and NO B1-B7 profile is positively established,
+and the proposed KEEP reason contains mainly:
+    real corruption
+    remote reachability
+    local unprivileged reachability
+    active object
+    UAF
+    double free
+    OOB
+    list corruption
+    parser bug
+    cross-netns scope
+    file-backed corruption
+    possible LPE
+    unresolved exploitability
+    requires manual review
+then DEFAULT to:
+    downgrade_to_moderate7=true
+unless decision_reason can explicitly identify B1, B2, B3, B4, B5, B6, or B7 and
+list the facts satisfying that preservation profile.
+REGRESSION GUARDS — DO NOT OVER-DOWNGRADE
+Do NOT let the stronger downgrade bias erase these kinds of cases:
+1. Direct attacker-selected kernel mapping/read/write primitive.
+2. Attacker-controlled heap OOB with meaningful target/offset/length/content
+   leverage beyond a fixed adjacent overwrite.
+3. Protected-file/object overwrite or explicit authorization bypass producing
+   access to broadly protected resources.
+4. Active RCU referenced-object release-before-quiescence exactly satisfying B1.
+5. KVM/MMU active-state retirement and semantic-domain transition exactly
+   satisfying B2.
+6. Central process/security-state authorization bypass exactly satisfying B4.
+7. Direct remote actual active-object UAF with demonstrated post-free
+   state-changing use exactly satisfying B5-UAF.
+8. Deterministic attacker-driven heap/slab old-allocation/new-bound OOB write
+   exactly satisfying B5-OOB.
+9. Supplied authoritative exploit evidence demonstrating root/LPE or protected
+   target compromise.
+These remain IMPORTANT when established.
+PYTHON MACHINE-PARSING CONTRACT
+This response is consumed programmatically by the Aegis post-reconciliation
+pipeline.
+Return exactly ONE JSON object and nothing else:
+- no Markdown code fence;
+- no prose before or after JSON;
+- use JSON booleans true/false, not quoted strings;
+- emit every key from the schema below on every response;
+- confidence must be a JSON number from 0.0 through 1.0;
+- final_bucket must be exactly "IMPORTANT retained" or "MODERATE7";
+- downgrade_to_moderate7=true means this stage recommends the old
+  request_llm_afterpushedtohigh() HIGH -> MODERATE7 correction.
+The caller independently enforces the legacy Perl numeric/state gates:
+- the issue must previously have been pushed to HIGH/IMPORTANT;
+- current impact must still be IMPORTANT;
+- operational KPANIC must still be present;
+- effective CVSS must be < 10;
+- previous conservative ActionableScore must be <= 9.
+Do not try to emulate or override those numeric gates inside this prompt.
+Your task is only the technical KEEP-vs-DOWNGRADE judgment.
+OUTPUT
+Return JSON only with exactly this structure:
+{
+  "downgrade_to_moderate7": true,
+  "confidence": 0.0,
+  "evidence_level": "demonstrated|explicit|strongly_implied|speculative|none",
+  "observed_vulnerability": "brief exact primitive",
+  "important_basis": "strongest positive reason that could support IMPORTANT; say none beyond generic memory-safety/reachability if appropriate",
+  "high_impact_demonstrated": false,
+  "high_impact_speculative": true,
+  "demonstrated_impact": {
+    "confidentiality": "high|low|none|unknown",
+    "integrity": "high|low|none|unknown",
+    "availability": "high|low|none|unknown",
+    "privilege_escalation": "demonstrated|strongly_implied|plausible_only|not_supported"
+  },
+  "reachability": "remote_unauthenticated|remote_conditional|guest_to_host|local_unprivileged|local_reduced_privilege|local_admin|unknown",
+  "required_privilege": "none|ordinary_user|reduced_or_namespaced_capability|host_admin_equivalent|unknown",
+  "memory_corruption": "strong_attacker_influenced|real_uaf_or_lifetime_violation|real_but_constrained|crash_oriented_corruption|generic_bug_class_only|none|unknown",
+  "primitive_analysis": {
+    "controlled_corruption_primitive": false,
+    "strong_uncontrolled_exploitation_primitive": false,
+    "controlled_reclaim_demonstrated": false,
+    "arbitrary_write_demonstrated": false,
+    "active_object_uaf_escape": false,
+    "active_rcu_lifetime_mismatch": false,
+    "semantic_reinterpretation_primitive": false,
+    "guest_triggerable_host_bug": false,
+    "guest_influenced_host_corruption": false,
+    "controlled_guest_to_host_corruption_primitive": false,
+    "important_preserving_class_b": false,
+    "important_grade_primitive_demonstrated": false
+  },
+  "important_reducing_constraints": {
+    "rare_or_nondefault_configuration": false,
+    "special_hardware_or_subsystem": false,
+    "additional_failure_or_error_path": false,
+    "race_or_timing_dependency": false,
+    "multiple_attack_preconditions": false,
+    "requires_prior_privileged_setup": false,
+    "impact_beyond_dos_is_speculative": false,
+    "paranoid_cvss_is_primary_high_signal": false
+  },
+  "important_preserving_signals": {
+    "direct_unprivileged_kernel_memory_corruption": false,
+    "direct_remote_kernel_memory_corruption": false,
+    "guest_to_host_memory_corruption": false,
+    "active_object_uaf_escape": false,
+    "active_rcu_lifetime_mismatch": false,
+    "semantic_reinterpretation_primitive": false,
+    "controlled_or_strong_corruption_primitive": false,
+    "demonstrated_security_boundary_compromise": false,
+    "important_preserving_class_b": false,
+    "important_grade_primitive_demonstrated": false
+  },
+  "decision_reason": "state A, B1-B7, or C and explain using demonstrated mechanics",
+  "high_impact_demonstrated_reason": "separate final demonstrated impact from speculative worst case",
+  "downgrade_constraints_reason": "explain reachability/configuration/privilege/hardware/race constraints",
+  "final_bucket": "IMPORTANT retained|MODERATE7"
+}
+BALANCED CONSISTENCY WITH PRIOR TECHNICAL TRIAGE
+Previous ActionableScore NUMBERS remain non-authoritative.
+However, when prior technical triage explicitly identifies ALL of:
+- a concrete primitive matching B1-B5 mechanics;
+- ImportantCandidate=YES;
+- AutoDowngradeAllowed=NO;
+- and detailed reasoning for the same primitive that is consistent with the
+  supplied patch/trace;
+do not dismiss those technical findings merely because the current filter has
+a stronger downgrade bias.
+Re-evaluate the underlying mechanics independently.  If they really satisfy
+B1-B7, preserve.  If they do not, downgrade.
+This is a consistency check, not a numeric-score rule.
+FINAL SELF-CHECK
+Before returning JSON:
+1. If downgrade=false, did I positively identify State A or exactly
+   B1/B2/B3/B4/B5/B6/B7?
+   If NO -> recompute to downgrade=true.
+2. Did I use "unresolved", "cannot rule out", or "manual review required" as
+   a KEEP reason? If yes -> recompute.
+3. Did I call a bounded adjacent OOB write controlled merely because attacker
+   triggers it? If yes -> set controlled=false and reassess.
+4. Did I call remote UAF/OOB/parser bug Important only because remote? If yes
+   -> downgrade unless A/B exists.
+5. Did I preserve double free without useful reclaim/reuse leverage? If yes
+   -> normally downgrade.
+6. Did I preserve active-object UAF solely because object is active/structured?
+   If yes -> downgrade unless A9 or B1 exists.
+7. Did I preserve limited cross-netns tunnel/config change solely because a
+   namespace boundary exists? If yes -> normally downgrade.
+8. Did I preserve file-backed corruption while attacker backing control,
+   authority difference, protected victim, or below-host-admin trigger is
+   unresolved? If yes -> normally downgrade.
+9. Did I preserve a malicious USB/peripheral overflow solely because its raw
+   overwrite is large? If yes -> account for physical/peripheral reachability
+   and require A1-A9 for KEEP.
+10. Did I preserve a fixed/constrained kernel-stack overwrite without useful
+    content/target/control-flow leverage? If yes -> normally downgrade.
+11. If important_preserving_class_b=true, does decision_reason literally name
+    B1, B2, B3, B4, B5, B6, or B7 and enumerate the matching facts? If no -> invalid;
+    recompute to false.
+12. Did I downgrade a directly remote-triggered ACTUAL UAF with a demonstrated
+    post-free WRITE/state mutation solely because controlled reclaim is absent?
+    If yes -> evaluate B5-UAF.
+13. Did I downgrade a deterministic heap/slab OOB write where attacker input
+    controls the new bound/count/index that is incorrectly applied to an old
+    smaller allocation? If yes -> evaluate B5-OOB.
+13b. Did I KEEP IMPORTANT merely because a remote/pre-auth malformed length
+     sign-extends into a gigantic memcpy size, while source and destination are
+     fixed, most OOB payload is not attacker-controlled, and the operation
+     simply runs until fault? If yes -> this is crash-dominant runaway copy,
+     not B5-OOB; downgrade to MODERATE7.
+14. Did I use B5 for a fixed adjacent overwrite, stack overwrite, OOB read,
+    remote lookup-only UAF, local stale write, or physical peripheral overflow?
+    If yes -> remove B5.
+15. Did I downgrade a local UAF where a freed backing page/PTE may escape into
+    and remain mapped in a user VMA? If yes -> explicitly evaluate B6.
+16. Did I downgrade a reflink/COW filesystem race where stale physical mapping
+    survives a completed COW/refcount transition and is used for the final
+    write/I/O mapping? If yes -> explicitly evaluate B7.
+17. Did I apply B6 merely to an immediate crash-only stale page lookup, or B7
+    merely to generic filesystem corruption? If yes -> remove the profile.
+18. If important_grade_primitive_demonstrated=true, can I identify a concrete
+    A1-A9 primitive rather than generic "real kernel memory corruption"?
+    If no -> set false and reassess.
+The goal is not to minimize severity.
+The goal is to distinguish:
+    "must be automatically IMPORTANT"
+from:
+    "serious enough for mandatory human review as MODERATE7."
+The supplied vulnerability evidence and prior analysis follow below:

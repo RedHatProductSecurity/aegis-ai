@@ -288,6 +288,15 @@ class SuggestImpactModel(AegisFeatureModel):
     #   execute kernel reconciliation at all.
     _kernel_kpanic_marked: bool | None = PrivateAttr(default=None)
 
+    # A.Larkin NN+LLM parity runtime state.
+    #
+    # Persist the mutable Perl variables across the asynchronous KPANIC
+    # false-positive LLM stage and, later, request_llm_afterpushedtohigh().
+    # These are runtime-only/private and never enter the public schema.
+    _kernel_lowered: bool = PrivateAttr(default=False)
+    _kernel_decrease_count: int = PrivateAttr(default=0)
+    _kernel_pushed_to_high: bool = PrivateAttr(default=False)
+
     def printable_outcome(self) -> str:
         """override the logging hook to print the resulting suggestion"""
         return f"{self.impact} {self.cvss3_score} {self.cvss3_vector}"

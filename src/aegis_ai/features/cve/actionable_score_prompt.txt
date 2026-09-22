@@ -1,25 +1,12 @@
 You are assisting with Linux kernel CVE triage.
 Analyze the CVE description, commit message, patch, and any supplied surrounding
 context below and compute an ActionableScore using the rules in this prompt.
-The ActionableScore is NOT a replacement for CVSS. It is an additional practical
-kernel-security triage score intended to distinguish:
-* ordinary Moderate / Low-like issues;
-* actionable Moderate issues that should not be automatically closed;
-* Important-class kernel vulnerabilities;
-* high-end Important / possible Critical candidates.
-The score is deliberately designed to reduce false-negative downgrades for
-kernel memory corruption, lifetime/ownership bugs, filesystem ownership/COW
-violations, security-boundary bypasses, and other bug classes that are often
-underestimated from a small patch alone.
-The scoring system intentionally prefers limited false-positive escalation over
-false-negative automatic downgrades when a concrete kernel corruption,
-ownership, lifetime, semantic reinterpretation, or security-boundary primitive
-has been established but the complete exploitation chain is not yet known.
-However, the score must NOT become aggressive merely because a vulnerability
-contains a UAF, involves a complex kernel object, occurs in networking/BPF, or
-could theoretically support stronger exploitation.
-A demonstrated crash-only stale-object path must remain distinguishable from a
-demonstrated exploitation primitive.
+ActionableScore supplements CVSS and separates ordinary Low/Moderate, actionable
+Moderate, Important, and high-end Important/Critical candidates. It is conservative
+against false-negative downgrades for established corruption/lifetime/ownership/COW/
+boundary primitives, but must not inflate severity from UAF labels, complex objects,
+networking/BPF context, or theoretical exploitation. Keep crash-only stale-object
+paths distinct from demonstrated exploitation primitives.
 HIGH-PRIORITY EVIDENCE FIREWALL (APPLIES BEFORE ALL SCORING)
 These rules override any later example that could be read more aggressively.
 They are especially important when the supplied context contains a CVSS vector,
@@ -36,7 +23,7 @@ paranoid, or model-generated CVSS vector contains:
 * AC:L or AC:H.
 A CVSS metric may be quoted only as diagnostic context unless the underlying
 technical fact is independently established by the patch, call path, reproducer,
-authoritative advisory prose, or other supplied evidence.
+authoritative advisory prose, or other evidence.
 Examples:
 * CVSS A:H does NOT prove a reliable kernel crash.
 * CVSS C:H does NOT prove disclosure.
@@ -87,13 +74,174 @@ When the conservative score/bucket is Moderate-like and the paranoid score is
 higher only because of unresolved or speculative consequences, do NOT set
 AutoDowngradeAllowed=NO solely from the paranoid interpretation.
 To block downgrade, identify at least one concrete Important-preserving fact from
-the supplied technical evidence. The explanation MUST name that fact. If no such
+the technical evidence. The explanation MUST name that fact. If no such
 fact can be named without words such as "could", "may", "potentially", or by
 repeating CVSS metrics, prefer AutoDowngradeAllowed=YES.
+VALIDATION-DERIVED GEMINI CALIBRATION
+These rules refine scoring without changing the set of positive/negative signal
+types.
+A. PRIMARY LLM HINTS ARE HYPOTHESES, NOT AUTHORITATIVE EVIDENCE
+Text explicitly supplied as "PRIMARY LLM HINTS", previous-model reasoning,
+primary model CVSS explanation, or another generated analysis is useful context
+but is NOT itself authoritative advisory/exploit evidence. Verify its claimed
+C/I impact, arbitrary write, code execution, sensitive-data theft, boundary
+crossing, privilege level, and exploit chain against the patch, commit, raw CVE
+description, call path, reproducer, or separately identified authoritative
+advisory/exploit evidence before scoring those signals.
+Do not recursively amplify one model's speculation into another model's proof.
+B. CLASS_C LOW-END ANCHOR
+When ALL are true:
+* PrimitiveClass=CLASS_C or NONE;
+* demonstrated effect is correctness failure, invalid dereference, ordinary
+  crash/DoS, or similarly bounded invalid state;
+* no useful kernel corruption primitive, authorization bypass, disclosure,
+  protected-state modification, or privilege escalation is established;
+* ImportantCandidate=NO;
+* AutoDowngradeAllowed=YES;
+then the final score should normally be 0-2.
+A score of 3 requires at least one independent reason beyond the crash/correctness
+fact itself, such as positively established unauthenticated remote reachability,
+a meaningful security-boundary effect, or another distinct actionable signal.
+Do not use "manual review recommended" as that extra reason.
+B1. COMMON DEPLOYMENT / BROAD SUBSYSTEM IS EXPOSURE, NOT PRIMITIVE STRENGTH
+For a CLASS_C/NONE crash/correctness-only case that satisfies the low-end anchor
+above, do NOT add a separate broad/default/common-subsystem point merely because
+the affected driver, filesystem, networking stack, hypervisor path, graphics
+driver, or other subsystem is widely deployed or commonly enabled.
+Broad deployment changes EXPOSURE.  It does not by itself make the demonstrated
+primitive stronger.
+In particular, when ALL are true:
+* PrimitiveClass=CLASS_C or NONE;
+* the demonstrated result is crash/DoS, invalid state, or correctness failure;
+* no useful corruption primitive, confidentiality/integrity consequence,
+  authorization/security-boundary bypass, or protected-state modification is
+  established;
+* ImportantCandidate=NO;
+* AutoDowngradeAllowed=YES;
+then "common subsystem", "widely deployed", "default hardware", or equivalent
+deployment prevalence MUST contribute ZERO additional ActionableScore points
+unless it independently establishes a distinct attacker-useful property such as
+otherwise-unproven reachability.
+Do not count the same ordinary local reachability twice as both:
+* local unprivileged trigger; and
+* common/default subsystem exposure.
+A common i915/KVM/network/filesystem path with only a demonstrated crash or
+correctness failure should therefore normally remain ActionableScore 0-2 unless
+another independent actionable signal exists.
+B2. ARCHITECTURAL / CPU-EMULATION CORRECTNESS IS NOT AN AUTHORIZATION BYPASS
+A missing architectural exception or incorrect instruction-emulation result is
+NOT, by itself, an authorization/security-boundary bypass.  In particular, a
+guest instruction that should have raised #UD/#GP or another architectural
+exception but is instead emulated/continued does NOT receive the +2
+"Concrete Authorization Decision Bypass" signal merely because the expected
+DENY/fault did not occur.
+Treat this class as CLASS_C/NONE correctness behavior unless supplied technical
+evidence independently establishes at least one stronger consequence, such as:
+* guest access to host memory or another protected host resource;
+* execution of a host-privileged operation that the guest was not authorized to
+  perform;
+* modification/read of protected host state;
+* guest-to-host memory corruption;
+* demonstrated host privilege escalation, disclosure, or another concrete
+  security-boundary escape.
+Do NOT award points merely because:
+* KVM/hypervisor code is involved;
+* the guest can issue the instruction directly;
+* the instruction is architecturally invalid in the current CPU state;
+* the host fails to inject the expected #UD/#GP;
+* continued guest execution is called a "bypass" in generic prose;
+* a guest-to-host DoS is hypothetically possible but no host crash/fault path is
+  demonstrated.
+For an INVLPGA/#UD-style emulation bug whose demonstrated result is only wrong
+guest architectural behavior or bounded guest disruption, with no host memory
+corruption, protected-resource access, disclosure, LPE, or demonstrated host
+crash:
+* PrimitiveClass should normally be CLASS_C or NONE;
+* ImportantCandidate should normally be NO;
+* AutoDowngradeAllowed should be YES;
+* ManualReview may be NO or RECOMMENDED, but manual review alone adds no score;
+* ActionableScore should normally be 0-2.
+If a genuine guest-triggered HOST crash/DoS is directly established, score that
+actual availability consequence separately; do not convert the missing
+architectural exception itself into an authorization-bypass signal.
+C. WIDE / EFFECTIVELY UNBOUNDED OOB CORRUPTION
+Do not apply the FINAL BOUNDED-OVERWRITE OVERRIDE merely because the destination
+starts at one fixed buffer. A copy/write whose attacker-influenced length extends
+far beyond the destination object, potentially traverses substantial kernel
+memory, or is effectively unbounded is NOT a small bounded/adjacent overwrite.
+If a real wide/unbounded OOB write is established, score the corruption itself
+as a meaningful CLASS_B signal (normally +2 rather than the +1 small constrained
+overwrite signal), then score reachability/crash separately without double
+counting. It does not automatically become CLASS_A, and
+AutoDowngradeAllowed may still be YES when useful target/control and non-crash
+consequence remain unproven.
+D. SMALL FIXED ADJACENT OVERWRITE
+For a genuinely small fixed/adjacent overwrite (for example a fixed few bytes)
+with no identified sensitive neighbor, target selection, reclaim, directed
+write, or demonstrated non-crash consequence, retain the constrained CLASS_B
+treatment. Do not invent C/I/LPE. Meaningful below-host-admin reachability can
+still justify Borderline/Actionable-Moderate review, but not CLASS_A by itself.
+E. AUTHORIZATION / BOUNDARY CONSEQUENCE DISCIPLINE
+A missing capability/namespace/security check may establish an authorization
+primitive. Score additional confidentiality, credential/resource theft, IPsec
+plaintext exposure, arbitrary privileged modification, or practical exploit
+chain only when the supplied non-generated technical/advisory evidence actually
+connects the bypass to that protected consequence. "Could redirect", "may
+expose", or a primary-model assertion is not enough for separate +1/+2 signals.
+F. UAF / DOUBLE-FREE CALIBRATION
+RealUAF=YES still receives the real lifetime signal. A concrete double-free or
+second lifetime mutation may receive the dedicated repeated-release signal.
+Do not additionally award repeated-lifetime manipulation, Weak LPE, Structured
+stale-object leverage, or Strong LPE when they merely restate the same second
+free/put. Extra points require a distinct exploitation-relevant mechanism.
+G. THRESHOLD DISCIPLINE
+Let arithmetic follow established signals; do not target historical scores.
+Weak CLASS_C crash/correctness cases must not drift to 3 from caution alone;
+real corruption must not collapse to 1-2 merely because exploit target is unknown;
+speculative downstream impact must not inflate cases to 9+.
+G1. FINAL GENERIC DOUBLE-FREE / REPEATED-RELEASE CAP
+This is a FINAL override. If the established primitive is a double-free or
+repeated free/put/release but evidence does NOT establish controlled or materially
+influenced reclaim/replacement, attacker-selected target/offset/content, useful
+post-free structured consumption, callback/ops/refcount/credential takeover,
+directed/arbitrary R/W, protected-resource corruption, demonstrated disclosure,
+or an authoritative exploit/LPE chain:
+* keep the real lifetime/UAF and repeated-release points;
+* crash/reachability may score normally when independently established;
+* award ZERO Strong-LPE points merely because "double-free can be exploited";
+* award ZERO Confidentiality/Integrity points merely from generic heap-grooming,
+  arbitrary-write, information-leak, or control-flow possibilities;
+* common/default subsystem exposure must not substitute for exploitation leverage;
+* AutoDowngradeAllowed MUST be YES unless another independent Important-preserving
+  mechanism exists;
+* ActionableScore MUST NOT exceed 5 from the generic double-free facts alone.
+A higher score is allowed only for a separately established exploitation-relevant
+mechanism named above. A concrete second free is serious and review-worthy, but
+it is not proof of arbitrary R/W, disclosure, LPE, or code execution.
+G2. FINAL SECONDARY-PANIC / DIAGNOSTIC-PATH OVERRIDE
+This is a FINAL override. If the vulnerable operation is normally reached only
+after an independent kernel panic/fatal condition or inside panic-reporting,
+diagnostic, crash-screen, fatal cleanup, or already-failing code, distinguish
+the prerequisite failure from the vulnerability itself.
+Unless this CVE independently supplies an attacker-triggerable fatal condition:
+* do NOT award Reliable kernel crash/strong DoS for the pre-existing panic;
+* do NOT infer local-unprivileged reachability merely because the containing
+  DRM/GPU/network/etc. subsystem is user reachable;
+* do NOT award broad/default/common-subsystem exposure for that secondary path;
+* CLASS_C/NONE crash-reporting/correctness cases with no independent corruption,
+  disclosure, integrity, or authorization primitive should normally score 0-2;
+* for CVSS, do not use A:H solely from the prerequisite panic; use A:L/A:N as
+  supported by the vulnerability's incremental effect.
+A prerequisite panic is context, not an impact caused by this CVE.
 MANDATORY MACHINE-PARSABLE OUTPUT
-The answer MUST begin with these standalone lines, with no Markdown or commentary:
+The answer MUST start with one complete machine-readable header containing all
+ActionableScore and CVSS fields below; no Markdown/prose may precede it.
+Reason internally in this order: derive facts -> finalize/freeze ActionableScore
+-> compute CVSS Base -> CVSS Paranoid -> CVSSSelected -> emit header -> prose.
+Never revise ActionableScore from CVSS or use CVSS metrics as ActionableScore evidence.
+Emit standalone lines in this order:
 ActionableScore=NUM
-ActionableScoreLower=NUM        # emit only when conservative != paranoid
+ActionableScoreLower=NUM        # only when conservative != paranoid
 PrimitiveClass=NONE|CLASS_A|CLASS_B|CLASS_C
 RealUAF=YES|NO
 HostAdminRequired=YES|NO|UNKNOWN
@@ -101,144 +249,68 @@ NamespaceScopedPrivilege=YES|NO|UNKNOWN
 ImportantCandidate=YES|NO
 ManualReview=NO|RECOMMENDED|REQUIRED
 AutoDowngradeAllowed=YES|NO
-ActionableScore is the final/paranoid score; ActionableScoreLower is the evidence-supported conservative score.
-Field semantics:
-* CLASS_A: strong Important-preserving primitive directly established.
-* CLASS_B: real kernel corruption/lifetime primitive needing exploitation-leverage analysis.
-* CLASS_C: demonstrated behavior primarily crash/DoS/invalid state, without independently useful corruption.
-* NONE: no meaningful corruption/lifetime/ownership/authorization/security primitive established.
-* RealUAF=YES only for an actual/directly implied post-lifetime or stale-object use.
-* HostAdminRequired=YES/NO only when positively established; otherwise UNKNOWN. Absence of proof of host-admin requirement is not NO.
-* NamespaceScopedPrivilege=YES only when the complete security-relevant operation is proven attacker-reachable in the relevant namespace; netns/veth/container presence alone is insufficient. Partial chain => UNKNOWN.
-* ImportantCandidate=YES for CLASS_A or sufficiently strong CLASS_B needing Important-vs-Moderate review because meaningful non-crash leverage remains unresolved. Constrained crash-only CLASS_B may be NO.
-* ManualReview and AutoDowngradeAllowed are independent. REQUIRED+YES is valid.
-AutoDowngradeAllowed=NO ONLY when supplied technical evidence establishes a concrete Important-preserving reason surviving conservative interpretation, e.g.:
-* valid CLASS_A with attacker-useful target/object control;
-* strong active-object CLASS_B UAF with concrete reuse/replacement/post-free structured consumption/callback/refcount takeover;
-* concrete repeated lifetime/refcount mutation creating meaningful unresolved post-lifetime corruption beyond ordinary crash-only double free;
-* demonstrated shared-page/COW ownership violation;
-* demonstrated authorization/security-boundary bypass with practical protected-resource access;
-* controlled corruption of a security-relevant target or meaningful attacker-selected placement/content;
-* demonstrated disclosure, unauthorized protected-state modification, LPE, privilege/resource theft, or equivalent non-crash consequence.
-The following NEVER suffice by themselves for NO: a CLASS_A label without its control criteria; ImportantCandidate=YES; ManualReview=REQUIRED; paranoid score >=7; bug category (UAF/OOB/double-free/network/filesystem/auth); CVSS C/I/A/AV/PR metrics; generic memory corruption; theoretical stronger exploitation.
-Use AutoDowngradeAllowed=YES when conservative evidence remains Moderate-like and no independently established Important-grade non-crash primitive exists, including constrained fixed/adjacent OOB writes without a demonstrated sensitive target, constrained cleanup/destructor UAFs without meaningful reuse, and uncertain races whose stronger reuse consequence is speculative.
-ImportantCandidate=YES and ManualReview=REQUIRED MAY coexist with AutoDowngradeAllowed=YES. AutoDowngradeAllowed=NO does not itself force final Important severity.
+CVSSBaseScore=NUM
+CVSSBaseVector=CVSS:3.1/...
+CVSSParanoidScore=NUM
+CVSSParanoidVector=CVSS:3.1/...
+CVSSSelectedScore=NUM
+CVSSSelectedVector=CVSS:3.1/...
+CVSSManualCheck=YES REQUIRES MANUAL CHECK|NO MANUAL CHECK REQUIRED COULD BE AUTOCLOSED
+CVSSReport="ASCII report phrase"
+ActionableScore is final/paranoid; ActionableScoreLower is conservative.
+CLASS_A=strong Important-preserving primitive; CLASS_B=real corruption/lifetime
+primitive needing leverage analysis; CLASS_C=primarily crash/DoS/invalid state
+without independently useful corruption; NONE=no meaningful primitive.
+RealUAF=YES only for actual/directly implied post-lifetime/stale-object use.
+HostAdminRequired must be evidenced; absence of proof != NO.
+NamespaceScopedPrivilege=YES requires the complete security-relevant operation
+reachable in that namespace; partial chain => UNKNOWN.
+ImportantCandidate=YES requires CLASS_A or strong CLASS_B unresolved non-crash
+leverage; constrained crash-only CLASS_B may be NO.
+ManualReview and AutoDowngradeAllowed are independent; REQUIRED+YES is valid.
+AutoDowngradeAllowed=NO requires a concrete conservative Important-preserving fact:
+controlled/strong CLASS_A/B exploitation leverage, structured active-object reuse,
+meaningful repeated-lifetime corruption beyond ordinary double free, COW/shared-page
+ownership violation, practical authorization-boundary bypass, controlled sensitive
+target corruption, or demonstrated disclosure/protected-state modification/LPE/
+resource theft. Labels, review status, bug class, CVSS metrics, generic corruption,
+or theoretical exploitation never suffice alone. Use YES when conservative evidence
+is Moderate-like and stronger leverage is speculative.
 MANDATORY FINAL CONSISTENCY CHECK / GEMINI OVERRIDES
-These rules are final overrides and supersede any more permissive example elsewhere in this prompt.
-Before emitting machine-readable fields, re-check every awarded Integrity, Confidentiality, Weak LPE, Strong LPE, CLASS_A, high-control-API, ImportantCandidate justification, and AutoDowngradeAllowed=NO decision.
-For each positive signal ask:
-"What concrete supplied evidence proves this after removing every sentence whose support depends on could, may, might, potentially, plausible, theoretically, generic worst-case language, or CVSS metrics?"
-If no concrete evidence remains:
-* remove that score point;
-* do not use that consequence to justify ImportantCandidate;
-* do not use it to justify AutoDowngradeAllowed=NO.
-STRICT SINGLE-CLASS RULE:
-PrimitiveClass is ONE classification. If machine output says PrimitiveClass=CLASS_B, do NOT award a separate "paranoid CLASS_A" point. Paranoid analysis may strengthen an established CLASS_B consequence, but may not invent CLASS_A target/placement control absent from supplied evidence.
-STRICT SOURCE-BYTES RULE:
-Attacker control of bytes being copied/written does NOT by itself satisfy "Local unprivileged high-control kernel data-plane API" and does NOT make an overwrite CLASS_A. The high-control point requires an independently exploitation-relevant property such as layout, target/object selection, lifetime/reclaim, allocator behavior, page ownership, callback state, refcounts, or comparable control.
-FINAL BOUNDED-OVERWRITE OVERRIDE:
-If ALL are true:
-* PrimitiveClass=CLASS_B;
-* overwrite is bounded/constrained;
-* destination is fixed/adjacent;
-* no identified security-sensitive target;
-* no meaningful target selection/grooming;
-* no arbitrary/directed write;
-* no controlled reclaim/replacement;
-* no demonstrated non-crash security consequence;
-then:
-* do NOT award Strong LPE;
-* do NOT award Weak LPE solely from hypothetical adjacent targets;
-* do NOT award Confidentiality or Integrity from hypothetical consequences;
-* do NOT create a paranoid CLASS_A point;
-* AutoDowngradeAllowed MUST be YES.
-ManualReview may still be REQUIRED and ImportantCandidate may still be YES if manual Important-vs-Moderate review is warranted.
-The human-readable section MUST contain exactly the parseable bucket form:
+These override permissive examples. Re-check every C/I, Weak/Strong LPE, CLASS_A,
+high-control-API, ImportantCandidate, and AutoDowngradeAllowed=NO signal after
+removing support based only on could/may/might/potentially/plausible/theoretical,
+generic worst-case prose, or CVSS. If no concrete evidence remains, remove the
+point and do not use it for ImportantCandidate or downgrade blocking.
+PrimitiveClass is single: CLASS_B output cannot also receive a separate invented
+"paranoid CLASS_A" point. Attacker control of source bytes alone is not high-control
+API/CLASS_A without meaningful target/layout/lifetime/placement control.
+For bounded fixed/adjacent CLASS_B overwrite with no sensitive target, target
+selection, arbitrary/directed write, controlled reclaim, or demonstrated non-crash
+consequence: no Strong LPE, hypothetical Weak LPE, C/I, or paranoid CLASS_A;
+AutoDowngradeAllowed MUST be YES. ManualReview/ImportantCandidate may still request
+human review.
+Human-readable output must contain exactly:
 Final recommended bucket: **...**::
-Allowed examples include Ordinary Moderate; Borderline / manual review recommended; Actionable Moderate; Actionable Moderate / Strong Important candidate requiring manual review; Strong Important candidate; High-end Important / possible Critical candidate.
+Allowed buckets: Ordinary Moderate; Borderline / manual review recommended;
+Actionable Moderate; Actionable Moderate / Strong Important candidate requiring
+manual review; Strong Important candidate; High-end Important / possible Critical candidate.
 CORE EVIDENCE RULES
-Use supplied CVE/commit/patch/source/call sites, normal Linux kernel architecture and well-established subsystem/lifetime/RCU/filesystem/network/namespace/DMA semantics, and common deployment defaults. Do not invent primitives unsupported by supplied evidence; do not infer arbitrary code execution/RW, C/I, LPE, or remote reachability merely from memory corruption, UAF/OOB/list corruption, networking location, complex objects, or bug class. Firmware-mediated input is not direct remote reachability when mediation matters. Distinguish established primitive, demonstrated consequence, and theoretical consequence. Conservative scoring suppresses unsupported positive signals; paranoid scoring still requires a defensible established mechanism. Missing arbitrary write, controlled reclaim, LPE, exploit, callback hijack, or disclosure is normally absence of a positive signal, not a negative score. A real corruption primitive need not be downgraded because the full exploit is unknown, but theoretical stronger exploitation does not justify promotion.
+Use supplied CVE/commit/patch/source/call sites, normal Linux kernel architecture and well-established subsystem/lifetime/RCU/filesystem/network/namespace/DMA semantics, and common deployment defaults. Do not invent primitives unsupported by evidence; do not infer arbitrary code execution/RW, C/I, LPE, or remote reachability merely from memory corruption, UAF/OOB/list corruption, networking location, complex objects, or bug class. Firmware-mediated input is not direct remote reachability when mediation matters. Distinguish established primitive, demonstrated consequence, and theoretical consequence. Conservative scoring suppresses unsupported positive signals; paranoid scoring still requires a defensible established mechanism. Missing arbitrary write, controlled reclaim, LPE, exploit, callback hijack, or disclosure is normally absence of a positive signal, not a negative score. A real corruption primitive need not be downgraded because the full exploit is unknown, but theoretical stronger exploitation does not justify promotion.
 ADVISORY / EXPLOIT EVIDENCE OVERRIDE
-The patch and commit are authoritative for the technical root cause and
-low-level primitive.
-However, supplied authoritative advisory, exploit, CVE, or trusted triage
-evidence MAY establish security facts that are absent from the upstream commit,
-including:
-* attacker reachability;
-* actual attacker privilege;
-* protected victim objects;
-* downstream call paths;
-* privileged FD/resource access;
-* confidentiality impact;
-* integrity impact;
-* security-boundary bypass;
-* privilege escalation;
-* root privilege acquisition;
-* arbitrary privileged command execution;
-* demonstrated exploit chains.
-Do NOT require these consequences to be stated in the upstream commit when they
-are explicitly established by supplied authoritative evidence and are
-technically connected to the patched bug.
-A patch-only interpretation MUST NOT override stronger supplied exploit/advisory
-evidence.
-For example:
-PATCH:
-    ptrace/dumpability authorization check is skipped incorrectly
-    ->
-    authorization primitive established
-ADVISORY/EXPLOIT:
-    ordinary unprivileged attacker can exercise a downstream caller
-    such as pidfd_getfd
-    ->
-    obtain or inspect a privileged process resource/FD
-    ->
-    access protected data or privileged functionality
-    ->
-    obtain root privileges or execute privileged commands
-must be scored from the COMPLETE established chain, not merely from the narrow
-wording of the patch.
-Likewise:
-PATCH:
-    memory corruption primitive
-ADVISORY:
-    controlled reclaim / arbitrary R/W / demonstrated LPE
-must use the stronger supplied evidence.
-When authoritative advisory/exploit evidence establishes:
-* local privilege escalation;
-* root acquisition;
-* privileged FD/resource theft;
-* protected-file/resource access;
-* arbitrary privileged command execution;
-* another concrete authorization-boundary consequence;
-do NOT leave the ActionableScore at 4-5 merely because the commit itself only
-documents the lower-level authorization or lifetime defect.
-Consider independently supported signals such as:
-* Local unprivileged trigger +1;
-* Security-boundary bypass with practical sensitive-object access +2;
-* Sensitive file / credential / FD theft +2;
-* Practical exploit chain demonstrated or strongly implied +1;
-* Confidentiality plausible +1;
-* Integrity plausible +1;
-* Strong exploitation leverage +2 when it represents an additional primitive
-  and does not double-count the same consequence.
-IMPORTANT:
-Avoid double-counting the same exploit consequence.
-For example:
-ptrace bypass
-    ->
-pidfd_getfd privileged FD access
-    ->
-root command execution
-may support:
-* +2 Security-boundary bypass;
-* +2 Sensitive FD/resource theft;
-* +1 Practical exploit chain;
-* +1 Local unprivileged trigger;
-without necessarily ALSO requiring a separate +2 Strong LPE point if that +2
-would merely describe the same already-counted chain.
-The purpose of this rule is not to inflate scores.
-It is to prevent a patch-only root-cause description from suppressing a
-demonstrated exploit consequence supplied in the triage input.
+Patch/commit are authoritative for root cause/low-level primitive. Supplied
+authoritative advisory, exploit, CVE, or trusted triage evidence may additionally
+establish reachability, attacker privilege, protected victims/downstream callers,
+privileged resource access, C/I impact, boundary bypass, LPE/root/privileged command
+execution, or a complete exploit chain. Do not require such consequences to appear
+in the upstream commit when authoritative evidence technically connects them to the
+bug; patch-only interpretation must not override stronger evidence.
+Conversely, generated/model prose is not authoritative.
+Score the COMPLETE established chain. E.g., a ptrace/dumpability check bug plus
+authoritative evidence that an ordinary user can use pidfd_getfd to obtain a
+privileged process resource is an authorization/resource-access primitive even if
+the patch only discusses the narrow helper. Likewise memory corruption plus
+authoritative controlled reclaim/arbitrary R/W/LPE uses the stronger evidence.
 CONSERVATIVE DOES NOT MEAN MOST-RESTRICTIVE DEPLOYMENT
 CRITICAL RULE:
 "Conservative score" means conservative about UNPROVEN SECURITY CONSEQUENCES.
@@ -349,12 +421,7 @@ Apply ONLY to concrete lifetime/UAF bugs when ALL or nearly all are true:
 2. attacker repeatedly drives or strongly influences the lifetime transition;
 3. that influence matters to stale use, reuse opportunity, post-free state, or
    vulnerable transition.
-Examples:
-* repeatedly replacing qdisc schedule while stale reader consumes old schedule;
-* repeatedly creating/freeing objects participating in UAF;
-* repeatedly changing attacker-controlled structured state while stale readers
-  remain.
-Do NOT award merely because:
+Do not award because:
 * userspace originally created the object;
 * API can create/configure objects;
 * reproducer can repeatedly recreate the crash from scratch.
@@ -362,67 +429,25 @@ For privilege-gated cleanup/destructor UAFs, repeated setup + teardown is weaker
 than actual control over stale reuse or post-free contents.
 Do NOT stack this with controlled-reclaim bonus for the same mechanism.
 PRIVILEGE ESCALATION / EXPLOITATION LEVERAGE
-Strong LPE plausibility / strong exploitation leverage: +2
-This is a HIGH-BAR signal. Apply only when evidence establishes a strong
-attacker-useful primitive and the mechanism is more specific than "memory
-corruption could be leveraged".
-For an overwrite, require evidence of meaningful control over a security-relevant
-target/placement OR an independently demonstrated protected-object consequence.
-Attacker influence over written bytes alone is insufficient when the destination
-is merely the fixed adjacent memory after a buffer.
-For a UAF, require controlled/meaningfully influenced reclaim, replacement,
-post-free structured state, callback/refcount takeover, or an equivalent concrete
-mechanism. Generic allocator reuse is insufficient.
-Apply when evidence establishes a strong attacker-useful primitive such as:
-* controlled UAF reclaim;
-* controlled object replacement;
-* attacker-influenced post-free structured reuse;
-* arbitrary/directed kernel write;
-* attacker-directed page-cache corruption;
-* protected shared-file/page corruption;
-* overwrite of security-sensitive fields;
-* reliable controlled type confusion;
-* callback/function-pointer influence;
-* refcount takeover;
-* credential manipulation;
-* demonstrated LPE;
-* strongly controlled guest-to-host corruption;
-* strong semantic reinterpretation.
-Do NOT award Strong LPE +2 for any of these by themselves:
-* an 8-byte or similarly bounded adjacent OOB overwrite with attacker-influenced
-  bytes but no demonstrated target selection or sensitive adjacent field;
-* a huge memcpy that is expected primarily to fault while walking unmapped memory,
-  without evidence of useful attacker-selected corruption before the fault;
-* a UAF where "the page/object could later be reallocated" is the only reuse
-  argument;
-* an authorization mistake where the modified object is not shown to belong to a
-  more privileged security domain or protected principal;
-* a CVSS vector asserting high C/I/A impact.
-Weak LPE concern: +1
-Apply only when more than a generic bug class is established.
-Examples:
-* plausible replacement/reuse with meaningful attacker influence;
-* bogus active-object pointer with meaningful control;
-* indirect object selection affecting sensitive object;
-* meaningful invalid structured-object interpretation;
-* corruption sink with some attacker control.
-Do NOT award solely because bug is a UAF.
-Do NOT award merely because stale object is:
-* BPF;
-* networking;
-* scheduler;
-* device object;
-* complex/powerful kernel structure.
-When applicable, use the more precise Structured stale-object exploitation
-leverage rule below.
-Weak corruption concern: +0
-Use for:
-* invalid pointer dereference with no useful reuse;
-* read-only array over-index without disclosure;
-* limited OOB read;
-* bookkeeping mismatch;
-* invalid ordinary value;
-* crash-only poisoned pointer.
+Strong LPE / strong exploitation leverage: +2. HIGH BAR: require a concrete
+attacker-useful mechanism beyond "memory corruption could be leveraged".
+For overwrite: meaningful security-relevant target/placement control or demonstrated
+protected-object consequence. Source-byte control alone with fixed adjacent target
+is insufficient. For UAF: controlled/materially influenced reclaim/replacement,
+post-free structured state, callback/refcount takeover, or equivalent.
+Qualifying mechanisms include controlled UAF/replacement, directed/arbitrary write,
+security-sensitive/page-cache/shared-file corruption, controlled type confusion,
+callback/refcount/credential control, demonstrated LPE, strong guest-host corruption,
+or strong semantic reinterpretation.
+Do NOT award +2 from bounded adjacent overwrite without target control, crash-dominant
+huge memcpy, hypothetical future UAF reuse, unproven cross-authority object, generic
+double-free, or CVSS high C/I/A.
+Weak LPE concern: +1 only for a concrete weaker mechanism beyond bug class:
+meaningfully influenced reuse/replacement, controlled bogus active-object pointer,
+sensitive indirect target selection, structured reinterpretation, or corruption
+sink with attacker control. UAF/networking/BPF/device complexity alone is insufficient.
+Weak corruption concern: +0 for invalid dereference, bounded read/no-output,
+bookkeeping mismatch, ordinary invalid value, or crash-only poisoned pointer.
 MEMORY CORRUPTION CLASSIFICATION
 Classify actual primitive BEFORE reachability penalties.
 ## A. STRONG CORRUPTION PRIMITIVE: +2
@@ -565,67 +590,20 @@ This signal is independent of the authorization-bypass +2 because:
 Do not award when security state loss does not affect an actual authorization
 decision.
 CONCRETE REPEATED RELEASE / REFCOUNT SIGNAL
-Concrete repeated release/refcount operation: +1
-Apply when the patch directly establishes:
-    release/drop/put(object)
-        ->
-    the same local/reference remains reachable
-        ->
-    a later deterministic path performs another release/drop/put on that
-    exact same reference
-AND the release operation can:
-* decrement a lifetime refcount;
-* invoke object destruction;
-* free the object;
-* release nested security-relevant state.
-This signal captures that the stale operation actively MUTATES object lifetime
-state rather than merely reading a dangling pointer or passing a stale pointer
-into a helper that immediately faults.
-Examples:
-* kref_put() on the same dangling object after an earlier kref_put() may have
-  reached zero;
-* refcount_dec_and_test()-style lifetime operation on an exact stale object;
-* second put/free/release on an exact object whose first release may have
-  destroyed it;
-* second object-lifetime release through an error/fail path after an earlier
-  success/skip path already released the same reference.
-The second operation does NOT need to establish arbitrary kernel write.
-The important distinction is that the vulnerable operation itself performs a
-WRITE-LIKE lifetime/refcount mutation through a reference whose object lifetime
-may already have ended.
-Do NOT award when:
-* the second release is only hypothetical;
-* the two operations use independently valid references;
-* the release is harmless/idempotent;
-* the first operation cannot end object lifetime;
-* actual stale reuse requires an unrelated race not established by the patch;
-* the helper only reads the stale object and faults;
-* the only evidence is a generic commit phrase such as "possible double free"
-  without enough mechanics to establish the repeated lifetime operation.
-Do NOT award solely because a helper is named:
-* put;
-* release;
-* free;
-* drop.
-Verify from supplied context or normal well-established helper semantics that
-the operation actually affects object lifetime/refcount and can participate in
-destruction/freeing.
-This +1 is independent of the base Real UAF +2 because:
-* Real UAF +2 scores the existence of the lifetime violation;
-* this +1 scores the concrete second lifetime-mutating operation performed
-  through the potentially dangling reference.
-However, avoid double-counting.
-Do NOT additionally award:
-* Weak LPE concern +1;
-* generic weak corruption +1;
-* Structured stale-object exploitation leverage +1;
-for the SAME second release/refcount fact.
-Structured stale-object leverage may coexist only when a DISTINCT later
-post-lifetime operation consumes meaningful structured fields beyond the
-repeated release/refcount mutation itself.
-Strong exploitation leverage +2 may replace weaker leverage interpretation when
-controlled reclaim, refcount takeover, directed corruption, callback control,
-or another strong primitive is independently established.
+Concrete repeated release/refcount operation: +1 when evidence shows the same
+reference remains reachable after an earlier release/drop/put that can end lifetime,
+and a later deterministic path again performs a lifetime-mutating release/drop/put.
+The second operation need not prove arbitrary write; it is stronger than stale read
+because it mutates lifetime/refcount through a potentially dangling reference.
+Do not award when the second release is hypothetical, references are independently
+valid, operation is idempotent, first release cannot end lifetime, stale reuse needs
+an unrelated unproven race, helper only reads/faults, or evidence merely says
+"possible double free". Verify helper lifetime semantics rather than names.
+This +1 is distinct from RealUAF +2 but must not be double-counted as Weak LPE,
+generic corruption, or structured-stale leverage for the same fact. Additional
+structured/strong leverage requires a DISTINCT later mechanism such as controlled
+reclaim, replacement, callback/refcount takeover, directed corruption, or sensitive
+structured consumption.
 ACTIVE STRUCTURED OBJECT VS FIXED STALE STORAGE
 For every UAF distinguish:
 ## FIXED STALE STORAGE
@@ -700,7 +678,7 @@ Apply only when ALL or nearly all are established:
    * another security-relevant operation;
 5. evidence supports something meaningfully beyond immediate cleanup fault or
    ordinary stale dereference.
-Do NOT award merely because:
+Do not award because:
 * stale object is complex;
 * cleanup passes stale pointer to destructor;
 * dereferencing stale fields causes Oops/page fault;
@@ -750,55 +728,14 @@ may justify:
 when the complete object lifetime and second mutation are concrete and
 post-lifetime exploitation leverage remains materially unresolved.
 Generic theoretical possibility of heap reuse is NOT enough for Strong +2.
-REPEATED RELEASE / REFCOUNT PARANOID LEVERAGE CALIBRATION
-A concrete repeated release/refcount UAF may support an additional paranoid +1
-ONLY when the patch-supported mechanics establish more than:
-"double release might theoretically be exploitable."
-The additional paranoid +1 may be awarded when:
-1. the first release can actually end object lifetime;
-2. the same exact stale reference survives;
-3. the second operation performs a real write-like refcount/lifetime mutation
-   through that reference;
-4. object storage may therefore already be outside its original lifetime when
-   the second mutation occurs;
-5. the resulting mutation is not limited to a guaranteed immediate fault before
-   any lifetime/refcount state can be modified;
-6. this creates a technically defensible unresolved post-free corruption
-   mechanism even though controlled reclaim/replacement is not yet demonstrated.
-Conceptually:
-    first put/release
-        ->
-    possible destruction/free
-        ->
-    stale reference survives
-        ->
-    second kref_put/refcount mutation
-        ->
-    lifetime metadata at the stale address is actively modified
-This may justify paranoid +1 for unresolved post-free lifetime/refcount
-corruption.
-IMPORTANT:
-This is NOT:
-    heap reuse is theoretically possible -> +1
-The scored fact is:
-    the vulnerable stale operation itself performs a concrete lifetime/refcount
-    mutation through storage whose original object lifetime may already have
-    ended.
-Do NOT award this paranoid +1 when:
-* the second helper merely reads stale state and faults;
-* the first release cannot free/end lifetime;
-* second release is speculative;
-* release is idempotent;
-* only a generic UAF class is known;
-* no actual lifetime/refcount mutation occurs;
-* a guaranteed immediate failure prevents the mutation from reaching stale
-  lifetime state.
-Do NOT stack this paranoid +1 with:
-* Weak LPE +1;
-* Structured stale-object leverage +1;
-when they describe the exact same second refcount mutation.
-If controlled reclaim/refcount takeover/directed corruption is established, use
-the stronger appropriate primitive instead.
+REPEATED RELEASE / REFCOUNT PARANOID CALIBRATION
+The dedicated repeated-release +1 may be used only when the first operation can
+end lifetime, the exact same stale reference survives, and the later operation
+concretely mutates lifetime/refcount state. Do not add Weak LPE or Structured
+stale-object leverage for that same fact. A paranoid +1 beyond the conservative
+result is allowed only when the second stale lifetime mutation itself creates a
+real unresolved post-free corruption mechanism rather than merely a theoretical
+heap-reuse possibility.
 KVM / GUEST-TO-HOST UAF CALIBRATION
 A UAF in host KVM state is security-boundary relevant, but the mere combination:
     guest-influenced state
@@ -887,7 +824,7 @@ When the complete trigger requires:
 guest-controlled action
 +
 host-VMM-controlled lifecycle operation
-record it as a COMPOUND TRIGGER unless supplied evidence shows the guest can
+record it as a COMPOUND TRIGGER unless evidence shows the guest can
 cause the VMM operation through an attacker-accessible interface.
 For compound triggers:
 * do not award Local unprivileged trigger solely from guest influence;
@@ -1036,7 +973,7 @@ This is an independent synchronization/lifetime signal beyond the base Real UAF
 * Real UAF +2 scores existence of post-lifetime use;
 * this +1 scores the concrete broken cross-object RCU lifetime invariant that
   makes the stale use possible during otherwise legitimate reader execution.
-Do NOT award merely because:
+Do not award because:
 * RCU appears somewhere in the code;
 * call_rcu() is used;
 * an object is freed during teardown;
@@ -1065,7 +1002,7 @@ Same calibration may apply to structured cleanup UAF if stale use is limited to
 destructor/unregister and only demonstrated result is crash.
 However, do NOT apply this calibration to a concrete repeated release/refcount
 case merely because both lifetime operations happen during error/cleanup paths.
-Do NOT apply merely because bug uses RCU/concurrency.
+Do not apply because bug uses RCU/concurrency.
 Do NOT suppress an active structured UAF with:
 * attacker-influenced replacement;
 * repeated object generation;
@@ -1074,33 +1011,12 @@ Do NOT suppress an active structured UAF with:
 * meaningful post-reuse field consumption;
 * concrete repeated lifetime/refcount mutation.
 CRASH CORRUPTION VS NON-CRASH EXPLOITATION
-Concrete:
-* double list_del;
-* poison dereference;
-* invalid list operation;
-* BUG;
-* invalid stale dereference;
-* stale cleanup pointer causing page fault
-may support crash/DoS.
-Do NOT count same evidence again as independent strong non-crash primitive.
-Ask:
-"What useful attacker-controlled primitive remains after excluding the crash?"
-Possible strong answers:
-* attacker-controlled write;
-* controlled reclaim;
-* active object replacement;
-* controlled list/object contents;
-* semantic reinterpretation;
-* disclosure;
-* credential/boundary compromise.
-For repeated-release/refcount bugs, also ask:
-"After excluding the crash, does the vulnerable operation itself still perform a
-lifetime/refcount mutation through storage whose original object lifetime may
-already have ended?"
-If YES, that fact is stronger than crash-only stale dereference and may support
-the dedicated repeated-release +1 and unresolved Class B preservation.
-It still does NOT automatically establish arbitrary write, controlled reclaim,
-or Strong LPE +2.
+Count a crash only once. Invalid dereference, poison/list failure, stale cleanup
+fault, BUG, or similar evidence does not become a second non-crash primitive.
+For lifetime bugs, a concrete second free/put/refcount mutation through storage
+whose original object lifetime may already have ended is stronger than an
+ordinary stale read and may receive its dedicated repeated-release signal, but
+it still does not prove arbitrary R/W, controlled reclaim, LPE, or C/I impact.
 REAL UAF SCORE FLOOR
 Apply floors AFTER raw arithmetic and genuine penalties.
 ## FLOOR 4
@@ -1233,7 +1149,7 @@ when host-admin-equivalent privilege is positively established.
 HostAdminRequired=NO
 when below-host-admin reachability is positively established.
 HostAdminRequired=UNKNOWN
-when supplied evidence does not resolve the complete privilege boundary.
+when evidence does not resolve the complete privilege boundary.
 For DRM/KMS/display-control paths:
 Do NOT infer HostAdminRequired=NO merely because a local desktop user exists.
 HostAdminRequired=NO is appropriate when supplied call-path/product context or
@@ -1614,7 +1530,7 @@ Examples:
 Do not stack +1 and +2 for same exact boundary.
 IMPORTANT:
 A helper-level authorization bypass and a downstream protected-resource
-consequence may be independent signals when the supplied evidence establishes
+consequence may be independent signals when evidence establishes
 both:
 1. a real authorization check is bypassed; AND
 2. the bypass gives access to a distinct privileged FD/file/resource that the
@@ -1622,92 +1538,25 @@ both:
 Do not collapse a demonstrated privileged-resource theft chain into a generic
 "information exposure" label.
 PROCESS EXIT / PTRACE / PIDFD RULES
-Process-exit privileged resource lifetime window: +1
-Apply when privilege/dumpability/mm state changes before privileged resources are
-closed and unauthorized inspection/copying becomes possible.
-Consider:
-* pidfd_getfd;
-* procfs;
-* PTRACE_MODE_READ_FSCREDS;
-* PTRACE_MODE_ATTACH_REALCREDS;
-* no-mm tasks;
-* exiting privileged tasks;
-* reduced capabilities;
-* surviving privileged FDs.
-A ptrace_may_access / __ptrace_may_access authorization defect is NOT necessarily
-limited to low-value task-information disclosure merely because the patched
-function is itself only an access-control helper.
-Inspect supplied callers and advisory/exploit evidence for what SUCCESSFUL
-authorization enables.
-In particular consider whether bypassing ptrace_may_access can enable:
-* pidfd_getfd() access to another process file descriptor;
-* procfs access to protected process state;
-* process_vm_* access;
-* ptrace attach/read operations;
-* acquisition of a privileged socket;
-* acquisition of a privileged file descriptor;
-* access to an already-open protected file;
-* access to credential-bearing or secret-bearing resources;
-* another privileged process resource.
-If supplied evidence establishes:
-attacker below host-admin privilege
-    ->
-dumpability / capability / ptrace authorization bypass
-    ->
-pidfd_getfd or equivalent caller succeeds
-    ->
-attacker obtains or accesses a privileged process FD/resource
-then treat this as:
-* Security-boundary bypass with practical sensitive-object access +2;
-and, when the FD/resource itself is independently security-sensitive:
-* Sensitive file / credential / FD theft +2.
-These two signals may coexist because:
-* the first scores the authorization boundary that was bypassed;
-* the second scores the distinct protected resource actually obtained.
-Do NOT award the second +2 merely because pidfd_getfd exists or because a
-privileged process may have interesting FDs.
-Require supplied evidence that a protected/sensitive resource is reachable.
-If supplied advisory/exploit evidence further establishes that this access can
-yield:
-* root privilege escalation;
-* arbitrary privileged command execution;
-* privileged configuration modification;
-* protected credential disclosure;
-then treat the complete chain as Important-grade CLASS_A.
-Do NOT leave the issue at Actionable Moderate merely because:
-* no kernel memory corruption exists;
-* CVSS confidentiality is numerically low;
-* the upstream commit discusses uid 0 or capability dropping;
-* the patch itself does not name pidfd_getfd;
-* the exploit consequence appears only in supplied authoritative advisory text.
-The attacker model must follow the COMPLETE supplied exploit path.
-For example, if the commit discusses uid 0 kernel-thread inspection but supplied
-authoritative evidence demonstrates that an ordinary local user can exploit the
-same ptrace/dumpability flaw against an exiting privileged userspace process,
-score the ordinary-user exploit path.
-Do NOT anchor the attacker model to the narrowest example in the commit.
-Conversely, do NOT infer privileged FD theft, root escalation, or arbitrary
-process access from ptrace_may_access alone.
-Without downstream protected-resource or exploit evidence, a ptrace/dumpability
-bypass may remain Actionable Moderate/manual review.
-CENTRAL AUTHORIZATION HELPER FAN-OUT: +1 paranoid,
-or conservative when callers are visible
-Award +1 when:
-1. the patched function is a central authorization predicate/helper;
-2. commit/context explicitly establishes that it guards multiple operations or
-   resources beyond the object whose state caused the bug;
-3. the authorization bypass occurs before downstream security hooks/callers;
-4. successful return is therefore security-relevant beyond a single diagnostic
-   value.
-Examples:
-    ptrace_may_access()
-    inode_permission()
-    capable()/ns_capable()-wrapped policy helper
-    LSM access predicate
-    credential/resource-access helper
-Do not award merely because a helper has many theoretical callers.
-Require either visible callers or explicit commit/context evidence that the
-helper is used for multiple access-control purposes.
+Process-exit privileged-resource lifetime window: +1 when dumpability/mm/capability
+state changes before privileged resources close and unauthorized inspection/copy is
+actually enabled. For ptrace_may_access/__ptrace_may_access, inspect supplied callers
+and authoritative exploit evidence: successful authorization can enable pidfd_getfd,
+procfs/process_vm/ptrace access, privileged sockets/FDs/files, credentials, or other
+protected process resources.
+If evidence establishes below-host-admin attacker -> authorization bypass ->
+pidfd_getfd/equivalent succeeds -> protected privileged FD/resource is obtained,
+score security-boundary bypass +2; add sensitive resource/FD theft +2 only when the
+resource is independently shown security-sensitive. Demonstrated root/privileged
+command execution/protected credential access makes the complete chain Important-grade
+CLASS_A. Do not downscore because no kernel corruption exists or because the patch
+omits the downstream caller. Conversely, do not infer protected-resource theft/LPE
+from ptrace helper involvement alone; without downstream evidence it may remain
+Actionable Moderate/manual review.
+CENTRAL AUTHORIZATION HELPER FAN-OUT: +1 paranoid (or conservative when callers are
+visible) only when the patched predicate centrally guards multiple security-relevant
+operations/resources and successful return has established fan-out. Many theoretical
+callers alone are insufficient.
 MEMORY LAYOUT INVARIANT RULE
 Memory layout invariant restoration: +1
 Apply when patch restores consistency among interdependent:
@@ -2054,7 +1903,7 @@ This signal is independent from the base active-state retirement signal:
 - translation-domain reinterpretation scores the additional fact that the
   stale old state is being carried across a change in semantic meaning or
   translation domain.
-Do NOT award merely because:
+Do not award because:
 - a PFN, GFN, address, or PTE changes;
 - a mapping is updated normally;
 - permissions change without a materially different interpretation domain;
@@ -2126,7 +1975,7 @@ Moderate range solely because the immediate patch symptom is a WARN or
 because arbitrary R/W is not demonstrated.
 Do not infer guest-to-host impact from the mere presence of KVM code.
 The cross-boundary consequence must be explicitly established by the
-supplied evidence.
+evidence.
 SPECIAL FILESYSTEM / COW SECURITY-BOUNDARY REVIEW
 For mapping/reflink/clone/COW/shared-block/page-cache/iomap bugs ask:
 Can a write authorized for A modify physical storage still referenced by
@@ -2140,7 +1989,7 @@ Apply only when functionality is both:
 * broadly present;
 * realistically exercised.
 CONFIG option alone is insufficient.
-Do NOT award merely because AMDGPU, DRM, networking, filesystem, or another
+Do not award because AMDGPU, DRM, networking, filesystem, or another
 subsystem is common.
 The vulnerable feature/path itself must be realistically exercised.
 NEGATIVE / REDUCING SIGNALS
@@ -2160,295 +2009,50 @@ shows that the COMPLETE exploit is reachable by an ordinary unprivileged local
 user.
 Do not preserve a narrow commit-only attacker model when stronger supplied
 evidence establishes a less-privileged attacker.
-IMPORTANT-GRADE PRIMITIVE PRESERVATION
-CLASS A -- normally Important-preserving:
-* arbitrary/directed kernel write;
-* controlled UAF reclaim/replacement;
-* callback/function pointer;
-* semantic reinterpretation;
-* controlled guest-to-host corruption;
-* substantial kernel disclosure;
-* protected shared-page corruption;
-* demonstrated root LPE;
-* broad security-boundary compromise;
-* demonstrated privileged FD/resource theft enabling protected-object access;
-* demonstrated authorization bypass leading to root or arbitrary privileged
-  execution.
-Normally:
-PrimitiveClass=CLASS_A
-ImportantCandidate=YES
-AutoDowngradeAllowed=NO
-when realistically reachable below host admin.
-## CLASS B -- leverage analysis required
-Examples:
-* active-object UAF;
-* RCU lifetime;
-* escaping stale object;
-* uncontrolled post-free write;
-* object lifetime corruption;
-* concrete repeated release/refcount mutation;
-* async post-teardown access;
-* list/tree/object corruption.
-Class B is NOT automatically Moderate.
-Class B is NOT automatically Important.
-Evaluate:
-* fixed vs active;
-* cleanup-only vs general active use;
-* stale-use depth;
-* attacker state influence;
-* reclaim;
-* repeatability;
-* fields consumed;
-* lifetime/refcount mutations performed;
-* whether first release may end lifetime;
-* whether exact same dangling reference is used again;
-* privilege;
-* namespace;
-* timing;
-* cross-layer escape.
-Class B may remain ordinary/borderline Moderate when:
-* trigger privilege-gated;
-* stale use cleanup/destructor-only;
-* crash is demonstrated consequence;
-* no reclaim/replacement;
-* no attacker-controlled post-free state;
-* no callback/read/write/boundary primitive;
-* no concrete repeated lifetime/refcount mutation.
-For strong unresolved active-object UAF:
-PrimitiveClass=CLASS_B
-ImportantCandidate=YES
-ManualReview=REQUIRED
-AutoDowngradeAllowed=NO
-may be correct.
-For concrete repeated release/refcount Class B where:
-* first release may end lifetime;
-* exact reference survives;
-* second lifetime mutation is concrete;
-* post-lifetime exploitation leverage remains materially unresolved;
-the following may also be correct:
-PrimitiveClass=CLASS_B
-ImportantCandidate=YES
-ManualReview=REQUIRED
-AutoDowngradeAllowed=NO
-even without controlled reclaim or arbitrary R/W.
-For constrained crash-only CLASS_B:
+IMPORTANT-GRADE / SCORE CALIBRATION
+Use these ranges as guidance after arithmetic and explicit floors/caps:
+* 0-2: Ordinary Moderate / Low-like.
+* 3-4: Borderline / manual review recommended.
+* 5-6: Actionable Moderate; do not automatically close.
+* 7-8: Strong Important candidate.
+* 9+: High-end Important / possible Critical candidate.
+PrimitiveClass and the numeric score must agree with the evidence:
+* CLASS_A normally requires a concrete Important-preserving primitive such as
+  directed/arbitrary write, controlled reclaim/replacement, protected shared
+  page corruption, demonstrated authorization/security-boundary compromise,
+  privileged resource theft, or demonstrated LPE.
+* CLASS_B requires leverage analysis. Active-object UAF, RCU/lifetime bugs,
+  constrained overwrites, repeated release/refcount corruption, and object
+  corruption may be Moderate or Important depending on reachability and actual
+  post-corruption leverage.
+* CLASS_C/NONE normally remains crash/DoS/invalid-state territory unless a
+  separate independently established security consequence exists.
+Do not promote a constrained CLASS_B merely because it is UAF/OOB/networking or
+because manual review is desirable. Conversely, do not suppress a real
+wide/unbounded corruption or concrete lifetime mutation merely because a useful
+final target has not yet been identified.
+AutoDowngradeAllowed=NO requires a concrete Important-preserving fact surviving
+the conservative interpretation. ManualReview=REQUIRED is not enough by itself.
+A constrained crash-only CLASS_B may correctly use:
 PrimitiveClass=CLASS_B
 ImportantCandidate=NO
 ManualReview=RECOMMENDED
 AutoDowngradeAllowed=YES
-may be correct.
-## CLASS C -- usually crash/DoS
-Examples:
-* invalid dereference;
-* double list_del no control;
-* poison pointer;
-* BUG/WARN;
-* stale fixed pointer immediately faults;
-* passive bookkeeping corruption.
-Do NOT reduce a concrete repeated release/refcount UAF to CLASS_C merely because
-the currently demonstrated terminal symptom is crash.
-ACTIONABLE SCORE CALIBRATION FOR REAL UAF
-Concrete UAF should not automatically fall to 2-3 merely because local/race/
-specialized/no reclaim.
-But neither should every UAF automatically become 5+.
-Typical:
-+2 UAF
-+0/+1 crash
-+0/+1 attacker reachability/control
-+0/+1 concrete repeated release/refcount ONLY when independently established
-+0/+1 structured stale leverage ONLY if independently established
-+0/+1 repeatable lifetime manipulation ONLY if exploitation-relevant
-+0/+2 strong leverage
-Then apply independently supported negatives.
-Privilege-gated cleanup UAF with crash-only behavior may legitimately score:
-raw conservative 3-4
-raw paranoid 4-5
-A concrete repeated release/refcount UAF with meaningful below-host-admin
-reachability may legitimately score:
-conservative 5
-paranoid 5-6
-before any demonstrated controlled reclaim or arbitrary R/W.
-This is NOT a mandatory target.
-It is a calibration example for cases where the second stale operation itself
-mutates lifetime/refcount state.
-Do NOT automatically package:
--1 race
--1 subsystem
--2 CAP_NET_ADMIN
-Do NOT automatically package:
-+1 structured stale object
-+1 repeatability
-+1 extra availability
-around same crash-only UAF.
-Do NOT automatically package:
-+1 repeated release
-+1 structured leverage
-+1 Weak LPE
-around the same second kref_put/refcount mutation.
+A strong unresolved lifetime/corruption case may correctly use:
+PrimitiveClass=CLASS_B
+ImportantCandidate=YES
+ManualReview=REQUIRED
+AutoDowngradeAllowed=NO
+ActionableScoreLower is the evidence-supported conservative score, not a
+most-restrictive-deployment score and not automatic downgrade permission.
+Authoritative exploit/advisory evidence that establishes a complete attacker
+path belongs in the conservative result, not only in the paranoid result.
 NUMERIC SCORE SANITY CHECK
-Before finalizing, recompute arithmetic. Listed positive/negative signals MUST equal raw scores. State every floor/cap explicitly as `Raw score: N; Applied floor/cap: N -> M`; never hide bonuses or penalties. Before FLOOR 5 check the BPF/control-plane exception and, for cleanup/error UAFs, the repeated-release exception. For repeated-release cases verify first lifetime-ending operation, surviving exact reference, concrete second lifetime mutation, dedicated +1, floor, and any independently justified paranoid +1. Advisory-derived signals must appear explicitly in arithmetic.
-PARANOID SCORE DISCIPLINE
-Paranoid scoring is a stronger technically defensible interpretation of ESTABLISHED mechanics, not permission to stack theoretical consequences. Do not infer LPE from every UAF, disclosure from every OOB read, sensitive-target corruption from every OOB write, remote reachability from networking code, reclaim from complex objects, guest-to-host compromise from host KVM UAF, or useful reclaim from every double release. If a stronger score requires an additional unproven primitive, mention it as speculative and award no point. Crash reliability does not create a second paranoid crash point. Repeated-refcount paranoid +1 is allowed only by its dedicated calibration. Demonstrated advisory/exploit evidence is established evidence and belongs in the conservative score, not only paranoid.
-CVSS VS ACTIONABLE SCORE
-Never derive ActionableScore or any signal mechanically from CVSS. CVSS and operational triage may diverge in either direction. In particular, C:H/I:H/A:H does not prove C/I/crash; AV:N does not prove direct remote reachability; PR:L does not prove ordinary unprivileged reachability. For every awarded signal ask whether the exact point remains justified if all CVSS vectors/scores are deleted. If not, remove it unless separate technical/advisory evidence proves the same fact. In Signal breakdown cite patch/call-path/interface/reproducer/advisory evidence, never `CVSS indicates/supports`, `because C:H/I:H/A:H`, `AV:N therefore remote`, or `PR:L therefore unprivileged`.
-ACTIONABLE SCORE INTERPRETATION
-0-2:
-Ordinary Moderate / Low-like
-3-4:
-Borderline; manual review recommended
-5-6:
-Actionable Moderate; should not be automatically closed
-7-8:
-Strong Important candidate
-9+:
-High-end Important / possible Critical candidate
-Ranges are guidance.
-Do NOT let arithmetic erase a clear strong primitive.
-Do NOT let many weak bonuses promote a constrained crash-only bug.
-A concrete UAF may remain 3-4 when:
-* privilege gating substantial/unresolved;
-* stale use cleanup-only;
-* crash only demonstrated;
-* no meaningful reuse primitive;
-* no concrete repeated lifetime/refcount mutation.
-A concrete repeated release/refcount UAF may naturally remain in 5-6 when:
-* the first release can end lifetime;
-* the same dangling reference survives;
-* the second operation mutates lifetime/refcount state;
-* reachability is meaningful;
-* controlled reclaim/arbitrary R/W is not demonstrated;
-* Important-vs-Moderate exploitation leverage remains unresolved.
-This should generally be treated as Actionable Moderate / Strong Important
-candidate requiring manual review rather than ordinary crash-only cleanup UAF.
-It does NOT automatically require score 7.
-A KVM host-side UAF may remain 4-5 when:
-* host stale-object use is real;
-* crash/DoS is supported;
-* guest or VMM influence exists;
-* but controlled host-memory reuse/corruption or actual guest-to-host boundary
-  compromise is not demonstrated.
-An authorization flaw may reach 7+ without kernel memory corruption when supplied
-evidence establishes a real low-privilege attacker path to:
-* privileged FD/resource theft;
-* protected-object access;
-* credential disclosure;
-* root privilege escalation;
-* arbitrary privileged execution.
-ACTIONABLESCORELOWER SEMANTICS
-ActionableScoreLower is the evidence-supported conservative score. It is not automatic downgrade authorization, proof of ordinary Moderate, a most-restrictive-deployment score, or a replacement for PrimitiveClass. A lower score may coexist with ImportantCandidate=YES, ManualReview=REQUIRED, and AutoDowngradeAllowed=NO when a concrete Important-preserving primitive exists. Conversely, constrained CLASS_B may use AutoDowngradeAllowed=YES. When authoritative exploit/advisory evidence establishes the complete attacker path, do not lower the conservative score by reverting to a narrower commit-only attacker model.
-NUMERIC SCORE VS SEMANTIC CLASSIFICATION
-Semantic conclusion and numeric score must agree.
-If:
-Final recommended bucket: **Strong Important candidate**::
-ActionableScore should normally be 7-8.
-For strong Class B near threshold:
-Final recommended bucket: **Actionable Moderate / Strong Important candidate requiring manual review**::
-This is particularly appropriate for concrete repeated release/refcount UAFs
-scoring 5-6 where Important-grade exploitation is not proven but automatic
-Moderate downgrade would discard meaningful unresolved lifetime-corruption
-leverage.
-For constrained crash-only CLASS_B prefer:
-Final recommended bucket: **Borderline / manual review recommended**::
-or:
-Final recommended bucket: **Actionable Moderate**::
-Do not call privilege-gated crash-only UAF Strong Important merely because object
-type is rich/complex.
-Do not call a KVM UAF Strong Important merely because the stale host object is
-reached from guest-influenced state when no strong guest-to-host exploitation
-primitive is established.
-Do not call a concrete repeated-release/refcount Class B "crash-only cleanup"
-without first evaluating whether the second operation itself mutates stale
-lifetime/refcount state.
-If PrimitiveClass=CLASS_A because a documented authorization exploit yields
-privileged FD/resource access or LPE and the complete path is available below
-host admin, a score stuck at 4-5 should be rechecked for missing downstream
-security-consequence signals.
-CLASS_A AUTHORIZATION CALIBRATION
-A concrete authorization bypass can be CLASS_A even when final downstream impact
-is not yet known if the patch directly establishes that:
-* an intended mandatory capability/credential/security-policy check is bypassed;
-* successful authorization changes externally reachable access semantics;
-* the bypass is not merely informational bookkeeping;
-* the fix explicitly restores the missing authority requirement.
-For such patch-only CLASS_A authorization bugs:
-* raw score should normally reach at least 5 without relying solely on a manual
-  review floor;
-* score 6 may be appropriate when a second independent security signal exists,
-  such as security-state lifetime loss or broad authorization-helper fan-out;
-* score 7+ normally requires stronger reachability or downstream protected
-  resource/consequence evidence.
-Do NOT force every CLASS_A authorization flaw to 7.
-MANUAL REVIEW SAFETY FLOOR
-Normally prevent automatic closure below actionable Moderate when:
-* active-object UAF positively reachable below host admin AND meaningful
-  exploitation surface exists;
-* concrete repeated release/refcount mutation through a potentially dangling
-  object is established and post-lifetime exploitation leverage remains
-  materially unresolved;
-* controlled/strong corruption;
-* semantic reinterpretation;
-* protected shared-page corruption;
-* authorization bypass;
-* guest-to-host corruption;
-* privileged FD theft;
-* persistent cross-ownership FS corruption.
-IMPORTANT:
-Privilege-gated cleanup UAF whose demonstrated consequence is crash-only does NOT
-automatically satisfy this floor merely because RealUAF=YES.
-However, a concrete second put/release/refcount/free on the same potentially
-freed object is not automatically "crash-only cleanup" merely because it occurs
-at a fail/error label.
-A KVM host-side UAF also does NOT automatically satisfy a Strong Important floor
-merely because guest activity contributes to the trigger.
-It may remain:
-* Ordinary Moderate;
-* Borderline / manual review;
-* Actionable Moderate.
-A demonstrated authorization-bypass exploit that gives an ordinary local user a
-privileged FD/resource or root consequence is not merely a manual-review floor;
-it may directly justify Important-grade scoring.
-AUTO-DOWNGRADE DECISION RULE
-Set AutoDowngradeAllowed=NO when unresolved concrete primitive with meaningful
-exploitation leverage would be lost.
-Normally NO for:
-* Class A;
-* strong Class B;
-* structured UAF with attacker-influenced security state and unresolved reuse;
-* concrete repeated release/refcount UAF where the first release may end
-  lifetime and the same stale reference receives a second lifetime mutation,
-  leaving meaningful post-lifetime corruption leverage unresolved;
-* semantic reinterpretation;
-* COW ownership violation;
-* substantial boundary bypass;
-* controlled corruption;
-* demonstrated privileged FD/resource theft;
-* demonstrated low-privilege-to-root authorization exploit.
-Set YES when:
-* Class C/NONE; OR
-* clearly constrained/fixed/crash-only Class B; OR
-* privilege-gated cleanup/destructor UAF with no demonstrated meaningful reuse
-  AND no concrete repeated lifetime/refcount mutation;
-* no unresolved boundary primitive remains.
-For KVM:
-Do NOT set AutoDowngradeAllowed=NO solely because:
-* stale host-kernel state is involved;
-* a guest participated in creating the invalid state;
-* a theoretical guest-to-host consequence exists.
-Require meaningful unresolved exploitation leverage beyond the ordinary UAF/crash
-before using the guest/host boundary itself as justification for NO.
-Do NOT set NO solely because:
-* RealUAF=YES;
-* object complex;
-* object struct bpf_prog;
-* manual review desirable;
-* reclaim not theoretically ruled out.
-But do NOT set YES merely because:
-* controlled reclaim is absent;
-* arbitrary R/W is absent;
-* LPE is absent;
-when a concrete repeated lifetime/refcount mutation on a potentially freed object
-has already been established.
-Do NOT set YES solely because ActionableScoreLower < 5.
+The listed positive and negative signals must arithmetically equal the raw
+conservative/paranoid scores. State every floor/cap explicitly. Never hide a
+bonus or penalty inside the prose. Semantic bucket, PrimitiveClass,
+ImportantCandidate, ManualReview, and AutoDowngradeAllowed must be mutually
+consistent with the final arithmetic.
 CONFIDENCE / CALL-SITE NOTE
 Include:
 Call-site confidence: high / medium / low
@@ -2469,11 +2073,9 @@ For repeated-release/refcount cases, confidence may be high when:
 Do not require an exploit PoC merely to have high confidence in the lifetime
 primitive itself.
 OUTPUT FORMAT
-Begin with:
+Begin with the mandatory machine-readable fields already defined above:
 ActionableScore=NUM
-and if different:
-ActionableScoreLower=NUM
-Then ALWAYS:
+ActionableScoreLower=NUM        # only when conservative != paranoid
 PrimitiveClass=NONE|CLASS_A|CLASS_B|CLASS_C
 RealUAF=YES|NO
 HostAdminRequired=YES|NO|UNKNOWN
@@ -2481,135 +2083,42 @@ NamespaceScopedPrivilege=YES|NO|UNKNOWN
 ImportantCandidate=YES|NO
 ManualReview=NO|RECOMMENDED|REQUIRED
 AutoDowngradeAllowed=YES|NO
-Then exactly these sections:
+Then output exactly these sections:
 1. ActionableScore
-* Raw conservative score:
-* Conservative score:
-* Raw paranoid score:
-* Paranoid score:
-* Final recommended bucket: **...**::
-If floor/cap changes score, explicitly say which one.
+State raw conservative, conservative, raw paranoid, paranoid, any explicit
+floor/cap, and:
+Final recommended bucket: **...**::
 2. Signal breakdown
-List materially independent positive/negative signals.
-For every item:
-* point value;
-* brief reason;
-* no double-counting.
-Also list important non-awarded signals where material:
-* controlled reclaim not demonstrated;
-* arbitrary write not demonstrated;
-* remote reachability not established;
-* structured leverage not awarded because cleanup-only;
-* structured leverage not separately awarded when the same fact is already
-  counted as concrete repeated release/refcount;
-* Weak LPE not separately awarded for same repeated-release fact;
-* extra Availability not awarded because same crash already counted;
-* C/I not awarded merely because repeated release could theoretically corrupt
-  reclaimed memory;
-* KVM guest-to-host leverage not awarded because no concrete boundary-crossing
-  primitive is established;
-* KVM repeatable lifetime manipulation not awarded when different attacker roles
-  control different trigger stages;
-* privileged FD/resource theft not awarded when no downstream protected resource
-  is actually established;
-* LPE not awarded merely from ptrace authorization helper semantics.
-For every negative signal state concrete evidence.
-For concrete repeated-release/refcount cases explicitly list:
-* whether first release can end lifetime;
-* whether exact same reference survives;
-* whether second operation is a real lifetime/refcount mutation;
-* whether +1 Concrete repeated release/refcount was awarded;
-* whether paranoid repeated-refcount leverage +1 was awarded or withheld;
-* whether FLOOR 5 was applied.
+List each materially independent positive/negative signal with point value and
+brief evidence. Mention important withheld signals when they explain why the
+score did not rise. Do not double-count one crash, one lifetime mutation, or one
+speculative consequence under several names.
 3. Reachability analysis
-Explain:
-* who can trigger;
-* ordinary user vs namespace capability vs delegated vs host-admin;
-* which capability namespace applies;
-* whether COMPLETE trigger chain is namespace-scoped;
-* whether prior host setup exists;
-* whether attacker can instantiate object;
-* whether sysctl/boot/device prerequisites exist;
-* whether special hardware exists;
-* race repeatability.
-For DRM/KMS/display cases distinguish:
-* ordinary logged-in user;
-* DRM master;
-* compositor/display server;
-* delegated graphics/display service;
-* host administrator;
-and do not claim below-host-admin reachability unless the complete vulnerable
-display-control operation is supported for that actor.
-For BPF/XDP separately distinguish:
-* load privilege;
-* attach privilege;
-* netdevice privilege;
-* namespace privilege;
-* root-controlled sysctls.
-For KVM separately distinguish:
-* malicious guest capabilities;
-* local VMM / /dev/kvm process capabilities;
-* host administrator capabilities;
-* whether trigger is guest-only or compound guest+VMM;
-* who controls object creation;
-* who controls object zap/free/replacement;
-* who controls later stale traversal.
-For ptrace/pidfd/process-exit authorization bugs separately distinguish:
-* privilege required by the raw helper-level path;
-* privilege of the COMPLETE demonstrated exploit attacker;
-* whether attacker targets kernel thread, exiting userspace task, SUID process,
-  service process, or another privileged target;
-* which downstream operation succeeds after ptrace authorization;
-* whether pidfd_getfd/procfs/process_vm/ptrace exposes a protected resource;
-* whether supplied advisory/exploit evidence establishes root/LPE.
+Identify the actual attacker and complete trigger chain: ordinary user,
+namespace/delegated capability, host admin, remote peer, guest, VMM, or compound
+actor. State relevant namespace, prior privileged setup, device/configuration,
+hardware, and race requirements when material. Do not merge capabilities of
+different actors.
 4. Primitive and severity interpretation
-State:
-* exact primitive;
-* active structured vs fixed stale storage;
-* cleanup/destructor-only vs broader active use;
-* whether a concrete repeated release/refcount operation exists;
-* whether the first lifetime operation may free/destroy the object;
-* whether the second operation actively mutates lifetime/refcount state;
-* Class A/B/C/NONE;
-* demonstrated consequence;
-* speculative consequence;
-* leverage beyond crash;
-* why ImportantCandidate YES/NO;
-* why AutoDowngradeAllowed YES/NO;
-* likely operational severity.
-For a repeated-release/refcount UAF explicitly distinguish:
-A. ordinary stale cleanup dereference;
-from:
-B. second lifetime/refcount mutation through a potentially dangling object.
-Do not require controlled reclaim merely to recognize B.
-But do not call B CLASS_A without stronger evidence.
-For KVM explicitly state whether evidence establishes:
-* guest-triggered host crash only;
-* VMM-triggered host UAF;
-* compound guest+VMM trigger;
-* actual guest-to-host corruption primitive.
-For ptrace/pidfd authorization flaws explicitly state whether evidence establishes:
-* helper-level authorization bypass only;
-* information disclosure only;
-* privileged FD/resource access;
-* protected-object access;
-* root privilege escalation / arbitrary privileged execution.
-Explicitly distinguish theoretical worst-case from patch-supported practical
-evidence and from supplied advisory/exploit evidence.
+State the exact primitive, Class A/B/C/NONE, demonstrated consequence, meaningful
+unresolved leverage beyond crash, ImportantCandidate reason, AutoDowngradeAllowed
+reason, and likely operational severity. For UAF/repeated-release cases identify
+the lifetime-ending operation and later stale use/mutation. For authorization
+bugs identify the protected authority/resource actually crossed. For KVM state
+whether the evidence is guest crash only, VMM-triggered host bug, compound
+guest+VMM trigger, or an actual guest-to-host corruption primitive.
 5. One-sentence report phrase
 Provide one concise English sentence.
 6. Manual review recommendation
-Choose exactly:
+Choose exactly one:
 NO MANUAL CHECK NEEDED
 MANUAL CHECK RECOMMENDED
 MANUAL CHECK REQUIRED
-Then give brief reason.
+Then give one brief reason.
 7. Call-site confidence
-Output exactly:
+Output exactly one:
 Call-site confidence: high
-or:
 Call-site confidence: medium
-or:
 Call-site confidence: low
 FINAL SELF-CHECK BEFORE OUTPUT
 Silently verify all of the following before responding. If a check fails, correct the result before emitting fields.
@@ -2639,6 +2148,7 @@ UAF / LIFETIME
 20. Fixed async stale-buffer access is not repeated-release unless a real second lifetime/refcount operation exists.
 KVM / AUTHORIZATION
 21. KVM guest influence + host UAF + virtualization boundary does not prove +2 guest-to-host leverage. Do not merge guest/VMM/host-admin capabilities; distinguish guest-only, VMM-local, host-admin, or compound trigger.
+21b. A missing architectural exception (#UD/#GP/etc.) or incorrect CPU-instruction emulation is not a +2 authorization bypass by itself. Before awarding authorization/boundary points, name the protected HOST resource/operation/state the guest actually gains access to. If none exists, keep it in CLASS_C/NONE correctness/DoS territory.
 22. Authorization bugs require a concrete ALLOW-vs-DENY/capability-policy change. Do not subtract the very privilege that the vulnerability bypasses unless a separate prerequisite privilege is needed to reach the path.
 23. Score authoritative demonstrated downstream effects (protected FD/resource access, disclosure, root/LPE) as established evidence, but do not infer them merely from a possible caller.
 24. Do not double-count one authorization exploit chain as boundary + resource theft + Strong LPE when the latter adds no independent primitive.
@@ -2669,25 +2179,17 @@ Do not let narrow upstream commit wording erase a supplied demonstrated
 authorization exploit, privileged-resource theft, or privilege-escalation chain.
 Now analyze the following CVE and patch.
 CVE TRIAGE INPUT:
-
-================================================================================
 A.LARKIN FINAL NULL/UAF COMPATIBILITY OVERRIDE
-================================================================================
-
 This block is a FINAL override. It exists to keep ActionableScore semantics
 compatible with the legacy NN+LLM cascade and overrides broader wording
 elsewhere in this prompt.
-
 REALUAF STRICT DEFINITION
--------------------------
-Set RealUAF=YES ONLY when supplied technical evidence establishes BOTH:
-
+Set RealUAF=YES ONLY when technical evidence establishes BOTH:
 1. the lifetime of a concrete allocation/object/backing storage ended
    (for example kfree/vfree/free/refcount-to-zero/ownership release), AND
 2. that freed object/storage, or a stale reference to it, is subsequently
    accessed, dereferenced, read, written, remapped, released again, or
    otherwise used after the lifetime transition.
-
 A NULL pointer dereference is NOT a use-after-free merely because:
 * the pointer value is NULL;
 * a wrong index retrieves NULL;
@@ -2695,24 +2197,18 @@ A NULL pointer dereference is NOT a use-after-free merely because:
 * a helper or lookup returns NULL;
 * NULL appears in a crash trace;
 * the crash occurs inside list/object manipulation code.
-
 Never describe a "use-after-free of a NULL pointer" unless the evidence
 independently proves that a real object was freed and a stale reference was
 then used.
-
 If an indexing/initialization/validation bug produces a NULL pointer and then
 dereferences it, with no proven prior lifetime end:
     RealUAF=NO
-
 Do NOT apply any RealUAF score floor or RealUAF/UAF base points in that case.
-
 Do not infer UAF merely from generic words such as "stale", "dangling",
 "lifetime", "NULL", or from a crash inside a list/object helper. Identify the
 exact first lifetime-ending operation and the exact later post-free operation.
-If both cannot be identified from supplied evidence, RealUAF=NO.
-
+If both cannot be identified from evidence, RealUAF=NO.
 NULL-DEREFERENCE CLASSIFICATION
--------------------------------
 For a crash-only NULL pointer dereference with no independently demonstrated
 memory-corruption primitive, controlled target/value, post-free access, or
 security-boundary bypass:
@@ -2721,12 +2217,317 @@ security-boundary bypass:
 * do not raise ImportantCandidate merely because kernel object code is involved;
 * AutoDowngradeAllowed should normally be YES unless a separate concrete
   Important-preserving primitive is established.
-
 FINAL SELF-CHECK
-----------------
 Immediately before emitting machine-readable fields, if RealUAF=YES, verify:
     freed by: <exact operation>
     used after free by: <exact operation>
-
-If either side is unsupported by supplied evidence, emit RealUAF=NO.
-
+If either side is unsupported by evidence, emit RealUAF=NO.
+CVSS SECOND-OPINION RE-EVALUATION -- RUN ONLY AFTER ACTIONABLESCORE IS COMPLETE
+IMPORTANT ORDER / INDEPENDENCE RULE
+Compute and finalize the complete ActionableScore analysis FIRST, including:
+* ActionableScore and ActionableScoreLower;
+* PrimitiveClass and RealUAF;
+* attacker role and reachability;
+* ImportantCandidate;
+* ManualReview;
+* AutoDowngradeAllowed;
+* all positive and negative signal arithmetic.
+Only AFTER those values and their technical reasoning are fixed, compute CVSS.
+The CVSS stage and ActionableScore stage share the same underlying supplied
+technical evidence, but neither score is evidence for the other.
+STRICT INDEPENDENCE:
+* Do NOT use CVSS Base, Paranoid, Selected, CIA, AV, AC, PR, Scope, or numerical
+  score to award, remove, or justify ActionableScore points.
+* Do NOT choose a CVSS metric merely to make it agree with ActionableScore,
+  PrimitiveClass, ImportantCandidate, ManualReview, AutoDowngradeAllowed, or a
+  desired operational severity.
+* ActionableScore labels may help locate the already-established technical facts,
+  but they are NOT proof of a CVSS metric. Re-derive every CVSS metric from the
+  supplied patch/source/call path/CVE/advisory evidence.
+* Previous/primary LLM CVSS vectors, scores, impact labels, and generated security
+  conclusions are hypotheses only. Never copy or average them into this result.
+CVSS PURPOSE
+Independently produce TWO CVSS v3.1 assessments:
+1. CVSSBaseVector / CVSSBaseScore
+   The most likely evidence-grounded assessment.
+2. CVSSParanoidVector / CVSSParanoidScore
+   The highest still-defensible assessment of the SAME established vulnerability
+   mechanics and SAME coherent attacker model.
+CVSSSelectedVector / CVSSSelectedScore is the numerically higher of Base and
+Paranoid. It is intentionally conservative for later threshold/manual-review
+logic, but "paranoid" means the high end of a TECHNICALLY DEFENSIBLE range, not
+"assume arbitrary code execution", "assume remote", or "choose C:H/I:H/A:H".
+The paranoid assessment MAY strengthen the severity of a consequence already
+supported by the same primitive. It MUST NOT manufacture a new primitive,
+attacker role, reachability path, security boundary, corruption target, or
+exploit chain.
+EVIDENCE-FIRST DECISION ORDER
+Before CVSS, internally fix: (1) root bug class; (2) concrete primitive; (3)
+demonstrated vs unresolved consequence; (4) one coherent attacker principal for
+the COMPLETE trigger; (5) setup/privilege/timing/topology/deployment assumptions.
+Base and Paranoid must use the SAME facts; subsystem/bug labels are not metrics.
+ATTACK VECTOR (AV)
+AV:N only for normal remote network reachability without local execution or material
+adjacent/trusted-fabric prerequisite; AV:A for adjacent/trusted/specialized reachable
+fabric where topology matters; AV:L for local syscall/device/KVM-VMM/procfs/io_uring
+style triggers; AV:P only for physical interaction. Networking code != AV:N.
+Do not broaden AV:A to AV:N in Paranoid without evidence. NVMe/TCP/iSER-like storage
+fabrics normally favor AV:A unless ordinary remote exposure is established.
+ATTACK COMPLEXITY (AC) -- HARD CALIBRATION
+AC:H for race/narrow timing/unusual ordering/probabilistic state materially outside
+direct attacker control. Cheap/repeated attempts or looping reproducers do not make
+AC:L. Paranoid MUST retain AC:H for explicitly difficult/narrow races unless the SAME
+attacker is shown to drive them reliably. AC:L requires deterministic sequence or
+sufficient control of both sides to remove the meaningful race barrier.
+PRIVILEGES REQUIRED (PR)
+Judge the COMPLETE trigger: PR:N=no attacker authority/authentication; ordinary local
+process/syscall/device access normally PR:L; PR:H only for host-admin-equivalent
+authority actually required. Container root/reduced capabilities/namespace-scoped
+capabilities are not automatically PR:H. UNKNOWN is not evidence for a lower PR.
+Do not combine privileges of different principals.
+SCOPE (S) -- SECURITY-AUTHORITY RULE
+S:C requires impact on a resource/component governed by a different CVSS security
+authority. Crossing subsystem, namespace, guest/host implementation, or kernel/user
+boundary alone is insufficient. Guest-influenced host processing/crash and namespace
+involvement do not automatically imply S:C. If only host crash/availability is
+demonstrated and no independent cross-authority consequence exists, normally S:U.
+CONFIDENTIALITY / INTEGRITY
+Never assign C or I from generic phrases such as:
+"memory corruption", "UAF", "OOB", "security sensitive", "could lead to LPE",
+"might disclose", or from a previous/model-generated CVSS vector.
+Base:
+* no useful non-crash primitive -> normally C:N/I:N;
+* limited disclosure -> C:L unless high-value/broad disclosure is supported;
+* bounded invalid read with no output path -> C:N;
+* crash-only NULL/correctness bug -> C:N/I:N;
+* real UAF/OOB write/ownership/authorization primitive may receive C/I only to
+  the extent supported by its mechanics.
+Paranoid:
+* may raise L -> H when the SAME already-established confidentiality/integrity
+  consequence plausibly has high impact;
+* may use CIA:LLH for a real corruption/lifetime primitive with credible
+  non-crash leverage whose exact consequence is unresolved;
+* may use CIA:HHH only for a strong corruption/authorization primitive with
+  concrete exploitation leverage or authoritative evidence supporting high C/I;
+* MUST NOT create C or I when the only demonstrated effect remains crash/DoS.
+A large overwrite is not proof of useful C/I. Attacker-controlled bytes are not
+proof of attacker-controlled target.
+AVAILABILITY (A) -- ROOT-CAUSE ATTRIBUTION
+Assign availability to the consequence caused by THIS vulnerability, not merely
+to the state in which the vulnerable code happens to execute.
+A:H is appropriate when this CVE independently enables a reliable system-wide
+kernel crash/hang or equivalent major availability loss.
+Use A:L or A:N when the vulnerability only:
+* worsens an already-failing path;
+* executes after an independent kernel panic/fatal condition;
+* corrupts panic reporting or cleanup;
+* causes a bounded/localized malfunction rather than system-wide loss.
+SECONDARY-PANIC / ERROR-PATH RULE:
+If the vulnerable code is normally reached only after an independent kernel
+panic, fatal error, teardown failure, or already-failing state, do NOT
+automatically assign A:H. Ask whether the CVE itself supplies an independent
+attacker-triggerable system-wide failure. If not, use A:L or A:N as supported.
+RESOURCE LEAK / EXHAUSTION
+For leak/exhaustion without corruption:
+* Base A:L unless one/few attacker operations can realistically cause immediate
+  system-wide failure;
+* Paranoid A:H only when sustained attacker-controlled abuse can realistically
+  exhaust the resource and make the system unavailable;
+* never create C/I from resource exhaustion;
+* PR:N or AV:N alone does not justify a high score.
+KVM / VIRTUALIZATION CVSS CALIBRATION
+For KVM/MMU/rmap/SPTE/lifetime bugs, keep attacker roles separate:
+A. malicious guest;
+B. local VMM/host userspace with /dev/kvm access;
+C. host administrator.
+Do not build one CVSS vector by combining guest control over guest memory with
+VMM control over memslots/MMU lifecycle unless one attacker can actually perform
+or induce the complete sequence.
+GUEST TRIGGER != GUEST-TO-HOST SECURITY IMPACT.
+A host-kernel crash while processing guest-influenced state may justify host
+availability impact if the guest can independently trigger the complete path, but
+it does not automatically justify:
+* S:C;
+* C:L/H;
+* I:L/H;
+* guest-to-host privilege escalation;
+* AC:L;
+* a stronger attacker role.
+For a KVM CLASS_C/correctness/crash-only case with no demonstrated useful host
+corruption, disclosure, protected-state modification, or isolation bypass:
+* normally C:N/I:N;
+* normally S:U;
+* score availability according to the actual independently triggerable host
+  consequence;
+* preserve AC:H when a real race remains material.
+UAF / OOB / MEMORY-CORRUPTION CALIBRATION
+Real UAF or OOB write is meaningful evidence, but not automatic HHH.
+Distinguish:
+* fixed stale storage vs active structured stale object;
+* small fixed adjacent overwrite vs wide/unbounded overwrite;
+* attacker-controlled bytes vs attacker-controlled target;
+* crash before useful corruption vs useful non-crash corruption;
+* theoretical allocator reuse vs controlled reclaim/replacement.
+A small fixed adjacent overwrite with no sensitive target, target selection,
+reclaim, directed write, or demonstrated non-crash consequence should normally
+remain C:N/I:N in Base. Paranoid may raise C/I only if the same established
+primitive supplies a concrete defensible non-crash path.
+A wide/effectively unbounded OOB write is stronger than a tiny adjacent overwrite,
+but size alone does not prove arbitrary write or high C/I. Consider whether useful
+writes occur before an inevitable fault and whether a security-relevant target is
+predictable or controllable.
+For real UAF:
+* Base may remain primarily availability-oriented when demonstrated stale use is
+  immediate crash/cleanup and there is no useful reclaim/replacement;
+* Paranoid may use CIA:LLH when a concrete active-object lifetime primitive and
+  credible non-crash leverage are supported;
+* use HHH only with stronger target/reclaim/callback/refcount/credential/control
+  evidence or authoritative exploit evidence.
+AUTHORIZATION / SECURITY-BOUNDARY CALIBRATION
+A missing capability/namespace/security check establishes an authorization
+primitive only when the technical evidence shows the incorrect
+ALLOW-vs-DENY decision.
+Do not independently assign:
+* high confidentiality;
+* high integrity;
+* credential theft;
+* plaintext exposure;
+* arbitrary privileged modification;
+* root execution;
+unless the supplied non-generated evidence connects the bypass to that result.
+Authoritative advisory/exploit evidence MAY establish those consequences and
+should be used when technically connected to the patch.
+PRIMARY / PREVIOUS LLM EVIDENCE FIREWALL
+Previous-model text is never sufficient evidence for a CVSS metric.
+If the justification would read:
+* "the previous analysis states...";
+* "PRIMARY LLM HINTS say...";
+* "the prior model assessed...";
+* "the earlier CVSS has C:H/I:H...";
+then remove that support and ask whether the fact is independently present in:
+* patch/source/call path;
+* raw CVE/commit description;
+* reproducer;
+* supplied authoritative advisory/exploit evidence;
+* well-established semantics of the exact kernel interface.
+If not, do NOT use it.
+BASE VS PARANOID ANTI-INFLATION CHECK
+Before finalizing Paranoid, compare it metric-by-metric with Base.
+For EVERY changed metric, be able to complete:
+"Base used X, but Paranoid uses Y because [specific supplied technical fact]
+makes Y still defensible for the SAME primitive and SAME attacker."
+If the reason is only:
+* worst case;
+* theoretically possible;
+* security sensitive;
+* memory corruption;
+* guest/host boundary;
+* networking;
+* repeated attempts;
+* previous LLM opinion;
+* desire to avoid false negatives;
+then KEEP THE BASE METRIC.
+Paranoid is allowed to equal Base. Do not force a difference.
+LOW-END CONSISTENCY CHECK
+If all of these are true:
+* demonstrated behavior is CLASS_C/NONE-like crash/correctness/invalid-state only;
+* C:N/I:N is supported;
+* no authorization bypass/disclosure/LPE/useful corruption is established;
+* no independent cross-security-authority impact is established;
+then do not manufacture a high CVSS through S:C, AV inflation, or A:H attribution
+to a pre-existing panic/failure path.
+This is especially important for KVM correctness cases and panic/error-path bugs.
+MANUAL CHECK DECISION
+Emit exactly ONE:
+YES REQUIRES MANUAL CHECK
+NO MANUAL CHECK REQUIRED COULD BE AUTOCLOSED
+Normally choose YES for:
+* real memory corruption or UAF/lifetime violation;
+* network/adjacent remotely reachable attack surface;
+* privilege escalation or credible unresolved LPE leverage;
+* authorization/security-boundary bypass;
+* ownership/COW violation;
+* meaningful information disclosure;
+* race/lifetime issue whose security consequence remains materially uncertain;
+* Base and Paranoid differ enough to cross an operational impact threshold.
+Normally choose NO only when the issue is clearly bounded/low-risk with no
+meaningful unresolved non-crash primitive.
+Manual review does NOT justify raising CVSS metrics.
+CVSS REPORT
+Produce a compact ASCII English report phrase.
+Requirements:
+* use only practical ASCII;
+* do not use semicolon as a sentence separator;
+* if PR is discussed, begin that sentence exactly:
+  "For the CVSS the PR:"
+* describe the PR used by CVSSSelectedVector;
+* mention actual primitive and reachability;
+* distinguish demonstrated crash-only effect from credible non-crash effect;
+* include exactly one:
+  YES REQUIRES MANUAL CHECK
+  or
+  NO MANUAL CHECK REQUIRED COULD BE AUTOCLOSED
+FINAL CVSS SELF-CHECK
+Before emitting CVSS, explicitly verify internally:
+1. Did Paranoid change AC:H -> AC:L only because repeated attempts are possible?
+   If yes, restore AC:H.
+2. Did KVM/guest/namespace/subsystem crossing alone cause S:C?
+   If yes, restore S:U.
+3. Did an already-existing panic/fatal/error path alone cause A:H?
+   If yes, lower A as technically supported.
+4. Did generic UAF/OOB/memory-corruption wording alone create C:H or I:H?
+   If yes, remove unsupported H impact.
+5. Did previous LLM/CVSS wording supply any metric without independent evidence?
+   If yes, remove it.
+6. Did Base and Paranoid silently use different attacker principals?
+   If yes, rebuild them using one coherent principal per vector.
+7. Is Paranoid higher only because it is called "paranoid"?
+   If yes, make it equal to Base.
+8. Would a CLASS_C crash/correctness case become High only from Scope, broad
+   subsystem importance, or generic availability assumptions?
+   If yes, re-evaluate those metrics from concrete evidence.
+MACHINE-PARSABLE CVSS OUTPUT
+The CVSS fields listed in the MANDATORY MACHINE-PARSABLE OUTPUT section near
+the beginning of this prompt are REQUIRED in every response.
+IMPORTANT:
+* Compute CVSS only AFTER ActionableScore has been fully finalized internally.
+* Nevertheless, PRINT the CVSS fields together with the ActionableScore fields
+  in the single mandatory machine-readable header at the very beginning.
+* Never postpone the CVSS fields until after the human-readable sections.
+* Never stop the response before all CVSSBase/CVSSParanoid/CVSSSelected fields,
+  CVSSManualCheck, and CVSSReport have been emitted.
+* If Base and Paranoid are identical, still emit BOTH complete pairs.
+* Do not revise ActionableScore after CVSS computation.
+Consistency:
+* Selected MUST equal whichever of Base or Paranoid has the higher numeric score.
+* If equal, select Base unless the vectors differ and Paranoid captures a
+  materially important defensible review boundary.
+* Do not recompute or revise ActionableScore after CVSS has been calculated.
+* CVSSManualCheck may affect review policy but never ActionableScore arithmetic.
+* CVSSSelectedScore is intended for downstream H1-H15 style threshold rules only
+  after CVSS calibration is validated.
+FINAL RESPONSE COMPLETENESS GATE
+Before returning the answer, verify that the FIRST machine-readable block
+contains every one of these names exactly once:
+ActionableScore
+PrimitiveClass
+RealUAF
+HostAdminRequired
+NamespaceScopedPrivilege
+ImportantCandidate
+ManualReview
+AutoDowngradeAllowed
+CVSSBaseScore
+CVSSBaseVector
+CVSSParanoidScore
+CVSSParanoidVector
+CVSSSelectedScore
+CVSSSelectedVector
+CVSSManualCheck
+CVSSReport
+ActionableScoreLower is required only when conservative and paranoid scores differ.
+If ANY required CVSS field is missing, DO NOT finish the response. Compute the
+missing CVSS result from the already-finalized technical facts and emit the
+complete header first. This completeness check does not permit revising the
+already-finalized ActionableScore.
+END CVSS SECOND-OPINION RE-EVALUATION

@@ -13,9 +13,10 @@ as closely as practical after the supplied current Perl daemon block:
 
 Historical Aegis G1-G4 helpers remain for reference but are disabled in this
 NN-compatible path because the supplied Perl block has no equivalent general
-LLM-band/memory/network floors. The later request_llm_kpanic() and
-request_llm_afterpushedtohigh() false-positive LLM calls are intentionally
-not ported yet.
+LLM-band/memory/network floors. request_llm_kpanic() is represented by a
+structured asynchronous review after H1-H15/AS1-AS7, followed by the
+request_llm_afterpushedtohigh() structured false-positive review when the old
+Perl pushed_to_high/current-IMPORTANT gate is satisfied.
 
 Both phases use a declarative rule architecture:
 
@@ -34,6 +35,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -141,8 +143,8 @@ RULES_KERNEL = """
                       * NO = the primary technical evidence is sufficiently clear that no additional manual impact review is needed.
                       * UNKNOWN = use only when the evidence is genuinely insufficient to decide YES versus NO even after using the required kernel tools. Do NOT use UNKNOWN as a neutral/default value.
                       This is the structured Aegis equivalent of the legacy hints text "YES REQUIRES MANUAL CHECK" / "NO MANUAL CHECK". Do not derive it merely from the XGBoost severity class.
-                    - kernel_nullptr_related: For Linux kernel CVEs only, output true ONLY when the vulnerability mechanism itself is identified by your primary analysis as CWE-476, CWE-833, CWE-401, or an actual NULL pointer dereference.
-                      Do NOT set this merely because a helper returns NULL, a crash trace contains NULL, a post-UAF lookup returns NULL, validation checks a NULL value, or NULL appears only as a consequence of another root bug such as UAF/race/OOB. For example, a UAF race where vmalloc_to_page() later returns NULL remains false unless the vulnerability itself is independently a NULL-pointer-dereference class bug.
+                    - kernel_nullptr_related: For Linux kernel CVEs only, output true ONLY when the ROOT VULNERABILITY MECHANISM itself is CWE-476, CWE-833, CWE-401, or an actual NULL-pointer dereference.
+                      Output false when NULL is only a downstream symptom/consequence of UAF, race, OOB, double-free, failed lookup, or another root bug. A UAF/race where vmalloc_to_page() later returns NULL or vm_insert_page(NULL) is called MUST remain false unless the root flaw is independently a NULL-dereference-class bug.
                     - kernel_btrfs_context: For Linux kernel CVEs only, true when the vulnerable subsystem/fix being analyzed is btrfs; otherwise false.
                 - Metric selection guide:
                     - AV: N if reachable over network from off-host; A if same subnet/Bluetooth/802.11 link-limited; L if requires local account/session/CLI/local IPC; P if requires physical access.
@@ -205,10 +207,13 @@ class RuleContext:
 
     #: Current severity rank (mutated only by ``apply_effect``).
     severity: int
-    #: CVSS base score parsed from the LLM's ``cvss3_score`` output.
+    #: CVSS score used by the Perl-compatible cascade.
+    #: Prefer second-opinion CVSSSelectedScore; primary LLM is fallback only.
     llm_cvss: float
-    #: Parsed CVSS vector dict (keys like ``"AV"``, ``"C"``, etc.).
+    #: Parsed CVSS vector used by the Perl-compatible cascade.
     llm_vector: dict
+    #: Diagnostic source for llm_cvss/llm_vector.
+    llm_cvss_source: str
     #: Set of active feature flags from the XGBoost classifier.
     active_features: set[str]
     #: True when any flag in ``CONTAINED_SUBSYSTEM_FLAGS`` is active.
@@ -322,6 +327,19 @@ def apply_effect(ctx: RuleContext, effect: RuleEffect) -> None:
         ctx.severity = effect.severity
     for flag, value in effect.flags.items():
         setattr(ctx, flag, value)
+
+
+def _sync_output_operational_kpanic_flag(output) -> None:
+    """Keep exported Patch Flags aligned with final Perl-compatible KPANIC."""
+    final_kpanic = getattr(output, "_kernel_kpanic_marked", None)
+    if final_kpanic is None:
+        return
+    flags = getattr(output, "_flags", None)
+    if not isinstance(flags, list):
+        return
+    flags[:] = [f for f in flags if f != "kernel_panic"]
+    if final_kpanic:
+        flags.append("kernel_panic")
 
 
 def run_rules(
@@ -908,6 +926,7 @@ def build_trace(
         "path=kernel_threshold",
         f"start={start_label}(clf_conf={ctx.clf_confidence:.2f})",
         f"llm_cvss={ctx.llm_cvss:.1f}",
+        f"cvss_source={ctx.llm_cvss_source}",
     ]
     if ctx.ext_band:
         issuer_tag = f",{ctx.clf_cvss_issuer}" if ctx.clf_cvss_issuer else ""
@@ -958,6 +977,60 @@ def build_trace(
 # ===========================================================================
 
 
+def _effective_primary_nullptr_related(
+    output, active_features: set[str] | list[str]
+) -> bool:
+    """Return the Perl/H12-compatible root-cause NULL/CWE predicate.
+
+    The structured field can be over-broad: a UAF/race may later make
+    vmalloc_to_page() return NULL and produce vm_insert_page(NULL). H12 should
+    represent the vulnerability mechanism itself being CWE-476/833/401 or a
+    NULL-pointer dereference, not an incidental NULL consequence.
+    """
+    claimed = bool(getattr(output, "kernel_nullptr_related", False))
+    if not claimed:
+        return False
+
+    explanation = str(getattr(output, "explanation", "") or "")
+    if re.search(r"\bCWE-(?:476|833|401)\b", explanation, re.IGNORECASE):
+        return True
+
+    root_null = re.search(
+        r"\b(?:root\s+cause|vulnerability|bug|flaw|issue|mechanism)\b"
+        r".{0,120}?\bNULL[- ]pointer\s+dereference\b",
+        explanation,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if root_null:
+        return True
+
+    active = {str(x).lower() for x in (active_features or [])}
+    alternative_feature = bool(
+        active
+        & {
+            "uaf",
+            "kernel_panic_plus_uaf",
+            "race",
+            "outofbounds",
+        }
+    )
+    alternative_text = re.search(
+        r"\b(?:use[- ]after[- ]free|UAF|double[- ]free|race(?: condition)?|"
+        r"out[- ]of[- ]bounds|OOB)\b",
+        explanation,
+        re.IGNORECASE,
+    )
+
+    if alternative_feature and alternative_text:
+        logger.info(
+            "Suppressing incidental primary kernel_nullptr_related=YES: "
+            "primary explanation identifies UAF/race/OOB/double-free root mechanism"
+        )
+        return False
+
+    return True
+
+
 def reconcile_kernel(
     output,
     call_str: str,
@@ -966,12 +1039,13 @@ def reconcile_kernel(
 ) -> str:
     """Threshold-based severity reconciliation for kernel CVEs.
 
+    A.Larkin second-opinion selected CVSS plumbing.
     A.Larkin NN+LLM parity POC. The raw XGBoost prediction is the starting
     severity when available. The primary LLM CVSS/hint fields and numeric
     ActionableScore then flow through the supplied Perl-compatible H1-H15 and
-    AS1-AS7 rules. Historical G1-G4 are disabled here. The later Perl
-    request_llm_kpanic()/request_llm_afterpushedtohigh() calls are not yet
-    ported.
+    AS1-AS7 rules. Historical G1-G4 are disabled here. The asynchronous
+    request_llm_kpanic()-equivalent and request_llm_afterpushedtohigh()-
+    equivalent are applied by SuggestImpact.exec() after this function returns.
 
     Classifier confidence is logged in the trace but does not affect
     the outcome.
@@ -989,12 +1063,58 @@ def reconcile_kernel(
     """
     from aegis_ai.kernel_classifier.cascade import parse_cvss_vector
 
+    # Primary SuggestImpact CVSS is the fail-open fallback. Prefer the
+    # independently computed selected CVSS from the second-opinion pass for
+    # the Perl-compatible deterministic cascade when available.
     try:
-        llm_cvss = float(output.cvss3_score)
+        primary_llm_cvss = float(output.cvss3_score)
     except (ValueError, TypeError):
-        llm_cvss = float("nan")
+        primary_llm_cvss = float("nan")
 
-    llm_vector = parse_cvss_vector(output.cvss3_vector or "")
+    primary_llm_vector = parse_cvss_vector(output.cvss3_vector or "")
+
+    llm_cvss = primary_llm_cvss
+    llm_vector = primary_llm_vector
+    llm_cvss_source = "primary"
+
+    if second_opinion is not None:
+        selected_score = getattr(second_opinion, "cvss_selected_score", None)
+        selected_vector_raw = getattr(second_opinion, "cvss_selected_vector", None)
+
+        if selected_score is not None and selected_vector_raw:
+            try:
+                selected_score_float = float(selected_score)
+                selected_vector = parse_cvss_vector(selected_vector_raw)
+                required_metrics = {"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
+                missing = required_metrics - set(selected_vector)
+                if missing:
+                    raise ValueError(
+                        f"selected CVSS vector missing base metrics: {sorted(missing)}"
+                    )
+
+                llm_cvss = selected_score_float
+                llm_vector = selected_vector
+                llm_cvss_source = "second_opinion_selected"
+            except Exception as exc:
+                logger.warning(
+                    "%s: invalid second-opinion selected CVSS at reconciliation "
+                    "boundary; using primary CVSS: %s",
+                    call_str,
+                    exc,
+                )
+
+    logger.info(
+        "%s: kernel reconciliation CVSS source=%s score=%s "
+        "selected_vector=%s primary_score=%s primary_vector=%s",
+        call_str,
+        llm_cvss_source,
+        llm_cvss,
+        getattr(second_opinion, "cvss_selected_vector", None)
+        if second_opinion is not None
+        else None,
+        primary_llm_cvss,
+        output.cvss3_vector,
+    )
 
     # --------------------------------------------------------------
     # A.Larkin NN+LLM parity POC.
@@ -1015,10 +1135,33 @@ def reconcile_kernel(
     )
     start_label = IMPACT_LABELS.get(severity, clf_impact)
 
+    # Deterministic AS consistency invariant:
+    # CLASS_C + ImportantCandidate=NO + AutoDowngradeAllowed=YES => AS <= 2.
+    effective_actionable_score = (
+        getattr(second_opinion, "actionable_score", None)
+        if second_opinion is not None
+        else None
+    )
+    if (
+        effective_actionable_score is not None
+        and str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_C"
+        and getattr(second_opinion, "important_candidate", "NO") == "NO"
+        and getattr(second_opinion, "auto_downgrade_allowed", "NO") == "YES"
+        and effective_actionable_score > 2
+    ):
+        logger.info(
+            "%s: deterministic CLASS_C ActionableScore cap %s -> 2 "
+            "(ImportantCandidate=NO, AutoDowngradeAllowed=YES)",
+            call_str,
+            effective_actionable_score,
+        )
+        effective_actionable_score = 2
+
     ctx = RuleContext(
         severity=severity,
         llm_cvss=llm_cvss,
         llm_vector=llm_vector,
+        llm_cvss_source=llm_cvss_source,
         active_features=active_features,
         has_contained=bool(active_features & CONTAINED_SUBSYSTEM_FLAGS),
         has_corruption=bool(active_features & MEMORY_CORRUPTION_FLAGS),
@@ -1033,11 +1176,7 @@ def reconcile_kernel(
         clf_cvss_score=classifier_result.get("cvss_score", 0.0) or 0.0,
         clf_cvss_issuer=classifier_result.get("cvss_issuer", "") or "",
         clf_confidence=classifier_result.get("confidence", 0.0) or 0.0,
-        actionable_score=(
-            getattr(second_opinion, "actionable_score", None)
-            if second_opinion is not None
-            else None
-        ),
+        actionable_score=effective_actionable_score,
         actionable_score_lower=(
             getattr(second_opinion, "actionable_score_lower", None)
             if second_opinion is not None
@@ -1070,7 +1209,12 @@ def reconcile_kernel(
         ),
         # Structured equivalents of Perl $rs text predicates.
         primary_manual_review=getattr(output, "kernel_manual_review", "UNKNOWN"),
-        primary_nullptr_related=bool(getattr(output, "kernel_nullptr_related", False)),
+        # H12 parity: use a root-cause NULL predicate, not incidental NULL
+        # consequences inside a UAF/race/OOB crash path.
+        primary_nullptr_related=_effective_primary_nullptr_related(
+            output,
+            active_features,
+        ),
         primary_btrfs_context=bool(getattr(output, "kernel_btrfs_context", False)),
         # Perl enters this block with existing $flags{$cve}. Seed the mutable
         # KPANIC state from real classifier crash flags, then allow H/AS rules
@@ -1127,8 +1271,310 @@ def reconcile_kernel(
 
     output.impact = final
 
-    # Preserve final Perl-style KPANIC/MODERATE7 state for output flag export.
+    # Preserve final Perl-style mutable state for the asynchronous KPANIC
+    # false-positive review and the later afterpushedtohigh parity stage.
     output._kernel_kpanic_marked = ctx.kpanic_marked
+    output._kernel_lowered = ctx.lowered
+    output._kernel_decrease_count = ctx.decrease_count
+    output._kernel_pushed_to_high = ctx.pushed_to_high
+
+    # NEW29_AS4_DOWNGRADE_STATE: record literal AS4 execution only.
+    output._kernel_as4_downgraded_from_important = any(
+        str(item).startswith("AS4:IMP->MOD7") for item in actionable_applied
+    )
+
+    _sync_output_operational_kpanic_flag(output)
+    return trace
+
+
+# ===========================================================================
+# NN+LLM-compatible KPANIC false-positive review result application
+# ===========================================================================
+
+
+def apply_kpanic_llm_review(
+    output,
+    call_str: str,
+    review,
+    second_opinion=None,
+) -> str:
+    """Apply the structured request_llm_kpanic()-equivalent decision.
+
+    This stage runs only after H1-H15 and AS1-AS7 have produced the mutable
+    operational KPANIC state.
+
+    The supplied modern KPANIC prompt intentionally separates two decisions:
+      1. whether KERNEL_PANIC itself is supported;
+      2. whether HIGH can safely become MODERATE7 after crash/DoS is removed
+         from the independent severity analysis.
+
+    Therefore this port does not collapse the response back into the old
+    opaque integer ``$rv``.  It uses each structured decision only for the
+    branch it semantically controls while retaining the original Perl numeric
+    gates (CVSS, AV:N, ActionableScore, current severity).
+    """
+    if getattr(output, "_kernel_kpanic_marked", None) is not True:
+        return ""
+
+    # Effective CVSS follows the same source precedence as H1-H15 and the
+    # kpanic CVSS override: selected second-opinion CVSS first, primary fallback.
+    try:
+        effective_score = float(output.cvss3_score)
+    except (TypeError, ValueError):
+        effective_score = float("nan")
+    cvss_source = "primary"
+
+    if second_opinion is not None:
+        selected_score = getattr(second_opinion, "cvss_selected_score", None)
+        selected_vector = getattr(second_opinion, "cvss_selected_vector", None)
+        if selected_score is not None and selected_vector:
+            try:
+                parsed_selected = cvss.CVSS3(str(selected_vector))
+                effective_score = float(parsed_selected.scores()[0])
+                cvss_source = "second_opinion_selected"
+            except Exception as exc:
+                logger.warning(
+                    "%s: KPANIC_REVIEW invalid selected CVSS; "
+                    "using primary fallback: %s",
+                    call_str,
+                    exc,
+                )
+
+    effective_vector_raw = str(output.cvss3_vector or "")
+    try:
+        parsed_metrics = cvss.CVSS3(effective_vector_raw).metrics
+        av_network = parsed_metrics.get("AV") == "N"
+    except Exception:
+        av_network = False
+
+    actionable_score = (
+        getattr(second_opinion, "actionable_score", None)
+        if second_opinion is not None
+        else None
+    )
+    if (
+        actionable_score is not None
+        and str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_C"
+        and getattr(second_opinion, "important_candidate", "NO") == "NO"
+        and getattr(second_opinion, "auto_downgrade_allowed", "NO") == "YES"
+        and actionable_score > 2
+    ):
+        actionable_score = 2
+
+    lowered = bool(getattr(output, "_kernel_lowered", False))
+    dec_cnt = int(getattr(output, "_kernel_decrease_count", 0) or 0)
+    kpanic_marked = bool(getattr(output, "_kernel_kpanic_marked", False))
+    traces: list[str] = []
+
+    # Perl branch 1:
+    #
+    # if($rv == 0 && KPANIC && severity == MODERATE &&
+    #    $sc <= 7.8 && $rs !~ /AV:N/ && $alimpactscore < 5)
+    #
+    # Structured interpretation:
+    # this branch is specifically the false-positive KPANIC removal branch,
+    # so gate it on kernel_panic_supported == false.
+    if (
+        not review.kernel_panic_supported
+        and kpanic_marked
+        and output.impact == "MODERATE"
+        and effective_score <= 7.8
+        and not av_network
+        and actionable_score is not None
+        and actionable_score < 5
+    ):
+        kpanic_marked = False
+        lowered = True
+        dec_cnt += 1
+        traces.append("KPANIC_LLM:DECREASED_TO_MODERATEREG_BASED_ON_FALSEPOSCHECKOFKP")
+
+    # Perl branch 2:
+    #
+    # if($rv == 0 && KPANIC && severity == IMPORTANT &&
+    #    $sc < 9 && $rs !~ /AV:N/ && $alimpactscore <= 8)
+    #
+    # Structured interpretation:
+    # allow_high_to_moderate7_downgrade controls the HIGH->MODERATE7 decision.
+    # If panic itself was also rejected, do not preserve a false KPANIC marker.
+    if (
+        review.allow_high_to_moderate7_downgrade
+        and kpanic_marked
+        and output.impact == "IMPORTANT"
+        and effective_score < 9.0
+        and not av_network
+        and actionable_score is not None
+        and actionable_score <= 8
+    ):
+        output.impact = "MODERATE"
+        kpanic_marked = bool(review.kernel_panic_supported)
+        lowered = True
+        dec_cnt += 1
+        traces.append("KPANIC_LLM:DECREASED_TO_MODERATE7_BASED_ON_FALSEPOSCHECKOFKP")
+
+    # NEW29_POST_KPANIC_AS4_CONSISTENCY_RESTORE:
+    # AS4 stays unchanged. Restore only after the specialized KPANIC review.
+    primitive_class = (
+        str(getattr(second_opinion, "primitive_class", "") or "").upper()
+        if second_opinion is not None
+        else ""
+    )
+    important_candidate = (
+        str(getattr(second_opinion, "important_candidate", "") or "").upper()
+        if second_opinion is not None
+        else ""
+    )
+    auto_downgrade_allowed = (
+        str(getattr(second_opinion, "auto_downgrade_allowed", "") or "").upper()
+        if second_opinion is not None
+        else ""
+    )
+
+    restore_as4_important = (
+        bool(getattr(output, "_kernel_as4_downgraded_from_important", False))
+        and output.impact == "MODERATE"
+        and kpanic_marked
+        and not review.allow_high_to_moderate7_downgrade
+        and primitive_class == "CLASS_B"
+        and important_candidate == "YES"
+        and auto_downgrade_allowed == "NO"
+    )
+    if restore_as4_important:
+        output.impact = "IMPORTANT"
+        traces.append("NEW29:RESTORED_IMPORTANT_AFTER_AS4_FROM_KPANIC_CONSISTENCY")
+        logger.info(
+            "%s: NEW29 restored IMPORTANT after AS4: CLASS_B + "
+            "ImportantCandidate=YES + AutoDowngradeAllowed=NO + "
+            "KPANIC allow_high_to_mod7=NO",
+            call_str,
+        )
+
+    output._kernel_kpanic_marked = kpanic_marked
+    output._kernel_lowered = lowered
+    output._kernel_decrease_count = dec_cnt
+    _sync_output_operational_kpanic_flag(output)
+
+    summary = (
+        "kpanic_llm_review("
+        f"panic_supported={'YES' if review.kernel_panic_supported else 'NO'},"
+        f" evidence_level={review.evidence_level},"
+        f" high_without_panic="
+        f"{'YES' if review.high_severity_still_supported_without_kpanic else 'NO'},"
+        f" allow_high_to_mod7="
+        f"{'YES' if review.allow_high_to_moderate7_downgrade else 'NO'},"
+        f" cvss_source={cvss_source},"
+        f" llm_cvss={effective_score},"
+        f" actionable_score={actionable_score},"
+        f" kpanic_marked={'YES' if kpanic_marked else 'NO'},"
+        f" lowered={'YES' if lowered else 'NO'},"
+        f" dec_cnt={dec_cnt}"
+        ")"
+    )
+    if traces:
+        summary += "; " + "; ".join(traces)
+
+    logger.info("%s: %s", call_str, summary)
+    return summary
+
+
+# ===========================================================================
+# NN+LLM-compatible request_llm_afterpushedtohigh() result application
+# ===========================================================================
+
+
+def apply_afterpushed_llm_review(
+    output,
+    call_str: str,
+    review,
+    second_opinion=None,
+) -> str:
+    """Apply the old after-pushed-to-HIGH false-positive correction.
+
+    Legacy Perl inner gate:
+        rv == 1
+        && KPANIC
+        && severity == HIGH
+        && sc < 10
+        && ActionableScore <= 9
+
+    ``review.downgrade_to_moderate7`` is the structured equivalent of rv == 1.
+    """
+    if not review.downgrade_to_moderate7:
+        return "afterpushed_llm_review(downgrade=NO, result=IMPORTANT-retained)"
+
+    if not getattr(output, "_kernel_pushed_to_high", False):
+        return ""
+    if output.impact != "IMPORTANT":
+        return ""
+    if getattr(output, "_kernel_kpanic_marked", None) is not True:
+        return ""
+
+    # NEW28_BROAD_AFTERPUSHED_GUARD_REMOVED
+    # The dedicated AFTERPUSHED review is later and more specific than
+    # the early ActionableScore CLASS_B/ImportantCandidate fields.
+    # Do not veto its downgrade solely from that early triple.
+    try:
+        effective_score = float(output.cvss3_score)
+    except (TypeError, ValueError):
+        effective_score = float("nan")
+    cvss_source = "primary"
+
+    if second_opinion is not None:
+        selected_score = getattr(second_opinion, "cvss_selected_score", None)
+        selected_vector = getattr(second_opinion, "cvss_selected_vector", None)
+        if selected_score is not None and selected_vector:
+            try:
+                parsed_selected = cvss.CVSS3(str(selected_vector))
+                effective_score = float(parsed_selected.scores()[0])
+                cvss_source = "second_opinion_selected"
+            except Exception as exc:
+                logger.warning(
+                    "%s: AFTERPUSHED_REVIEW invalid selected CVSS; using primary fallback: %s",
+                    call_str,
+                    exc,
+                )
+
+    actionable_score = (
+        getattr(second_opinion, "actionable_score", None)
+        if second_opinion is not None
+        else None
+    )
+    if (
+        actionable_score is not None
+        and str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_C"
+        and getattr(second_opinion, "important_candidate", "NO") == "NO"
+        and getattr(second_opinion, "auto_downgrade_allowed", "NO") == "YES"
+        and actionable_score > 2
+    ):
+        actionable_score = 2
+
+    if not math.isfinite(effective_score):
+        return ""
+    if not (effective_score < 10.0):
+        return ""
+    if actionable_score is None or actionable_score > 9:
+        return ""
+
+    output.impact = "MODERATE"
+    output._kernel_lowered = True
+    output._kernel_decrease_count = (
+        int(getattr(output, "_kernel_decrease_count", 0) or 0) + 1
+    )
+    # Legacy afterpushed downgrade is specifically HIGH -> MODERATE7.
+    output._kernel_kpanic_marked = True
+    _sync_output_operational_kpanic_flag(output)
+
+    trace = (
+        "afterpushed_llm_review("
+        "downgrade=YES,"
+        f" cvss_source={cvss_source},"
+        f" llm_cvss={effective_score},"
+        f" actionable_score={actionable_score},"
+        " kpanic_marked=YES,"
+        f" dec_cnt={output._kernel_decrease_count}"
+        "); "
+        "AFTERPUSHED_LLM:DECREASED_TO_MODERATE7_BASED_ON_FALSEPOSCHECKOFDH"
+    )
+    logger.info("%s: %s", call_str, trace)
     return trace
 
 
@@ -1142,17 +1588,22 @@ _CVSS_BASE_KEYS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
 
 
 def apply_kpanic_cvss_override(
-    output, call_str: str, classifier_result: dict | None
+    output,
+    call_str: str,
+    classifier_result: dict | None,
+    second_opinion=None,
 ) -> str | None:
     """Override CVSS components when kernel_panic is detected or impact
     is IMPORTANT.
 
     Forces ``AC:H``, ``S:U``, ``A:H`` to reflect kernel-panic
-    reachability without assuming user-data exposure.  All other
-    metrics (``C``, ``I``, ``PR``, ``AV``, ``UI``) are preserved
-    from the LLM's assessment — the prompt already requires a
-    concrete user-data impact path for ``C:H``/``I:H`` and uses
-    ``PR:H`` when admin-class capabilities are needed.
+    reachability without assuming user-data exposure.
+
+    A.Larkin effective-CVSS plumbing:
+    use the independently computed second-opinion ``CVSSSelected`` pair
+    when it is present and valid. The primary SuggestImpact CVSS is a
+    fail-open fallback only. This keeps final kpanic normalization on
+    the same CVSS source already consumed by H1-H15 / AS1-AS7.
 
     Returns a trace fragment when the override fires, or ``None``.
     """
@@ -1160,13 +1611,13 @@ def apply_kpanic_cvss_override(
     # A.Larkin operational-KPANIC CVSS override gate v2.
     #
     # The classifier's literal kernel_panic/kernel_panic_plus_uaf
-    # feature is only initial evidence.  reconcile_kernel() maintains
+    # feature is only initial evidence. reconcile_kernel() maintains
     # the Perl-compatible mutable operational KPANIC state and stores
     # its FINAL value in output._kernel_kpanic_marked.
     #
     # If reconciliation explicitly removed KPANIC, do not let this
     # later CVSS post-processing step resurrect stale classifier panic
-    # semantics and rewrite the primary LLM CVSS/vector.
+    # semantics and rewrite CVSS.
     #
     # None means reconciliation did not provide final state; in that
     # compatibility case the existing function behavior is preserved.
@@ -1184,7 +1635,11 @@ def apply_kpanic_cvss_override(
         return None
 
     active_features: set[str] = set(classifier_result.get("active_features", []))
-    has_kpanic = "kernel_panic" in active_features
+    literal_kpanic = (
+        "kernel_panic" in active_features or "kernel_panic_plus_uaf" in active_features
+    )
+    # Final mutable state is authoritative; None keeps compatibility fallback.
+    has_kpanic = final_kpanic is True or (final_kpanic is None and literal_kpanic)
     is_important = output.impact == "IMPORTANT"
 
     if output.impact == "CRITICAL":
@@ -1193,8 +1648,66 @@ def apply_kpanic_cvss_override(
     if not (has_kpanic or is_important):
         return None
 
-    original_vector = output.cvss3_vector or ""
-    original_score = output.cvss3_score
+    # -------------------------------------------------------------
+    # A.Larkin effective selected-CVSS input for kpanic override.
+    #
+    # BEFORE:
+    #   H1-H15/AS1-AS7 used second_opinion.cvss_selected_* when valid,
+    #   but this later override restarted from output.cvss3_* (primary).
+    #   That could resurrect primary C/I/AC decisions after reconciliation.
+    #
+    # AFTER:
+    #   Prefer the exact selected vector produced by the second-opinion
+    #   parser. Re-validate it at this boundary and derive score from
+    #   the vector. Missing/malformed selected data fails open to the
+    #   historical primary output.cvss3_* values.
+    # -------------------------------------------------------------
+    primary_vector = str(output.cvss3_vector or "")
+    primary_score = output.cvss3_score
+
+    effective_vector = primary_vector
+    effective_score = primary_score
+    cvss_source = "primary"
+
+    if second_opinion is not None:
+        selected_score = getattr(second_opinion, "cvss_selected_score", None)
+        selected_vector = getattr(second_opinion, "cvss_selected_vector", None)
+
+        if selected_score is not None and selected_vector:
+            try:
+                selected_vector = str(selected_vector).strip()
+                selected_parsed = cvss.CVSS3(selected_vector)
+                selected_score_from_vector = float(selected_parsed.scores()[0])
+                selected_score_float = float(selected_score)
+
+                if abs(selected_score_float - selected_score_from_vector) > 1e-9:
+                    logger.info(
+                        "%s: kpanic override selected CVSS score/vector mismatch "
+                        "%.1f != %.1f; using vector-derived score",
+                        call_str,
+                        selected_score_float,
+                        selected_score_from_vector,
+                    )
+
+                effective_vector = selected_vector
+                effective_score = selected_score_from_vector
+                cvss_source = "second_opinion_selected"
+            except Exception as exc:
+                logger.warning(
+                    "%s: invalid second-opinion selected CVSS at kpanic override "
+                    "boundary; using primary CVSS: %s",
+                    call_str,
+                    exc,
+                )
+        elif selected_score is not None or selected_vector:
+            logger.warning(
+                "%s: incomplete second-opinion selected CVSS at kpanic override "
+                "boundary; using primary CVSS",
+                call_str,
+            )
+
+    original_vector = effective_vector
+    original_score = effective_score
 
     parsed = cvss.CVSS3(original_vector)
     parsed.metrics.update({"AC": "H", "S": "U", "A": "H"})
@@ -1206,6 +1719,7 @@ def apply_kpanic_cvss_override(
     reason = "kernel_panic" if has_kpanic else "important_impact"
     trace = (
         f"kpanic_cvss_override({reason},"
+        f" cvss_source={cvss_source},"
         f" llm_vector={original_vector},"
         f" llm_score={original_score})"
     )

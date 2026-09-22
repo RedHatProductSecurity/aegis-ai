@@ -1,11 +1,12 @@
 import asyncio
+import json
 import logging
 import re
 from pathlib import Path
 from typing import Any, Literal, cast
 
 import cvss
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import aegis_ai.toolsets.tools.osidb as osidb_tool
 from aegis_ai import get_settings
@@ -30,7 +31,9 @@ from aegis_ai.features.cve.data_models import (
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
     RULES_KERNEL,
+    apply_afterpushed_llm_review,
     apply_kpanic_cvss_override,
+    apply_kpanic_llm_review,
     check_kernel_output,
     reconcile_kernel,
 )
@@ -45,7 +48,65 @@ from aegis_ai.toolsets.tools.kernel_cves import (
 logger = logging.getLogger(__name__)
 
 
-# Kernel ActionableScore / NN+LLM parity experiment, state at end of 10 Sep 2026.
+# Inserted by A.Larkin (on 9 Sept 2026), dirty hack:
+class KernelKpanicReviewModel(BaseModel):
+    """Structured result of the NN+LLM-compatible KPANIC false-positive pass."""
+
+    kernel_panic_supported: bool
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence_level: Literal[
+        "demonstrated",
+        "explicit",
+        "strongly_implied",
+        "speculative",
+        "none",
+    ]
+    observed_failure: str
+    additional_assumptions_required: list[str]
+    independent_high_impact_strength: Literal[
+        "strong",
+        "moderate",
+        "weak",
+        "none",
+    ]
+    high_severity_still_supported_without_kpanic: bool
+    independent_high_impact: list[str]
+    previous_actionable_score_considered: bool
+    previous_actionable_score_basis: list[str]
+    allow_high_to_moderate7_downgrade: bool
+    reason: str
+    downgrade_reason: str
+
+
+class KernelAfterPushedHighReviewModel(BaseModel):
+    """Structured result of the NN+LLM request_llm_afterpushedtohigh() pass."""
+
+    downgrade_to_moderate7: bool
+    confidence: float = Field(ge=0.0, le=1.0)
+    evidence_level: Literal[
+        "demonstrated",
+        "explicit",
+        "strongly_implied",
+        "speculative",
+        "none",
+    ]
+    observed_vulnerability: str
+    important_basis: str
+    high_impact_demonstrated: bool
+    high_impact_speculative: bool
+    demonstrated_impact: dict[str, str]
+    reachability: str
+    required_privilege: str
+    memory_corruption: str
+    primitive_analysis: dict[str, bool]
+    important_reducing_constraints: dict[str, bool]
+    important_preserving_signals: dict[str, bool]
+    decision_reason: str
+    high_impact_demonstrated_reason: str
+    downgrade_constraints_reason: str
+    final_bucket: Literal["IMPORTANT retained", "MODERATE7"]
+
+
 class KernelSecondOpinionModel(BaseModel):
     """Parsed result of the temporary Gemini ActionableScore experiment."""
 
@@ -62,6 +123,13 @@ class KernelSecondOpinionModel(BaseModel):
     manual_review: Literal["NO", "RECOMMENDED", "REQUIRED"]
     auto_downgrade_allowed: Literal["YES", "NO"]
 
+    # A.Larkin second-opinion selected CVSS plumbing.
+    # Optional by design: malformed/missing experimental CVSS must not discard
+    # an otherwise useful ActionableScore result. kernel.py falls back to the
+    # primary SuggestImpact CVSS when these are None.
+    cvss_selected_score: float | None = None
+    cvss_selected_vector: str | None = None
+
     final_bucket: str
     recommended_impact: Literal["MODERATE", "IMPORTANT"]
 
@@ -69,6 +137,8 @@ class KernelSecondOpinionModel(BaseModel):
 
 
 _ACTIONABLE_SCORE_PROMPT_PATH = Path(__file__).with_name("actionable_score_prompt.txt")
+_KPANIC_PROMPT_PATH = Path(__file__).with_name("kpanic_prompt.txt")
+_AFTERPUSHED_PROMPT_PATH = Path(__file__).with_name("afterpushedtohigh_prompt.txt")
 
 
 async def _ensure_kernel_context_for_second_opinion(
@@ -248,6 +318,121 @@ def _load_actionable_score_prompt() -> str:
     return _ACTIONABLE_SCORE_PROMPT_PATH.read_text(encoding="utf-8")
 
 
+def _load_kpanic_prompt() -> str:
+    return _KPANIC_PROMPT_PATH.read_text(encoding="utf-8")
+
+
+def _load_afterpushed_prompt() -> str:
+    return _AFTERPUSHED_PROMPT_PATH.read_text(encoding="utf-8")
+
+
+def _parse_afterpushed_review_response(
+    text: str,
+    call_str: str,
+) -> KernelAfterPushedHighReviewModel:
+    """Parse strict JSON from afterpushedtohigh_prompt.txt."""
+    raw = text.strip()
+    if raw.startswith("```"):
+        lines = raw.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        raw = "\n".join(lines).strip()
+
+    if not raw.startswith("{") or not raw.endswith("}"):
+        first = raw.find("{")
+        last = raw.rfind("}")
+        if first == -1 or last <= first:
+            raise ValueError("AFTERPUSHED response does not contain a JSON object")
+        raw = raw[first : last + 1]
+
+    payload = json.loads(raw)
+    review = KernelAfterPushedHighReviewModel.model_validate(payload)
+
+    if review.downgrade_to_moderate7 and review.final_bucket != "MODERATE7":
+        raise ValueError(
+            "AFTERPUSHED semantic mismatch: downgrade=true but final_bucket is not MODERATE7"
+        )
+    if (
+        not review.downgrade_to_moderate7
+        and review.final_bucket != "IMPORTANT retained"
+    ):
+        raise ValueError(
+            "AFTERPUSHED semantic mismatch: downgrade=false but final_bucket is not IMPORTANT retained"
+        )
+
+    logger.info(
+        "%s: AFTERPUSHED_REVIEW parsed downgrade=%s confidence=%.2f "
+        "evidence_level=%s high_impact_demonstrated=%s final_bucket=%s",
+        call_str,
+        review.downgrade_to_moderate7,
+        review.confidence,
+        review.evidence_level,
+        review.high_impact_demonstrated,
+        review.final_bucket,
+    )
+    return review
+
+
+def _parse_kpanic_review_response(
+    text: str,
+    call_str: str,
+) -> KernelKpanicReviewModel:
+    """Parse the strict JSON contract from kpanic_prompt.txt.
+
+    Failures are handled by the caller as fail-open: the pre-KPANIC-review
+    reconciliation result remains unchanged.
+    """
+    raw = text.strip()
+
+    # Be tolerant of an accidental Markdown fence even though the prompt
+    # explicitly forbids it.
+    if raw.startswith("```"):
+        lines = raw.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        raw = "\n".join(lines).strip()
+
+    # Likewise tolerate a small amount of accidental prose by extracting the
+    # outermost JSON object.  Pydantic still validates all required fields.
+    if not raw.startswith("{") or not raw.endswith("}"):
+        first = raw.find("{")
+        last = raw.rfind("}")
+        if first == -1 or last <= first:
+            raise ValueError("KPANIC review response does not contain a JSON object")
+        raw = raw[first : last + 1]
+
+    payload = json.loads(raw)
+    review = KernelKpanicReviewModel.model_validate(payload)
+
+    if (
+        review.independent_high_impact_strength == "strong"
+        and not review.high_severity_still_supported_without_kpanic
+    ):
+        logger.warning(
+            "%s: KPANIC review semantic inconsistency: strength=strong but "
+            "high_severity_still_supported_without_kpanic=false",
+            call_str,
+        )
+
+    logger.info(
+        "%s: KPANIC_REVIEW parsed panic_supported=%s confidence=%.2f "
+        "evidence_level=%s high_without_panic=%s strength=%s "
+        "allow_high_to_mod7=%s",
+        call_str,
+        review.kernel_panic_supported,
+        review.confidence,
+        review.evidence_level,
+        review.high_severity_still_supported_without_kpanic,
+        review.independent_high_impact_strength,
+        review.allow_high_to_moderate7_downgrade,
+    )
+    return review
+
+
 # Older version of this class before ActionableScore experiment:
 # class KernelSecondOpinionModel(BaseModel):
 #    """Temporary local experiment for kernel severity validation."""
@@ -260,6 +445,7 @@ def _load_actionable_score_prompt() -> str:
 #    rationale: str
 
 
+# A.Larkin second-opinion selected CVSS plumbing.
 def _parse_actionable_score_response(
     text: str,
     call_str: str,
@@ -292,6 +478,49 @@ def _parse_actionable_score_response(
     important_candidate = required("ImportantCandidate")
     manual_review = required("ManualReview")
     auto_downgrade = required("AutoDowngradeAllowed")
+
+    # Parse the independently computed selected CVSS emitted AFTER the
+    # ActionableScore section. Fail open: bad/missing experimental CVSS keeps
+    # the ActionableScore result and reconciliation falls back to primary CVSS.
+    cvss_selected_score: float | None = None
+    cvss_selected_vector: str | None = None
+
+    selected_score_raw = optional("CVSSSelectedScore")
+    selected_vector_raw = optional("CVSSSelectedVector")
+
+    if selected_score_raw is not None and selected_vector_raw is not None:
+        try:
+            selected_vector = selected_vector_raw.strip()
+            selected_score_from_vector = cvss.CVSS3(selected_vector).scores()[0]
+            selected_score_reported = float(selected_score_raw)
+
+            if abs(selected_score_reported - selected_score_from_vector) > 1e-9:
+                logger.info(
+                    "%s: ACTIONABLE_SCORE selected CVSS score/vector mismatch "
+                    "%.1f != %.1f; using vector-derived score",
+                    call_str,
+                    selected_score_reported,
+                    selected_score_from_vector,
+                )
+
+            cvss_selected_score = float(selected_score_from_vector)
+            cvss_selected_vector = selected_vector
+        except Exception as exc:
+            logger.warning(
+                "%s: ACTIONABLE_SCORE selected CVSS invalid; "
+                "falling back to primary CVSS for reconciliation: %s",
+                call_str,
+                exc,
+            )
+    elif selected_score_raw is not None or selected_vector_raw is not None:
+        logger.warning(
+            "%s: ACTIONABLE_SCORE selected CVSS incomplete "
+            "(score_present=%s vector_present=%s); "
+            "falling back to primary CVSS for reconciliation",
+            call_str,
+            selected_score_raw is not None,
+            selected_vector_raw is not None,
+        )
 
     bucket_match = re.search(
         r"Final recommended bucket:\s*\*\*(.+?)\*\*::",
@@ -351,6 +580,8 @@ def _parse_actionable_score_response(
         important_candidate=cast(Literal["YES", "NO"], important_candidate),
         manual_review=cast(Literal["NO", "RECOMMENDED", "REQUIRED"], manual_review),
         auto_downgrade_allowed=cast(Literal["YES", "NO"], auto_downgrade),
+        cvss_selected_score=cvss_selected_score,
+        cvss_selected_vector=cvss_selected_vector,
         final_bucket=final_bucket,
         recommended_impact=recommended_impact,
         raw_response=text,
@@ -359,7 +590,8 @@ def _parse_actionable_score_response(
     logger.info(
         "%s: ACTIONABLE_SCORE parsed score=%s lower=%s "
         "primitive=%s important_candidate=%s manual_review=%s "
-        "auto_downgrade=%s bucket=%s mapped_impact=%s",
+        "auto_downgrade=%s selected_cvss=%s selected_vector=%s "
+        "bucket=%s mapped_impact=%s",
         call_str,
         parsed.actionable_score,
         parsed.actionable_score_lower,
@@ -367,6 +599,8 @@ def _parse_actionable_score_response(
         parsed.important_candidate,
         parsed.manual_review,
         parsed.auto_downgrade_allowed,
+        parsed.cvss_selected_score,
+        parsed.cvss_selected_vector,
         parsed.final_bucket,
         parsed.recommended_impact,
     )
@@ -628,7 +862,12 @@ class SuggestImpact(Feature):
             second_opinion=second_opinion,
         )
 
-        override_trace = apply_kpanic_cvss_override(output, call_str, classifier_result)
+        override_trace = apply_kpanic_cvss_override(
+            output,
+            call_str,
+            classifier_result,
+            second_opinion=second_opinion,
+        )
         if override_trace:
             trace = f"{trace}; {override_trace}"
         elif output.impact != pre_reconcile_impact:
@@ -732,11 +971,28 @@ class SuggestImpact(Feature):
         #   In NN+LLM ActionableScore is explicitly the second LLM pass and sees
         #   the first LLM result. This restores the same information flow.
         # ------------------------------------------------------------
+        # A.Larkin remove CVSS from ActionableScore primary_hints.
+        #
+        # Keep the primary LLM's structured/manual technical hints, but do not
+        # pass its CVSS vector or numeric score into the ActionableScore model.
+        #
+        # WHY:
+        # Primary Aegis CVSS can anchor the second LLM toward an already-selected
+        # severity/CIA conclusion. ActionableScore already receives kernel context
+        # and raw fix patch data, so it should derive its own score independently.
+        #
+        # Intentionally still passed:
+        #   - manual-review hint
+        #   - NULL/CWE-related hint
+        #   - btrfs-context hint
+        #   - primary technical explanation
+        #
+        # Intentionally no longer passed:
+        #   - primary CVSS vector
+        #   - primary CVSS score
         primary_hints = (
             "PRIMARY LLM HINTS FROM THE PREVIOUS ANALYSIS:\n"
             "=============================================\n"
-            f"CVSS vector: {result.output.cvss3_vector}\n"
-            f"CVSS score: {result.output.cvss3_score}\n"
             f"Manual review: {getattr(result.output, 'kernel_manual_review', 'UNKNOWN')}\n"
             f"NULL/CWE-476/CWE-833/CWE-401 related: "
             f"{getattr(result.output, 'kernel_nullptr_related', False)}\n"
@@ -797,6 +1053,758 @@ class SuggestImpact(Feature):
 
         prompt_dump_path = Path(f"/tmp/aegis_actionable_score_input_{dump_id}.txt")
 
+        try:
+            prompt_dump_path.write_text(prompt, encoding="utf-8")
+
+            logger.info(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input dumped to %s "
+                "(chars=%d bytes=%d)",
+                call_str,
+                prompt_dump_path,
+                len(prompt),
+                len(prompt.encode("utf-8")),
+            )
+
+            # Normally this will not appear unless DEBUG logging is enabled.
+            # It is intentionally DEBUG rather than INFO because the prompt
+            # is around 150k characters and would otherwise flood every log.
+            logger.debug(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input BEGIN\n%s\n"
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input END",
+                call_str,
+                prompt,
+                call_str,
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION could not dump exact "
+                "input to %s: %s",
+                call_str,
+                prompt_dump_path,
+                exc,
+            )
+
+        try:
+            #
+            # Raw text output is intentional.
+            #
+            # The original ActionableScore prompt itself defines the output
+            # contract.  This tests whether Gemini follows the same contract
+            # as the OpenAI model.
+            #
+            second_result = await self._run(
+                f"{call_str}:ActionableScoreSecondOpinion",
+                prompt,
+                deps=deps,
+                output_type=str,
+            )
+
+            raw_text = second_result.output
+
+            if not isinstance(raw_text, str):
+                raw_text = str(raw_text)
+
+            logger.info(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION raw_response:\n%s",
+                call_str,
+                raw_text,
+            )
+
+            opinion = _parse_actionable_score_response(
+                raw_text,
+                call_str,
+            )
+
+        except Exception as exc:
+            #
+            # Experimental only. Never break normal Aegis execution.
+            #
+            logger.warning(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION failed: %s",
+                call_str,
+                exc,
+            )
+            return None
+
+        return opinion
+
+    async def _experimental_kernel_kpanic_review(
+        self,
+        result,
+        deps,
+        classifier_result: dict | None,
+        second_opinion: KernelSecondOpinionModel | None,
+        call_str: str,
+        kernel_context: str | None,
+    ) -> KernelKpanicReviewModel | None:
+        """Run the NN+LLM KPANIC false-positive filter after H1-H15/AS1-AS7.
+
+        Ordering mirrors the supplied Perl daemon:
+            primary triage
+            -> ActionableScore
+            -> deterministic H/AS cascade
+            -> request_llm_kpanic()
+
+        The later request_llm_afterpushedtohigh() stage is intentionally not
+        implemented here.
+        """
+        if getattr(result.output, "_kernel_kpanic_marked", None) is not True:
+            logger.info(
+                "%s: KPANIC_REVIEW skipped because operational kpanic_marked=NO",
+                call_str,
+            )
+            return None
+
+        if second_opinion is None:
+            logger.warning(
+                "%s: KPANIC_REVIEW skipped because ActionableScore result "
+                "is unavailable",
+                call_str,
+            )
+            return None
+
+        if not kernel_context:
+            logger.warning(
+                "%s: KPANIC_REVIEW skipped because kernel context is unavailable",
+                call_str,
+            )
+            return None
+
+        try:
+            kpanic_prompt = _load_kpanic_prompt()
+        except Exception as exc:
+            logger.warning(
+                "%s: KPANIC_REVIEW cannot load kpanic_prompt.txt: %s",
+                call_str,
+                exc,
+            )
+            return None
+
+        patch_summaries = []
+        if isinstance(classifier_result, dict):
+            patch_summaries = classifier_result.get("patch_summaries") or []
+
+        if isinstance(patch_summaries, list):
+            patch_context = "\n\n--- PATCH ---\n\n".join(
+                str(x) for x in patch_summaries
+            )
+        else:
+            patch_context = str(patch_summaries)
+
+        # Equivalent of old NN+LLM:
+        #
+        #   $htmltext
+        #   . PREVIOUS ACTIONABLESCORE ANALYSIS ($longtextforAS)
+        #   . PREVIOUS TRIAGE / CVSS DESCRIPTION ($rs)
+        #   . PREVIOUS ACTIONABLESCORE CONSISTENCY RULE
+        #
+        # The raw ActionableScore response is passed intact so this stage sees
+        # the conservative/paranoid reasoning, selected CVSS, primitive class,
+        # and all technical signal breakdown exactly as Gemini emitted it.
+        primary_impact = (
+            getattr(result.output, "_original_llm_impact", None) or result.output.impact
+        )
+        primary_score = (
+            getattr(result.output, "_original_llm_score", None)
+            or result.output.cvss3_score
+        )
+        primary_vector = (
+            getattr(result.output, "_original_llm_vector", None)
+            or result.output.cvss3_vector
+        )
+
+        primary_triage = (
+            f"Primary impact: {primary_impact}\n"
+            f"Primary CVSS score: {primary_score}\n"
+            f"Primary CVSS vector: {primary_vector}\n"
+            f"Manual review: "
+            f"{getattr(result.output, 'kernel_manual_review', 'UNKNOWN')}\n"
+            f"NULL/CWE-476/CWE-833/CWE-401 related: "
+            f"{getattr(result.output, 'kernel_nullptr_related', False)}\n"
+            f"btrfs context: "
+            f"{getattr(result.output, 'kernel_btrfs_context', False)}\n"
+            "Technical explanation:\n"
+            f"{result.output.explanation}\n"
+        )
+
+        consistency_rule = (
+            "IMPORTANT: Apply the PREVIOUS ACTIONABLESCORE CONSISTENCY RULE. "
+            "Do not preserve HIGH merely because the previous text says Important. "
+            "Do not use any previous numeric ActionableScore threshold as a "
+            "prerequisite for preserving HIGH or as a reason to allow downgrade. "
+            "Consider the underlying technical findings from both conservative "
+            "and paranoid ActionableScore analyses, but independently determine "
+            "whether the supplied evidence establishes a strong non-crash "
+            "security primitive. A previous low conservative score must not "
+            "outweigh stronger technical evidence identified at this step, "
+            "including attacker-influenced kernel memory/object corruption, "
+            "validation-to-use semantic reinterpretation, ownership/lifetime "
+            "violations, protected-data boundary violations, or other serious "
+            "kernel exploitation primitives."
+        )
+
+        prompt = (
+            kpanic_prompt
+            + "\n\n=== KERNEL / PATCH EVIDENCE ===\n"
+            + kernel_context
+            + "\n\n=== RAW FIX PATCH CONTEXT ===\n"
+            + patch_context
+            + "\n\n=== PREVIOUS ACTIONABLESCORE ANALYSIS ===\n"
+            + second_opinion.raw_response
+            + "\n\n=== PREVIOUS TRIAGE / CVSS DESCRIPTION ===\n"
+            + primary_triage
+            + "\n\n=== CURRENT POST-CASCADE OPERATIONAL STATE ===\n"
+            + f"Impact after H1-H15/AS1-AS7: {result.output.impact}\n"
+            + "Operational KPANIC marker: YES\n"
+            + "lowered: "
+            + ("YES" if getattr(result.output, "_kernel_lowered", False) else "NO")
+            + "\n"
+            + f"dec_cnt: {getattr(result.output, '_kernel_decrease_count', 0)}\n"
+            + "pushed_to_high: "
+            + (
+                "YES"
+                if getattr(result.output, "_kernel_pushed_to_high", False)
+                else "NO"
+            )
+            + "\n\n"
+            + consistency_rule
+        )
+
+        logger.info(
+            "%s: KPANIC_REVIEW prompt_chars=%d kernel_context_chars=%d",
+            call_str,
+            len(prompt),
+            len(kernel_context),
+        )
+
+        dump_id_match = re.search(r"CVE-\d{4}-\d+", call_str)
+        dump_id = (
+            dump_id_match.group(0)
+            if dump_id_match
+            else re.sub(r"[^A-Za-z0-9_.-]+", "_", call_str).strip("_")
+        )
+        prompt_dump_path = Path(f"/tmp/aegis_kpanic_input_{dump_id}.txt")
+
+        try:
+            prompt_dump_path.write_text(prompt, encoding="utf-8")
+            logger.info(
+                "%s: KPANIC_REVIEW exact input dumped to %s (chars=%d bytes=%d)",
+                call_str,
+                prompt_dump_path,
+                len(prompt),
+                len(prompt.encode("utf-8")),
+            )
+        except Exception as exc:
+            logger.warning(
+                "%s: KPANIC_REVIEW could not dump exact input to %s: %s",
+                call_str,
+                prompt_dump_path,
+                exc,
+            )
+
+        try:
+            review_result = await self._run(
+                f"{call_str}:KernelPanicFalsePositiveReview",
+                prompt,
+                deps=deps,
+                output_type=str,
+            )
+            raw_text = review_result.output
+            if not isinstance(raw_text, str):
+                raw_text = str(raw_text)
+
+            logger.info(
+                "%s: KPANIC_REVIEW raw_response:\n%s",
+                call_str,
+                raw_text,
+            )
+            return _parse_kpanic_review_response(raw_text, call_str)
+
+        except Exception as exc:
+            # Parity experiment must never break the normal Aegis result.
+            logger.warning(
+                "%s: KPANIC_REVIEW failed; keeping pre-review result: %s",
+                call_str,
+                exc,
+            )
+            return None
+
+    async def _experimental_kernel_afterpushed_review(
+        self,
+        result,
+        deps,
+        classifier_result: dict | None,
+        second_opinion: KernelSecondOpinionModel | None,
+        call_str: str,
+        kernel_context: str | None,
+    ) -> KernelAfterPushedHighReviewModel | None:
+        """Run the old request_llm_afterpushedtohigh()-equivalent review.
+
+        The call is gated exactly at the old outer Perl condition:
+            pushed_to_high && current severity == HIGH/IMPORTANT
+
+        The inner Perl downgrade gates are enforced later in kernel.py.
+        """
+        if not getattr(result.output, "_kernel_pushed_to_high", False):
+            logger.info(
+                "%s: AFTERPUSHED_REVIEW skipped because pushed_to_high=NO",
+                call_str,
+            )
+            return None
+
+        if result.output.impact != "IMPORTANT":
+            logger.info(
+                "%s: AFTERPUSHED_REVIEW skipped because current impact=%s",
+                call_str,
+                result.output.impact,
+            )
+            return None
+
+        if second_opinion is None:
+            logger.warning(
+                "%s: AFTERPUSHED_REVIEW skipped because ActionableScore result is unavailable",
+                call_str,
+            )
+            return None
+
+        if not kernel_context:
+            logger.warning(
+                "%s: AFTERPUSHED_REVIEW skipped because kernel context is unavailable",
+                call_str,
+            )
+            return None
+
+        try:
+            review_prompt = _load_afterpushed_prompt()
+        except Exception as exc:
+            logger.warning(
+                "%s: AFTERPUSHED_REVIEW cannot load afterpushedtohigh_prompt.txt: %s",
+                call_str,
+                exc,
+            )
+            return None
+
+        patch_summaries = []
+        if isinstance(classifier_result, dict):
+            patch_summaries = classifier_result.get("patch_summaries") or []
+        if isinstance(patch_summaries, list):
+            patch_context = "\n\n--- PATCH ---\n\n".join(
+                str(x) for x in patch_summaries
+            )
+        else:
+            patch_context = str(patch_summaries)
+
+        primary_impact = (
+            getattr(result.output, "_original_llm_impact", None) or result.output.impact
+        )
+        primary_score = (
+            getattr(result.output, "_original_llm_score", None)
+            or result.output.cvss3_score
+        )
+        primary_vector = (
+            getattr(result.output, "_original_llm_vector", None)
+            or result.output.cvss3_vector
+        )
+
+        primary_triage = (
+            f"Primary impact: {primary_impact}\n"
+            f"Primary CVSS score: {primary_score}\n"
+            f"Primary CVSS vector: {primary_vector}\n"
+            f"Manual review: {getattr(result.output, 'kernel_manual_review', 'UNKNOWN')}\n"
+            f"NULL/CWE-476/CWE-833/CWE-401 related: "
+            f"{getattr(result.output, 'kernel_nullptr_related', False)}\n"
+            f"btrfs context: {getattr(result.output, 'kernel_btrfs_context', False)}\n"
+            "Technical explanation:\n"
+            f"{result.output.explanation}\n"
+        )
+
+        consistency_rule = (
+            "IMPORTANT: Apply the PREVIOUS ACTIONABLESCORE CONSISTENCY RULE. "
+            "Do not preserve HIGH merely because the previous text says Important. "
+            "Preserve HIGH when the previous conservative ActionableScore is >= 7 "
+            "and that score is independently supported by a concrete non-crash "
+            "shared-page/pagecache/COW/ownership security primitive rather than "
+            "speculative kernel panic or generic worst-case reasoning."
+        )
+
+        prompt = (
+            review_prompt
+            + "\n\n=== KERNEL / PATCH EVIDENCE ===\n"
+            + kernel_context
+            + "\n\n=== RAW FIX PATCH CONTEXT ===\n"
+            + patch_context
+            + "\n\n=== PREVIOUS ACTIONABLESCORE ANALYSIS ===\n"
+            + second_opinion.raw_response
+            + "\n\n=== PREVIOUS TRIAGE / CVSS DESCRIPTION ===\n"
+            + primary_triage
+            + "\n\n=== CURRENT POST-KPANIC-REVIEW OPERATIONAL STATE ===\n"
+            + f"Impact: {result.output.impact}\n"
+            + "Operational KPANIC marker: "
+            + (
+                "YES"
+                if getattr(result.output, "_kernel_kpanic_marked", False)
+                else "NO"
+            )
+            + "\n"
+            + "lowered: "
+            + ("YES" if getattr(result.output, "_kernel_lowered", False) else "NO")
+            + "\n"
+            + f"dec_cnt: {getattr(result.output, '_kernel_decrease_count', 0)}\n"
+            + "pushed_to_high: YES\n\n"
+            + consistency_rule
+        )
+
+        logger.info(
+            "%s: AFTERPUSHED_REVIEW prompt_chars=%d kernel_context_chars=%d",
+            call_str,
+            len(prompt),
+            len(kernel_context),
+        )
+
+        dump_id_match = re.search(r"CVE-\d{4}-\d+", call_str)
+        dump_id = (
+            dump_id_match.group(0)
+            if dump_id_match
+            else re.sub(r"[^A-Za-z0-9_.-]+", "_", call_str).strip("_")
+        )
+        dump_path = Path(f"/tmp/aegis_afterpushed_input_{dump_id}.txt")
+        try:
+            dump_path.write_text(prompt, encoding="utf-8")
+            logger.info(
+                "%s: AFTERPUSHED_REVIEW exact input dumped to %s (chars=%d bytes=%d)",
+                call_str,
+                dump_path,
+                len(prompt),
+                len(prompt.encode("utf-8")),
+            )
+        except Exception as exc:
+            logger.warning(
+                "%s: AFTERPUSHED_REVIEW could not dump exact input to %s: %s",
+                call_str,
+                dump_path,
+                exc,
+            )
+
+        try:
+            review_result = await self._run(
+                f"{call_str}:AfterPushedToHighReview",
+                prompt,
+                deps=deps,
+                output_type=str,
+            )
+            raw_text = review_result.output
+            if not isinstance(raw_text, str):
+                raw_text = str(raw_text)
+            logger.info(
+                "%s: AFTERPUSHED_REVIEW raw_response:\n%s",
+                call_str,
+                raw_text,
+            )
+            return _parse_afterpushed_review_response(raw_text, call_str)
+        except Exception as exc:
+            logger.warning(
+                "%s: AFTERPUSHED_REVIEW failed; keeping pre-review result: %s",
+                call_str,
+                exc,
+            )
+            return None
+
+        # Older ver before trying ActionableScore (that was much simplified:
+        #    async def _experimental_kernel_second_opinion(
+        #        self,
+        #        result,
+        #        deps,
+        #        classifier_result: dict | None,
+        #        call_str: str,
+        #        kernel_context=None,
+        #    ):
+        #        """TEMPORARY LOCAL EXPERIMENT.
+        #
+        #        Run an independent kernel-specific LLM pass for IMPORTANT or
+        #        kernel-panic cases.  It can only distinguish IMPORTANT from
+        #        MODERATE; it can never produce LOW.
+        #        """
+        #
+        #        if not classifier_result or not isinstance(classifier_result, dict):
+        #            return None
+        #
+        #        output = result.output
+        #
+        #        active_features = set(classifier_result.get("active_features", []))
+        #        has_kpanic = (
+        #            "kernel_panic" in active_features
+        #            or "kernel_panic_plus_uaf" in active_features
+        #        )
+        #
+        #        # First experiment: only examine the interesting boundary.
+        #        if output.impact != "IMPORTANT" and not has_kpanic:
+        #            return None
+        #
+        #
+        #        prompt = f"""
+        # You are an independent second-opinion Linux kernel security analyst.
+        #
+        # Target vulnerability: {call_str}
+        # CVE:
+        # (so take CVE ID from this target vulnerability str)
+        #
+        # The following Linux kernel CVE context was already retrieved earlier by
+        # kernel_cve_tool during the primary Aegis analysis.
+        #
+        # Do NOT call kernel_cve_tool again.
+        #
+        # Treat the kernel context below as the primary technical evidence for this
+        # validation. Analyze the actual bug mechanism, affected object or buffer,
+        # object lifetime, patch semantics, attacker prerequisites, and the concrete
+        # security primitive created by successful triggering of the vulnerability.
+        #
+        # The kernel context may contain descriptive or severity-assessment prose
+        # written by CVE authors or vendors.
+        #
+        # Do NOT treat statements such as:
+        #
+        # - "may allow memory corruption";
+        # - "may allow privilege escalation";
+        # - "integrity impact is high";
+        # - "confidentiality impact is possible";
+        # - "could allow code execution";
+        #
+        # as proof of a concrete primitive.
+        #
+        # Those statements are conclusions to be independently validated.
+        #
+        # Base your decision on the actual data flow, memory operation, object
+        # lifetime, bounds relationship, attacker-controlled inputs, and patch
+        # semantics.
+        #
+        # Do not simply agree with the existing Aegis classification.
+        #
+        # Do NOT infer severity merely from:
+        # - CWE names;
+        # - CVSS values;
+        # - the current Aegis impact;
+        # - classifier flags;
+        # - generic labels such as UAF, OOB, double-free, race, networking,
+        #  memory corruption, or kernel panic.
+        #
+        # IMPORTANT:
+        # The current Aegis CVSS vector and C/I/A values may themselves be wrong.
+        # Do NOT use existing C:H, I:H, or A:H values as evidence that confidentiality,
+        # integrity, code execution, arbitrary read/write, or another security primitive
+        # actually exists.
+        #
+        # KERNEL CONTEXT
+        # ==============
+        # {kernel_context or "Kernel context was not available."}
+        # ==============
+        #
+        # Current Aegis result:
+        # Impact: {output.impact}
+        # CVSS vector: {output.cvss3_vector}
+        # CVSS score: {output.cvss3_score}
+        #
+        # Kernel classifier active features:
+        # {sorted(active_features)}
+        #
+        # Your task is ONLY to distinguish IMPORTANT from MODERATE.
+        #
+        # First determine the concrete primitive supported by the vulnerability and
+        # patch semantics.
+        #
+        # The question is NOT merely whether some non-crash effect is theoretically
+        # possible.
+        #
+        # The question is whether the evidence supports a sufficiently concrete and
+        # powerful security primitive to justify IMPORTANT rather than MODERATE.
+        #
+        # Recommend IMPORTANT when the technical evidence directly supports a useful,
+        # security-significant primitive such as:
+        #
+        # - attacker-controlled or meaningfully controllable write to a useful target;
+        # - useful post-free access or reuse where the attacker retains meaningful
+        #  control after the object is freed;
+        # - freed backing memory or pages remaining accessible or mapped to the attacker;
+        # - attacker-controlled OOB access with useful target and/or value control;
+        # - concrete information disclosure;
+        # - concrete authorization or privilege bypass with meaningful security impact;
+        # - cross-security-boundary escape;
+        # - direct corruption of protected data or security-sensitive state;
+        # - another realistic confidentiality or integrity primitive supported by the
+        #  actual code and patch.
+        #
+        # Recommend MODERATE when the realistic supported consequence is primarily:
+        #
+        # - crash;
+        # - kernel panic;
+        # - denial of service;
+        # - bounded or constrained corruption without a demonstrated useful target;
+        # - stale-pointer or UAF behavior without evidence of useful post-free control;
+        # - double-free without evidence of a useful reuse/dereference primitive;
+        # - OOB write where the attacker controls bytes but not a useful destination;
+        # - authorization/configuration bypass whose scope and attacker advantage are
+        #  narrow or limited;
+        # - a hypothetical exploit chain requiring several unsupported assumptions.
+        #
+        # IMPORTANT DISTINCTION:
+        # Do not confuse exploit reliability with primitive strength.
+        #
+        # A narrow race window, difficult heap grooming, or AC:H does NOT by itself
+        # justify MODERATE if successful exploitation clearly provides a strong,
+        # useful confidentiality or integrity primitive.
+        #
+        # However, the reverse is also important:
+        #
+        # Do not promote to IMPORTANT merely because exploitation might theoretically
+        # be possible.
+        #
+        # For example, reasoning like:
+        #
+        # double-free
+        # -> memory might be reallocated
+        # -> this might become a UAF
+        # -> metadata might be corrupted
+        # -> arbitrary write might therefore be possible
+        #
+        # is speculative and is NOT sufficient evidence for IMPORTANT unless the actual
+        # code, object lifetime, or patch supports those intermediate steps.
+        #
+        # Likewise:
+        #
+        # - attacker-controlled bytes are NOT automatically an attacker-controlled
+        #  arbitrary write;
+        # - a stale pointer is NOT automatically a useful UAF primitive;
+        # - a UAF is NOT automatically arbitrary read/write;
+        # - an OOB write is NOT automatically code execution;
+        # - network reachability is NOT automatically IMPORTANT;
+        # - a privilege or authorization mismatch is NOT automatically Important-grade
+        #  unless the resulting boundary bypass is sufficiently meaningful.
+        #
+        # For memory corruption, explicitly distinguish these questions:
+        #
+        # 1. What exact object, page, field, buffer, or allocation becomes stale,
+        #   freed, overwritten, or out of bounds?
+        #
+        # 2. What exactly can the attacker control before the violation?
+        #
+        # 3. What exactly can the attacker control after the violation?
+        #
+        # 4. Does the attacker control the written value?
+        #   If yes, is that control full, partial, fixed-width, constrained, or fixed?
+        #
+        # 5. Does the attacker control the destination or victim object?
+        #   If yes, is it arbitrary, meaningfully selectable, constrained, or fixed?
+        #
+        # 6. For a UAF or double-free, is there evidence that freed memory can be
+        #   reallocated and then accessed or modified through the stale reference?
+        #
+        # 7. For a stale pointer, what operation is actually performed through it after
+        #   the lifetime transition?
+        #
+        # 8. For an OOB write, what lies beyond the boundary, and is corruption of that
+        #   destination useful rather than merely crash-inducing?
+        #
+        # 9. For authorization or namespace bugs, what privilege does the attacker
+        #   already possess, what additional authority is gained, and how broad is the
+        #   affected security boundary?
+        #
+        # 10. Is the claimed confidentiality or integrity primitive directly supported
+        #    by the kernel context and patch, merely plausible, or speculative?
+        #
+        # Set useful_non_crash_primitive=true only when there is concrete technical
+        # evidence for a useful confidentiality, integrity, authorization, mapping,
+        # lifetime, read, or write primitive beyond simple crash/DoS.
+        #
+        # Do NOT set useful_non_crash_primitive=true merely because:
+        # - the bug is a UAF;
+        # - the bug is an OOB write;
+        # - the bug is a double-free;
+        # - memory corruption exists;
+        # - the current CVSS says C:H or I:H;
+        # - a theoretical exploit chain can be imagined.
+        #
+        # Set panic_dominant=true when the supported practical effect is primarily
+        # crash, kernel panic, or denial of service and no sufficiently concrete useful
+        # non-crash primitive is established.
+        #
+        # When deciding between IMPORTANT and MODERATE, give more weight to directly
+        # demonstrated primitive strength than to generic vulnerability class names.
+        #
+        # A useful primitive should be supported by the actual technical context,
+        # not merely inferred from the vulnerability category.
+        #
+        # If the evidence supports only a possible or speculative non-crash primitive,
+        # prefer MODERATE.
+        #
+        # If the evidence directly supports a strong primitive but exploitation is
+        # difficult or unreliable, IMPORTANT may still be appropriate.
+        #
+        #
+        # For oversized memcpy/memmove operations, distinguish carefully between:
+        #
+        # - attacker control over the length;
+        # - attacker control over the initial source bytes;
+        # - attacker control over all bytes copied;
+        # - attacker control over the destination;
+        # - attacker control over the objects corrupted beyond the destination.
+        #
+        # A very large attacker-triggered copy is NOT automatically a large
+        # attacker-controlled write.
+        #
+        # If the copy runs beyond both the valid source and destination buffers,
+        # do not describe the resulting bytes or corrupted targets as
+        # attacker-controlled unless the code demonstrates that control.
+        #
+        #
+        # Return a concise technical rationale that states:
+        #
+        # - the concrete primitive;
+        # - what the attacker controls;
+        # - what the attacker does not control;
+        # - whether the primitive is directly established or speculative;
+        # - why that evidence is sufficient for IMPORTANT or insufficient and therefore
+        #  MODERATE.
+        # """
+        #
+        #        try:
+        #            second_result = await self._run(
+        #                f"{call_str}:KernelSecondOpinion",
+        #                prompt,
+        #                deps=deps,
+        #                output_type=KernelSecondOpinionModel,
+        #            )
+        #        except Exception as e:
+        #            # This is experimental.  Never break normal Aegis processing
+        #            # if the second opinion fails.
+        #            logger.warning(
+        #                "%s: SECOND_OPINION failed: %s",
+        #                call_str,
+        #                e,
+        #            )
+        #            return None
+        #
+        #        opinion = second_result.output
+        #
+        #        logger.info(
+        #            "%s: SECOND_OPINION recommended=%s "
+        #            "useful_non_crash=%s panic_dominant=%s "
+        #            "confidence=%.2f primitive=%s rationale=%s",
+        #            call_str,
+        #            opinion.recommended_impact,
+        #            opinion.useful_non_crash_primitive,
+        #            opinion.panic_dominant,
+        #            opinion.confidence,
+        #            opinion.primitive,
+        #            opinion.rationale,
+        #        )
+        #
+        #        return opinion
+
+        prompt_dump_path = Path(
+            "/tmp/aegis_actionable_score_input_"
+            + re.sub(r"[^A-Za-z0-9_.-]+", "_", call_str)
+            + ".txt"
+        )
         try:
             prompt_dump_path.write_text(prompt, encoding="utf-8")
 
@@ -1130,12 +2138,98 @@ class SuggestImpact(Feature):
         else:
             second_opinion = None
 
-        trace = SuggestImpact.post_process(
+        # ------------------------------------------------------------
+        # A.Larkin NN+LLM parity: split synchronous post-processing so the
+        # asynchronous request_llm_kpanic-equivalent runs AFTER H1-H15/AS1-AS7
+        # but BEFORE kpanic CVSS normalization.
+        # ------------------------------------------------------------
+        SuggestImpact.post_process_cvss(result.output, call_str)
+        pre_reconcile_impact = result.output.impact
+
+        trace = SuggestImpact.reconcile_severity(
             result.output,
             call_str,
             classifier_result=classifier_result,
             second_opinion=second_opinion,
         )
+
+        kpanic_review = await self._experimental_kernel_kpanic_review(
+            result,
+            deps,
+            classifier_result,
+            second_opinion,
+            call_str,
+            kernel_context,
+        )
+
+        if kpanic_review is not None:
+            kpanic_trace = apply_kpanic_llm_review(
+                result.output,
+                call_str,
+                kpanic_review,
+                second_opinion=second_opinion,
+            )
+            if kpanic_trace:
+                trace = f"{trace}; {kpanic_trace}"
+
+        afterpushed_review = await self._experimental_kernel_afterpushed_review(
+            result,
+            deps,
+            classifier_result,
+            second_opinion,
+            call_str,
+            kernel_context,
+        )
+        if afterpushed_review is not None:
+            afterpushed_trace = apply_afterpushed_llm_review(
+                result.output,
+                call_str,
+                afterpushed_review,
+                second_opinion=second_opinion,
+            )
+            if afterpushed_trace:
+                trace = f"{trace}; {afterpushed_trace}"
+
+        override_trace = apply_kpanic_cvss_override(
+            result.output,
+            call_str,
+            classifier_result,
+            second_opinion=second_opinion,
+        )
+        if override_trace:
+            trace = f"{trace}; {override_trace}"
+        elif result.output.impact != pre_reconcile_impact:
+            SuggestImpact.align_score_to_impact(result.output, call_str)
+
+        # Older ver before ActionableScore check (that was much simplified):
+        #        if (
+        #            second_opinion is not None
+        #            and result.output.impact == "IMPORTANT"
+        #            and second_opinion.recommended_impact == "MODERATE"
+        #            and not second_opinion.useful_non_crash_primitive
+        #            and second_opinion.confidence >= 0.70
+        #        ):
+        #            logger.info(
+        #                "%s: SECOND_OPINION APPLY IMPORTANT -> MODERATE "
+        #                "(panic_dominant=%s confidence=%.2f rationale=%s)",
+        #                call_str,
+        #                second_opinion.panic_dominant,
+        #                second_opinion.confidence,
+        #                second_opinion.rationale,
+        #            )
+        #
+        #            result.output.impact = "MODERATE"
+        #
+        #            # Keep CVSS consistent with the newly lowered impact.
+        #            # For now we deliberately do NOT invent a new vector here.
+        #            SuggestImpact.align_score_to_impact(result.output, call_str)
+        #
+        #            trace = (
+        #                f"{trace}; experimental_second_opinion:"
+        #                f"IMPORTANT->MODERATE"
+        #            )
+
+        # end of "Inserted by A.Larkin, dirty hack"
 
         impact_changed = result.output.impact != original_impact
         vector_changed = result.output.cvss3_vector != original_vector
@@ -1166,6 +2260,31 @@ class SuggestImpact(Feature):
                 }
             else:
                 exported_flags = {"kpanic"} if final_kpanic else set()
+
+                # NEW26_FINAL_OPERATIONAL_KPANIC_DIAGNOSTICS_SYNC
+                # At this late export boundary reconciliation and both LLM
+                # false-positive reviews are complete. Keep all unrelated
+                # classifier features, but normalize panic markers to the final
+                # Perl-compatible operational KPANIC state so diagnostic
+                # Patch Flags consumers see the same final state.
+                active = list(classifier_result.get("active_features", []) or [])
+                active = [
+                    feature
+                    for feature in active
+                    if feature not in {"kernel_panic", "kernel_panic_plus_uaf"}
+                ]
+                if final_kpanic:
+                    active.append("kernel_panic")
+                classifier_result["active_features"] = active
+
+                logger.info(
+                    "%s: final operational KPANIC diagnostics sync: "
+                    "kpanic_marked=%s active_features=%s",
+                    call_str,
+                    "YES" if final_kpanic else "NO",
+                    active,
+                )
+
             result.output._flags = sorted(exported_flags)
 
         return result
