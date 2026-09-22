@@ -263,7 +263,7 @@ class OSIDBClient:
             f"[component_flaw_tool] Listing flaws for component '{component_name}'."
         )
         params = {
-            "affects__ps_component": component_name,
+            "components": component_name,
             "include_fields": _FLAW_LIST_FIELDS,
         }
         session, token = await self._get_session_or_token()
@@ -284,7 +284,7 @@ class OSIDBClient:
             f"[component_count_tool] Counting flaws for component '{component_name}'."
         )
         params = {
-            "affects__ps_component": component_name,
+            "components": component_name,
             "include_fields": _FLAW_COUNT_FIELDS,
         }
         session, token = await self._get_session_or_token()
