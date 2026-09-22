@@ -5,6 +5,12 @@ from typing import Any, cast
 
 import httpx
 import osidb_bindings
+from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_list_response_200 import (
+    OsidbApiV1FlawsListResponse200,
+)
+from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_retrieve_response_200 import (
+    OsidbApiV1FlawsRetrieveResponse200,
+)
 
 from aegis_ai import get_settings
 from aegis_ai.request_context import get_request_scope
@@ -198,10 +204,6 @@ class OSIDBClient:
                         "Verify Kerberos credentials, delegation, and OSIDB access."
                     ) from e
                 raise
-            from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_retrieve_response_200 import (
-                OsidbApiV1FlawsRetrieveResponse200,
-            )
-
             flaw_data = OsidbApiV1FlawsRetrieveResponse200.from_dict(data)
         else:
             session = cast(Any, session)  # token was None, so session is not None
@@ -246,10 +248,6 @@ class OSIDBClient:
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_list_response_200 import (
-                    OsidbApiV1FlawsListResponse200,
-                )
-
                 parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
                 results = parsed.results or []
                 for item in results:
