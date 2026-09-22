@@ -308,5 +308,5 @@ class OSIDBClient:
         session = cast(Any, session)
         return session.flaws.count(
             affects__ps_component=component_name,
-            include_fields=_FLAW_LIST_FIELDS,
+            include_fields=_FLAW_COUNT_FIELDS,
         )
