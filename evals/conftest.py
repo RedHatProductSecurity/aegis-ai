@@ -21,6 +21,7 @@ from aegis_ai.toolsets.tools.osv_dev_ghsa import (
 from evals.features.common import eval_metrics, eval_summary
 from evals.utils.build_system_cache import (
     build_system_cache_retrieve,
+    build_system_cache_retrieve_batch,
 )
 from evals.utils.build_system_cache import (
     cache_misses as build_system_cache_misses,
@@ -219,6 +220,11 @@ def _patch_build_system_lookup(_monkeypatch_session):
 
     _monkeypatch_session.setattr(
         build_system_mod, "_lookup_binary_rpms", build_system_cache_retrieve
+    )
+    _monkeypatch_session.setattr(
+        build_system_mod,
+        "_lookup_binary_rpms_batch",
+        build_system_cache_retrieve_batch,
     )
 
 

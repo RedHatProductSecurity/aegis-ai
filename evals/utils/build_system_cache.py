@@ -88,6 +88,13 @@ def build_system_cache_retrieve(
         event.set()
 
 
+def build_system_cache_retrieve_batch(
+    package: str, streams: list[str]
+) -> list[ListBinaryRPMsOutput]:
+    """Batch wrapper: resolve each stream through the per-key cache."""
+    return [build_system_cache_retrieve(package, s) for s in streams]
+
+
 def write_misses_report() -> Path | None:
     """Write cache-miss keys to a file so the user knows what was fetched live."""
     if not cache_misses:

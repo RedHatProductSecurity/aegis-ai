@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import re
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,6 +29,9 @@ BREW_PROFILE = "brew"
 _EXCLUDED_RPM_PATTERNS = re.compile(
     r"^glibc-(all-langpacks|langpack-|minimal-langpack)|-debuginfo(-|$)|-debugsource$"
 )
+
+BREW_MAX_CONCURRENT = 4
+_brew_sem = threading.Semaphore(BREW_MAX_CONCURRENT)
 
 
 class ListBinaryRPMsInput(BaseToolInput):
@@ -67,6 +71,35 @@ def _create_brew_session() -> koji.ClientSession:
     return koji.ClientSession(config["server"], session_opts)
 
 
+def _fetch_deptopia_builds(package: str) -> list[dict]:
+    """Query Deptopia for all builds of a package."""
+    base = get_settings().deptopia_url.rstrip("/")
+    params = urllib.parse.urlencode({"build_name": package, "strict_builds": "true"})
+    url = f"{base}{DEPTOPIA_API_PATH}?{params}"
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        data = json.loads(resp.read())
+    if not isinstance(data, dict):
+        raise TypeError(f"Deptopia returned {type(data).__name__}, expected object")
+    builds = data.get("Builds", [])
+    if not isinstance(builds, list):
+        raise TypeError(f"Deptopia 'Builds' is {type(builds).__name__}, expected list")
+    return builds
+
+
+def _resolve_build_id(
+    session: koji.ClientSession, builds: list[dict], ps_update_stream: str
+) -> tuple[int, str] | None:
+    """Find a build matching the stream and resolve it to a Koji build ID."""
+    matches = [b for b in builds if b.get("ps_update_stream") == ps_update_stream]
+    if not matches:
+        return None
+    nvr = matches[0]["build_nvr"]
+    build = session.getBuild(nvr)
+    if not build:
+        return None
+    return build["id"], nvr
+
+
 def _resolve_build_from_stream(
     session: koji.ClientSession, package: str, ps_update_stream: str
 ) -> tuple[int, str] | None:
@@ -74,26 +107,8 @@ def _resolve_build_from_stream(
 
     Returns (build_id, build_nvr) or None if no matching build is found.
     """
-    base = get_settings().deptopia_url.rstrip("/")
-    params = urllib.parse.urlencode({"build_name": package, "strict_builds": "true"})
-    url = f"{base}{DEPTOPIA_API_PATH}?{params}"
-    with urllib.request.urlopen(url, timeout=30) as resp:
-        data = json.loads(resp.read())
-
-    matches = [
-        b
-        for b in data.get("Builds", [])
-        if b.get("ps_update_stream") == ps_update_stream
-    ]
-    if not matches:
-        return None
-
-    nvr = matches[0]["build_nvr"]
-    build = session.getBuild(nvr)
-    if not build:
-        return None
-
-    return build["id"], nvr
+    builds = _fetch_deptopia_builds(package)
+    return _resolve_build_id(session, builds, ps_update_stream)
 
 
 def _list_binary_rpms(session: koji.ClientSession, build_id: int) -> list[str]:
@@ -108,34 +123,15 @@ def _list_binary_rpms(session: koji.ClientSession, build_id: int) -> list[str]:
     )
 
 
-def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOutput:
-    """Synchronous lookup of binary RPMs (runs in a thread)."""
+def _resolve_stream(
+    session: koji.ClientSession,
+    package: str,
+    builds: list[dict],
+    ps_update_stream: str,
+) -> ListBinaryRPMsOutput:
+    """Resolve one stream from pre-fetched Deptopia builds."""
     try:
-        session = _create_brew_session()
-    except koji.ConfigurationError as e:
-        return ListBinaryRPMsOutput(
-            package=package,
-            ps_update_stream=ps_update_stream,
-            status="error",
-            error_message=f"Koji profile '{BREW_PROFILE}' not configured: {e}",
-        )
-
-    try:
-        result = _resolve_build_from_stream(session, package, ps_update_stream)
-    except urllib.error.HTTPError as e:
-        return ListBinaryRPMsOutput(
-            package=package,
-            ps_update_stream=ps_update_stream,
-            status="error",
-            error_message=f"Deptopia API error: {e.code} {e.reason}",
-        )
-    except urllib.error.URLError as e:
-        return ListBinaryRPMsOutput(
-            package=package,
-            ps_update_stream=ps_update_stream,
-            status="error",
-            error_message=f"Deptopia API error: {e.reason}",
-        )
+        resolved = _resolve_build_id(session, builds, ps_update_stream)
     except koji.GenericError as e:
         return ListBinaryRPMsOutput(
             package=package,
@@ -143,23 +139,19 @@ def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOu
             status="error",
             error_message=f"Koji/Brew error: {e}",
         )
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
-        return ListBinaryRPMsOutput(
-            package=package,
-            ps_update_stream=ps_update_stream,
-            status="error",
-            error_message=f"Deptopia response error: {e}",
-        )
 
-    if result is None:
+    if resolved is None:
         return ListBinaryRPMsOutput(
             package=package,
             ps_update_stream=ps_update_stream,
             status="not_found",
-            error_message=f"No builds found for package '{package}' in stream '{ps_update_stream}'",
+            error_message=(
+                f"No builds found for package '{package}' "
+                f"in stream '{ps_update_stream}'"
+            ),
         )
 
-    build_id, build_nvr = result
+    build_id, build_nvr = resolved
 
     try:
         binary_rpms = _list_binary_rpms(session, build_id)
@@ -178,6 +170,104 @@ def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOu
         binary_rpms=binary_rpms,
         build_nvr=build_nvr,
     )
+
+
+def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOutput:
+    """Synchronous lookup of binary RPMs for a single (package, stream) pair."""
+    with _brew_sem:
+        try:
+            session = _create_brew_session()
+        except koji.ConfigurationError as e:
+            return ListBinaryRPMsOutput(
+                package=package,
+                ps_update_stream=ps_update_stream,
+                status="error",
+                error_message=f"Koji profile '{BREW_PROFILE}' not configured: {e}",
+            )
+
+        try:
+            builds = _fetch_deptopia_builds(package)
+        except urllib.error.HTTPError as e:
+            return ListBinaryRPMsOutput(
+                package=package,
+                ps_update_stream=ps_update_stream,
+                status="error",
+                error_message=f"Deptopia API error: {e.code} {e.reason}",
+            )
+        except urllib.error.URLError as e:
+            return ListBinaryRPMsOutput(
+                package=package,
+                ps_update_stream=ps_update_stream,
+                status="error",
+                error_message=f"Deptopia API error: {e.reason}",
+            )
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            return ListBinaryRPMsOutput(
+                package=package,
+                ps_update_stream=ps_update_stream,
+                status="error",
+                error_message=f"Deptopia response error: {e}",
+            )
+
+        return _resolve_stream(session, package, builds, ps_update_stream)
+
+
+def _lookup_binary_rpms_batch(
+    package: str, streams: list[str]
+) -> list[ListBinaryRPMsOutput]:
+    """Batch lookup: one Deptopia request per package, one Brew session.
+
+    Acquires the Brew semaphore once for the entire batch so that a
+    single package with many streams does not hold multiple slots.
+    """
+    with _brew_sem:
+        try:
+            session = _create_brew_session()
+        except koji.ConfigurationError as e:
+            return [
+                ListBinaryRPMsOutput(
+                    package=package,
+                    ps_update_stream=s,
+                    status="error",
+                    error_message=f"Koji profile '{BREW_PROFILE}' not configured: {e}",
+                )
+                for s in streams
+            ]
+
+        try:
+            builds = _fetch_deptopia_builds(package)
+        except urllib.error.HTTPError as e:
+            return [
+                ListBinaryRPMsOutput(
+                    package=package,
+                    ps_update_stream=s,
+                    status="error",
+                    error_message=f"Deptopia API error: {e.code} {e.reason}",
+                )
+                for s in streams
+            ]
+        except urllib.error.URLError as e:
+            return [
+                ListBinaryRPMsOutput(
+                    package=package,
+                    ps_update_stream=s,
+                    status="error",
+                    error_message=f"Deptopia API error: {e.reason}",
+                )
+                for s in streams
+            ]
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            return [
+                ListBinaryRPMsOutput(
+                    package=package,
+                    ps_update_stream=s,
+                    status="error",
+                    error_message=f"Deptopia response error: {e}",
+                )
+                for s in streams
+            ]
+
+        return [_resolve_stream(session, package, builds, s) for s in streams]
 
 
 @Tool

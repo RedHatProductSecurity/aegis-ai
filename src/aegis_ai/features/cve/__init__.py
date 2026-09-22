@@ -1322,11 +1322,13 @@ class SuggestAffectedPackages(Feature):
 
         Returns True if at least one lookup was attempted.
         """
+        from collections import defaultdict
+
         from packageurl import PackageURL
 
-        from aegis_ai.toolsets.tools.build_system import _lookup_binary_rpms
+        from aegis_ai.toolsets.tools.build_system import _lookup_binary_rpms_batch
 
-        unique_keys: dict[tuple[str, str], None] = {}
+        pkg_streams: dict[str, list[str]] = defaultdict(list)
         for a in affects:
             if not isinstance(a, dict):
                 continue
@@ -1337,56 +1339,61 @@ class SuggestAffectedPackages(Feature):
                     pkg_name = PackageURL.from_string(purl_str).name
                 except ValueError:
                     continue
-                unique_keys[(pkg_name, stream)] = None
+                if stream not in pkg_streams[pkg_name]:
+                    pkg_streams[pkg_name].append(stream)
 
-        if not unique_keys:
+        if not pkg_streams:
             return False
 
+        total_pairs = sum(len(s) for s in pkg_streams.values())
         logger.info(
             "[list_binary_rpms] looking up %d unique (package, stream) pairs "
-            "from %d affects",
-            len(unique_keys),
+            "(%d packages) from %d affects",
+            total_pairs,
+            len(pkg_streams),
             len(affects),
         )
 
         _NOT_FOUND: list[str] = []
 
-        async def _lookup(
-            pkg: str, stream: str
-        ) -> tuple[tuple[str, str], list[str] | None]:
-            """Return binary RPM list on success, ``_NOT_FOUND`` (empty
-            sentinel) for completed not-found lookups, ``None`` for
-            retryable errors."""
+        async def _lookup_package(
+            pkg: str, streams: list[str]
+        ) -> list[tuple[tuple[str, str], list[str] | None]]:
+            """Batch-resolve all streams for one package."""
             try:
-                result = await asyncio.to_thread(_lookup_binary_rpms, pkg, stream)
+                batch = await asyncio.to_thread(_lookup_binary_rpms_batch, pkg, streams)
             except Exception:
-                logger.exception(
-                    "[list_binary_rpms] %s/%s unexpected error", pkg, stream
-                )
-                return (pkg, stream), None
-            if result.status == "success":
-                logger.info(
-                    "[list_binary_rpms] %s/%s -> %d binary RPMs",
-                    pkg,
-                    stream,
-                    len(result.binary_rpms),
-                )
-                return (pkg, stream), result.binary_rpms
-            if result.status == "not_found":
-                return (pkg, stream), _NOT_FOUND
-            logger.warning(
-                "[list_binary_rpms] %s/%s failed: %s",
-                pkg,
-                stream,
-                result.error_message,
-            )
-            return (pkg, stream), None
+                logger.exception("[list_binary_rpms] %s unexpected error", pkg)
+                return [((pkg, s), None) for s in streams]
 
-        results = await asyncio.gather(
-            *[_lookup(pkg, stream) for pkg, stream in unique_keys]
+            mapped: list[tuple[tuple[str, str], list[str] | None]] = []
+            for result in batch:
+                key = (result.package, result.ps_update_stream)
+                if result.status == "success":
+                    logger.info(
+                        "[list_binary_rpms] %s/%s -> %d binary RPMs",
+                        result.package,
+                        result.ps_update_stream,
+                        len(result.binary_rpms),
+                    )
+                    mapped.append((key, result.binary_rpms))
+                elif result.status == "not_found":
+                    mapped.append((key, _NOT_FOUND))
+                else:
+                    logger.warning(
+                        "[list_binary_rpms] %s/%s failed: %s",
+                        result.package,
+                        result.ps_update_stream,
+                        result.error_message,
+                    )
+                    mapped.append((key, None))
+            return mapped
+
+        batch_results = await asyncio.gather(
+            *[_lookup_package(pkg, streams) for pkg, streams in pkg_streams.items()]
         )
         rpm_cache: dict[tuple[str, str], list[str] | None] = {
-            k: rpms for k, rpms in results
+            k: rpms for batch in batch_results for k, rpms in batch
         }
 
         enriched = 0
@@ -1412,7 +1419,7 @@ class SuggestAffectedPackages(Feature):
             enriched += 1
 
         logger.info("[list_binary_rpms] enriched %d/%d affects", enriched, len(affects))
-        return bool(unique_keys)
+        return bool(pkg_streams)
 
 
 class QueryAffectedComponents(DeterministicFeature):
