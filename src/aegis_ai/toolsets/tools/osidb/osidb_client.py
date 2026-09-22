@@ -225,35 +225,6 @@ class OSIDBClient:
 
         return flaw_data
 
-    async def _paginate_flaws_with_token(
-        self, params: dict[str, Any], token: str
-    ) -> AsyncGenerator:
-        """Paginate OSIDB v2 flaws list with Bearer token and yield flaw-like objects."""
-        base = get_settings().osidb_server_url.rstrip("/")
-        url = f"{base}/osidb/api/v2/flaws"
-        limit = 100
-        offset = 0
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            while True:
-                page_params = {**params, "limit": limit, "offset": offset}
-                resp = await client.get(
-                    url,
-                    params=page_params,
-                    headers={"Authorization": f"Bearer {token}"},
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
-                results = parsed.results or []
-                for item in results:
-                    yield item
-                count = getattr(parsed, "count", None)
-                if count is None:
-                    count = len(results)
-                offset += len(results)
-                if offset >= count or len(results) < limit:
-                    break
-
     async def list_component_flaws(self, component_name: str) -> AsyncGenerator:
         """
         Retrieves flaws related to a specific component using an async iterator.
@@ -268,8 +239,15 @@ class OSIDBClient:
         }
         session, token = await self._get_session_or_token()
         if token:
-            async for flaw in self._paginate_flaws_with_token(params, token):
-                yield flaw
+            data = await self._token_get(
+                path="/osidb/api/v2/flaws",
+                params=params,
+                token=token,
+                timeout=60.0,
+            )
+            parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
+            for item in parsed.results or []:
+                yield item
             return
         session = cast(Any, session)
         for flaw in session.flaws.retrieve_list_iterator(**params):
