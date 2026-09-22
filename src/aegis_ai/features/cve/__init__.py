@@ -29,43 +29,235 @@ from aegis_ai.features.cve.data_models import (
 )
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
-    RULES_KERNEL_ADDENDUM,
+    RULES_KERNEL,
+    apply_kpanic_cvss_override,
     check_kernel_output,
+    reconcile_kernel,
 )
 from aegis_ai.features.data_models import feature_deps
 from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
-from aegis_ai.toolsets.tools.kernel_cves import get_cached_kernel_context_text
+from aegis_ai.toolsets.tools.kernel_cves import (
+    get_cached_kernel_context_text,
+)
 
 logger = logging.getLogger(__name__)
 
 
-# Temporary kernel ActionableScore experiment reconstructed from the early
-# new1/new2/new3 branch.  This intentionally predates the deterministic
-# Perl-compatible reconciliation cascade.
+# Kernel ActionableScore / NN+LLM parity experiment, state at end of 10 Sep 2026.
 class KernelSecondOpinionModel(BaseModel):
     """Parsed result of the temporary Gemini ActionableScore experiment."""
 
     actionable_score: int
     actionable_score_lower: int | None = None
+
     primitive_class: Literal["NONE", "CLASS_A", "CLASS_B", "CLASS_C"]
     real_uaf: Literal["YES", "NO"]
+
     host_admin_required: Literal["YES", "NO", "UNKNOWN"]
     namespace_scoped_privilege: Literal["YES", "NO", "UNKNOWN"]
+
     important_candidate: Literal["YES", "NO"]
     manual_review: Literal["NO", "RECOMMENDED", "REQUIRED"]
     auto_downgrade_allowed: Literal["YES", "NO"]
+
     final_bucket: str
     recommended_impact: Literal["MODERATE", "IMPORTANT"]
+
     raw_response: str
 
 
 _ACTIONABLE_SCORE_PROMPT_PATH = Path(__file__).with_name("actionable_score_prompt.txt")
 
 
+async def _ensure_kernel_context_for_second_opinion(
+    cve_id: str,
+    deps,
+    call_str: str,
+) -> str:
+    # ---------------------------------------------------------------------
+    # A.Larkin kernel ActionableScore POC reliability fix.
+    #
+    # EXISTING AEGIS EAGER-PREFETCH PRECEDENT
+    # ---------------------------------------
+    # SuggestImpact.exec() already eagerly runs the kernel classifier before
+    # the primary LLM turn:
+    #
+    #     # Eagerly run the kernel classifier so the result is available on
+    #     # deps for both the tool fast-path and post-processing ...
+    #     pre_clf = await kernel_impact_classify(...)
+    #     deps.classifier_result = pre_clf
+    #
+    # That design intentionally prevents downstream correctness from depending
+    # on whether an autonomous LLM happens to issue kernel_impact_tool.
+    #
+    # WHY THE SAME RELIABILITY GUARANTEE IS NEEDED HERE
+    # -------------------------------------------------
+    # RULES_KERNEL also explicitly tells the model:
+    #
+    #     "Always use kernel_cve tool if the component is the Linux kernel."
+    #
+    # However, kernel_cve_tool is exposed to the autonomous LLM through
+    # kernel_extra_toolset. The application does not otherwise guarantee that
+    # Gemini actually issues that tool call.
+    #
+    # CVE-2026-64457 demonstrated the failure mode:
+    #
+    #     primary Gemini omitted kernel_cve_tool
+    #       -> kernel context cache remained empty
+    #       -> ActionableScore was skipped
+    #       -> AS1-AS7 compatibility rules could not run
+    #
+    # This is model tool-selection nondeterminism, not a CVE property.
+    #
+    # NEW BEHAVIOR
+    # ------------
+    # 1. Reuse the existing kernel_cve_tool cache first. This remains the
+    #    normal zero-extra-work path when primary Gemini obeyed RULES_KERNEL.
+    # 2. Only if the cache is empty, invoke the EXISTING kernel_cve_tool
+    #    implementation deterministically at application level.
+    # 3. Re-read the cache after the call.
+    # 4. If the fallback itself fails, retain the existing POC fail-open
+    #    behavior so normal SuggestImpact is never broken.
+    #
+    # This mirrors the PURPOSE of the existing eager kernel-classifier prefetch:
+    # required downstream context should not disappear merely because the LLM
+    # did not choose to call an available tool.
+    #
+    # IMPORTANT API CORRECTION
+    # ------------------------
+    # An earlier fallback version tried to infer arbitrary callable signatures
+    # and, for two positional arguments, effectively called:
+    #
+    #     kernel_cve_tool(ctx, cve_id)
+    #
+    # Runtime diagnostics from this Aegis tree show the actual API:
+    #
+    #     kernel_cve_tool(
+    #         ctx: RunContext[feature_deps],
+    #         input: LINUXCVEToolInput,
+    #     ) -> LINUXCVEToolResponse
+    #
+    # Therefore the second argument MUST be the structured Pydantic input:
+    #
+    #     LINUXCVEToolInput(cve_id=cve_id)
+    #
+    # Passing a bare string caused:
+    #
+    #     'str' object has no attribute 'cve_id'
+    #
+    # This version intentionally targets the real Aegis API rather than using
+    # reflection-based guessing. It is simpler, clearer for upstream review,
+    # and keeps kernel_cve_tool itself as the single source of truth.
+    # ---------------------------------------------------------------------
+
+    cached = get_cached_kernel_context_text(cve_id)
+    if cached:
+        return cached
+
+    logger.warning(
+        "%s: kernel_cve_tool cache missing after primary guarded_run(); "
+        "primary LLM did not populate context required by ActionableScore. "
+        "Using deterministic fallback analogous to the existing eager "
+        "kernel-classifier prefetch.",
+        call_str,
+    )
+
+    try:
+        from types import SimpleNamespace
+
+        from aegis_ai.toolsets.tools.kernel_cves import (
+            LINUXCVEToolInput,
+            kernel_cve_tool,
+        )
+
+        # -------------------------------------------------------------
+        # A.Larkin deterministic kernel-context fallback API fix.
+        #
+        # kernel_cve_tool in this Aegis tree is a pydantic-ai Tool wrapper,
+        # not a directly callable async function. The previous typed-input
+        # fix correctly constructed:
+        #
+        #     LINUXCVEToolInput(cve_id=cve_id)
+        #
+        # but still attempted to call the Tool wrapper itself, producing:
+        #
+        #     'Tool' object is not callable
+        #
+        # The earlier diagnostic/reflection version had already shown that
+        # the wrapper exposes the actual Python callable. Keep this simple
+        # and explicit: unwrap only the known .function/.func attributes,
+        # then call that underlying implementation with the structured input.
+        #
+        # This preserves the same design goal as the existing eager kernel
+        # classifier prefetch: downstream correctness must not depend on
+        # whether Gemini chooses to invoke an available tool.
+        # -------------------------------------------------------------
+        tool_func = getattr(kernel_cve_tool, "function", None) or getattr(
+            kernel_cve_tool, "func", None
+        )
+
+        if tool_func is None:
+            raise RuntimeError("kernel_cve_tool underlying callable not found")
+
+        direct_ctx = SimpleNamespace(deps=deps)
+        tool_input = LINUXCVEToolInput(cve_id=cve_id)
+
+        logger.info(
+            "%s: deterministic kernel_cve_tool fallback invoking "
+            "underlying callable with "
+            "LINUXCVEToolInput(cve_id=%s)",
+            call_str,
+            cve_id,
+        )
+
+        maybe_result = tool_func(direct_ctx, tool_input)
+
+        if hasattr(maybe_result, "__await__"):
+            maybe_result = await maybe_result
+
+        cached = get_cached_kernel_context_text(cve_id)
+        if cached:
+            logger.info(
+                "%s: deterministic kernel_cve_tool fallback populated "
+                "kernel context (%d chars)",
+                call_str,
+                len(cached),
+            )
+            return cached
+
+        logger.warning(
+            "%s: deterministic kernel_cve_tool fallback completed but "
+            "kernel context cache is still empty (response_type=%s)",
+            call_str,
+            type(maybe_result).__name__,
+        )
+        return ""
+
+    except Exception as exc:
+        logger.warning(
+            "%s: deterministic kernel_cve_tool fallback failed: %s",
+            call_str,
+            exc,
+        )
+        return ""
+
+
 def _load_actionable_score_prompt() -> str:
     return _ACTIONABLE_SCORE_PROMPT_PATH.read_text(encoding="utf-8")
+
+
+# Older version of this class before ActionableScore experiment:
+# class KernelSecondOpinionModel(BaseModel):
+#    """Temporary local experiment for kernel severity validation."""
+#
+#    recommended_impact: Literal["MODERATE", "IMPORTANT"]
+#    useful_non_crash_primitive: bool
+#    panic_dominant: bool
+#    confidence: float = Field(ge=0.0, le=1.0)
+#    primitive: str
+#    rationale: str
 
 
 def _parse_actionable_score_response(
@@ -73,75 +265,101 @@ def _parse_actionable_score_response(
     call_str: str,
 ) -> KernelSecondOpinionModel:
     def required(name: str) -> str:
-        match = re.search(rf"(?m)^{re.escape(name)}=(.+?)\\s*$", text)
-        if not match:
+        m = re.search(
+            rf"(?m)^{re.escape(name)}=(.+?)\s*$",
+            text,
+        )
+        if not m:
             raise ValueError(f"missing required field {name}")
-        return match.group(1).strip()
+        return m.group(1).strip()
 
     def optional(name: str) -> str | None:
-        match = re.search(rf"(?m)^{re.escape(name)}=(.+?)\\s*$", text)
-        return match.group(1).strip() if match else None
+        m = re.search(
+            rf"(?m)^{re.escape(name)}=(.+?)\s*$",
+            text,
+        )
+        return m.group(1).strip() if m else None
 
     score = int(required("ActionableScore"))
+
     lower_raw = optional("ActionableScoreLower")
     lower = int(lower_raw) if lower_raw is not None else None
 
+    primitive_class = required("PrimitiveClass")
+    real_uaf = required("RealUAF")
+    host_admin = required("HostAdminRequired")
+    namespace_priv = required("NamespaceScopedPrivilege")
+    important_candidate = required("ImportantCandidate")
+    manual_review = required("ManualReview")
+    auto_downgrade = required("AutoDowngradeAllowed")
+
     bucket_match = re.search(
-        r"Final recommended bucket:\\s*\\*\\*(.+?)\\*\\*::",
+        r"Final recommended bucket:\s*\*\*(.+?)\*\*::",
         text,
     )
     if not bucket_match:
         raise ValueError("missing Final recommended bucket")
 
     final_bucket = bucket_match.group(1).strip()
-    important_buckets = {
-        "Strong Important candidate",
-        "High-end Important / possible Critical candidate",
-    }
-    recommended_impact: Literal["MODERATE", "IMPORTANT"] = (
-        "IMPORTANT" if final_bucket in important_buckets else "MODERATE"
-    )
+
+    #
+    # Map ActionableScore semantics to the Aegis binary
+    # IMPORTANT / MODERATE decision.
+    #
+    # For this POC we intentionally follow the semantic conclusion,
+    # not CVSS.
+    #
+    def _map_actionable_bucket_to_impact(
+        bucket_text: str,
+    ) -> Literal["MODERATE", "IMPORTANT"]:
+        bucket = bucket_text.strip()
+
+        # Unambiguously Important-side buckets.
+        #
+        # Use startswith intentionally because Gemini may emit variants such as:
+        #
+        #   Strong Important candidate
+        #
+        # or:
+        #
+        #   Strong Important candidate / Actionable Moderate at minimum
+        #
+        if bucket.startswith("High-end Important"):
+            return "IMPORTANT"
+
+        if bucket.startswith("Strong Important candidate"):
+            return "IMPORTANT"
+
+        # Hybrid / borderline buckets remain MODERATE as the semantic
+        # classification. Manual-review requirements are handled separately
+        # and must not automatically mean IMPORTANT.
+        return "MODERATE"
+
+    recommended_impact = _map_actionable_bucket_to_impact(final_bucket)
 
     parsed = KernelSecondOpinionModel(
         actionable_score=score,
         actionable_score_lower=lower,
         primitive_class=cast(
-            Literal["NONE", "CLASS_A", "CLASS_B", "CLASS_C"],
-            required("PrimitiveClass"),
+            Literal["NONE", "CLASS_A", "CLASS_B", "CLASS_C"], primitive_class
         ),
-        real_uaf=cast(
-            Literal["YES", "NO"],
-            required("RealUAF"),
-        ),
-        host_admin_required=cast(
-            Literal["YES", "NO", "UNKNOWN"],
-            required("HostAdminRequired"),
-        ),
+        real_uaf=cast(Literal["YES", "NO"], real_uaf),
+        host_admin_required=cast(Literal["YES", "NO", "UNKNOWN"], host_admin),
         namespace_scoped_privilege=cast(
-            Literal["YES", "NO", "UNKNOWN"],
-            required("NamespaceScopedPrivilege"),
+            Literal["YES", "NO", "UNKNOWN"], namespace_priv
         ),
-        important_candidate=cast(
-            Literal["YES", "NO"],
-            required("ImportantCandidate"),
-        ),
-        manual_review=cast(
-            Literal["NO", "RECOMMENDED", "REQUIRED"],
-            required("ManualReview"),
-        ),
-        auto_downgrade_allowed=cast(
-            Literal["YES", "NO"],
-            required("AutoDowngradeAllowed"),
-        ),
+        important_candidate=cast(Literal["YES", "NO"], important_candidate),
+        manual_review=cast(Literal["NO", "RECOMMENDED", "REQUIRED"], manual_review),
+        auto_downgrade_allowed=cast(Literal["YES", "NO"], auto_downgrade),
         final_bucket=final_bucket,
         recommended_impact=recommended_impact,
         raw_response=text,
     )
 
     logger.info(
-        "%s: ACTIONABLE_SCORE parsed score=%s lower=%s primitive=%s "
-        "important_candidate=%s manual_review=%s auto_downgrade=%s "
-        "bucket=%s mapped_impact=%s",
+        "%s: ACTIONABLE_SCORE parsed score=%s lower=%s "
+        "primitive=%s important_candidate=%s manual_review=%s "
+        "auto_downgrade=%s bucket=%s mapped_impact=%s",
         call_str,
         parsed.actionable_score,
         parsed.actionable_score_lower,
@@ -152,7 +370,11 @@ def _parse_actionable_score_response(
         parsed.final_bucket,
         parsed.recommended_impact,
     )
+
     return parsed
+
+
+# end of "Inserted by A.Larkin, dirty hack"
 
 
 def _build_cve_input(cve_id: CVEID, static_context: Any = None) -> CVEFeatureInput:
@@ -265,15 +487,43 @@ class SuggestImpact(Feature):
         return check_kernel_output(result.output, deps)
 
     @staticmethod
-    def reconcile_severity(output, call_str) -> str:
-        """LLM self-consistency check.
+    def reconcile_severity(
+        output,
+        call_str,
+        classifier_result=None,
+        second_opinion=None,
+    ) -> str:
+        """Bidirectional severity reconciliation.
 
-        If the LLM's stated impact matches its CVSS band, keep it.
-        If they disagree, trust the CVSS band (quantitative >
-        qualitative).
+        Dispatches to one of two paths:
+
+        **Kernel path** (classifier_result present): threshold-based
+        reconciliation ported from al-kernel.  The classifier's
+        cascade-adjusted prediction is the starting severity; the LLM's
+        own CVSS score drives deterministic threshold rules (H1–H11).
+
+        **Non-kernel path** (no classifier): LLM self-consistency check.
+        If the LLM's stated impact matches its CVSS band, keep it.  If
+        they disagree, trust the CVSS band (quantitative > qualitative).
+        In both cases, CRITICAL is capped to IMPORTANT unless the
+        CVSS vector objectively supports it (AV:N/AC:L/PR:N/UI:N
+        with at least two of C:H, I:H, A:H).
+
+        The kernel path additionally applies specific guardrails
+        (G2–G5) based on classifier-provided feature flags (memory
+        corruption, network exposure, contained subsystems, etc.).
 
         Returns a trace string explaining the decision.
         """
+        if classifier_result and isinstance(classifier_result, dict):
+            return reconcile_kernel(
+                output,
+                call_str,
+                classifier_result,
+                second_opinion=second_opinion,
+            )
+
+        # --- Non-kernel path: LLM self-consistency ---
         SEV = SEVERITY_ORDER
 
         try:
@@ -291,7 +541,7 @@ class SuggestImpact(Feature):
 
         if llm_impact == llm_cvss_band:
             trace = (
-                f"llm_cvss={llm_cvss:.1f}; "
+                f"path=non_kernel; llm_cvss={llm_cvss:.1f}; "
                 f"band={llm_cvss_band}; stated={llm_impact}; "
                 f"consistent=true; result={llm_impact}"
             )
@@ -305,7 +555,7 @@ class SuggestImpact(Feature):
 
         final = llm_cvss_band
         trace = (
-            f"llm_cvss={llm_cvss:.1f}; "
+            f"path=non_kernel; llm_cvss={llm_cvss:.1f}; "
             f"band={llm_cvss_band}; stated={llm_impact}; "
             f"consistent=false; result={final}"
         )
@@ -363,12 +613,25 @@ class SuggestImpact(Feature):
                 output.cvss3_score = f"{floor}"
 
     @staticmethod
-    def post_process(output, call_str):
+    def post_process(
+        output,
+        call_str,
+        classifier_result=None,
+        second_opinion=None,
+    ):
         SuggestImpact.post_process_cvss(output, call_str)
         pre_reconcile_impact = output.impact
-        trace = SuggestImpact.reconcile_severity(output, call_str)
+        trace = SuggestImpact.reconcile_severity(
+            output,
+            call_str,
+            classifier_result=classifier_result,
+            second_opinion=second_opinion,
+        )
 
-        if output.impact != pre_reconcile_impact:
+        override_trace = apply_kpanic_cvss_override(output, call_str, classifier_result)
+        if override_trace:
+            trace = f"{trace}; {override_trace}"
+        elif output.impact != pre_reconcile_impact:
             SuggestImpact.align_score_to_impact(output, call_str)
 
         return trace
@@ -404,12 +667,16 @@ class SuggestImpact(Feature):
         deps,
         classifier_result: dict | None,
         call_str: str,
-        kernel_context: str | None = None,
-    ) -> KernelSecondOpinionModel | None:
-        """Run the early ActionableScore second-opinion experiment.
+        kernel_context=None,
+    ):
+        """TEMPORARY LOCAL EXPERIMENT.
 
-        The second pass intentionally does not receive current Aegis impact,
-        current Aegis CVSS, XGBoost prediction, or classifier flags.
+        Run the original ActionableScore rubric using Gemini against the
+        already-cached kernel patch/mbox context.
+
+        Gemini returns the original machine-readable ActionableScore text.
+        We parse that text locally and map the final semantic bucket to
+        MODERATE or IMPORTANT.
         """
 
         if not classifier_result or not isinstance(classifier_result, dict):
@@ -432,7 +699,67 @@ class SuggestImpact(Feature):
             )
             return None
 
-        prompt = actionable_prompt + "\n\n" + kernel_context + "\n"
+        patch_summaries = []
+
+        if isinstance(classifier_result, dict):
+            patch_summaries = classifier_result.get("patch_summaries") or []
+
+        if isinstance(patch_summaries, list):
+            patch_context = "\n\n--- PATCH ---\n\n".join(
+                str(x) for x in patch_summaries
+            )
+        else:
+            patch_context = str(patch_summaries)
+
+        # ------------------------------------------------------------
+        # A.Larkin NN+LLM parity POC.
+        #
+        # BEFORE:
+        #   ActionableScore was intentionally isolated from primary Aegis
+        #   impact/CVSS.
+        #
+        # AFTER:
+        #   Feed primary-LLM hints into ActionableScore, but still omit XGBoost
+        #   prediction/flags/confidence.
+        #
+        # PERL SOURCE:
+        #   request_llm_calculate_awareness(
+        #     $htmltext . " and as input hints from previous LLM call for "
+        #     "analyses of this patch is " . $rs
+        #   );
+        #
+        # WHY:
+        #   In NN+LLM ActionableScore is explicitly the second LLM pass and sees
+        #   the first LLM result. This restores the same information flow.
+        # ------------------------------------------------------------
+        primary_hints = (
+            "PRIMARY LLM HINTS FROM THE PREVIOUS ANALYSIS:\n"
+            "=============================================\n"
+            f"CVSS vector: {result.output.cvss3_vector}\n"
+            f"CVSS score: {result.output.cvss3_score}\n"
+            f"Manual review: {getattr(result.output, 'kernel_manual_review', 'UNKNOWN')}\n"
+            f"NULL/CWE-476/CWE-833/CWE-401 related: "
+            f"{getattr(result.output, 'kernel_nullptr_related', False)}\n"
+            f"btrfs context: {getattr(result.output, 'kernel_btrfs_context', False)}\n"
+            f"Technical explanation:\n{result.output.explanation}\n"
+        )
+
+        prompt = (
+            actionable_prompt
+            + "\n\n"
+            + kernel_context
+            + "\n\n"
+            + "RAW FIX PATCH CONTEXT:\n"
+            + "======================\n"
+            + patch_context
+            + "\n\n"
+            + primary_hints
+        )
+
+        # Still deliberately NOT supplied here:
+        #   current XGBoost raw/adjusted prediction
+        #   classifier active flags
+        #   classifier confidence
 
         logger.info(
             "%s: ACTIONABLE_SCORE_SECOND_OPINION "
@@ -442,14 +769,83 @@ class SuggestImpact(Feature):
             len(kernel_context),
         )
 
+        # ------------------------------------------------------------
+        # TEMP DEBUG / POC:
+        # Save the EXACT text that will be passed to Gemini below.
+        #
+        # Example:
+        #   /tmp/aegis_actionable_score_input_CVE-2026-53016.txt
+        #
+        # This is deliberately immediately before self._run(), so the
+        # dump contains exactly:
+        #
+        #   actionable_score_prompt.txt + cached kernel_context
+        #
+        # and nothing from the current Aegis severity/CVSS/XGBoost result.
+        #
+        # Best-effort only: failure to write /tmp must never break Aegis.
+        # ------------------------------------------------------------
+        dump_id_match = re.search(r"CVE-\d{4}-\d+", call_str)
+        if dump_id_match:
+            dump_id = dump_id_match.group(0)
+        else:
+            dump_id = re.sub(
+                r"[^A-Za-z0-9_.-]+",
+                "_",
+                call_str,
+            ).strip("_")
+
+        prompt_dump_path = Path(f"/tmp/aegis_actionable_score_input_{dump_id}.txt")
+
         try:
+            prompt_dump_path.write_text(prompt, encoding="utf-8")
+
+            logger.info(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input dumped to %s "
+                "(chars=%d bytes=%d)",
+                call_str,
+                prompt_dump_path,
+                len(prompt),
+                len(prompt.encode("utf-8")),
+            )
+
+            # Normally this will not appear unless DEBUG logging is enabled.
+            # It is intentionally DEBUG rather than INFO because the prompt
+            # is around 150k characters and would otherwise flood every log.
+            logger.debug(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input BEGIN\n%s\n"
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input END",
+                call_str,
+                prompt,
+                call_str,
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION could not dump exact "
+                "input to %s: %s",
+                call_str,
+                prompt_dump_path,
+                exc,
+            )
+
+        try:
+            #
+            # Raw text output is intentional.
+            #
+            # The original ActionableScore prompt itself defines the output
+            # contract.  This tests whether Gemini follows the same contract
+            # as the OpenAI model.
+            #
             second_result = await self._run(
                 f"{call_str}:ActionableScoreSecondOpinion",
                 prompt,
                 deps=deps,
                 output_type=str,
             )
+
             raw_text = second_result.output
+
             if not isinstance(raw_text, str):
                 raw_text = str(raw_text)
 
@@ -458,15 +854,24 @@ class SuggestImpact(Feature):
                 call_str,
                 raw_text,
             )
-            return _parse_actionable_score_response(raw_text, call_str)
+
+            opinion = _parse_actionable_score_response(
+                raw_text,
+                call_str,
+            )
+
         except Exception as exc:
-            # Experimental only: never break normal Aegis execution.
+            #
+            # Experimental only. Never break normal Aegis execution.
+            #
             logger.warning(
                 "%s: ACTIONABLE_SCORE_SECOND_OPINION failed: %s",
                 call_str,
                 exc,
             )
             return None
+
+        return opinion
 
     async def _revise_explanation(
         self,
@@ -654,9 +1059,26 @@ class SuggestImpact(Feature):
 
         output_schema = SuggestImpactModel.model_json_schema()
         if not is_kernel:
-            output_schema.get("properties", {}).pop(
-                "classifier_disagreement_rationale", None
-            )
+            for kernel_only_field in (
+                "classifier_disagreement_rationale",
+                "kernel_manual_review",
+                "kernel_nullptr_related",
+                "kernel_btrfs_context",
+            ):
+                output_schema.get("properties", {}).pop(kernel_only_field, None)
+        else:
+            props = output_schema.get("properties", {})
+            required = output_schema.setdefault("required", [])
+            for kernel_required_field in (
+                "kernel_manual_review",
+                "kernel_nullptr_related",
+                "kernel_btrfs_context",
+            ):
+                if (
+                    kernel_required_field in props
+                    and kernel_required_field not in required
+                ):
+                    required.append(kernel_required_field)
 
         prompt = AegisPrompt(
             user_instruction="Analyze the CVE JSON and derive a CVSS v3.1 base vector and score with metric-by-metric rationale from the perspective of Red Hat customers. Based on the score, select the impact (LOW/MODERATE/IMPORTANT/CRITICAL).",
@@ -668,9 +1090,7 @@ class SuggestImpact(Feature):
                 - Do not base metric choices on which RH products are affected; reason from technical preconditions and exploit mechanics.
                 - Pick impact (Critical/Important/Moderate/Low) from the computed score.
             """,
-            rules=self._RULES_BASE + RULES_KERNEL_ADDENDUM
-            if is_kernel
-            else self._RULES_BASE,
+            rules=RULES_KERNEL if is_kernel else self._RULES_BASE,
             context=_build_cve_input(cve_id, static_context),
             output_schema=output_schema,
         )
@@ -694,62 +1114,35 @@ class SuggestImpact(Feature):
         result.output._original_llm_score = original_score
         result.output._original_llm_vector = original_vector
 
-        trace = SuggestImpact.post_process(result.output, call_str)
-
-        # Early new3 behavior: run ActionableScore as a late semantic
-        # second opinion, before the later deterministic reconciliation work.
-        kernel_context = (
-            get_cached_kernel_context_text(str(cve_id)) if is_kernel else None
-        )
+        # Compute independent ActionableScore before deterministic reconciliation.
         if is_kernel:
+            kernel_context = await _ensure_kernel_context_for_second_opinion(
+                str(cve_id), deps, call_str
+            )
             logger.info(
-                "%s: SECOND_OPINION cached kernel context=%s chars",
+                "%s: SECOND_OPINION kernel context=%s chars",
                 call_str,
                 len(kernel_context or ""),
             )
-
-        second_opinion = (
-            await self._experimental_kernel_second_opinion(
-                result,
-                deps,
-                classifier_result,
-                call_str,
-                kernel_context,
+            second_opinion = await self._experimental_kernel_second_opinion(
+                result, deps, classifier_result, call_str, kernel_context
             )
-            if is_kernel
-            else None
+        else:
+            second_opinion = None
+
+        trace = SuggestImpact.post_process(
+            result.output,
+            call_str,
+            classifier_result=classifier_result,
+            second_opinion=second_opinion,
         )
 
-        if second_opinion is not None:
-            old_impact = result.output.impact
-            new_impact = second_opinion.recommended_impact
-            logger.info(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION DECISION %s -> %s "
-                "(score=%s lower=%s primitive=%s important_candidate=%s "
-                "manual_review=%s auto_downgrade=%s bucket=%s)",
-                call_str,
-                old_impact,
-                new_impact,
-                second_opinion.actionable_score,
-                second_opinion.actionable_score_lower,
-                second_opinion.primitive_class,
-                second_opinion.important_candidate,
-                second_opinion.manual_review,
-                second_opinion.auto_downgrade_allowed,
-                second_opinion.final_bucket,
-            )
-            result.output.impact = new_impact
-            trace = (
-                f"{trace}; actionable_score_second_opinion:"
-                f"{old_impact}->{new_impact}"
-                f"(score={second_opinion.actionable_score}"
-                f",lower={second_opinion.actionable_score_lower}"
-                f",primitive={second_opinion.primitive_class}"
-                f",bucket={second_opinion.final_bucket})"
-            )
-
+        impact_changed = result.output.impact != original_impact
         vector_changed = result.output.cvss3_vector != original_vector
-        if vector_changed:
+        guardrail_fired = classifier_result is not None and (
+            impact_changed or vector_changed
+        )
+        if guardrail_fired:
             result.output._explanation_revised = await self._revise_explanation(
                 result,
                 original_score,
@@ -763,13 +1156,17 @@ class SuggestImpact(Feature):
         result.output._classifier_diagnostics = classifier_result
         result.output._reconciliation_trace = trace
 
-        # Map classifier feature flags to OSIDB label names so the bot
-        # can create FlawLabel records (e.g. "kpanic") after saving the flaw.
+        # Export the final mutable Perl-compatible KPANIC state.
         if classifier_result and isinstance(classifier_result, dict):
-            active = classifier_result.get("active_features", [])
-            result.output._flags = sorted(
-                {_FLAG_TO_LABEL[f] for f in active if f in _FLAG_TO_LABEL}
-            )
+            final_kpanic = getattr(result.output, "_kernel_kpanic_marked", None)
+            if final_kpanic is None:
+                active = classifier_result.get("active_features", [])
+                exported_flags = {
+                    _FLAG_TO_LABEL[f] for f in active if f in _FLAG_TO_LABEL
+                }
+            else:
+                exported_flags = {"kpanic"} if final_kpanic else set()
+            result.output._flags = sorted(exported_flags)
 
         return result
 
