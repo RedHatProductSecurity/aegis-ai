@@ -1,8 +1,11 @@
 import asyncio
 import logging
-from typing import Any
+import re
+from pathlib import Path
+from typing import Any, Literal, cast
 
 import cvss
+from pydantic import BaseModel
 
 import aegis_ai.toolsets.tools.osidb as osidb_tool
 from aegis_ai import get_settings
@@ -33,8 +36,123 @@ from aegis_ai.features.data_models import feature_deps
 from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
+from aegis_ai.toolsets.tools.kernel_cves import get_cached_kernel_context_text
 
 logger = logging.getLogger(__name__)
+
+
+# Temporary kernel ActionableScore experiment reconstructed from the early
+# new1/new2/new3 branch.  This intentionally predates the deterministic
+# Perl-compatible reconciliation cascade.
+class KernelSecondOpinionModel(BaseModel):
+    """Parsed result of the temporary Gemini ActionableScore experiment."""
+
+    actionable_score: int
+    actionable_score_lower: int | None = None
+    primitive_class: Literal["NONE", "CLASS_A", "CLASS_B", "CLASS_C"]
+    real_uaf: Literal["YES", "NO"]
+    host_admin_required: Literal["YES", "NO", "UNKNOWN"]
+    namespace_scoped_privilege: Literal["YES", "NO", "UNKNOWN"]
+    important_candidate: Literal["YES", "NO"]
+    manual_review: Literal["NO", "RECOMMENDED", "REQUIRED"]
+    auto_downgrade_allowed: Literal["YES", "NO"]
+    final_bucket: str
+    recommended_impact: Literal["MODERATE", "IMPORTANT"]
+    raw_response: str
+
+
+_ACTIONABLE_SCORE_PROMPT_PATH = Path(__file__).with_name("actionable_score_prompt.txt")
+
+
+def _load_actionable_score_prompt() -> str:
+    return _ACTIONABLE_SCORE_PROMPT_PATH.read_text(encoding="utf-8")
+
+
+def _parse_actionable_score_response(
+    text: str,
+    call_str: str,
+) -> KernelSecondOpinionModel:
+    def required(name: str) -> str:
+        match = re.search(rf"(?m)^{re.escape(name)}=(.+?)\\s*$", text)
+        if not match:
+            raise ValueError(f"missing required field {name}")
+        return match.group(1).strip()
+
+    def optional(name: str) -> str | None:
+        match = re.search(rf"(?m)^{re.escape(name)}=(.+?)\\s*$", text)
+        return match.group(1).strip() if match else None
+
+    score = int(required("ActionableScore"))
+    lower_raw = optional("ActionableScoreLower")
+    lower = int(lower_raw) if lower_raw is not None else None
+
+    bucket_match = re.search(
+        r"Final recommended bucket:\\s*\\*\\*(.+?)\\*\\*::",
+        text,
+    )
+    if not bucket_match:
+        raise ValueError("missing Final recommended bucket")
+
+    final_bucket = bucket_match.group(1).strip()
+    important_buckets = {
+        "Strong Important candidate",
+        "High-end Important / possible Critical candidate",
+    }
+    recommended_impact: Literal["MODERATE", "IMPORTANT"] = (
+        "IMPORTANT" if final_bucket in important_buckets else "MODERATE"
+    )
+
+    parsed = KernelSecondOpinionModel(
+        actionable_score=score,
+        actionable_score_lower=lower,
+        primitive_class=cast(
+            Literal["NONE", "CLASS_A", "CLASS_B", "CLASS_C"],
+            required("PrimitiveClass"),
+        ),
+        real_uaf=cast(
+            Literal["YES", "NO"],
+            required("RealUAF"),
+        ),
+        host_admin_required=cast(
+            Literal["YES", "NO", "UNKNOWN"],
+            required("HostAdminRequired"),
+        ),
+        namespace_scoped_privilege=cast(
+            Literal["YES", "NO", "UNKNOWN"],
+            required("NamespaceScopedPrivilege"),
+        ),
+        important_candidate=cast(
+            Literal["YES", "NO"],
+            required("ImportantCandidate"),
+        ),
+        manual_review=cast(
+            Literal["NO", "RECOMMENDED", "REQUIRED"],
+            required("ManualReview"),
+        ),
+        auto_downgrade_allowed=cast(
+            Literal["YES", "NO"],
+            required("AutoDowngradeAllowed"),
+        ),
+        final_bucket=final_bucket,
+        recommended_impact=recommended_impact,
+        raw_response=text,
+    )
+
+    logger.info(
+        "%s: ACTIONABLE_SCORE parsed score=%s lower=%s primitive=%s "
+        "important_candidate=%s manual_review=%s auto_downgrade=%s "
+        "bucket=%s mapped_impact=%s",
+        call_str,
+        parsed.actionable_score,
+        parsed.actionable_score_lower,
+        parsed.primitive_class,
+        parsed.important_candidate,
+        parsed.manual_review,
+        parsed.auto_downgrade_allowed,
+        parsed.final_bucket,
+        parsed.recommended_impact,
+    )
+    return parsed
 
 
 def _build_cve_input(cve_id: CVEID, static_context: Any = None) -> CVEFeatureInput:
@@ -280,6 +398,76 @@ class SuggestImpact(Feature):
                 unchanged.append(m)
         return changed, unchanged
 
+    async def _experimental_kernel_second_opinion(
+        self,
+        result,
+        deps,
+        classifier_result: dict | None,
+        call_str: str,
+        kernel_context: str | None = None,
+    ) -> KernelSecondOpinionModel | None:
+        """Run the early ActionableScore second-opinion experiment.
+
+        The second pass intentionally does not receive current Aegis impact,
+        current Aegis CVSS, XGBoost prediction, or classifier flags.
+        """
+
+        if not classifier_result or not isinstance(classifier_result, dict):
+            return None
+
+        if not kernel_context:
+            logger.warning(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION no kernel context available",
+                call_str,
+            )
+            return None
+
+        try:
+            actionable_prompt = _load_actionable_score_prompt()
+        except Exception as exc:
+            logger.warning(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION cannot load prompt: %s",
+                call_str,
+                exc,
+            )
+            return None
+
+        prompt = actionable_prompt + "\n\n" + kernel_context + "\n"
+
+        logger.info(
+            "%s: ACTIONABLE_SCORE_SECOND_OPINION "
+            "prompt_chars=%d kernel_context_chars=%d",
+            call_str,
+            len(prompt),
+            len(kernel_context),
+        )
+
+        try:
+            second_result = await self._run(
+                f"{call_str}:ActionableScoreSecondOpinion",
+                prompt,
+                deps=deps,
+                output_type=str,
+            )
+            raw_text = second_result.output
+            if not isinstance(raw_text, str):
+                raw_text = str(raw_text)
+
+            logger.info(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION raw_response:\n%s",
+                call_str,
+                raw_text,
+            )
+            return _parse_actionable_score_response(raw_text, call_str)
+        except Exception as exc:
+            # Experimental only: never break normal Aegis execution.
+            logger.warning(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION failed: %s",
+                call_str,
+                exc,
+            )
+            return None
+
     async def _revise_explanation(
         self,
         result,
@@ -507,6 +695,58 @@ class SuggestImpact(Feature):
         result.output._original_llm_vector = original_vector
 
         trace = SuggestImpact.post_process(result.output, call_str)
+
+        # Early new3 behavior: run ActionableScore as a late semantic
+        # second opinion, before the later deterministic reconciliation work.
+        kernel_context = (
+            get_cached_kernel_context_text(str(cve_id)) if is_kernel else None
+        )
+        if is_kernel:
+            logger.info(
+                "%s: SECOND_OPINION cached kernel context=%s chars",
+                call_str,
+                len(kernel_context or ""),
+            )
+
+        second_opinion = (
+            await self._experimental_kernel_second_opinion(
+                result,
+                deps,
+                classifier_result,
+                call_str,
+                kernel_context,
+            )
+            if is_kernel
+            else None
+        )
+
+        if second_opinion is not None:
+            old_impact = result.output.impact
+            new_impact = second_opinion.recommended_impact
+            logger.info(
+                "%s: ACTIONABLE_SCORE_SECOND_OPINION DECISION %s -> %s "
+                "(score=%s lower=%s primitive=%s important_candidate=%s "
+                "manual_review=%s auto_downgrade=%s bucket=%s)",
+                call_str,
+                old_impact,
+                new_impact,
+                second_opinion.actionable_score,
+                second_opinion.actionable_score_lower,
+                second_opinion.primitive_class,
+                second_opinion.important_candidate,
+                second_opinion.manual_review,
+                second_opinion.auto_downgrade_allowed,
+                second_opinion.final_bucket,
+            )
+            result.output.impact = new_impact
+            trace = (
+                f"{trace}; actionable_score_second_opinion:"
+                f"{old_impact}->{new_impact}"
+                f"(score={second_opinion.actionable_score}"
+                f",lower={second_opinion.actionable_score_lower}"
+                f",primitive={second_opinion.primitive_class}"
+                f",bucket={second_opinion.final_bucket})"
+            )
 
         vector_changed = result.output.cvss3_vector != original_vector
         if vector_changed:
