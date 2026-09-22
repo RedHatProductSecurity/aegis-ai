@@ -350,7 +350,9 @@ async def component_count_tool(
         count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
     """
     logger.debug(component_name)
-    return await client.count_component_flaws(component_name)
+    return await client.count_component_flaws(
+        component_name, include_embargoed=OSIDB_RETRIEVE_EMBARGOED
+    )
 
 
 # Maximum flaws to return from component_flaw_tool to avoid unbounded memory use.
@@ -376,12 +378,10 @@ async def component_flaw_tool(
     """
     logger.debug(component_name)
     flaws = []
-    async for flaw in client.list_component_flaws(component_name, limit=limit):
-        if not OSIDB_RETRIEVE_EMBARGOED and getattr(flaw, "embargoed", False):
-            continue
+    async for flaw in client.list_component_flaws(
+        component_name, limit=limit, include_embargoed=OSIDB_RETRIEVE_EMBARGOED
+    ):
         flaws.append(flaw.to_dict())
-        if len(flaws) >= limit:
-            break
     return flaws
 
 

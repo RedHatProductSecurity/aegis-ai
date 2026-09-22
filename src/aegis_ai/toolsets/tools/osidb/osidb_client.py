@@ -226,7 +226,11 @@ class OSIDBClient:
         return flaw_data
 
     async def list_component_flaws(
-        self, component_name: str, *, limit: int | None = None
+        self,
+        component_name: str,
+        *,
+        limit: int | None = None,
+        include_embargoed: bool = False,
     ) -> AsyncGenerator:
         """
         Retrieves flaws related to a specific component using an async iterator.
@@ -241,6 +245,8 @@ class OSIDBClient:
         }
         if limit is not None:
             params["limit"] = limit
+        if not include_embargoed:
+            params["embargoed"] = False
         session, token = await self._get_session_or_token()
         if token:
             data = await self._token_get(
@@ -261,7 +267,9 @@ class OSIDBClient:
             if limit is not None and count + 1 >= limit:
                 break
 
-    async def count_component_flaws(self, component_name: str):
+    async def count_component_flaws(
+        self, component_name: str, *, include_embargoed: bool = False
+    ):
         """
         Retrieves count of flaws related to a specific component.
         Uses delegated Kerberos credentials when present (same as get_flaw_data).
@@ -269,10 +277,12 @@ class OSIDBClient:
         logger.info(
             f"[component_count_tool] Counting flaws for component '{component_name}'."
         )
-        params = {
+        params: dict[str, Any] = {
             "components": component_name,
             "include_fields": _FLAW_COUNT_FIELDS,
         }
+        if not include_embargoed:
+            params["embargoed"] = False
         session, token = await self._get_session_or_token()
         if token:
             data = await self._token_get(
