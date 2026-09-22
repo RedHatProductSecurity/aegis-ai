@@ -376,7 +376,7 @@ async def component_flaw_tool(
     """
     logger.debug(component_name)
     flaws = []
-    async for flaw in client.list_component_flaws(component_name):
+    async for flaw in client.list_component_flaws(component_name, limit=limit):
         if not OSIDB_RETRIEVE_EMBARGOED and getattr(flaw, "embargoed", False):
             continue
         flaws.append(flaw.to_dict())

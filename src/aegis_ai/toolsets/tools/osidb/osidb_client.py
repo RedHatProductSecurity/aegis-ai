@@ -225,7 +225,9 @@ class OSIDBClient:
 
         return flaw_data
 
-    async def list_component_flaws(self, component_name: str) -> AsyncGenerator:
+    async def list_component_flaws(
+        self, component_name: str, *, limit: int | None = None
+    ) -> AsyncGenerator:
         """
         Retrieves flaws related to a specific component using an async iterator.
         Uses delegated Kerberos credentials when present (same as get_flaw_data).
@@ -233,25 +235,31 @@ class OSIDBClient:
         logger.info(
             f"[component_flaw_tool] Listing flaws for component '{component_name}'."
         )
-        params = {
+        params: dict[str, Any] = {
             "components": component_name,
             "include_fields": _FLAW_LIST_FIELDS,
         }
+        if limit is not None:
+            params["limit"] = limit
         session, token = await self._get_session_or_token()
         if token:
             data = await self._token_get(
                 path="/osidb/api/v2/flaws",
                 params=params,
                 token=token,
-                timeout=60.0,
+                timeout=30.0,
             )
             parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
             for item in parsed.results or []:
                 yield item
             return
         session = cast(Any, session)
-        for flaw in session.flaws.retrieve_list_iterator(**params):
+        # retrieve_list_iterator treats `limit` as page size and follows all
+        # pages, so we enforce the total-result cap client-side
+        for count, flaw in enumerate(session.flaws.retrieve_list_iterator(**params)):
             yield flaw
+            if limit is not None and count + 1 >= limit:
+                break
 
     async def count_component_flaws(self, component_name: str):
         """
@@ -269,7 +277,7 @@ class OSIDBClient:
         if token:
             data = await self._token_get(
                 path="/osidb/api/v2/flaws",
-                params={**params, "limit": 1, "offset": 0},
+                params=params,
                 token=token,
                 timeout=30.0,
             )
