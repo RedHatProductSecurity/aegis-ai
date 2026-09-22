@@ -54,30 +54,27 @@ class OSIDBUnauthorizedError(Exception):
         super().__init__(self.message)
 
 
-def _is_osidb_unauthorized(exc: BaseException) -> bool:
-    """Return True if *exc* indicates OSIDB returned 401."""
+def _is_osidb_status(exc: BaseException, code: int, fallback_text: str) -> bool:
+    """Return True if *exc* indicates OSIDB returned the given HTTP status code."""
     if isinstance(exc, httpx.HTTPStatusError):
-        return exc.response.status_code == 401
+        return exc.response.status_code == code
     resp = getattr(exc, "response", None)
     if resp is not None:
-        code = getattr(resp, "status_code", None)
-        if code == 401:
+        status = getattr(resp, "status_code", None)
+        if status == code:
             return True
     text = str(exc).lower()
-    return "401" in text and ("unauthorized" in text or "client error" in text)
+    return str(code) in text and (fallback_text in text or "client error" in text)
+
+
+def _is_osidb_unauthorized(exc: BaseException) -> bool:
+    """Return True if *exc* indicates OSIDB returned 401."""
+    return _is_osidb_status(exc, 401, "unauthorized")
 
 
 def _is_osidb_flaw_not_found(exc: BaseException) -> bool:
     """Return True if *exc* indicates OSIDB returned 404 for a flaw lookup."""
-    if isinstance(exc, httpx.HTTPStatusError):
-        return exc.response.status_code == 404
-    resp = getattr(exc, "response", None)
-    if resp is not None:
-        code = getattr(resp, "status_code", None)
-        if code == 404:
-            return True
-    text = str(exc).lower()
-    return "404" in text and ("not found" in text or "client error" in text)
+    return _is_osidb_status(exc, 404, "not found")
 
 
 class OSIDBClient:
