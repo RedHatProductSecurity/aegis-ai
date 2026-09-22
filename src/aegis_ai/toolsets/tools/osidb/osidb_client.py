@@ -184,6 +184,7 @@ class OSIDBClient:
                 "Ensure Kerberos delegation (kinit -f) for web requests or configure "
                 "process-level OSIDB auth."
             )
+        params = {"include_fields": _FLAW_RETRIEVE_FIELDS}
         if token:
             logger.info(
                 "[flaw_tool] Using delegated Kerberos credentials for OSIDB (pass-through auth)"
@@ -191,7 +192,7 @@ class OSIDBClient:
             try:
                 data = await self._token_get(
                     path=f"/osidb/api/v2/flaws/{cve_id}",
-                    params={"include_fields": _FLAW_RETRIEVE_FIELDS},
+                    params=params,
                     token=token,
                     timeout=30.0,
                 )
@@ -208,10 +209,7 @@ class OSIDBClient:
         else:
             session = cast(Any, session)  # token was None, so session is not None
             try:
-                flaw_data = session.flaws.retrieve(
-                    id=cve_id,
-                    include_fields=_FLAW_RETRIEVE_FIELDS,
-                )
+                flaw_data = session.flaws.retrieve(id=cve_id, **params)
             except Exception as e:
                 if _is_osidb_unauthorized(e):
                     raise OSIDBUnauthorizedError() from e
@@ -227,8 +225,8 @@ class OSIDBClient:
 
         return flaw_data
 
-    async def _list_component_flaws_with_token(
-        self, component_name: str, token: str
+    async def _paginate_flaws_with_token(
+        self, params: dict[str, Any], token: str
     ) -> AsyncGenerator:
         """Paginate OSIDB v2 flaws list with Bearer token and yield flaw-like objects."""
         base = get_settings().osidb_server_url.rstrip("/")
@@ -237,15 +235,10 @@ class OSIDBClient:
         offset = 0
         async with httpx.AsyncClient(timeout=60.0) as client:
             while True:
-                params = {
-                    "affects__ps_component": component_name,
-                    "include_fields": _FLAW_LIST_FIELDS,
-                    "limit": limit,
-                    "offset": offset,
-                }
+                page_params = {**params, "limit": limit, "offset": offset}
                 resp = await client.get(
                     url,
-                    params=params,
+                    params=page_params,
                     headers={"Authorization": f"Bearer {token}"},
                 )
                 resp.raise_for_status()
@@ -261,23 +254,6 @@ class OSIDBClient:
                 if offset >= count or len(results) < limit:
                     break
 
-    async def _count_component_flaws_with_token(
-        self, component_name: str, token: str
-    ) -> int:
-        """Return OSIDB flaw count for component using Bearer token."""
-        data = await self._token_get(
-            path="/osidb/api/v2/flaws",
-            params={
-                "affects__ps_component": component_name,
-                "include_fields": _FLAW_COUNT_FIELDS,
-                "limit": 1,
-                "offset": 0,
-            },
-            token=token,
-            timeout=30.0,
-        )
-        return int(data.get("count", 0))
-
     async def list_component_flaws(self, component_name: str) -> AsyncGenerator:
         """
         Retrieves flaws related to a specific component using an async iterator.
@@ -286,18 +262,17 @@ class OSIDBClient:
         logger.info(
             f"[component_flaw_tool] Listing flaws for component '{component_name}'."
         )
+        params = {
+            "affects__ps_component": component_name,
+            "include_fields": _FLAW_LIST_FIELDS,
+        }
         session, token = await self._get_session_or_token()
         if token:
-            async for flaw in self._list_component_flaws_with_token(
-                component_name, token
-            ):
+            async for flaw in self._paginate_flaws_with_token(params, token):
                 yield flaw
             return
         session = cast(Any, session)
-        for flaw in session.flaws.retrieve_list_iterator(
-            affects__ps_component=component_name,
-            include_fields=_FLAW_LIST_FIELDS,
-        ):
+        for flaw in session.flaws.retrieve_list_iterator(**params):
             yield flaw
 
     async def count_component_flaws(self, component_name: str):
@@ -308,11 +283,18 @@ class OSIDBClient:
         logger.info(
             f"[component_count_tool] Counting flaws for component '{component_name}'."
         )
+        params = {
+            "affects__ps_component": component_name,
+            "include_fields": _FLAW_COUNT_FIELDS,
+        }
         session, token = await self._get_session_or_token()
         if token:
-            return await self._count_component_flaws_with_token(component_name, token)
+            data = await self._token_get(
+                path="/osidb/api/v2/flaws",
+                params={**params, "limit": 1, "offset": 0},
+                token=token,
+                timeout=30.0,
+            )
+            return int(data.get("count", 0))
         session = cast(Any, session)
-        return session.flaws.count(
-            affects__ps_component=component_name,
-            include_fields=_FLAW_COUNT_FIELDS,
-        )
+        return session.flaws.count(**params)
