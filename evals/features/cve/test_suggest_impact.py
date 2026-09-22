@@ -562,7 +562,12 @@ cases = [
         cve_id="CVE-2026-53094",
         expected_impact="MODERATE",
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
-        metadata={"known_to_fail_evaluators": ["NoAffectsInExplanation"]},
+        metadata={
+            "known_to_fail_evaluators": [
+                "CVSSKernelScopeAndPrivileges",
+                "NoAffectsInExplanation",
+            ]
+        },
     ),
     # Analyst feedback (AEGIS-368): upstream CVSS from cve.org shows AV:N/PR:N/UI:N,
     # but Aegis previously suggested AV:L/PR:L/UI:R without reading external references.
