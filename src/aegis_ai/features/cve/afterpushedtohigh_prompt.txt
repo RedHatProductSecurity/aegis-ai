@@ -25,7 +25,7 @@ DECISION MODEL — TWO PRIMARY STATES + NARROW EXCEPTION
 STATE A — full IMPORTANT-grade primitive:
 downgrade_to_moderate7=false; important_grade_primitive_demonstrated=true;
 important_preserving_class_b=false.
-STATE B — narrow B1-B7 preservation exception only:
+STATE B — narrow B1-B8 preservation exception only:
 downgrade_to_moderate7=false; important_grade_primitive_demonstrated=false;
 important_preserving_class_b=true.
 STATE C — otherwise downgrade:
@@ -78,7 +78,7 @@ not yet proven but automatic downgrade would destroy a particularly strong
 patch-established primitive.
 State B MUST NOT be used as a generic "uncertainty" bucket.
 If important_preserving_class_b=true, decision_reason MUST explicitly name
-B1, B2, B3, B4, B5, B6, or B7. Otherwise the result is invalid.
+B1, B2, B3, B4, B5, B6, B7, or B8. Otherwise the result is invalid.
 B5 is intentionally a calibrated middle class: it captures a small set of
 compound concrete memory-safety primitives that are stronger than generic
 Class B uncertainty but still weaker than full State A exploit primitives.
@@ -386,9 +386,60 @@ Do NOT apply B7 merely because:
 - a stale extent exists but is not used for an actual write/I/O decision;
 - cross-file corruption is only an abstract possibility unsupported by the
   mapping/COW mechanics.
+B8 — DIRECT UNAUTHENTICATED REMOTE KERNEL-CRASH PRESERVATION
+This is an explicit operational IMPORTANT-preservation exception to the normal
+rule that crash/DoS alone belongs in MODERATE7.
+
+Do NOT downgrade IMPORTANT -> MODERATE7 when supplied authoritative evidence
+establishes ALL or nearly all:
+1. The vulnerable kernel service/path is directly network reachable when that
+   service is enabled in a valid supported configuration.
+2. An unauthenticated remote attacker can directly supply the triggering
+   packet/request/input.
+3. That input demonstrably or explicitly causes a kernel oops, panic, fatal
+   fault, or equivalent kernel-level crash.
+4. No local account, host-admin-equivalent attacker privilege, physical access,
+   separate privileged attacker setup, prior memory corruption, or another
+   vulnerability is required for the complete trigger.
+
+B8 is intentionally different from B1-B7: it does NOT require an independent
+non-crash IMPORTANT-grade primitive. The demonstrated direct unauthenticated
+remote kernel crash itself is the narrow operational preservation basis.
+
+Attack complexity does NOT by itself defeat B8. A race, timing dependency,
+protocol-state requirement, malformed packet construction, or other AC:H-like
+condition may reduce CVSS independently but does not permit this automatic
+IMPORTANT -> MODERATE7 downgrade when the same unauthenticated remote peer can
+drive the complete demonstrated crash path.
+
+Normal service applicability is NOT an unusual prerequisite. Requiring the
+affected RPC/NFS/network service to be enabled and network reachable does not
+by itself defeat B8.
+
+When B8 applies set:
+    downgrade_to_moderate7=false
+    important_grade_primitive_demonstrated=false
+    important_preserving_class_b=true
+    final_bucket="IMPORTANT retained"
+
+B8 remains applicable even when:
+- C:H and I:H are not demonstrated;
+- the only demonstrated CIA consequence is A:H;
+- memory corruption beyond the crash is constrained or speculative;
+- arbitrary write, LPE, controlled reclaim, or protected-object corruption is
+  not demonstrated.
+
+Do NOT apply B8 when remote reachability is indirect/hypothetical, attacker
+authentication/local access is required, host-admin-equivalent attacker
+privilege or physical access is required, the crash is only speculative, or a
+separate privileged actor/another vulnerability is required to complete the
+crash path.
+
+B8 does NOT infer C:H or I:H. Score confidentiality and integrity independently.
+
 MANDATORY DOWNGRADE CALIBRATION
 The following are normally STATE C / MODERATE7 unless a separate State A or
-B1-B7 condition is established.
+B1-B8 condition is established.
 C1 — BOUNDED / ADJACENT OOB WRITE
 A fixed or bounded OOB write is NOT Important-grade merely because:
 - it is kernel memory;
@@ -630,7 +681,7 @@ MANDATORY DEFAULT-BIAS CHECK
 If all are true:
     high_impact_demonstrated=false
     important_grade_primitive_demonstrated=false
-and NO B1-B7 profile is positively established,
+and NO B1-B8 profile is positively established,
 and the proposed KEEP reason contains mainly:
     real corruption
     remote reachability
@@ -648,8 +699,8 @@ and the proposed KEEP reason contains mainly:
     requires manual review
 then DEFAULT to:
     downgrade_to_moderate7=true
-unless decision_reason can explicitly identify B1, B2, B3, B4, B5, B6, or B7 and
-list the facts satisfying that preservation profile.
+unless decision_reason can explicitly identify B1, B2, B3, B4, B5, B6, B7, or B8
+and list the facts satisfying that preservation profile.
 REGRESSION GUARDS — DO NOT OVER-DOWNGRADE
 Do NOT let the stronger downgrade bias erase these kinds of cases:
 1. Direct attacker-selected kernel mapping/read/write primitive.
@@ -667,6 +718,9 @@ Do NOT let the stronger downgrade bias erase these kinds of cases:
    exactly satisfying B5-OOB.
 9. Supplied authoritative exploit evidence demonstrating root/LPE or protected
    target compromise.
+10. Direct unauthenticated remote attacker input that explicitly/demonstrably
+    causes a kernel-level crash and satisfies B8, even when no independent
+    non-crash IMPORTANT-grade primitive is demonstrated.
 These remain IMPORTANT when established.
 PYTHON MACHINE-PARSING CONTRACT
 This response is consumed programmatically by the Aegis post-reconciliation
@@ -743,7 +797,7 @@ Return JSON only with exactly this structure:
     "important_preserving_class_b": false,
     "important_grade_primitive_demonstrated": false
   },
-  "decision_reason": "state A, B1-B7, or C and explain using demonstrated mechanics",
+  "decision_reason": "state A, B1-B8, or C and explain using demonstrated mechanics",
   "high_impact_demonstrated_reason": "separate final demonstrated impact from speculative worst case",
   "downgrade_constraints_reason": "explain reachability/configuration/privilege/hardware/race constraints",
   "final_bucket": "IMPORTANT retained|MODERATE7"
@@ -759,12 +813,12 @@ However, when prior technical triage explicitly identifies ALL of:
 do not dismiss those technical findings merely because the current filter has
 a stronger downgrade bias.
 Re-evaluate the underlying mechanics independently.  If they really satisfy
-B1-B7, preserve.  If they do not, downgrade.
+B1-B8, preserve.  If they do not, downgrade.
 This is a consistency check, not a numeric-score rule.
 FINAL SELF-CHECK
 Before returning JSON:
 1. If downgrade=false, did I positively identify State A or exactly
-   B1/B2/B3/B4/B5/B6/B7?
+   B1/B2/B3/B4/B5/B6/B7/B8?
    If NO -> recompute to downgrade=true.
 2. Did I use "unresolved", "cannot rule out", or "manual review required" as
    a KEEP reason? If yes -> recompute.
@@ -787,7 +841,7 @@ Before returning JSON:
 10. Did I preserve a fixed/constrained kernel-stack overwrite without useful
     content/target/control-flow leverage? If yes -> normally downgrade.
 11. If important_preserving_class_b=true, does decision_reason literally name
-    B1, B2, B3, B4, B5, B6, or B7 and enumerate the matching facts? If no -> invalid;
+    B1, B2, B3, B4, B5, B6, B7, or B8 and enumerate the matching facts? If no -> invalid;
     recompute to false.
 12. Did I downgrade a directly remote-triggered ACTUAL UAF with a demonstrated
     post-free WRITE/state mutation solely because controlled reclaim is absent?
@@ -800,6 +854,13 @@ Before returning JSON:
      fixed, most OOB payload is not attacker-controlled, and the operation
      simply runs until fault? If yes -> this is crash-dominant runaway copy,
      not B5-OOB; downgrade to MODERATE7.
+13c. Did I downgrade a direct unauthenticated remote kernel crash solely because
+     impact beyond DoS is speculative or the corruption primitive is constrained?
+     If yes -> explicitly evaluate B8. If B8 is satisfied, retain IMPORTANT.
+13d. Did I reject B8 solely because attack complexity is high, a race/timing or
+     protocol-state condition exists, or the affected service must normally be
+     enabled/reachable? If yes -> recompute; those facts do not by themselves
+     defeat B8.
 14. Did I use B5 for a fixed adjacent overwrite, stack overwrite, OOB read,
     remote lookup-only UAF, local stale write, or physical peripheral overflow?
     If yes -> remove B5.
@@ -819,3 +880,40 @@ The goal is to distinguish:
 from:
     "serious enough for mandatory human review as MODERATE7."
 The supplied vulnerability evidence and prior analysis follow below:
+
+NEW46 — EXACT B5OOB PROVENANCE OVERRIDES PHYSICAL/PERIPHERAL DOWNGRADE
+
+Previous ActionableScore may contain the machine-readable field `B5OOB=YES`.
+When ALL six structured facts are present:
+    PrimitiveClass=CLASS_B
+    B5OOB=YES
+    ImportantCandidate=YES
+    ManualReview=REQUIRED
+    AutoDowngradeAllowed=NO
+    HostAdminRequired=NO
+and the supplied patch/commit independently confirms the canonical B5-OOB
+old-allocation/new-bound heap/slab OOB WRITE mechanics, classify as State B:
+    downgrade_to_moderate7=false
+    important_grade_primitive_demonstrated=false
+    important_preserving_class_b=true
+    final_bucket="IMPORTANT retained"
+
+This exact NEW46 profile is intentionally an exception to the older B5-OOB
+physical/peripheral exclusion and to C6-style malicious-device downgrade.
+Physical access, AV:P, a malicious USB/peripheral, special hardware, or the fact
+that C/I beyond corruption remains speculative may reduce CVSS/reachability,
+but MUST NOT by themselves downgrade a positively confirmed exact B5OOB case.
+Do not require arbitrary write, controlled target selection, a named sensitive
+adjacent object, or completed LPE merely to preserve IMPORTANT under this exact
+gate.  Do not infer C:H/I:H from the preservation decision.
+
+The exception is narrow: B5OOB must be explicitly YES in prior structured
+triage AND independently confirmed from patch mechanics.  Generic OOB WRITE,
+classifier `outofbounds`, malicious-device crashes, fixed adjacent overwrites,
+stack OOB, OOB READ, and runaway copies remain governed by the normal State-C
+rules when the canonical B5 transition is absent.
+
+If the exact gate is satisfied, `decision_reason` MUST explicitly name
+`B5-OOB` and MUST NOT select State C solely because the trigger is USB,
+peripheral, physical, special hardware, or because stronger C/I/LPE is
+undemonstrated.
