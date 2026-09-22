@@ -15,6 +15,7 @@ from aegis_ai_ml.src.osidb_retrieve import (
     _load_existing_cve_ids,
     _merge_records,
     _warn_lost_cves,
+    fetch_flaws_from_osidb,
     main,
     normalize_flaws,
 )
@@ -91,6 +92,40 @@ def test_normalize_flaws_accepted_records_not_in_skipped_cves() -> None:
 
     assert len(normalized) == 1
     assert "CVE-2025-0004" not in skipped_cves
+
+
+def test_fetch_flaws_uses_list_for_component_filter() -> None:
+    class _Flaw:
+        def to_dict(self) -> dict[str, Any]:
+            return {"uuid": "uuid-1", "cve_id": "CVE-2025-0004"}
+
+    class _Flaws:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, Any]] = []
+
+        def retrieve_list_iterator_async(self, **kwargs: Any):
+            self.calls.append(kwargs)
+            return iter([_Flaw()])
+
+    class _Session:
+        def __init__(self) -> None:
+            self.flaws = _Flaws()
+
+    args = type(
+        "Args",
+        (),
+        {"max_per_impact": 1, "impacts": ["IMPORTANT"], "states": ["DONE"]},
+    )()
+    session = _Session()
+
+    flaws = fetch_flaws_from_osidb(args, session=session)
+
+    assert flaws == [{"uuid": "uuid-1", "cve_id": "CVE-2025-0004"}]
+    assert [call["components"] for call in session.flaws.calls] == [
+        ["kernel"],
+        ["Linux kernel"],
+    ]
+    assert all("owner_isempty" not in call for call in session.flaws.calls)
 
 
 # ---------------------------------------------------------------------------

@@ -244,11 +244,10 @@ def fetch_flaws_from_osidb(
                 flaw_iter = session.flaws.retrieve_list_iterator_async(
                     impact=impact,
                     workflow_state=args.states,
-                    components=component,
+                    components=[component],
                     max_results=per_impact,
                     include_fields=FLAWS_FIELDS,
                     order=FLAWS_ORDER,
-                    owner_isempty="false",
                     **owner_kwargs,
                 )
                 for flaw in flaw_iter:
