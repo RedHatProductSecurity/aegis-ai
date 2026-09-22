@@ -211,7 +211,7 @@ class TestSuggestImpactExecFlagsPopulation:
                 },
             )
 
-        assert result.output._flags == []
+        assert result.output._flags == ["kpanic"]
 
     @patch("aegis_ai.features.cve.SuggestImpact.post_process", return_value="")
     @patch("aegis_ai.features.cve.is_kernel_component", return_value=True)
@@ -290,7 +290,7 @@ class TestSuggestImpactExecFlagsPopulation:
                 },
             )
 
-        assert result.output._flags == []
+        assert result.output._flags == ["kpanic"]
 
 
 @pytest.mark.asyncio
