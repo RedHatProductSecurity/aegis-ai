@@ -10,6 +10,9 @@ from aegis_ai.toolsets.tools.build_system import ListBinaryRPMsOutput
 from aegis_ai.toolsets.tools.build_system import (
     _lookup_binary_rpms as live_lookup_binary_rpms,
 )
+from aegis_ai.toolsets.tools.build_system import (
+    _lookup_binary_rpms_batch as live_lookup_binary_rpms_batch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -88,11 +91,49 @@ def build_system_cache_retrieve(
         event.set()
 
 
+def _try_read_cache(package: str, ps_update_stream: str) -> ListBinaryRPMsOutput | None:
+    """Read a single cache entry, returning None on miss or corruption."""
+    cache_file = Path(CACHE_DIR) / _cache_filename(package, ps_update_stream)
+    try:
+        with open(cache_file) as f:
+            data = json.load(f)
+        logger.debug('read build system cache from "%s"', cache_file)
+        return ListBinaryRPMsOutput(**data)
+    except (OSError, json.JSONDecodeError, ValidationError):
+        return None
+
+
 def build_system_cache_retrieve_batch(
     package: str, streams: list[str]
 ) -> list[ListBinaryRPMsOutput]:
-    """Batch wrapper: resolve each stream through the per-key cache."""
-    return [build_system_cache_retrieve(package, s) for s in streams]
+    """Batch cache lookup: read hits from disk, resolve misses in one batch.
+
+    Misses go through the original ``_lookup_binary_rpms_batch`` so
+    Deptopia is queried once per package, not once per stream.
+    """
+    results: dict[str, ListBinaryRPMsOutput] = {}
+    missed_streams: list[str] = []
+
+    with _cache_lock:
+        for s in streams:
+            cached = _try_read_cache(package, s)
+            if cached is not None:
+                results[s] = cached
+            else:
+                missed_streams.append(s)
+
+    if missed_streams:
+        live_results = live_lookup_binary_rpms_batch(package, missed_streams)
+        for result in live_results:
+            write_cache_entry(package, result.ps_update_stream, result)
+            logger.info(
+                'writing build system cache to "%s"',
+                Path(CACHE_DIR) / _cache_filename(package, result.ps_update_stream),
+            )
+            cache_misses.append(f"{package}/{result.ps_update_stream}")
+            results[result.ps_update_stream] = result
+
+    return [results[s] for s in streams]
 
 
 def write_misses_report() -> Path | None:
