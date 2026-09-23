@@ -347,12 +347,18 @@ async def component_count_tool(
         component_name: An object containing component_name (ex. curl).
 
     Returns:
-        count: A Pydantic model containing the CVE entity's cve_id, title, description, severity or an error message.
+        An integer flaw count, or 0 when OSIDB authorization fails.
     """
     logger.debug(component_name)
-    return await client.count_component_flaws(
-        component_name, include_embargoed=OSIDB_RETRIEVE_EMBARGOED
-    )
+    try:
+        return await client.count_component_flaws(
+            component_name, include_embargoed=OSIDB_RETRIEVE_EMBARGOED
+        )
+    except OSIDBUnauthorizedError:
+        logger.warning(
+            f"[component_count_tool] OSIDB unauthorized when counting flaws for '{component_name}'"
+        )
+        return 0
 
 
 # Maximum flaws to return from component_flaw_tool to avoid unbounded memory use.
@@ -377,12 +383,18 @@ async def component_flaw_tool(
         A list of flaw-like objects (cve_id, title, description, etc.) up to `limit` items.
     """
     logger.debug(component_name)
-    flaws = []
-    async for flaw in client.list_component_flaws(
-        component_name, limit=limit, include_embargoed=OSIDB_RETRIEVE_EMBARGOED
-    ):
-        flaws.append(flaw.to_dict())
-    return flaws
+    try:
+        flaws = []
+        async for flaw in client.list_component_flaws(
+            component_name, limit=limit, include_embargoed=OSIDB_RETRIEVE_EMBARGOED
+        ):
+            flaws.append(flaw.to_dict())
+        return flaws
+    except OSIDBUnauthorizedError:
+        logger.warning(
+            f"[component_flaw_tool] OSIDB unauthorized when listing flaws for '{component_name}'"
+        )
+        return []
 
 
 toolset: FunctionToolset[feature_deps] = FunctionToolset(

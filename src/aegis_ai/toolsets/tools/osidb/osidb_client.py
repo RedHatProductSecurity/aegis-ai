@@ -262,10 +262,17 @@ class OSIDBClient:
         session = cast(Any, session)
         # retrieve_list_iterator treats `limit` as page size and follows all
         # pages, so we enforce the total-result cap client-side
-        for count, flaw in enumerate(session.flaws.retrieve_list_iterator(**params)):
-            yield flaw
-            if limit is not None and count + 1 >= limit:
-                break
+        try:
+            for count, flaw in enumerate(
+                session.flaws.retrieve_list_iterator(**params)
+            ):
+                yield flaw
+                if limit is not None and count + 1 >= limit:
+                    break
+        except Exception as e:
+            if _is_osidb_unauthorized(e):
+                raise OSIDBUnauthorizedError() from e
+            raise
 
     async def count_component_flaws(
         self, component_name: str, *, include_embargoed: bool = False
@@ -293,4 +300,9 @@ class OSIDBClient:
             )
             return int(data.get("count", 0))
         session = cast(Any, session)
-        return session.flaws.count(**params)
+        try:
+            return session.flaws.count(**params)
+        except Exception as e:
+            if _is_osidb_unauthorized(e):
+                raise OSIDBUnauthorizedError() from e
+            raise
