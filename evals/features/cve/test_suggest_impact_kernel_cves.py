@@ -102,19 +102,8 @@ KNOWN_FAILURES: dict[str, dict] = {
         "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2022-50865": {
-        "known_to_fail_evaluators": [
-            "CVSSKernelScopeAndPrivileges",
-            "KpanicOverestimationEvaluator",
-            "UnderestimationEvaluator",
-        ],
-        "reason": (
-            "Overestimation: predicted IMPORTANT, expected MODERATE. "
-            "kernel_panic active; classifier starts at IMPORTANT despite "
-            "OSIDB MODERATE — kpanic-driven overescalation. Also: explanation "
-            "states 'requiring ... elevated privileges (PR:N)'; the phrase "
-            "'elevated privileges' contradicts PR:N (None), as PR:N implies "
-            "no privileges are required."
-        ),
+        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
+        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2022-50873": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
@@ -154,10 +143,6 @@ KNOWN_FAILURES: dict[str, dict] = {
             "AEGIS-441 benchmark — kpanic-driven overescalation. "
             "Also underestimates to LOW without classifier."
         ),
-    },
-    "CVE-2023-54045": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2023-54081": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
@@ -212,15 +197,10 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
     "CVE-2024-53104": {
-        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
-        "reason": (
-            "The explanation for I:H states 'The out-of-bounds write can overwrite kernel "
-            "data structures, leading to significant integrity impact.' This describes a "
-            "purely internal kernel state issue without providing a plausible user-data "
-            "impact path, which contradicts the rubric's instruction to 'do not set "
-            "C:H/I:H for purely internal kernel state issues without a plausible "
-            "user-data impact path.'"
-        ),
+        "known_to_fail_evaluators": [
+            "KpanicOverestimationEvaluator",
+        ],
+        "reason": ("Overestimation: predicted IMPORTANT, expected MODERATE"),
     },
     "CVE-2025-37798": {
         "known_to_fail_evaluators": ["KpanicOverestimationEvaluator"],
@@ -239,34 +219,6 @@ KNOWN_FAILURES: dict[str, dict] = {
             "kernel_panic + memory features only; classifier starts IMPORTANT "
             "(conf=0.03) despite low confidence — kpanic overestimation signal. "
             "Also: PR:L inconsistent with requiring /dev/udmabuf access."
-        ),
-    },
-    "CVE-2025-38052": {
-        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
-        "reason": (
-            "The vector sets C:H and I:H for an internal kernel slab use-after-free "
-            "read issue without providing a plausible user-data impact path."
-        ),
-    },
-    "CVE-2025-38089": {
-        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
-        "reason": (
-            "LLM sets I:H for internal kernel state corruption without providing "
-            "a plausible user-data impact path as required by the rubric."
-        ),
-    },
-    "CVE-2025-38352": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": (
-            "Underestimation: predicted MODERATE, expected IMPORTANT. "
-            "LLM consistently underscores CIA for posix-cpu-timers UAF."
-        ),
-    },
-    "CVE-2025-38590": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": (
-            "Underestimation: predicted MODERATE, expected IMPORTANT. "
-            "LLM underestimates net/mlx5e network driver IPsec path flaw."
         ),
     },
     "CVE-2025-38718": {
@@ -301,10 +253,6 @@ KNOWN_FAILURES: dict[str, dict] = {
             "LLM explanation inconsistent with its own vector: explanation states C:H/I:L "
             "but vector has C:L/I:H. Scope/privilege narration does not match the vector."
         ),
-    },
-    "CVE-2025-39754": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": "Underestimation: predicted LOW, expected MODERATE.",
     },
     "CVE-2025-39809": {
         "known_to_fail_evaluators": [
@@ -353,35 +301,6 @@ KNOWN_FAILURES: dict[str, dict] = {
             "AEGIS-441 benchmark — kpanic-driven overescalation."
         ),
     },
-    "CVE-2025-68305": {
-        "known_to_fail_evaluators": [
-            "CVSSKernelScopeAndPrivileges",
-            "KpanicOverestimationEvaluator",
-        ],
-        "reason": (
-            "Overestimation: predicted IMPORTANT, expected MODERATE. "
-            "kernel_panic + remote + uaf + danger features; classifier starts at "
-            "IMPORTANT (conf=0.63), LLM CVSS 7.0 (MODERATE band) but no rule "
-            "de-escalates. Also: explanation only describes DoS but vector sets C:H/I:H."
-        ),
-    },
-    "CVE-2025-68742": {
-        "known_to_fail_evaluators": [
-            "CVSSKernelScopeAndPrivileges",
-            "UnderestimationEvaluator",
-        ],
-        "reason": (
-            "On one run, the explanation-revision step only prompts the LLM to reconcile "
-            "what changed during post-processing, but the original LLM response already had "
-            "an internal C/I/PR mismatch between its prose and its own vector — and that "
-            "pre-existing inconsistency was invisible to the revision logic. Specifically, "
-            "the LLM emitted I:N in the vector but wrote 'minor integrity impact (I:L)' in "
-            "the explanation. Post-processing changed only impact (LOW -> MODERATE) and "
-            "score (3.8 -> 4.1); the vector itself was not modified, so metric_changed was "
-            "empty and the revision prompt did not instruct the LLM to reconcile the "
-            "explanation text with the unchanged C/I/PR metrics."
-        ),
-    },
     "CVE-2025-71182": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": (
@@ -417,12 +336,10 @@ KNOWN_FAILURES: dict[str, dict] = {
         ),
     },
     "CVE-2026-23074": {
-        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
-        "reason": (
-            "Explanation for S:C describes privilege escalation to elevated system "
-            "access but the CVSS vector uses S:U. Scope narration inconsistent "
-            "with vector."
-        ),
+        "known_to_fail_evaluators": [
+            "KpanicOverestimationEvaluator",
+        ],
+        "reason": ("Overestimation: predicted IMPORTANT, expected MODERATE"),
     },
 }
 
