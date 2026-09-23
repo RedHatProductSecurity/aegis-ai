@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.9.3] - 2026-09-24
+
+### Fixed
+- `component_count_tool` and `component_flaw_tool` now handle `OSIDBUnauthorizedError` gracefully instead of letting it propagate to the agent [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+
+
 ## [0.9.2] - 2026-09-23
 
 ### Changed
