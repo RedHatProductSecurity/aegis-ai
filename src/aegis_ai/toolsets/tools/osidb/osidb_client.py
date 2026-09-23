@@ -67,8 +67,8 @@ def _is_osidb_status(exc: BaseException, code: int, fallback_text: str) -> bool:
     resp = getattr(exc, "response", None)
     if resp is not None:
         status = getattr(resp, "status_code", None)
-        if status == code:
-            return True
+        if status is not None:
+            return status == code
     text = str(exc).lower()
     return str(code) in text and (fallback_text in text or "client error" in text)
 
