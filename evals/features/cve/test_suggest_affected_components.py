@@ -146,6 +146,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-35339",
     "CVE-2026-35342",
     "CVE-2026-35537",
+    "CVE-2026-37236",
     "CVE-2026-39946",
     "CVE-2026-40175",
     "CVE-2026-40193",
@@ -155,6 +156,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-40938",
     "CVE-2026-41843",
     "CVE-2026-56128",
+    "CVE-2026-81521",
 )
 
 
@@ -171,6 +173,10 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 # Expected ecosystems for CVEs where ground-truth is known.
 # Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
+    "CVE-2025-22868": ["golang"],
+    "CVE-2025-47911": ["golang"],
+    "CVE-2025-58190": ["golang"],
+    "CVE-2025-64329": ["golang"],
     "CVE-2026-22815": ["pypi"],
     "CVE-2026-22822": ["golang"],
     "CVE-2026-24128": ["maven"],
@@ -200,6 +206,7 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-34073": ["pypi"],
     "CVE-2026-34444": ["pypi"],
     "CVE-2026-34785": ["gem"],
+    "CVE-2026-37236": ["golang"],
     "CVE-2026-39946": ["golang"],
     "CVE-2026-40175": ["npm"],
     "CVE-2026-40193": ["golang"],
@@ -208,7 +215,27 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-40938": ["golang"],
     "CVE-2026-41843": ["maven"],
     "CVE-2026-56128": ["generic"],
+    "CVE-2026-81521": ["golang"],
 }
+
+
+# AEGIS-496: preserve versioned module identities and affected package paths.
+# The ticket examples use OSIDB descriptions/references, with expected /v2 names
+# verified against mongo-driver's pkg.go.dev reference and grpc-gateway's
+# v2.28.0 go.mod. MongoDB triage comments are reduced to the affected-version
+# context. Other module expectations match the cached OSIDB component paths.
+GO_MODULE_IDENTITY_CVE_IDS: tuple[str, ...] = (
+    "CVE-2025-22868",  # oauth2/jws: retain affected package specificity
+    "CVE-2025-47911",  # net/html: retain affected package specificity
+    "CVE-2025-58190",  # net/html: retain affected package specificity
+    "CVE-2025-64329",  # containerd: unsuffixed and /v2, deduplicated across ranges
+    "CVE-2026-22822",  # external-secrets: v0/v1 module remains unsuffixed
+    "CVE-2026-33414",  # podman: /v4 and /v5, no unsuffixed module
+    "CVE-2026-37236",  # AEGIS-496: grpc-gateway/v2, not the unsuffixed module
+    "CVE-2026-40575",  # oauth2-proxy: /v7 only
+    "CVE-2026-40611",  # lego: /v4, /v3, and unsuffixed v2 (no invented /v2)
+    "CVE-2026-81521",  # AEGIS-496: mongo-driver/v2; v1 lacks Client.BulkWrite
+)
 
 
 def _description_from_cve(cve: CVE) -> str:
@@ -280,6 +307,8 @@ def _build_cases(
             metadata["known_to_fail_evaluators"] = ["ComponentsOverlapEvaluator"]
         if cve_id in EXPECTED_ECOSYSTEMS:
             metadata["expected_ecosystems"] = EXPECTED_ECOSYSTEMS[cve_id]
+        if cve_id in GO_MODULE_IDENTITY_CVE_IDS:
+            metadata["require_exact_components"] = True
 
         case_evaluators = tuple(
             field_evaluators[f] for f in field_evaluators if f in metadata
@@ -366,6 +395,21 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         return EvaluationReason(value=score, reason=reason)
 
 
+class ExactComponentsEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
+    """Require exact module/package identities, including version segments."""
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestAffectedComponentsModel]
+    ) -> EvaluationReason:
+        expected = cast(list[str], ctx.expected_output or [])
+        suggested = ctx.output.components
+        matches = set(suggested) == set(expected) and len(suggested) == len(expected)
+        return EvaluationReason(
+            value=matches,
+            reason=None if matches else f"got {suggested}, expected {expected}",
+        )
+
+
 class EcosystemEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
     """Scores ecosystem prediction against expected_ecosystems in metadata."""
 
@@ -393,6 +437,7 @@ class EcosystemEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
 # evaluators only attached to cases that provide the corresponding expected data
 field_evaluators = {
     "expected_ecosystems": EcosystemEvaluator(),
+    "require_exact_components": ExactComponentsEvaluator(),
 }
 
 
