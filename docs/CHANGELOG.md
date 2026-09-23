@@ -4,11 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+
+## [0.9.2] - 2026-09-23
+
+### Changed
+- `suggest-impact` for kernel CVEs now uses LLM self-consistency instead of a reconciliation pipeline, with improved prompt guidance for kernel-specific attack vectors [\[AEGIS-499\]](https://redhat.atlassian.net/browse/AEGIS-499)
+- `suggest-affected-components` defaults to `generic` ecosystem instead of `upstream` [\[AEGIS-505\]](https://redhat.atlassian.net/browse/AEGIS-505)
+- `osidb-bot` no longer restricts processing to specific flaw sources [\[AEGIS-477\]](https://redhat.atlassian.net/browse/AEGIS-477)
+- `osv_dev_cve_tool` and `external_references_tool` now restrict responses to the queried CVE data [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- OSV.dev and GHSA responses are filtered before sending to LLM to reduce context size [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- doubled the default value for `AEGIS_LLM_INPUT_TOKENS_WARN_THR` [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- evaluation suite migrated to `gemini-3.8-flash` [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
 
 ### Added
-- KPI endpoint filters for component feedback: `cve_id`, `source_component`, and `multiple_source_components` query parameters on `GET /api/v1/analysis/kpi/cve`. Component matching is case-sensitive.
-- KPI endpoint reports feedback under canonical public feature names, so manual and programmatic (osidb-bot) log entries unify under `feature=all`: `source_component` collapses into `suggest-affected-components` and `cve_description` into `suggest-description`. Either raw key is still accepted as a query alias for its canonical feature.
+- added `component` filter to `GET /api/v1/analysis/kpi/osidb-bot` endpoint [\[AEGIS-494\]](https://redhat.atlassian.net/browse/AEGIS-494)
+- added KPI endpoint filters for component feedback: `cve_id`, `source_component`, and `multiple_source_components` query parameters on `GET /api/v1/analysis/kpi/cve` [\[AEGIS-445\]](https://redhat.atlassian.net/browse/AEGIS-445)
+- KPI endpoint now reports feedback under canonical public feature names, so manual and programmatic (osidb-bot) log entries unify under `feature=all`; component matching is case-sensitive, and raw query aliases `source_component` and `cve_description` remain accepted, mapping to `suggest-affected-components` and `suggest-description`, respectively [\[AEGIS-445\]](https://redhat.atlassian.net/browse/AEGIS-445)
+- added `scripts/populate_evals_cache.py` to pre-populate evals caches [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- added script to analyze `suggest-impact` accuracy on kernel CVEs [\[AEGIS-499\]](https://redhat.atlassian.net/browse/AEGIS-499)
+
+### Fixed
+- fixed OSIDB component flaw querying: corrected field names, added server-side embargo filtering, and fixed serialization errors [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- improved LLM prompt guidance for `suggest-affected-packages` (null-PURL handling) and `suggest-affected-components` (Qt umbrella components) [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- improved handling of `OSIDBFlawNotFoundError` in the OSIDB tool [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+- kernel classifier now discards results below confidence threshold and caches low-confidence outcomes [\[AEGIS-499\]](https://redhat.atlassian.net/browse/AEGIS-499)
+- hardened kernel vulns repo git operations: centralized sync, switched mirror [\[AEGIS-484\]](https://redhat.atlassian.net/browse/AEGIS-484)
+- implemented retry on HTTP 503, and limited concurrent connections while fetching context for the kernel classifier  [\[AEGIS-499\]](https://redhat.atlassian.net/browse/AEGIS-499)
+- improved handling OSIDB cache misses in evals when OSIDB is unavailable [\[AEGIS-506\]](https://redhat.atlassian.net/browse/AEGIS-506)
+
 
 ## [0.9.1] - 2026-09-15
 
