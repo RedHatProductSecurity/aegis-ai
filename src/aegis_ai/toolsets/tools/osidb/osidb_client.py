@@ -249,12 +249,17 @@ class OSIDBClient:
             params["embargoed"] = False
         session, token = await self._get_session_or_token()
         if token:
-            data = await self._token_get(
-                path="/osidb/api/v2/flaws",
-                params=params,
-                token=token,
-                timeout=30.0,
-            )
+            try:
+                data = await self._token_get(
+                    path="/osidb/api/v2/flaws",
+                    params=params,
+                    token=token,
+                    timeout=30.0,
+                )
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 401:
+                    raise OSIDBUnauthorizedError() from e
+                raise
             parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
             for item in parsed.results or []:
                 yield item
@@ -292,12 +297,17 @@ class OSIDBClient:
             params["embargoed"] = False
         session, token = await self._get_session_or_token()
         if token:
-            data = await self._token_get(
-                path="/osidb/api/v2/flaws",
-                params=params,
-                token=token,
-                timeout=30.0,
-            )
+            try:
+                data = await self._token_get(
+                    path="/osidb/api/v2/flaws",
+                    params=params,
+                    token=token,
+                    timeout=30.0,
+                )
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 401:
+                    raise OSIDBUnauthorizedError() from e
+                raise
             return int(data.get("count", 0))
         session = cast(Any, session)
         try:
