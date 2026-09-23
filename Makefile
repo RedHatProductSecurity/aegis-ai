@@ -122,4 +122,3 @@ build-container: Containerfile
 
 run-container:
 	podman run --rm -it -v /etc/krb5.conf:/etc/krb5.conf -p 9000:9000 localhost/aegis-ai:latest scripts/run_web_service.sh
-
