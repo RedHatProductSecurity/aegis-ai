@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/pnggroup/libpng/commit/c1b0318b393c90679e6fa5bc1d329fd5d5012ec1",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/pnggroup/libpng/commit/c1b0318b393c90679e6fa5bc1d329fd5d5012ec1",
+        "url": "https://github.com/pnggroup/libpng/commit/c1b0318b393c90679e6fa5bc1d329fd5d5012ec1",
+        "content_type": null,
+        "extracted_text": null
+    }
+}
