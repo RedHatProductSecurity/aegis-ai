@@ -480,6 +480,14 @@ class Bot(StateProxy):
             )
 
             if not self.retrying_failed:
+                if not pos.updated_dt:
+                    # enable bot state initialization by explicitly specifying CVE ID(s) on the command line
+                    assert flaw_updater.flaw_data
+                    pos = BotPosition(
+                        last_cve=cve,
+                        updated_dt=flaw_updater.flaw_data["updated_dt"],
+                    )
+
                 # mark as pending
                 self.pending[pos] = True
 
