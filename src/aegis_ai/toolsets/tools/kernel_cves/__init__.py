@@ -94,6 +94,36 @@ class LINUXCVEToolResponse(BaseToolOutput):
         )
 
 
+# Temporary POC cache used by the early ActionableScore second opinion.
+_KERNEL_CVE_CONTEXT_CACHE: dict[str, LINUXCVEToolResponse] = {}
+
+
+def get_cached_kernel_context(cve_id: str) -> LINUXCVEToolResponse | None:
+    return _KERNEL_CVE_CONTEXT_CACHE.get(cve_id)
+
+
+def get_cached_kernel_context_text(cve_id: str) -> str | None:
+    """Return only technical kernel context, excluding vendor/CVSS conclusions."""
+    result = _KERNEL_CVE_CONTEXT_CACHE.get(cve_id)
+    if result is None or result.metadata is None:
+        return None
+
+    metadata = result.metadata
+    parts = [
+        f"CVE: {cve_id}",
+        "",
+        "AFFECTED FILES:",
+        "\n".join(metadata.affected_files) if metadata.affected_files else "(none)",
+        "",
+        "FIX COMMIT REFERENCES:",
+        "\n".join(metadata.commit_hashes) if metadata.commit_hashes else "(none)",
+        "",
+        "KERNEL CVE MBOX / PATCH CONTEXT:",
+        metadata.mbox_data or "(none)",
+    ]
+    return "\n".join(parts)
+
+
 # --- Repository Management (Thread-Safe) ---
 class KernelVulnsRepo:
     """
@@ -280,4 +310,7 @@ async def kernel_cve_tool(
             input.cve_id, "Not a kernel CVE; tool not applicable."
         )
     logger.info(f"Looking up kernel context for {input.cve_id}...")
-    return await kernel_cve_lookup(input.cve_id)
+    result = await kernel_cve_lookup(input.cve_id)
+    _KERNEL_CVE_CONTEXT_CACHE[str(input.cve_id)] = result
+    logger.info("Cached kernel context for %s", input.cve_id)
+    return result
