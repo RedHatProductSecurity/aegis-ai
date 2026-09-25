@@ -450,7 +450,13 @@ class SuggestImpact(Feature):
 
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=["affects", "impact", "rh_cvss_score"],
+            exclude_osidb_fields=[
+                "affects",
+                "impact",
+                "mitigation",
+                "rh_cvss_score",
+                "statement",
+            ],
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
             classifier_attempted=use_kernel_classifier and is_kernel,
