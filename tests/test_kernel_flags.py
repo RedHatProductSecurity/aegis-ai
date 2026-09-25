@@ -171,7 +171,7 @@ async def _canned_exec_feature_with_flags(feature, flaw_data):
 
 @pytest.mark.asyncio
 class TestSuggestImpactExecFlagsPopulation:
-    """Verify that SuggestImpact.exec() populates _flags from classifier active_features."""
+    """Verify final _flags exported by SuggestImpact.exec() after kernel reconciliation."""
 
     @patch("aegis_ai.features.cve.SuggestImpact.post_process", return_value="")
     @patch("aegis_ai.features.cve.is_kernel_component", return_value=True)

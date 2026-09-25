@@ -630,6 +630,12 @@ class KernelImpactClassifier:
             features = self._feature_extractor.extract_patch_features(
                 content, patch_filename="", cve_id=cve_id
             )
+            logger.warning(
+                "DEBUG %s commit=%s TRUE FEATURES=%r",
+                cve_id,
+                commit_hash,
+                {k: v for k, v in features.items() if v},
+            )
             agg_total_lines += features.pop("_total_lines", 0)
             agg_src_lines += features.pop("_src_lines", 0)
             for key, val in features.items():
@@ -739,8 +745,26 @@ class KernelImpactClassifier:
             f"patches_fetched({cve_id}, {len(patches)}_patches, {patch_bytes}_bytes)"
         )
 
-        patch_features = self._extract_features(patches, cve_id)
+        if cve_id == "CVE-2026-53016":
+            from pathlib import Path
 
+            out = []
+            for commit_hash, content in patches:
+                if isinstance(content, bytes):
+                    content = content.decode("utf-8", errors="replace")
+                out.append(f"\n\n===== COMMIT {commit_hash} =====\n\n{content}")
+
+            Path("/tmp/CVE-2026-53016-patches.txt").write_text(
+                "".join(out),
+                encoding="utf-8",
+            )
+
+        patch_features = self._extract_features(patches, cve_id)
+        logger.warning(
+            "DEBUG %s patch_features AFTER extract = %r",
+            cve_id,
+            {k: v for k, v in patch_features.items() if v},
+        )
         html_supplemented_flags: list[str] = []
         html_pages = await self._fetch_commit_html(commit_hashes)
         if html_pages:
@@ -764,7 +788,11 @@ class KernelImpactClassifier:
             logger.warning("No commit HTML retrieved for %s", cve_id)
 
         self._apply_flag_cascade(patch_features)
-
+        logger.warning(
+            "DEBUG %s patch_features AFTER cascade = %r",
+            cve_id,
+            {k: v for k, v in patch_features.items() if v},
+        )
         cvss_vector, cvss_score, cvss_issuer = _select_best_external_cvss3(cvss_scores)
 
         impact, confidence, probabilities, raw_pred = self._predict(

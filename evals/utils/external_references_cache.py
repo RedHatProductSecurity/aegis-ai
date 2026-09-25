@@ -8,6 +8,7 @@ from typing import Any
 from aegis_ai.toolsets.tools.external_references import (
     ExternalReferenceResult,
     cache_key_for_url,
+    validate_url,
 )
 from aegis_ai.toolsets.tools.external_references import (
     fetch_reference as live_fetch_reference,
@@ -37,7 +38,15 @@ async def extref_cache_retrieve(url: str) -> ExternalReferenceResult:
     """Return cached external reference data if available.
 
     On cache miss, fetch live and store for subsequent runs.
+    Blocked URLs (not in the allowlist) are returned immediately without caching.
     """
+    if not validate_url(url):
+        return ExternalReferenceResult(
+            url=url,
+            status="blocked",
+            error_message=f"URL not in allowlist: {url}",
+        )
+
     cache_file = Path(CACHE_DIR) / f"{cache_key_for_url(url)}.json"
 
     async with cache_lock:

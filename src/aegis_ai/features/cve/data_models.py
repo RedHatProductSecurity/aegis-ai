@@ -221,6 +221,49 @@ class SuggestImpactModel(AegisFeatureModel):
         ),
     )
 
+    # ------------------------------------------------------------------
+    # A.Larkin NN+LLM parity POC.
+    #
+    # BEFORE:
+    #   The Perl cascade reads text predicates from $rs:
+    #       $rs =~ /YES REQUIRES MANUAL CHECK/
+    #       $rs =~ /NO MANUAL CHECK/
+    #       $rs =~ /CWE-476|CWE-833|CWE-401|NULL pointer dereference/i
+    #       $rs =~ /btrfs/i
+    #   The earlier Aegis port either approximated or omitted these tests.
+    #
+    # AFTER:
+    #   Primary SuggestImpact returns explicit kernel-only structured fields.
+    #
+    # WHY:
+    #   This lets kernel.py reproduce the Perl branches without regex-scraping
+    #   explanation prose and without substituting unrelated classifier flags.
+    # ------------------------------------------------------------------
+    kernel_manual_review: Literal["YES", "NO", "UNKNOWN"] = Field(
+        default="UNKNOWN",
+        exclude=True,
+        description=(
+            "Kernel-only parity signal. YES corresponds to legacy "
+            "'YES REQUIRES MANUAL CHECK', NO to 'NO MANUAL CHECK', "
+            "UNKNOWN when primary analysis cannot decide."
+        ),
+    )
+    kernel_nullptr_related: bool = Field(
+        default=False,
+        exclude=True,
+        description=(
+            "Kernel-only parity signal: true for CWE-476/CWE-833/CWE-401 "
+            "or NULL pointer dereference semantics."
+        ),
+    )
+    kernel_btrfs_context: bool = Field(
+        default=False,
+        exclude=True,
+        description=(
+            "Kernel-only parity signal: true when the vulnerability/fix is in btrfs."
+        ),
+    )
+
     _flags: list[str] = PrivateAttr(default_factory=list)
     _classifier_diagnostics: dict[str, Any] | None = PrivateAttr(default=None)
     _reconciliation_trace: str | None = PrivateAttr(default=None)
@@ -228,6 +271,31 @@ class SuggestImpactModel(AegisFeatureModel):
     _original_llm_score: str | None = PrivateAttr(default=None)
     _original_llm_vector: str | None = PrivateAttr(default=None)
     _explanation_revised: bool = PrivateAttr(default=False)
+
+    # A.Larkin NN+LLM parity POC.
+    #
+    # BEFORE:
+    #   bool=False made "reconciliation ran and removed KPANIC" indistinguishable
+    #   from "kernel reconciliation did not run".
+    #
+    # AFTER:
+    #   None = no final Perl-compatible marker state was produced;
+    #   True/False = reconciliation produced the final mutable KPANIC state.
+    #
+    # WHY:
+    #   The final OSIDB kpanic export must follow the mutable Perl marker after
+    #   H9/H10/AS6 removals, while retaining a fallback for paths that did not
+    #   execute kernel reconciliation at all.
+    _kernel_kpanic_marked: bool | None = PrivateAttr(default=None)
+
+    # A.Larkin NN+LLM parity runtime state.
+    #
+    # Persist the mutable Perl variables across the asynchronous KPANIC
+    # false-positive LLM stage and, later, request_llm_afterpushedtohigh().
+    # These are runtime-only/private and never enter the public schema.
+    _kernel_lowered: bool = PrivateAttr(default=False)
+    _kernel_decrease_count: int = PrivateAttr(default=0)
+    _kernel_pushed_to_high: bool = PrivateAttr(default=False)
 
     def printable_outcome(self) -> str:
         """override the logging hook to print the resulting suggestion"""
