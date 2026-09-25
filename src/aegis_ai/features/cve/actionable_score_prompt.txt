@@ -103,6 +103,99 @@ A score of 3 requires at least one independent reason beyond the crash/correctne
 fact itself, such as positively established unauthenticated remote reachability,
 a meaningful security-boundary effect, or another distinct actionable signal.
 Do not use "manual review recommended" as that extra reason.
+
+B0A. REMOTE DIRECT KERNEL-FAULT PRIMITIVE
+Do not conflate "a kernel panic is not demonstrated" with "there is no concrete
+kernel-fault primitive."
+
+Award +1 "Remote direct kernel-fault primitive" when ALL or nearly all are true:
+* unauthenticated remote attacker-controlled input directly reaches the vulnerable
+  kernel operation during ordinary runtime processing;
+* the attacker materially controls the packet/input property that determines
+  whether the unsafe operation is exercised;
+* the patch/commit establishes a concrete fault-prone kernel operation, rather
+  than merely inconsistent state or a hypothetical later failure;
+* that operation is invalid or fault-capable under documented/well-established
+  semantics of at least one credible supported architecture or execution
+  environment;
+* no local account, host-admin-equivalent privilege, victim-side user interaction,
+  firmware compromise, or separate major prerequisite is required to reach it.
+
+Examples that MAY qualify:
+* a network packet controls alignment and the kernel performs a typed load/store
+  whose required alignment is not guaranteed, with the fix replacing it by an
+  explicit unaligned-safe accessor;
+* a remotely controlled packet field directly reaches an architecture-dependent
+  kernel operation that can raise a CPU/kernel fault on credible supported
+  platforms.
+
+This signal is DISTINCT from "Reliable kernel crash / strong DoS":
+* this +1 recognizes the established direct fault primitive;
+* the normal crash/DoS +1 requires its own evidence that the resulting failure is
+  reliably fatal/DoS-capable;
+* do not award both merely by restating the same speculative crash consequence.
+
+Do NOT award this signal for:
+* generic malformed-packet parsing;
+* ordinary bounds/validation fixes with no concrete fault-prone operation;
+* resource leaks/exhaustion alone;
+* generic networking location;
+* speculative UAF/OOB/corruption theories;
+* bugs where an additional unrelated state transition is required before any
+  fault-prone kernel operation exists;
+* a path that first requires privileged local configuration/control-plane setup
+  not already established as ordinary exposed runtime behavior.
+
+NO DOUBLE-COUNT WITH COMMON/BROAD NETWORKING EXPOSURE
+The +1 Remote direct kernel-fault primitive does NOT make generic networking,
+common deployment, broad subsystem exposure, or ordinary packet-processing
+location into an additional scoring signal.  B1 still applies in full.
+
+In particular, for a CLASS_C/NONE availability-only case with:
+* +2 established unauthenticated remote reachability; and
+* +1 Remote direct kernel-fault primitive; and
+* no other independent actionable primitive,
+
+the raw arithmetic is normally 3, NOT 4:
+    remote reachability                 +2
+    common/core networking exposure      0
+    remote direct kernel-fault primitive +1
+                                         --
+    raw score                             3
+
+Then apply the REMOTE DIRECT KERNEL FAULT calibration floor below: when its
+conditions are satisfied, the final ActionableScore should normally be raised
+to at least 4.  Report that as a calibration floor, not as a fabricated
+"common networking path +1" signal.
+
+CALIBRATION FOR REMOTE DIRECT KERNEL FAULTS
+When the complete evidence positively establishes:
+* direct unauthenticated remote runtime reachability; AND
+* a Remote direct kernel-fault primitive as defined above; AND
+* CLASS_C/NONE with no C/I, authorization bypass, useful corruption, or LPE;
+
+then this is NOT an ordinary low-end CLASS_C correctness case.
+The final ActionableScore should normally NOT be below 4 after arithmetic unless
+a separately established negative signal legitimately reduces it.
+
+For this profile:
+* ImportantCandidate should normally remain NO unless independent Important-grade
+  evidence exists;
+* do not invent C:H/I:H or exploitation leverage;
+* ManualReview should normally be REQUIRED when the real-world fatal/DoS effect is
+  architecture-dependent or deployment-dependent and that distinction materially
+  affects Moderate-vs-Important triage;
+* AutoDowngradeAllowed must be decided independently. The remote direct fault
+  signal alone does not prove IMPORTANT, but it MUST prevent automatic LOW-style
+  treatment and must remain visible to the later specialized review.
+
+Calibration example:
+A TCP/netfilter patch states that an attacker-controlled TCP option stream does
+not guarantee 4-byte alignment and replaces a direct typed 32-bit dereference
+with get_unaligned_be32(). If ordinary unauthenticated network traffic reaches
+that parser, treat the unsafe access itself as a concrete remote direct
+kernel-fault primitive even if a panic is architecture-dependent and no crash
+trace is supplied. Do not call the panic demonstrated solely from that patch.
 B0. CONCRETE CROSS-OBJECT LIVE-STATE INTERFERENCE IS NOT LOW-END CORRECTNESS
 Do NOT equate "no Important-grade primitive" with LOW severity.
 
@@ -468,6 +561,9 @@ NamespaceScopedPrivilege=YES|NO|UNKNOWN
 ImportantCandidate=YES|NO
 ManualReview=NO|RECOMMENDED|REQUIRED
 AutoDowngradeAllowed=YES|NO
+CrashReachability=UNPRIVILEGED_RUNTIME|PRIVILEGED_RUNTIME|INIT_PROBE_CONFIG|ERROR_RECOVERY|UNKNOWN
+CrashTriggerPrivilege=UNPRIVILEGED|NAMESPACE_PRIVILEGED|HOST_ADMIN|UNKNOWN
+CrashOnlyLowEligible=YES|NO|UNKNOWN
 CVSSBaseScore=NUM
 CVSSBaseVector=CVSS:3.1/...
 CVSSParanoidScore=NUM
@@ -491,6 +587,59 @@ established.
 HostAdminRequired must be evidenced; absence of proof != NO.
 NamespaceScopedPrivilege=YES requires the complete security-relevant operation
 reachable in that namespace; partial chain => UNKNOWN.
+
+NEW61a.2 CRASH-CONTEXT CLASSIFICATION
+Classify the trigger path independently from whether a crash/oops is factually
+possible. These fields are technical reachability facts, not severity labels.
+
+CrashReachability:
+* UNPRIVILEGED_RUNTIME = an ordinary unprivileged user, remote/network peer, guest,
+  or similarly below-admin actor can exercise the vulnerable crash path during
+  normal runtime without a separate host-admin setup/operation being the trigger.
+* PRIVILEGED_RUNTIME = the crash is exercised during runtime, but the vulnerable
+  operation itself requires an established privileged/admin-class operation.
+* INIT_PROBE_CONFIG = the crash is confined to initialization, probe, bind/unbind,
+  firmware/device bring-up, suspend/resume setup, explicit configuration, module/
+  device lifecycle, or comparable setup path rather than ordinary unprivileged
+  runtime traffic.
+* ERROR_RECOVERY = the vulnerable operation is confined to an allocation-failure,
+  unwind, cleanup, recovery, diagnostic, already-failing, or exceptional path.
+* UNKNOWN = evidence does not establish one of the above. Do not guess a safer
+  category merely because the patch is in driver/init/error code.
+
+CrashTriggerPrivilege:
+* UNPRIVILEGED = the complete crash trigger is established below host-admin.
+* NAMESPACE_PRIVILEGED = the complete trigger requires privilege, but that
+  privilege is established as attacker-obtainable inside a relevant namespace.
+* HOST_ADMIN = the complete trigger requires host-admin/root/admin-class capability.
+* UNKNOWN = the complete trigger privilege is not established.
+
+CrashOnlyLowEligible:
+* YES is a POSITIVE PROOF, not a default. Emit YES only when ALL are true:
+  - PrimitiveClass=CLASS_C;
+  - the demonstrated security consequence is crash/DoS/invalid-state only;
+  - no RealUAF, controlled corruption, useful post-free primitive, disclosure,
+    integrity effect, authorization/security-boundary bypass, or other independent
+    non-crash security primitive is established;
+  - CrashReachability is INIT_PROBE_CONFIG, ERROR_RECOVERY, or PRIVILEGED_RUNTIME;
+  - CrashReachability is NOT UNPRIVILEGED_RUNTIME;
+  - if PRIVILEGED_RUNTIME, CrashTriggerPrivilege is positively
+    HOST_ADMIN or NAMESPACE_PRIVILEGED;
+  - for INIT_PROBE_CONFIG or ERROR_RECOVERY with CrashTriggerPrivilege=UNKNOWN,
+    evidence still positively excludes an ordinary unprivileged/remote runtime
+    trigger of the vulnerable operation;
+  - the conclusion is based on patch/call-path/advisory evidence, not merely on
+    low CVSS, ActionableScore, classifier output, or the words "init"/"error".
+* NO when a crash-capable path is established but any YES requirement fails,
+  especially ordinary unprivileged/network runtime reachability or an independent
+  security primitive.
+* UNKNOWN when this CVE is not meaningfully crash-capable, or evidence is
+  insufficient to classify crash-only LOW eligibility. UNKNOWN never authorizes
+  a crash-only LOW exception.
+
+IMPORTANT: factual kernel panic/oops evidence does NOT by itself force
+CrashOnlyLowEligible=NO. Conversely, host-admin/config/error-path vocabulary does
+not by itself justify YES. Classify the complete trigger chain.
 ImportantCandidate=YES requires CLASS_A or strong CLASS_B unresolved non-crash
 leverage; constrained crash-only CLASS_B may be NO.
 ManualReview and AutoDowngradeAllowed are independent; REQUIRED+YES is valid.
@@ -2400,6 +2549,9 @@ NamespaceScopedPrivilege=YES|NO|UNKNOWN
 ImportantCandidate=YES|NO
 ManualReview=NO|RECOMMENDED|REQUIRED
 AutoDowngradeAllowed=YES|NO
+CrashReachability=UNPRIVILEGED_RUNTIME|PRIVILEGED_RUNTIME|INIT_PROBE_CONFIG|ERROR_RECOVERY|UNKNOWN
+CrashTriggerPrivilege=UNPRIVILEGED|NAMESPACE_PRIVILEGED|HOST_ADMIN|UNKNOWN
+CrashOnlyLowEligible=YES|NO|UNKNOWN
 Then output exactly these sections:
 1. ActionableScore
 State raw conservative, conservative, raw paranoid, paranoid, any explicit
@@ -2485,6 +2637,14 @@ SEMANTIC DECISIONS
 28. AutoDowngradeAllowed=NO requires a named concrete Important-preserving fact that survives conservative interpretation. If the explanation needs "could/may/might/potentially/plausible/theoretically" or CVSS to support NO, change it to YES.
 29. Distinguish "Important not independently proven" from "safe to auto-downgrade"; they are not equivalent.
 30. Re-run the MANDATORY FINAL CONSISTENCY CHECK / GEMINI OVERRIDES last, after all other scoring and semantic decisions.
+31. NEW61a.2 crash self-check: if CrashOnlyLowEligible=YES, verify that
+    PrimitiveClass=CLASS_C, CrashReachability is one of INIT_PROBE_CONFIG /
+    ERROR_RECOVERY / PRIVILEGED_RUNTIME, and no ordinary unprivileged/network
+    runtime trigger or independent non-crash primitive is established. If that
+    proof is incomplete, emit NO or UNKNOWN rather than YES.
+32. NEW59 safety self-check: do not use a low ActionableScore as evidence that a
+    runtime/network crash path is safe. UNPRIVILEGED_RUNTIME must never be
+    CrashOnlyLowEligible=YES.
 Keep the answer concise and technical.
 Do not repeat the entire patch.
 Do not provide generic Linux kernel background.
