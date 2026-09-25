@@ -32,10 +32,13 @@ from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
     RULES_KERNEL,
     apply_afterpushed_llm_review,
+    apply_as0_safe_low_marker_consistency,
+    apply_crash_only_no_review_low_override,
     apply_deferred_low_review,
     apply_final_low_safety_invariant,
     apply_kpanic_cvss_override,
     apply_kpanic_llm_review,
+    apply_moderate_no_review_marker_consistency,
     check_kernel_output,
     reconcile_kernel,
 )
@@ -55,6 +58,9 @@ class KernelKpanicReviewModel(BaseModel):
     """Structured result of the NN+LLM-compatible KPANIC false-positive pass."""
 
     kernel_panic_supported: bool
+    # Operational triage verdict: preserve KPANIC/manual-review routing even when
+    # a literal panic/oops is not yet demonstrated. This must not promote severity.
+    operational_kpanic_supported: bool = False
     confidence: float = Field(ge=0.0, le=1.0)
     evidence_level: Literal[
         "demonstrated",
@@ -454,13 +460,14 @@ def _parse_kpanic_review_response(
         )
 
     logger.info(
-        "%s: KPANIC_REVIEW parsed panic_supported=%s confidence=%.2f "
+        "%s: KPANIC_REVIEW parsed panic_supported=%s operational_kpanic=%s confidence=%.2f "
         "evidence_level=%s high_without_panic=%s strength=%s "
         "preservation_profile=%s allow_high_to_mod7=%s remove_operational_kpanic=%s "
         "low_auto_close=%s low_auto_close_confidence=%.2f "
         "manual_review_still_required=%s manual_review_confidence=%.2f",
         call_str,
         review.kernel_panic_supported,
+        review.operational_kpanic_supported,
         review.confidence,
         review.evidence_level,
         review.high_severity_still_supported_without_kpanic,
@@ -1090,66 +1097,6 @@ class SuggestImpact(Feature):
             len(kernel_context),
         )
 
-        # ------------------------------------------------------------
-        # TEMP DEBUG / POC:
-        # Save the EXACT text that will be passed to Gemini below.
-        #
-        # Example:
-        #   /tmp/aegis_actionable_score_input_CVE-2026-53016.txt
-        #
-        # This is deliberately immediately before self._run(), so the
-        # dump contains exactly:
-        #
-        #   actionable_score_prompt.txt + cached kernel_context
-        #
-        # and nothing from the current Aegis severity/CVSS/XGBoost result.
-        #
-        # Best-effort only: failure to write /tmp must never break Aegis.
-        # ------------------------------------------------------------
-        dump_id_match = re.search(r"CVE-\d{4}-\d+", call_str)
-        if dump_id_match:
-            dump_id = dump_id_match.group(0)
-        else:
-            dump_id = re.sub(
-                r"[^A-Za-z0-9_.-]+",
-                "_",
-                call_str,
-            ).strip("_")
-
-        prompt_dump_path = Path(f"/tmp/aegis_actionable_score_input_{dump_id}.txt")
-
-        try:
-            prompt_dump_path.write_text(prompt, encoding="utf-8")
-
-            logger.info(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input dumped to %s "
-                "(chars=%d bytes=%d)",
-                call_str,
-                prompt_dump_path,
-                len(prompt),
-                len(prompt.encode("utf-8")),
-            )
-
-            # Normally this will not appear unless DEBUG logging is enabled.
-            # It is intentionally DEBUG rather than INFO because the prompt
-            # is around 150k characters and would otherwise flood every log.
-            logger.debug(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input BEGIN\n%s\n"
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input END",
-                call_str,
-                prompt,
-                call_str,
-            )
-
-        except Exception as exc:
-            logger.warning(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION could not dump exact "
-                "input to %s: %s",
-                call_str,
-                prompt_dump_path,
-                exc,
-            )
-
         try:
             #
             # Raw text output is intentional.
@@ -1306,6 +1253,12 @@ class SuggestImpact(Feature):
             "violations, protected-data boundary violations, or other serious "
             "kernel exploitation primitives.\n\n"
             "NEW53 OPERATIONAL KPANIC DECISION: In the JSON object also emit "
+            "operational_kpanic_supported as a JSON boolean. This is a TRIAGE "
+            "decision, separate from literal kernel_panic_supported. Set it true "
+            "when concrete kernel-state/lifetime/corruption mechanics leave a "
+            "credible kernel-fatal path that warrants MODERATE+KPANIC manual review, "
+            "even if no crash trace proves a literal panic. It MUST NOT promote "
+            "MODERATE to IMPORTANT. "
             "remove_operational_kpanic as a JSON boolean. This is a SEPARATE "
             "decision from kernel_panic_supported and from "
             "allow_high_to_moderate7_downgrade. Set "
@@ -1395,31 +1348,6 @@ class SuggestImpact(Feature):
             len(prompt),
             len(kernel_context),
         )
-
-        dump_id_match = re.search(r"CVE-\d{4}-\d+", call_str)
-        dump_id = (
-            dump_id_match.group(0)
-            if dump_id_match
-            else re.sub(r"[^A-Za-z0-9_.-]+", "_", call_str).strip("_")
-        )
-        prompt_dump_path = Path(f"/tmp/aegis_kpanic_input_{dump_id}.txt")
-
-        try:
-            prompt_dump_path.write_text(prompt, encoding="utf-8")
-            logger.info(
-                "%s: KPANIC_REVIEW exact input dumped to %s (chars=%d bytes=%d)",
-                call_str,
-                prompt_dump_path,
-                len(prompt),
-                len(prompt.encode("utf-8")),
-            )
-        except Exception as exc:
-            logger.warning(
-                "%s: KPANIC_REVIEW could not dump exact input to %s: %s",
-                call_str,
-                prompt_dump_path,
-                exc,
-            )
 
         try:
             review_result = await self._run(
@@ -1579,30 +1507,6 @@ class SuggestImpact(Feature):
             len(prompt),
             len(kernel_context),
         )
-
-        dump_id_match = re.search(r"CVE-\d{4}-\d+", call_str)
-        dump_id = (
-            dump_id_match.group(0)
-            if dump_id_match
-            else re.sub(r"[^A-Za-z0-9_.-]+", "_", call_str).strip("_")
-        )
-        dump_path = Path(f"/tmp/aegis_afterpushed_input_{dump_id}.txt")
-        try:
-            dump_path.write_text(prompt, encoding="utf-8")
-            logger.info(
-                "%s: AFTERPUSHED_REVIEW exact input dumped to %s (chars=%d bytes=%d)",
-                call_str,
-                dump_path,
-                len(prompt),
-                len(prompt.encode("utf-8")),
-            )
-        except Exception as exc:
-            logger.warning(
-                "%s: AFTERPUSHED_REVIEW could not dump exact input to %s: %s",
-                call_str,
-                dump_path,
-                exc,
-            )
 
         try:
             review_result = await self._run(
@@ -1918,43 +1822,6 @@ class SuggestImpact(Feature):
         #
         #        return opinion
 
-        prompt_dump_path = Path(
-            "/tmp/aegis_actionable_score_input_"
-            + re.sub(r"[^A-Za-z0-9_.-]+", "_", call_str)
-            + ".txt"
-        )
-        try:
-            prompt_dump_path.write_text(prompt, encoding="utf-8")
-
-            logger.info(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input dumped to %s "
-                "(chars=%d bytes=%d)",
-                call_str,
-                prompt_dump_path,
-                len(prompt),
-                len(prompt.encode("utf-8")),
-            )
-
-            # Normally this will not appear unless DEBUG logging is enabled.
-            # It is intentionally DEBUG rather than INFO because the prompt
-            # is around 150k characters and would otherwise flood every log.
-            logger.debug(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input BEGIN\n%s\n"
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION exact input END",
-                call_str,
-                prompt,
-                call_str,
-            )
-
-        except Exception as exc:
-            logger.warning(
-                "%s: ACTIONABLE_SCORE_SECOND_OPINION could not dump exact "
-                "input to %s: %s",
-                call_str,
-                prompt_dump_path,
-                exc,
-            )
-
         try:
             #
             # Raw text output is intentional.
@@ -2010,6 +1877,7 @@ class SuggestImpact(Feature):
         *,
         deps=None,
         cve_context: dict | None = None,
+        kpanic_review=None,
     ):
         """Ask the LLM to revise its explanation after post-processing
         changed the score, impact, or CVSS vector.  Best-effort: failures
@@ -2068,12 +1936,58 @@ class SuggestImpact(Feature):
             if parts:
                 context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
 
+        # Keep the rewritten narrative aligned with the specialized KPANIC
+        # evidence verdict.  Operational KPANIC is a review-routing marker, not
+        # proof that a literal panic/oops was demonstrated.  Without this
+        # constraint the revision LLM can incorrectly turn A:H plus an
+        # operational marker into wording such as "reliably causes a kernel
+        # panic", contradicting the structured KPANIC review.
+        kpanic_explanation_constraint = ""
+        if kpanic_review is not None and not getattr(
+            kpanic_review, "kernel_panic_supported", False
+        ):
+            operational_kpanic = bool(
+                getattr(kpanic_review, "operational_kpanic_supported", False)
+            )
+            manual_review_required = bool(
+                getattr(kpanic_review, "manual_review_still_required", False)
+            )
+            kpanic_explanation_constraint = (
+                "\n\nMandatory kernel-panic evidence constraint:\n"
+                "- The specialized KPANIC review concluded "
+                "kernel_panic_supported=false.\n"
+                "- Do NOT state or imply that a kernel panic, oops, fatal "
+                "dereference, or crash is demonstrated, confirmed, reliable, "
+                "deterministic, or guaranteed.\n"
+                "- A:H may still describe a credible severe availability/"
+                "kernel-fatal path, but explicitly distinguish that plausible "
+                "path from a demonstrated panic/crash.\n"
+                "- Apply this constraint to EVERY part of the revised explanation, "
+                "including the metric-by-metric CVSS rationale. In particular, an "
+                "A:H bullet MUST NOT use unconditional wording such as 'causes a "
+                "kernel panic', 'results in a kernel panic', 'triggers a kernel "
+                "panic', or equivalent factual wording when kernel_panic_supported=false.\n"
+                "- When explaining A:H in this state, use uncertainty-preserving "
+                "wording such as 'could lead to a kernel crash or denial of service', "
+                "'may create a kernel-fatal availability path', or equivalent, and "
+                "make clear that a specific panic/oops is not directly demonstrated.\n"
+                f"- operational_kpanic_supported={str(operational_kpanic).lower()} "
+                "is an operational triage/manual-review decision, NOT factual "
+                "panic evidence.\n"
+                f"- manual_review_still_required={str(manual_review_required).lower()}.\n"
+                "Use wording such as 'can create a credible kernel-fatal "
+                "availability path' or 'could lead to a kernel crash', and, "
+                "when relevant, state that no specific panic/oops is directly "
+                "demonstrated by the supplied evidence."
+            )
+
         follow_up = (
             f"{context_block}"
             "Post-processing has adjusted your assessment.\n"
             f"Changes: {'; '.join(changes)}\n"
             f"Reconciliation trace: {trace}\n"
-            f"{metric_instructions}\n\n"
+            f"{metric_instructions}"
+            f"{kpanic_explanation_constraint}\n\n"
             "Revise your explanation so the rationale is consistent with "
             "the updated score and impact.  Rewrite the affected sentences "
             "in place — do NOT append a note, disclaimer, or separate "
@@ -2236,21 +2150,78 @@ class SuggestImpact(Feature):
         result.output._original_llm_score = original_score
         result.output._original_llm_vector = original_vector
 
-        # Compute independent ActionableScore before deterministic reconciliation.
-        if is_kernel:
-            kernel_context = await _ensure_kernel_context_for_second_opinion(
-                str(cve_id), deps, call_str
-            )
-            logger.info(
-                "%s: SECOND_OPINION kernel context=%s chars",
-                call_str,
-                len(kernel_context or ""),
-            )
-            second_opinion = await self._experimental_kernel_second_opinion(
-                result, deps, classifier_result, call_str, kernel_context
-            )
-        else:
-            second_opinion = None
+        # Kernel-experimental integration is strictly kernel-only.
+        # Non-kernel CVEs must keep the normal Aegis post-processing path and
+        # must not retrieve kernel context or run ActionableScore/KPANIC/
+        # after-pushed-high reviews.
+        if not is_kernel:
+            trace = SuggestImpact.post_process(result.output, call_str)
+            result.output._classifier_diagnostics = classifier_result
+            result.output._reconciliation_trace = trace
+            return result
+
+        # ------------------------------------------------------------
+        # POC: compute independent ActionableScore BEFORE reconciliation.
+        #
+        # A.Larkin reliability correction.
+        #
+        # PREVIOUS ASSUMPTION:
+        #   "primary guarded_run() completed, therefore kernel_cve_tool cache
+        #    should be populated."
+        #
+        # That is not guaranteed by the agent architecture. RULES_KERNEL says
+        # "Always use kernel_cve tool", but kernel_cve_tool is only exposed to
+        # the autonomous LLM via kernel_extra_toolset.
+        #
+        # EXISTING AEGIS PRECEDENT:
+        #   Just above, Aegis already eagerly executes:
+        #
+        #       pre_clf = await kernel_impact_classify(...)
+        #       deps.classifier_result = pre_clf
+        #
+        #   so downstream classifier/reconciliation behavior cannot disappear
+        #   merely because Gemini did not choose kernel_impact_tool.
+        #
+        # NEW BEHAVIOR:
+        #   Use the same reliability principle for kernel CVE context. Reuse
+        #   kernel_cve_tool's cache when primary Gemini populated it; otherwise
+        #   invoke the existing kernel_cve_tool implementation deterministically
+        #   before ActionableScore.
+        #
+        # This does NOT change CVSS, impact policy, H/AS thresholds, or scoring.
+        # It only guarantees availability of context already declared mandatory
+        # by RULES_KERNEL and required by the second-opinion stage.
+        # ------------------------------------------------------------
+        lookup_cve_id = str(cve_id)
+        kernel_context = await _ensure_kernel_context_for_second_opinion(
+            lookup_cve_id,
+            deps,
+            call_str,
+        )
+
+        logger.info(
+            "%s: SECOND_OPINION kernel context=%s chars",
+            call_str,
+            len(kernel_context or ""),
+        )
+
+        logger.info(
+            "%s: CLASSIFIER_RESULT keys=%s",
+            call_str,
+            (
+                sorted(classifier_result.keys())
+                if isinstance(classifier_result, dict)
+                else None
+            ),
+        )
+
+        second_opinion = await self._experimental_kernel_second_opinion(
+            result,
+            deps,
+            classifier_result,
+            call_str,
+            kernel_context,
+        )
 
         # ------------------------------------------------------------
         # A.Larkin NN+LLM parity: split synchronous post-processing so the
@@ -2330,6 +2301,50 @@ class SuggestImpact(Feature):
         )
         if final_low_safety_trace:
             trace = f"{trace}; {final_low_safety_trace}"
+
+        # NEW61a.2: factual crash evidence and operational review routing are
+        # independent axes.  After the general NEW58 fail-closed invariant,
+        # permit only the narrow AS<=1/CLASS_C crash-only case where the
+        # ActionableScore independently proves a safe crash context. This may
+        # supersede a crash-correlated KPANIC manual-review verdict, but never
+        # preservation/high-impact or unprivileged-runtime evidence.
+        crash_only_low_trace = apply_crash_only_no_review_low_override(
+            result.output,
+            call_str,
+            kpanic_review,
+            second_opinion=second_opinion,
+        )
+        if crash_only_low_trace:
+            trace = f"{trace}; {crash_only_low_trace}"
+
+        # NEW60: an older reconciliation branch may already have produced LOW
+        # before NEW59 runs.  In that case NEW59 has no downgrade to perform,
+        # but a stale operational KPANIC marker can still survive.  Consume it
+        # only for the narrow AS==0 + explicit remove_operational_kpanic +
+        # independently confirmed safe-LOW/no-review state.  NEW54 remains the
+        # final fail-closed invariant for every marker that survives NEW60.
+        as0_low_marker_trace = apply_as0_safe_low_marker_consistency(
+            result.output,
+            call_str,
+            kpanic_review,
+            second_opinion=second_opinion,
+        )
+        if as0_low_marker_trace:
+            trace = f"{trace}; {as0_low_marker_trace}"
+
+        # NEW53.2: ordinary MODERATE and operational review routing are
+        # independent decisions.  If the specialized review positively rejects
+        # factual panic, operational KPANIC, and manual review with high
+        # confidence, consume a stale marker without changing severity.  LOW
+        # auto-close remains governed exclusively by NEW59/NEW58/NEW61a.2/NEW53.1.
+        moderate_marker_trace = apply_moderate_no_review_marker_consistency(
+            result.output,
+            call_str,
+            kpanic_review,
+            second_opinion=second_opinion,
+        )
+        if moderate_marker_trace:
+            trace = f"{trace}; {moderate_marker_trace}"
 
         # NEW54: final operational-state consistency invariant.
         #
@@ -2464,6 +2479,7 @@ class SuggestImpact(Feature):
                 call_str,
                 deps=deps,
                 cve_context=resolved_static_context,
+                kpanic_review=kpanic_review,
             )
 
         result.output._classifier_diagnostics = classifier_result

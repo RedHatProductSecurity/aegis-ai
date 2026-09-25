@@ -1777,6 +1777,7 @@ def apply_kpanic_llm_review(
         effective_score = float(output.cvss3_score)
     except (TypeError, ValueError):
         effective_score = float("nan")
+    effective_vector_raw = str(output.cvss3_vector or "")
     cvss_source = "primary"
 
     if second_opinion is not None:
@@ -1786,6 +1787,7 @@ def apply_kpanic_llm_review(
             try:
                 parsed_selected = cvss.CVSS3(str(selected_vector))
                 effective_score = float(parsed_selected.scores()[0])
+                effective_vector_raw = str(selected_vector)
                 cvss_source = "second_opinion_selected"
             except Exception as exc:
                 logger.warning(
@@ -1795,7 +1797,6 @@ def apply_kpanic_llm_review(
                     exc,
                 )
 
-    effective_vector_raw = str(output.cvss3_vector or "")
     try:
         parsed_metrics = cvss.CVSS3(effective_vector_raw).metrics
         av_network = parsed_metrics.get("AV") == "N"
@@ -1860,13 +1861,38 @@ def apply_kpanic_llm_review(
         if second_opinion is not None
         else None
     )
-    if (
-        actionable_score is not None
+
+    # Keep the specialized-review score consistent with reconcile_kernel().
+    # The historical unconditional CLASS_C cap (>2 -> 2) could silently turn a
+    # real ActionableScore=3 into 2 after reconciliation had deliberately
+    # suppressed that cap for false-LOW safety.  Apply the same narrow cap here:
+    # only bounded CLASS_C, ManualReview=NO, AutoDowngradeAllowed=YES,
+    # selected/effective CVSS < 5.5, and C:N/I:N.
+    try:
+        actionable_metrics = (
+            cvss.CVSS3(effective_vector_raw).metrics if effective_vector_raw else {}
+        )
+    except Exception:
+        actionable_metrics = {}
+    class_c_cap_safe = (
+        second_opinion is not None
         and str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_C"
         and getattr(second_opinion, "important_candidate", "NO") == "NO"
         and getattr(second_opinion, "auto_downgrade_allowed", "NO") == "YES"
-        and actionable_score > 2
-    ):
+        and getattr(second_opinion, "manual_review", "") == "NO"
+        and math.isfinite(effective_score)
+        and effective_score < 5.5
+        and actionable_metrics.get("C") == "N"
+        and actionable_metrics.get("I") == "N"
+    )
+    if actionable_score is not None and actionable_score > 2 and class_c_cap_safe:
+        logger.info(
+            "%s: specialized-review deterministic CLASS_C ActionableScore cap "
+            "%s -> 2 (bounded CLASS_C, ManualReview=NO, "
+            "AutoDowngradeAllowed=YES, CVSS<5.5, C:N/I:N)",
+            call_str,
+            actionable_score,
+        )
         actionable_score = 2
 
     lowered = bool(getattr(output, "_kernel_lowered", False))
@@ -1974,6 +2000,19 @@ def apply_kpanic_llm_review(
     remove_operational_kpanic = bool(
         getattr(review, "remove_operational_kpanic", False)
     )
+    # Operational KPANIC is a triage/manual-review verdict, deliberately separate
+    # from factual proof of a panic/oops.  It may preserve MODERATE+KPANIC but
+    # MUST NOT promote severity to IMPORTANT.
+    operational_kpanic_supported = bool(
+        getattr(review, "operational_kpanic_supported", False)
+    )
+    if operational_kpanic_supported and remove_operational_kpanic:
+        logger.info(
+            "%s: KPANIC review requested operational preservation; "
+            "ignoring remove_operational_kpanic=YES",
+            call_str,
+        )
+        remove_operational_kpanic = False
     # NEW57: review routing is independent from factual panic and from
     # IMPORTANT preservation.  A specialized reread may correctly conclude
     # "no panic" and "regular MODERATE severity", while still finding a
@@ -1992,6 +2031,8 @@ def apply_kpanic_llm_review(
     independent_review_required = (
         manual_review_still_required and manual_review_confidence >= 0.85
     )
+    if operational_kpanic_supported and kpanic_marked:
+        traces.append("KPANIC_LLM:OPERATIONAL_KPANIC_PRESERVED")
     if (
         remove_operational_kpanic
         and not independent_review_required
@@ -2010,6 +2051,15 @@ def apply_kpanic_llm_review(
         traces.append(
             "NEW57:OPERATIONAL_REVIEW_PRESERVED_INDEPENDENT_OF_KPANIC"
             f"(confidence={manual_review_confidence:.2f})"
+        )
+    elif remove_operational_kpanic and kpanic_marked and av_network:
+        # Preserve the historical remote-network safety gate.  Do not replace
+        # it with a generic ActionableScore>=4 rule: numeric AS is context, not
+        # factual KPANIC evidence.  This trace makes the deliberate veto visible
+        # instead of silently leaving the operational marker set.
+        traces.append(
+            "NEW53:REMOVE_OPERATIONAL_KPANIC_BLOCKED_REMOTE_NETWORK"
+            f"(actionable_score={actionable_score},cvss={effective_score})"
         )
 
     # NEW29_POST_KPANIC_AS4_CONSISTENCY_RESTORE:
@@ -2093,6 +2143,7 @@ def apply_kpanic_llm_review(
     summary = (
         "kpanic_llm_review("
         f"panic_supported={'YES' if review.kernel_panic_supported else 'NO'},"
+        f" operational_kpanic_supported={'YES' if operational_kpanic_supported else 'NO'},"
         f" evidence_level={review.evidence_level},"
         f" high_without_panic="
         f"{'YES' if review.high_severity_still_supported_without_kpanic else 'NO'},"
@@ -2208,6 +2259,7 @@ def apply_afterpushed_llm_review(
         effective_score = float(output.cvss3_score)
     except (TypeError, ValueError):
         effective_score = float("nan")
+    effective_vector_raw = str(output.cvss3_vector or "")
     cvss_source = "primary"
 
     if second_opinion is not None:
@@ -2217,6 +2269,7 @@ def apply_afterpushed_llm_review(
             try:
                 parsed_selected = cvss.CVSS3(str(selected_vector))
                 effective_score = float(parsed_selected.scores()[0])
+                effective_vector_raw = str(selected_vector)
                 cvss_source = "second_opinion_selected"
             except Exception as exc:
                 logger.warning(
@@ -2230,13 +2283,38 @@ def apply_afterpushed_llm_review(
         if second_opinion is not None
         else None
     )
-    if (
-        actionable_score is not None
+
+    # Keep the specialized-review score consistent with reconcile_kernel().
+    # The historical unconditional CLASS_C cap (>2 -> 2) could silently turn a
+    # real ActionableScore=3 into 2 after reconciliation had deliberately
+    # suppressed that cap for false-LOW safety.  Apply the same narrow cap here:
+    # only bounded CLASS_C, ManualReview=NO, AutoDowngradeAllowed=YES,
+    # selected/effective CVSS < 5.5, and C:N/I:N.
+    try:
+        actionable_metrics = (
+            cvss.CVSS3(effective_vector_raw).metrics if effective_vector_raw else {}
+        )
+    except Exception:
+        actionable_metrics = {}
+    class_c_cap_safe = (
+        second_opinion is not None
         and str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_C"
         and getattr(second_opinion, "important_candidate", "NO") == "NO"
         and getattr(second_opinion, "auto_downgrade_allowed", "NO") == "YES"
-        and actionable_score > 2
-    ):
+        and getattr(second_opinion, "manual_review", "") == "NO"
+        and math.isfinite(effective_score)
+        and effective_score < 5.5
+        and actionable_metrics.get("C") == "N"
+        and actionable_metrics.get("I") == "N"
+    )
+    if actionable_score is not None and actionable_score > 2 and class_c_cap_safe:
+        logger.info(
+            "%s: specialized-review deterministic CLASS_C ActionableScore cap "
+            "%s -> 2 (bounded CLASS_C, ManualReview=NO, "
+            "AutoDowngradeAllowed=YES, CVSS<5.5, C:N/I:N)",
+            call_str,
+            actionable_score,
+        )
         actionable_score = 2
 
     if not math.isfinite(effective_score):
@@ -2282,114 +2360,277 @@ def apply_deferred_low_review(
     classifier_result: dict | None,
     second_opinion=None,
 ) -> str:
-    """Apply the old AS7 intent only after independent specialized review.
+    """NEW59: apply deferred LOW after the independent specialized review.
 
-    LOW is operationally destructive because it auto-closes the CVE.  NEW56
-    therefore treats ActionableScore as *eligibility* for LOW, never as
-    sufficient authority.  The specialized review must explicitly approve
-    safe auto-close, and independent pre-existing signals can veto it.
+    NEW59 restores the useful legacy AS<3 LOW signal without restoring legacy
+    blindness.  ActionableScore is still only eligibility: LOW requires
+    AutoDowngradeAllowed=YES, no named preservation profile, no independent
+    high-impact primitive, no mandatory manual-review verdict, and affirmative
+    specialized LOW approval.
 
-    This intentionally does not promote severity.  Failure/omission/ambiguity
-    simply leaves the already-reconciled MODERATE/MODERATE7/IMPORTANT result.
+    AS==0 is a stronger fast path.  When the specialized reviewer independently
+    rejects factual panic, affirmatively approves LOW auto-close, finds no
+    preservation/high-impact/manual-review blocker, an inconsistent stale
+    operational marker may be consumed even if remove_operational_kpanic was
+    accidentally left false.  This is the deterministic form of NEW56.2's
+    one-way consistency rule; it never treats AS==0 itself as technical proof.
     """
     if second_opinion is None or review is None:
         return ""
     if output.impact != "MODERATE":
         return ""
 
-    # NEW56.1: a still-live operational KPANIC marker is no longer an
-    # unconditional veto for deferred LOW.  The specialized KPANIC review may
-    # consume that marker only when it explicitly approved the *separate*
-    # operational-removal decision.  The independent LOW approval below is
-    # still required as well, so neither verdict can authorize auto-close by
-    # itself.  This deliberately does not relax NEW53's generic AV:N gate.
-    had_operational_kpanic = bool(getattr(output, "_kernel_kpanic_marked", False))
-    remove_operational_kpanic = bool(
-        getattr(review, "remove_operational_kpanic", False)
-    )
-    if had_operational_kpanic and not remove_operational_kpanic:
+    score = getattr(second_opinion, "actionable_score", None)
+    if score is None or score >= 3:
         return ""
 
-    # NEW57: deferred LOW must not bypass the independent review-routing
-    # verdict.  NEW56.1 may consume an explicitly removable panic marker, but
-    # only when the specialized reread does not independently require analyst
-    # review for a non-panic security mechanism.
-    manual_review_still_required = bool(
-        getattr(review, "manual_review_still_required", False)
-    )
+    if str(getattr(second_opinion, "auto_downgrade_allowed", "NO")).upper() != "YES":
+        return ""
+
+    actionable_manual = str(getattr(second_opinion, "manual_review", "")).upper()
+    if actionable_manual == "REQUIRED":
+        return ""
+
+    preservation_profile = str(
+        getattr(review, "preservation_profile", "NONE") or "NONE"
+    ).upper()
+    if preservation_profile != "NONE":
+        return ""
+
+    independent_strength = str(
+        getattr(review, "independent_high_impact_strength", "none") or "none"
+    ).lower()
+    if independent_strength not in {"weak", "none"}:
+        return ""
+    if bool(getattr(review, "high_severity_still_supported_without_kpanic", False)):
+        return ""
+
     try:
         manual_review_confidence = float(
             getattr(review, "manual_review_confidence", 0.0) or 0.0
         )
     except (TypeError, ValueError):
         manual_review_confidence = 0.0
+    manual_review_still_required = bool(
+        getattr(review, "manual_review_still_required", False)
+    )
     if manual_review_still_required and manual_review_confidence >= 0.85:
         return ""
 
-    score = getattr(second_opinion, "actionable_score", None)
-    if score is None or score >= 3:
-        return ""
+    # NEW59.3: the specialized KPANIC review runs later and rereads the same
+    # technical evidence specifically for LOW auto-close/manual-review safety.
+    # Allow that later verdict to supersede an older primary
+    # kernel_manual_review=YES for AS=1/2 only in the narrow bounded CLASS_C
+    # profile.  This does NOT bypass a negative specialized LOW verdict:
+    # low_auto_close_supported must itself be true with >=0.85 confidence, and
+    # the specialized reviewer must affirmatively say manual review is no longer
+    # required with >=0.90 confidence.  All preservation/high-impact/semantic
+    # blockers below remain hard vetoes.
+    primary_manual_yes = (
+        str(getattr(output, "kernel_manual_review", "UNKNOWN")).upper() == "YES"
+    )
 
-    # NEW56.1: RECOMMENDED meant that an additional review was advisable; by
-    # this point that specialized independent review has actually run.  Keep
-    # REQUIRED as the fail-closed unresolved state, but do not make an older
-    # RECOMMENDED advisory a permanent veto after affirmative safe-close review.
-    actionable_manual = str(getattr(second_opinion, "manual_review", "")).upper()
-    if actionable_manual == "REQUIRED":
-        return ""
-    if str(getattr(second_opinion, "auto_downgrade_allowed", "NO")).upper() != "YES":
-        return ""
-    if str(getattr(output, "kernel_manual_review", "UNKNOWN")).upper() == "YES":
-        return ""
-    if bool(getattr(output, "kernel_nullptr_related", False)):
-        return ""
-
-    # The independent review must positively establish that auto-close is safe.
     low_supported = bool(getattr(review, "low_auto_close_supported", False))
-    low_confidence = float(getattr(review, "low_auto_close_confidence", 0.0) or 0.0)
+    try:
+        low_confidence = float(getattr(review, "low_auto_close_confidence", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        low_confidence = 0.0
     if not low_supported or low_confidence < 0.85:
         return ""
 
-    # Independent classifier contradiction: a strong pre-LLM MODERATE/IMPORTANT
-    # prediction is not allowed to be silently erased by the same LLM family
-    # expressing one pessimistic opinion through several correlated fields.
-    classifier_result = classifier_result or {}
-    raw_clf = str(
-        classifier_result.get("raw_prediction") or classifier_result.get("impact") or ""
+    primitive_for_primary_supersede = str(
+        getattr(second_opinion, "primitive_class", "") or ""
     ).upper()
-    try:
-        clf_conf = float(classifier_result.get("confidence", 0.0) or 0.0)
-    except (TypeError, ValueError):
-        clf_conf = 0.0
-    if raw_clf in {"MODERATE", "IMPORTANT", "CRITICAL"} and clf_conf >= 0.80:
+    primary_manual_superseded = (
+        primary_manual_yes
+        and score in {1, 2}
+        and primitive_for_primary_supersede == "CLASS_C"
+        and actionable_manual == "NO"
+        and not bool(getattr(review, "kernel_panic_supported", False))
+        and not bool(getattr(review, "operational_kpanic_supported", False))
+        and not manual_review_still_required
+        and manual_review_confidence >= 0.90
+        and low_supported
+        and low_confidence >= 0.85
+        and preservation_profile == "NONE"
+        and independent_strength in {"weak", "none"}
+        and not bool(
+            getattr(review, "high_severity_still_supported_without_kpanic", False)
+        )
+    )
+    if primary_manual_yes and not (
+        (
+            score == 0
+            and not manual_review_still_required
+            and manual_review_confidence >= 0.85
+        )
+        or primary_manual_superseded
+    ):
         return ""
 
-    # Strong external IMPORTANT evidence is another independent veto.  Keep
-    # ordinary MODERATE external scores diagnostic rather than making LOW
-    # impossible for every vendor/NVD disagreement.
-    try:
-        ext_score = float(classifier_result.get("cvss_score", 0.0) or 0.0)
-    except (TypeError, ValueError):
-        ext_score = 0.0
-    ext_issuer = str(classifier_result.get("cvss_issuer", "") or "").upper()
-    if ext_issuer in {"RH", "RED HAT", "NIST", "NVD"} and ext_score >= 7.0:
-        return ""
-
-    # Strong patch/semantic signals from the earlier pass are vetoes, not
-    # independent votes for LOW.  This prevents one low numeric score from
-    # overriding concrete lifetime/ownership/authorization evidence.
+    # Strong patch/semantic signals remain hard vetoes.  NEW59 intentionally
+    # does NOT use kernel_nullptr_related as a blanket veto: a bounded NULL
+    # dereference can itself be LOW when the independent reviewer confirms that
+    # no fatal/review-worthy mechanism remains.
     raw = str(getattr(second_opinion, "raw_response", "") or "")
     strong_headers = (
         "CleanFixProtection=YES",
         "COWOwnershipViolation=YES",
         "AuthorizationBypass=YES",
         "RealUAF=YES",
+        "B5OOB=YES",
     )
     if any(h in raw for h in strong_headers):
         return ""
     if str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_A":
         return ""
     if str(getattr(second_opinion, "important_candidate", "NO")).upper() == "YES":
+        return ""
+
+    # NEW97 / NEW59 structured-context safety split:
+    # AS<3 is eligibility, not proof that a candidate is safe to auto-close.
+    #
+    # A known UNPRIVILEGED_RUNTIME path is not, by itself, a reason to reject
+    # NEW59 when the independent KPANIC review says there is no factual panic,
+    # no high-impact/preservation blocker, and LOW auto-close is safe.  This
+    # keeps bounded resource-leak/correctness cases eligible for LOW.
+    #
+    # Conversely, a completely unresolved CLASS_C context must not authorize
+    # automatic LOW closure.  UNKNOWN/UNKNOWN/UNKNOWN therefore fails closed.
+    # Factual crash cases retain the NEW61a.2 safety requirement below:
+    # CrashOnlyLowEligible must be affirmative.  NEW61a.2 itself remains stricter
+    # and still rejects UNPRIVILEGED_RUNTIME crash routing.
+    primitive = str(getattr(second_opinion, "primitive_class", "") or "").upper()
+    crash_reachability = str(
+        getattr(second_opinion, "crash_reachability", "UNKNOWN") or "UNKNOWN"
+    ).upper()
+    crash_privilege = str(
+        getattr(second_opinion, "crash_trigger_privilege", "UNKNOWN") or "UNKNOWN"
+    ).upper()
+    crash_low_eligible = str(
+        getattr(second_opinion, "crash_only_low_eligible", "UNKNOWN") or "UNKNOWN"
+    ).upper()
+
+    # NEW59.1: UNKNOWN crash-context fields normally fail closed, but they are
+    # irrelevant for a positively established non-crash CLASS_C candidate.
+    # CVE-2026-52960 exposed this gap: the specialized review independently
+    # rejected factual panic, approved LOW auto-close with high confidence, and
+    # required no manual review, yet the resource/reference-leak case remained
+    # MODERATE solely because all three crash-only routing fields were UNKNOWN.
+    #
+    # Keep the exception deliberately narrow.  UNKNOWN/UNKNOWN/UNKNOWN is
+    # tolerated only when the specialized reviewer says this is not a factual
+    # panic, LOW is safe at >=0.90 confidence, and no manual review remains at
+    # >=0.85 confidence.  All preservation/high-impact/strong-header gates above
+    # still apply, and factual crash cases remain subject to CrashOnlyLowEligible.
+    unknown_crash_context = (
+        primitive == "CLASS_C"
+        and crash_reachability == "UNKNOWN"
+        and crash_privilege == "UNKNOWN"
+        and crash_low_eligible == "UNKNOWN"
+    )
+    proven_noncrash_low = (
+        not bool(getattr(review, "kernel_panic_supported", False))
+        and low_supported
+        and low_confidence >= 0.90
+        and not manual_review_still_required
+        and manual_review_confidence >= 0.85
+    )
+
+    # NEW59.2: the UNKNOWN-context relaxation above must not auto-close a
+    # remotely reachable, unauthenticated candidate.  CVE-2022-50865 showed
+    # that AV:N/PR:N can otherwise satisfy the same CLASS_C + strong
+    # non-crash LOW-review gates as a bounded local resource leak while still
+    # belonging in MODERATE.  Scope this veto only to the UNKNOWN-context
+    # exception; known/proven NEW59 crash-context paths are unchanged.
+    selected_cvss_vector = str(
+        getattr(second_opinion, "cvss_selected_vector", None)
+        or getattr(output, "cvss3_vector", "")
+        or ""
+    )
+    remote_unauthenticated = (
+        "/AV:N/" in selected_cvss_vector and "/PR:N/" in selected_cvss_vector
+    )
+    if unknown_crash_context and (not proven_noncrash_low or remote_unauthenticated):
+        return ""
+
+    if bool(getattr(review, "kernel_panic_supported", False)) and (
+        crash_low_eligible != "YES"
+    ):
+        return ""
+
+    # NEW59 deliberately does not use classifier severity or an external CVSS
+    # number as a hard LOW veto.  They are correlated/summary severity signals,
+    # not independently established high-impact primitives.  Concrete semantic
+    # blockers above and the specialized review verdicts own LOW safety.
+
+    had_operational_kpanic = bool(getattr(output, "_kernel_kpanic_marked", False))
+    remove_operational_kpanic = bool(
+        getattr(review, "remove_operational_kpanic", False)
+    )
+
+    # NEW59 AS==0 fast path: repair only the narrow contradictory state where
+    # the specialized reviewer itself says panic is unsupported, LOW auto-close
+    # is safe with high confidence, no review/high-impact/preservation blocker
+    # remains, but the operational-removal boolean was left false.
+    as0_marker_fast_path = (
+        score == 0
+        and had_operational_kpanic
+        and not bool(getattr(review, "kernel_panic_supported", False))
+        and low_supported
+        and low_confidence >= 0.85
+        and not manual_review_still_required
+        and manual_review_confidence >= 0.85
+        and preservation_profile == "NONE"
+        and independent_strength in {"weak", "none"}
+        and not bool(
+            getattr(review, "high_severity_still_supported_without_kpanic", False)
+        )
+    )
+
+    # NEW59.3: AS=1/2 primary-manual supersede may also consume a stale
+    # operational KPANIC marker when the SAME specialized review independently
+    # establishes the full safe-LOW/no-review profile.
+    #
+    # This closes the narrow state exposed by CVE-2025-38193:
+    #
+    #   primary_manual_review=YES
+    #   ActionableScore=1/2, CLASS_C, ManualReview=NO
+    #   kernel_panic_supported=NO
+    #   operational_kpanic_supported=NO
+    #   low_auto_close_supported=YES
+    #   manual_review_still_required=NO
+    #   preservation_profile=NONE
+    #
+    # In that state NEW53.2 would consume the marker immediately afterwards
+    # anyway. Requiring remove_operational_kpanic=YES here therefore prevented
+    # NEW59 from using an otherwise complete specialized LOW verdict solely
+    # because the older operational marker had not yet been synchronized.
+    #
+    # Keep this tied to primary_manual_superseded so it cannot become a generic
+    # AS=1/2 marker-removal path.
+    specialized_marker_consistency = (
+        primary_manual_superseded
+        and had_operational_kpanic
+        and not bool(getattr(review, "kernel_panic_supported", False))
+        and not bool(getattr(review, "operational_kpanic_supported", False))
+        and low_supported
+        and low_confidence >= 0.85
+        and not manual_review_still_required
+        and manual_review_confidence >= 0.90
+        and preservation_profile == "NONE"
+        and independent_strength in {"weak", "none"}
+        and not bool(
+            getattr(review, "high_severity_still_supported_without_kpanic", False)
+        )
+    )
+
+    effective_remove_operational_kpanic = (
+        remove_operational_kpanic
+        or as0_marker_fast_path
+        or specialized_marker_consistency
+    )
+    if had_operational_kpanic and not effective_remove_operational_kpanic:
         return ""
 
     output.impact = "LOW"
@@ -2401,20 +2642,376 @@ def apply_deferred_low_review(
     _sync_output_operational_kpanic_flag(output)
 
     reason = str(getattr(review, "low_auto_close_reason", "") or "").strip()
-    if had_operational_kpanic:
+    if as0_marker_fast_path and not remove_operational_kpanic:
         trace = (
-            "NEW56.1:DEFERRED_AS7_MOD7_TO_LOW("
+            "NEW59:AS0_FASTPATH_MOD7_TO_LOW("
+            f"score=0,review_confidence={low_confidence:.2f},"
+            "panic_supported=NO,preservation=NONE,high_impact=NONE,"
+            "manual_review=NO,repair_stale_operational_marker=YES)"
+        )
+    elif had_operational_kpanic:
+        trace = (
+            "NEW59:ASLT3_MOD7_TO_LOW("
             f"score={score},review_confidence={low_confidence:.2f},"
-            "remove_operational_kpanic=YES,"
-            "independent_review=YES,blockers=NONE)"
+            f"remove_operational_kpanic={'YES' if remove_operational_kpanic else 'NO'},"
+            f"specialized_marker_consistency={'YES' if specialized_marker_consistency else 'NO'},"
+            "preservation=NONE,"
+            f"high_impact={independent_strength.upper()},"
+            f"primary_manual_superseded={'YES' if primary_manual_superseded else 'NO'},"
+            "blockers=NONE)"
         )
     else:
         trace = (
-            "NEW56.1:DEFERRED_AS7_MOD_TO_LOW("
+            "NEW59:ASLT3_MOD_TO_LOW("
             f"score={score},review_confidence={low_confidence:.2f},"
-            "independent_review=YES,blockers=NONE)"
+            "preservation=NONE,"
+            f"high_impact={independent_strength.upper()},"
+            f"primary_manual_superseded={'YES' if primary_manual_superseded else 'NO'},"
+            "blockers=NONE)"
         )
     logger.info("%s: %s reason=%s", call_str, trace, reason)
+    return trace
+
+
+def apply_crash_only_no_review_low_override(
+    output,
+    call_str: str,
+    review,
+    second_opinion=None,
+) -> str:
+    """NEW61a.2: permit a narrowly proven crash-only LOW despite KPANIC review routing.
+
+    NEW61a required the KPANIC reviewer itself to say that manual review was not
+    required.  That remained correlated with factual crash detection and was
+    stochastic on the target case.  NEW61a.2 instead requires an independent,
+    machine-readable ActionableScore classification of crash reachability,
+    privilege, and LOW eligibility.
+
+    Factual ``kernel_panic_supported`` remains true.  The exception changes only
+    operational routing when the crash is CLASS_C, AS<=1, no Important/preservation
+    or independent high-impact primitive exists, and CrashOnlyLowEligible=YES is
+    backed by a constrained INIT/PROBE/CONFIG, ERROR/RECOVERY, or privileged-runtime
+    context.  UNPRIVILEGED_RUNTIME and UNKNOWN reachability can never authorize it.
+    """
+    if second_opinion is None or review is None:
+        return ""
+    if output.impact != "MODERATE":
+        return ""
+
+    score = getattr(second_opinion, "actionable_score", None)
+    if score not in {0, 1}:
+        return ""
+    if str(getattr(second_opinion, "primitive_class", "")).upper() != "CLASS_C":
+        return ""
+    if str(getattr(second_opinion, "important_candidate", "NO")).upper() != "NO":
+        return ""
+    if str(getattr(second_opinion, "auto_downgrade_allowed", "NO")).upper() != "YES":
+        return ""
+    if str(getattr(second_opinion, "manual_review", "")).upper() != "NO":
+        return ""
+    if str(getattr(output, "kernel_manual_review", "UNKNOWN")).upper() != "NO":
+        return ""
+
+    # This override exists only for a real factual crash/oops. Non-crash LOW
+    # candidates remain owned by NEW59/NEW60.
+    if not bool(getattr(review, "kernel_panic_supported", False)):
+        return ""
+    evidence_level = str(getattr(review, "evidence_level", "") or "").lower()
+    if evidence_level not in {"demonstrated", "explicit", "strongly_implied"}:
+        return ""
+
+    preservation_profile = str(
+        getattr(review, "preservation_profile", "NONE") or "NONE"
+    ).upper()
+    if preservation_profile != "NONE":
+        return ""
+
+    independent_strength = str(
+        getattr(review, "independent_high_impact_strength", "none") or "none"
+    ).lower()
+    if independent_strength not in {"weak", "none"}:
+        return ""
+    if bool(getattr(review, "high_severity_still_supported_without_kpanic", False)):
+        return ""
+
+    crash_reachability = str(
+        getattr(second_opinion, "crash_reachability", "UNKNOWN") or "UNKNOWN"
+    ).upper()
+    crash_privilege = str(
+        getattr(second_opinion, "crash_trigger_privilege", "UNKNOWN") or "UNKNOWN"
+    ).upper()
+    crash_low_eligible = str(
+        getattr(second_opinion, "crash_only_low_eligible", "UNKNOWN") or "UNKNOWN"
+    ).upper()
+
+    if crash_low_eligible != "YES":
+        return ""
+    if crash_reachability not in {
+        "INIT_PROBE_CONFIG",
+        "ERROR_RECOVERY",
+        "PRIVILEGED_RUNTIME",
+    }:
+        return ""
+    if crash_privilege == "UNPRIVILEGED":
+        return ""
+
+    # PRIVILEGED_RUNTIME must be positively privilege-bounded. For init/probe/
+    # config and error/recovery paths UNKNOWN privilege is allowed only because
+    # CrashOnlyLowEligible=YES itself requires the prompt to establish that no
+    # ordinary unprivileged runtime trigger exists.
+    if crash_reachability == "PRIVILEGED_RUNTIME" and crash_privilege not in {
+        "HOST_ADMIN",
+        "NAMESPACE_PRIVILEGED",
+    }:
+        return ""
+
+    raw = str(getattr(second_opinion, "raw_response", "") or "")
+    strong_headers = (
+        "CleanFixProtection=YES",
+        "COWOwnershipViolation=YES",
+        "AuthorizationBypass=YES",
+        "RealUAF=YES",
+    )
+    if any(h in raw for h in strong_headers):
+        return ""
+
+    if not bool(getattr(output, "_kernel_kpanic_marked", False)):
+        return ""
+
+    # Deliberately do NOT require manual_review_still_required=false here.
+    # NEW61a.2 exists because that KPANIC-review axis was observed to follow the
+    # mere existence of a demonstrated crash. The independent crash-context proof
+    # above is the narrow superseding signal. All high-impact/preservation gates
+    # remain hard vetoes.
+    manual_required = bool(getattr(review, "manual_review_still_required", False))
+    try:
+        manual_confidence = float(
+            getattr(review, "manual_review_confidence", 0.0) or 0.0
+        )
+    except (TypeError, ValueError):
+        manual_confidence = 0.0
+
+    output.impact = "LOW"
+    output._kernel_lowered = True
+    output._kernel_decrease_count = (
+        int(getattr(output, "_kernel_decrease_count", 0) or 0) + 1
+    )
+    output._kernel_kpanic_marked = False
+    _sync_output_operational_kpanic_flag(output)
+
+    trace = (
+        "NEW61a.2:CRASH_CONTEXT_PROVEN_MOD7_TO_LOW("
+        f"score={score},panic_supported=YES,evidence={evidence_level},"
+        "class=CLASS_C,primary_manual=NO,actionable_manual=NO,"
+        f"crash_reachability={crash_reachability},"
+        f"crash_privilege={crash_privilege},crash_low_eligible=YES,"
+        f"kpanic_manual_required={'YES' if manual_required else 'NO'},"
+        f"kpanic_manual_confidence={manual_confidence:.2f},"
+        "preservation=NONE,high_impact="
+        f"{independent_strength.upper()},operational_kpanic_consumed=YES)"
+    )
+    logger.info("%s: %s", call_str, trace)
+    return trace
+
+
+def apply_as0_safe_low_marker_consistency(
+    output,
+    call_str: str,
+    review,
+    second_opinion=None,
+) -> str:
+    """NEW53.1: consume a stale operational KPANIC marker on safe existing LOW.
+
+    Some older reconciliation branches can reach LOW before the specialized
+    KPANIC review runs.  In that state NEW59 has no downgrade left to perform,
+    but a classifier-derived operational KPANIC marker can survive until NEW54
+    and mechanically floor the already-LOW result back to MODERATE7.
+
+    This is a marker-consistency repair, not a severity heuristic: impact is
+    never changed here.  Consume the marker only when the specialized review
+    independently rejects both factual and operational KPANIC, positively
+    approves LOW auto-close with high confidence, requires no manual review,
+    and no preservation/high-impact/strong ActionableScore blocker survives.
+
+    ``remove_operational_kpanic`` is intentionally not required.  The four
+    validation false-LOW escalations showed that this older policy field can
+    remain false even when the review's stronger structured conclusions are
+    jointly unambiguous.  NEW54 remains unchanged and fail-closes every LOW
+    whose marker survives this narrow consistency gate.
+    """
+    if second_opinion is None or review is None:
+        return ""
+    if output.impact != "LOW":
+        return ""
+    if not bool(getattr(output, "_kernel_kpanic_marked", False)):
+        return ""
+
+    score = getattr(second_opinion, "actionable_score", None)
+    if score is None or score > 2:
+        return ""
+    if str(getattr(second_opinion, "auto_downgrade_allowed", "NO")).upper() != "YES":
+        return ""
+    if str(getattr(second_opinion, "manual_review", "")).upper() == "REQUIRED":
+        return ""
+
+    preservation_profile = str(
+        getattr(review, "preservation_profile", "NONE") or "NONE"
+    ).upper()
+    if preservation_profile != "NONE":
+        return ""
+
+    independent_strength = str(
+        getattr(review, "independent_high_impact_strength", "none") or "none"
+    ).lower()
+    if independent_strength not in {"weak", "none"}:
+        return ""
+    if bool(getattr(review, "high_severity_still_supported_without_kpanic", False)):
+        return ""
+    if bool(getattr(review, "kernel_panic_supported", False)):
+        return ""
+    if bool(getattr(review, "operational_kpanic_supported", False)):
+        return ""
+
+    low_supported = bool(getattr(review, "low_auto_close_supported", False))
+    try:
+        low_confidence = float(getattr(review, "low_auto_close_confidence", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        low_confidence = 0.0
+    if not low_supported or low_confidence < 0.90:
+        return ""
+
+    # The boolean verdict owns this axis.  Do not require high confidence in a
+    # negative manual-review verdict: CVE-2025-71315 correctly emitted
+    # manual_review_still_required=false with low confidence while separately
+    # giving the affirmative safe-LOW decision 0.95 confidence.
+    if bool(getattr(review, "manual_review_still_required", False)):
+        return ""
+
+    # Preserve the same concrete semantic vetoes used by deferred LOW.  A low
+    # numeric score must never erase independently established dangerous state.
+    raw = str(getattr(second_opinion, "raw_response", "") or "")
+    strong_headers = (
+        "CleanFixProtection=YES",
+        "COWOwnershipViolation=YES",
+        "AuthorizationBypass=YES",
+        "RealUAF=YES",
+        "B5OOB=YES",
+    )
+    if any(h in raw for h in strong_headers):
+        return ""
+    if str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_A":
+        return ""
+    if str(getattr(second_opinion, "important_candidate", "NO")).upper() == "YES":
+        return ""
+
+    output._kernel_kpanic_marked = False
+    _sync_output_operational_kpanic_flag(output)
+
+    trace = (
+        "NEW53.1:LOW_SPECIALIZED_REVIEW_CONSUMED_OPERATIONAL_KPANIC("
+        f"score={score},low_confidence={low_confidence:.2f},"
+        "panic_supported=NO,operational_kpanic_supported=NO,"
+        "manual_review_still_required=NO,preservation=NONE,"
+        f"high_impact={independent_strength.upper()},blockers=NONE)"
+    )
+    logger.info("%s: %s", call_str, trace)
+    return trace
+
+
+def apply_moderate_no_review_marker_consistency(
+    output,
+    call_str: str,
+    review,
+    second_opinion=None,
+) -> str:
+    """NEW53.2: consume stale operational KPANIC on ordinary MODERATE.
+
+    This is deliberately NOT a LOW heuristic and never changes impact.  It
+    handles the narrow state where reconciliation already selected ordinary
+    MODERATE, but an older classifier-derived KPANIC marker survived even
+    though the specialized review independently rejects factual panic,
+    operational KPANIC, manual-review routing, preservation, and independent
+    high-impact evidence.
+
+    ``low_auto_close_supported`` is intentionally irrelevant here: a review may
+    correctly reject destructive LOW auto-close while also concluding that
+    MODERATE needs no KPANIC/manual-review marker.  NEW53.2 therefore improves
+    review-routing precision without weakening LOW safety.
+    """
+    if second_opinion is None or review is None:
+        return ""
+    if output.impact != "MODERATE":
+        return ""
+    if not bool(getattr(output, "_kernel_kpanic_marked", False)):
+        return ""
+
+    score = getattr(second_opinion, "actionable_score", None)
+    if score is None or score > 2:
+        return ""
+    if str(getattr(second_opinion, "auto_downgrade_allowed", "NO")).upper() != "YES":
+        return ""
+    if str(getattr(second_opinion, "manual_review", "")).upper() == "REQUIRED":
+        return ""
+
+    if bool(getattr(review, "kernel_panic_supported", False)):
+        return ""
+    if bool(getattr(review, "operational_kpanic_supported", False)):
+        return ""
+    if bool(getattr(review, "manual_review_still_required", False)):
+        return ""
+    try:
+        manual_confidence = float(
+            getattr(review, "manual_review_confidence", 0.0) or 0.0
+        )
+    except (TypeError, ValueError):
+        manual_confidence = 0.0
+    if manual_confidence < 0.90:
+        return ""
+
+    preservation_profile = str(
+        getattr(review, "preservation_profile", "NONE") or "NONE"
+    ).upper()
+    if preservation_profile != "NONE":
+        return ""
+
+    independent_strength = str(
+        getattr(review, "independent_high_impact_strength", "none") or "none"
+    ).lower()
+    if independent_strength != "none":
+        return ""
+    if bool(getattr(review, "high_severity_still_supported_without_kpanic", False)):
+        return ""
+
+    # Keep the same deterministic strong-signal vetoes as NEW53.1.  This gate
+    # must never erase review routing in the presence of independently parsed
+    # corruption/ownership/authorization evidence merely because the review is
+    # stochastic or incomplete.
+    raw = str(getattr(second_opinion, "raw_response", "") or "")
+    strong_headers = (
+        "CleanFixProtection=YES",
+        "COWOwnershipViolation=YES",
+        "AuthorizationBypass=YES",
+        "RealUAF=YES",
+        "B5OOB=YES",
+    )
+    if any(h in raw for h in strong_headers):
+        return ""
+    if str(getattr(second_opinion, "primitive_class", "")).upper() == "CLASS_A":
+        return ""
+    if str(getattr(second_opinion, "important_candidate", "NO")).upper() == "YES":
+        return ""
+
+    output._kernel_kpanic_marked = False
+    _sync_output_operational_kpanic_flag(output)
+
+    trace = (
+        "NEW53.2:MODERATE_SPECIALIZED_REVIEW_CONSUMED_OPERATIONAL_KPANIC("
+        f"score={score},manual_confidence={manual_confidence:.2f},"
+        "panic_supported=NO,operational_kpanic_supported=NO,"
+        "manual_review_still_required=NO,preservation=NONE,"
+        "high_impact=NONE,blockers=NONE)"
+    )
+    logger.info("%s: %s", call_str, trace)
     return trace
 
 
