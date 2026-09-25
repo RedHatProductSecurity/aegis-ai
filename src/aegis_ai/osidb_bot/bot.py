@@ -221,13 +221,6 @@ class FlawUpdater:
                 truncated = textwrap.shorten(fl, width=256, placeholder=" [...]")
                 self._info(f"OSIDB response: {truncated}")
 
-    def position(self) -> BotPosition:
-        assert self.flaw_data
-        return BotPosition(
-            last_cve=self.flaw_data["cve_id"],
-            updated_dt=datetime.fromisoformat(self.flaw_data["updated_dt"]),
-        )
-
     async def apply_suggestions(self) -> bool:
         assert self.flaw_data
         all_ok: bool = True
@@ -470,8 +463,10 @@ class Bot(StateProxy):
         self.retry_list[cve] = self.max_retries
         return True
 
-    async def process_cve(self, cve: CVEID) -> bool:
+    async def process_cve(self, pos: BotPosition) -> bool:
         flaw_updater: FlawUpdater | None = None
+        cve: CVEID | None = pos.last_cve
+        assert cve
 
         try:
             flaw_updater = FlawUpdater(
@@ -486,7 +481,7 @@ class Bot(StateProxy):
 
             if not self.retrying_failed:
                 # mark as pending
-                self.pending[flaw_updater.position()] = True
+                self.pending[pos] = True
 
             return await flaw_updater.do()
 
@@ -516,7 +511,7 @@ class Bot(StateProxy):
                 self.decrement_retry(cve)
             elif flaw_updater:
                 # mark as done
-                self.pending[flaw_updater.position()] = False
+                self.pending[pos] = False
 
             # determine the next state
             pkeys = self.pending.keys()
@@ -531,7 +526,7 @@ class Bot(StateProxy):
                 del self.pending[next_state]
 
             # do not update state if the CVE with lowest updated_dt is still being processed
-            if next_state:
+            if next_state and next_state.updated_dt:
                 # update state (and state file unless read-only)
                 assert not self.retrying_failed
                 self.state = next_state
@@ -549,7 +544,7 @@ class Bot(StateProxy):
                 logger.info(f"[{i}/{total}] processing {cve}")
                 log_memory(f"cve_start({cve})")
                 try:
-                    if await self.process_cve(cve):
+                    if await self.process_cve(pos):
                         processed += 1
                 except Exception as e:
                     msg = f"{cve}: unhandled exception: {e.__class__.__name__}"
