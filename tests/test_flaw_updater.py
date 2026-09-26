@@ -618,7 +618,7 @@ async def test_schedule_retry_creates_manual_triage_on_last_attempt(mock_exec_fe
     agent = MagicMock()
 
     from aegis_ai.osidb_bot.bot import Bot
-    from aegis_ai.osidb_bot.state import BotStateFileHandler
+    from aegis_ai.osidb_bot.state import BotPosition, BotStateFileHandler
 
     with (
         BotStateFileHandler(None) as sfh,
@@ -630,7 +630,7 @@ async def test_schedule_retry_creates_manual_triage_on_last_attempt(mock_exec_fe
         bot.retrying_failed = True
         bot.retry_list[CVE_ID] = 1
 
-        await bot.process_cve(CVE_ID)
+        await bot.process_cve(BotPosition(last_cve=CVE_ID))
 
     session.flaws.labels.create.assert_called_with(
         flaw_id=flaw_data["uuid"],
@@ -651,7 +651,7 @@ async def test_validation_failure_skips_retry_and_manual_triage(mock_exec_featur
     agent = MagicMock()
 
     from aegis_ai.osidb_bot.bot import Bot
-    from aegis_ai.osidb_bot.state import BotStateFileHandler
+    from aegis_ai.osidb_bot.state import BotPosition, BotStateFileHandler
 
     with (
         BotStateFileHandler(None) as sfh,
@@ -660,7 +660,7 @@ async def test_validation_failure_skips_retry_and_manual_triage(mock_exec_featur
         ),
     ):
         bot = Bot(sfh, agent, max_retries=3)
-        await bot.process_cve(CVE_ID)
+        await bot.process_cve(BotPosition(last_cve=CVE_ID))
 
     assert CVE_ID not in bot.retry_list
     session.flaws.labels.create.assert_not_called()

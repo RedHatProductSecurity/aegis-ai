@@ -74,6 +74,19 @@ def _kwargs_for_log(kwargs: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _position_by_flaw(flaw: Any) -> BotPosition:
+    """Return a BotPosition object using CVE and updated_dt from flaw"""
+    return BotPosition(
+        last_cve=flaw.cve_id,
+        updated_dt=flaw.updated_dt,
+    )
+
+
+def _cves_to_positions(cve_ids: Sequence[CVEID]) -> Sequence[BotPosition]:
+    """Return a list of BotPosition objects using CVE and updated_dt from flaw"""
+    return [BotPosition(last_cve=cve, updated_dt=None) for cve in cve_ids]
+
+
 class FlawFinder:
     osidb: Session
 
@@ -84,7 +97,7 @@ class FlawFinder:
         self,
         state: BotPosition,
         age_cutoff: datetime | None = None,
-    ) -> Sequence[CVEID]:
+    ) -> Sequence[BotPosition]:
         # infer search predicates from ELIGIBLE_FLAWS
         kwargs: dict[str, Any] = {
             "include_fields": ["cve_id", "updated_dt"],
@@ -126,11 +139,11 @@ class FlawFinder:
         flaw_iterator = self.osidb.flaws.retrieve_list_iterator(**kwargs)
 
         if state.last_cve is None:
-            return [flaw.cve_id for flaw in flaw_iterator]
+            return [_position_by_flaw(flaw) for flaw in flaw_iterator]
 
         # skip the last processed CVE unless it was updated since last processing
         return [
-            flaw.cve_id
+            _position_by_flaw(flaw)
             for flaw in flaw_iterator
             if flaw.cve_id != state.last_cve or flaw.updated_dt != state.updated_dt
         ]
@@ -207,13 +220,6 @@ class FlawUpdater:
                 fl = response.text.partition("\n")[0]
                 truncated = textwrap.shorten(fl, width=256, placeholder=" [...]")
                 self._info(f"OSIDB response: {truncated}")
-
-    def position(self) -> BotPosition:
-        assert self.flaw_data
-        return BotPosition(
-            last_cve=self.flaw_data["cve_id"],
-            updated_dt=datetime.fromisoformat(self.flaw_data["updated_dt"]),
-        )
 
     async def apply_suggestions(self) -> bool:
         assert self.flaw_data
@@ -436,7 +442,7 @@ class Bot(StateProxy):
         ) as e:
             raise RuntimeError(f"failed to establish OSIDB session: {e}")
 
-    def search_cve_ids(self) -> Sequence[CVEID]:
+    def search_cves(self) -> Sequence[BotPosition]:
         finder = FlawFinder(self.osidb)
         return finder.search(
             state=self.state,
@@ -457,8 +463,10 @@ class Bot(StateProxy):
         self.retry_list[cve] = self.max_retries
         return True
 
-    async def process_cve(self, cve: CVEID) -> bool:
+    async def process_cve(self, pos: BotPosition) -> bool:
         flaw_updater: FlawUpdater | None = None
+        cve: CVEID | None = pos.last_cve
+        assert cve
 
         try:
             flaw_updater = FlawUpdater(
@@ -472,8 +480,16 @@ class Bot(StateProxy):
             )
 
             if not self.retrying_failed:
+                if not pos.updated_dt:
+                    # enable bot state initialization by explicitly specifying CVE ID(s) on the command line
+                    assert flaw_updater.flaw_data
+                    pos = BotPosition(
+                        last_cve=cve,
+                        updated_dt=flaw_updater.flaw_data["updated_dt"],
+                    )
+
                 # mark as pending
-                self.pending[flaw_updater.position()] = True
+                self.pending[pos] = True
 
             return await flaw_updater.do()
 
@@ -503,7 +519,7 @@ class Bot(StateProxy):
                 self.decrement_retry(cve)
             elif flaw_updater:
                 # mark as done
-                self.pending[flaw_updater.position()] = False
+                self.pending[pos] = False
 
             # determine the next state
             pkeys = self.pending.keys()
@@ -518,23 +534,25 @@ class Bot(StateProxy):
                 del self.pending[next_state]
 
             # do not update state if the CVE with lowest updated_dt is still being processed
-            if next_state:
+            if next_state and next_state.updated_dt:
                 # update state (and state file unless read-only)
                 assert not self.retrying_failed
                 self.state = next_state
 
-    async def _process_cve_list(self, cve_ids: Sequence[CVEID] = ()) -> None:
-        total: int = len(cve_ids)
+    async def _process_cve_list(self, cves: Sequence[BotPosition] = ()) -> None:
+        total: int = len(cves)
         processed: int = 0
 
-        async def process_cve_bounded(i: int, cve: CVEID) -> None:
+        async def process_cve_bounded(i: int, pos: BotPosition) -> None:
             nonlocal processed
 
             async with max_jobs_sem:
+                cve: CVEID | None = pos.last_cve
+                assert cve
                 logger.info(f"[{i}/{total}] processing {cve}")
                 log_memory(f"cve_start({cve})")
                 try:
-                    if await self.process_cve(cve):
+                    if await self.process_cve(pos):
                         processed += 1
                 except Exception as e:
                     msg = f"{cve}: unhandled exception: {e.__class__.__name__}"
@@ -544,17 +562,19 @@ class Bot(StateProxy):
 
         log_memory(f"batch_start({total} CVEs)")
         await asyncio.gather(
-            *[process_cve_bounded(*job) for job in enumerate(cve_ids, start=1)]
+            *[process_cve_bounded(*job) for job in enumerate(cves, start=1)]
         )
         log_memory("batch_end")
         logger.info(f"processed {processed} out of {total} CVEs")
 
     async def process(self, cve_ids: Sequence[CVEID] = ()) -> None:
-        if not cve_ids:
+        if cve_ids:
+            cves = _cves_to_positions(cve_ids)
+        else:
             # look for CVEs to process
-            cve_ids = self.search_cve_ids()
+            cves = self.search_cves()
 
-        await self._process_cve_list(cve_ids)
+        await self._process_cve_list(cves)
 
         if self.retry_list:
             logger.info("retrying failed CVEs")
@@ -562,4 +582,4 @@ class Bot(StateProxy):
 
             # sort the list such that CVEs with fewer remaining retry attempts are processed first
             retry_cves = sorted(self.retry_list, key=self.retry_list.__getitem__)
-            await self._process_cve_list(retry_cves)
+            await self._process_cve_list(_cves_to_positions(retry_cves))
