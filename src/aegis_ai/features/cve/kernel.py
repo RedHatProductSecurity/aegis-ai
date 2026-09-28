@@ -250,6 +250,9 @@ class RuleContext:
     clf_cvss_issuer: str = ""
     #: Classifier confidence (logged, does not affect outcome).
     clf_confidence: float = 0.0
+    #: Whether a trusted XGBoost result is actually available.  Kernel CVEs
+    #: may legitimately reach this pipeline without one (NEW69).
+    classifier_available: bool = True
 
     # --- ActionableScore / second-opinion signals ---
     # Computed before reconciliation, consumed only in Phase 3 after H/G.
@@ -275,6 +278,11 @@ class RuleContext:
     actionable_important_candidate: bool = False
     actionable_manual_review: str = ""
     actionable_auto_downgrade_allowed: bool = False
+    # NEW70: explicit ActionableScore verdict for whether an availability-only
+    # crash/hang case is eligible for automatic LOW closure.  Keep the raw
+    # tri-state value so only an explicit NO can veto H8; YES/UNKNOWN preserve
+    # historical H8 behavior.
+    actionable_crash_only_low_eligible: str = "UNKNOWN"
     actionable_recommended_impact: str = ""
     # NEW51: provenance for the narrow AS8 CLASS_A+COW promotion.  This is
     # exported after reconciliation so later precision reviews cannot erase the
@@ -315,6 +323,18 @@ class RuleContext:
     # Historical fields kept only because disabled G1-G4 helpers remain.
     decreased: bool = False
     h1_fired: bool = False
+    # NEW64 provenance bit: H1 preserved an already-IMPORTANT assessment because
+    # ActionableScore explicitly requires manual review and says an automatic
+    # IMPORTANT -> MODERATE downgrade is unsafe. AS4 must not immediately erase
+    # that same preservation decision solely because numeric AS/CVSS are low.
+    h1_actionable_downgrade_veto_preserved: bool = False
+    # NEW66: pipeline-wide provenance for the same ActionableScore contract.
+    # Unlike the historical H1-specific bit above, this latch is also set when
+    # AS4 itself encounters ManualReview=REQUIRED + AutoDowngradeAllowed=NO.
+    # Later automated precision/KPANIC review must not cross the preserved
+    # IMPORTANT -> MODERATE boundary merely by re-evaluating the same unresolved
+    # evidence.  This is preservation-only and never promotes a CVE.
+    actionable_downgrade_veto_preserved: bool = False
     # NEW47 provenance bit: H11 preserved IMPORTANT because the same narrow
     # strong-CLASS_A + clean-fix evidence used by NEW46 explicitly vetoed the
     # PR:H/CVSS<8 downgrade. AS4 must not immediately erase that preservation.
@@ -543,6 +563,25 @@ def h1(ctx: RuleContext) -> RuleEffect | None:
     if ctx.severity != IMP or ctx.llm_cvss >= 6.5 or ctx.lowered:
         return None
 
+    # NEW64: enforce the ActionableScore downgrade contract at the existing
+    # IMPORTANT boundary. This is preservation-only: it never promotes a CVE to
+    # IMPORTANT and does not require RealUAF/CLASS_A/ImportantCandidate. When the
+    # specialized second opinion says both that manual review is REQUIRED and
+    # that automatic downgrade is NOT allowed, generic H1 CVSS thresholding must
+    # not cross IMPORTANT -> MODERATE automatically.
+    actionable_downgrade_veto = (
+        ctx.actionable_manual_review.upper() == "REQUIRED"
+        and not ctx.actionable_auto_downgrade_allowed
+    )
+    if actionable_downgrade_veto:
+        return RuleEffect(
+            trace="H1_GUARD:actionable_auto_downgrade_veto",
+            flags={
+                "h1_actionable_downgrade_veto_preserved": True,
+                "actionable_downgrade_veto_preserved": True,
+            },
+        )
+
     # NEW46: do not use CLASS_A itself as a generic H1 veto.  H1 is protected
     # only when CLASS_A is accompanied by one of two independently structured,
     # narrowly defined patch-mechanics signals plus the existing conservative
@@ -715,6 +754,17 @@ def h8(ctx: RuleContext) -> RuleEffect | None:
         or (ctx.actionable_primitive.upper() == "CLASS_B" and ctx.actionable_real_uaf)
     ):
         return None
+
+    # NEW70: H8 is a legacy automatic MODERATE -> LOW closure rule.  When the
+    # specialized ActionableScore analysis explicitly says that this crash/hang
+    # case is NOT eligible for crash-only LOW closure, H8 must not erase an
+    # already-existing MODERATE result.  This is preservation-only: it neither
+    # promotes LOW nor treats YES/UNKNOWN as new evidence.
+    if ctx.actionable_crash_only_low_eligible.upper() == "NO":
+        return RuleEffect(
+            trace="NEW70:H8_LOW_DOWNGRADE_BLOCKED_BY_ACTIONABLE_CRASH_ONLY_LOW_INELIGIBLE"
+        )
+
     return RuleEffect(
         severity=LOW,
         trace="H8:MOD->LOW(local_low_CIA+no_required_manual)",
@@ -988,6 +1038,16 @@ def as3(ctx: RuleContext) -> RuleEffect | None:
 def as4(ctx: RuleContext) -> RuleEffect | None:
     # PERL: AS<6 && HIGH && sc<=7 -> MODERATE7/KPANIC; dec_cnt++.
     #
+    # NEW64: if H1 preserved an existing IMPORTANT because ActionableScore
+    # explicitly vetoed automatic downgrade pending required manual review, AS4
+    # must not immediately erase that same preservation decision.
+    #
+    # NEW66: AS4 is itself an automatic IMPORTANT -> MODERATE boundary.  H1 does
+    # not run when CVSSSelectedScore is >=6.5, so the H1-only provenance cannot
+    # protect cases such as CVE-2025-40248 with CVSSSelectedScore=6.6.  Honor the
+    # same explicit ActionableScore contract directly here and set a pipeline-
+    # wide preservation latch for the later KPANIC precision review.
+    #
     # NEW47: if H11 just preserved IMPORTANT on the narrow strong-CLASS_A +
     # clean-fix condition, AS4 must not immediately erase the same decision
     # solely because the numeric ActionableScore is <6. This provenance veto
@@ -999,10 +1059,22 @@ def as4(ctx: RuleContext) -> RuleEffect | None:
         or s >= 6
         or ctx.severity != IMP
         or ctx.llm_cvss > 7.0
+        or ctx.h1_actionable_downgrade_veto_preserved
         or ctx.h11_clean_fix_preserved
         or ctx.h11_authorization_bypass_preserved
     ):
         return None
+
+    actionable_downgrade_veto = (
+        ctx.actionable_manual_review.upper() == "REQUIRED"
+        and not ctx.actionable_auto_downgrade_allowed
+    )
+    if actionable_downgrade_veto:
+        return RuleEffect(
+            trace="AS4_GUARD:actionable_auto_downgrade_veto",
+            flags={"actionable_downgrade_veto_preserved": True},
+        )
+
     return RuleEffect(
         severity=MOD,
         trace="AS4:IMP->MOD7(score<6+cvss<=7)",
@@ -1232,8 +1304,16 @@ def build_trace(
     alongside the reconciliation outcome for diagnostics and debugging.
     """
     parts = [
-        "path=kernel_threshold",
-        f"start={start_label}(clf_conf={ctx.clf_confidence:.2f})",
+        (
+            "path=kernel_threshold"
+            if ctx.classifier_available
+            else "path=kernel_no_classifier"
+        ),
+        (
+            f"start={start_label}(clf_conf={ctx.clf_confidence:.2f})"
+            if ctx.classifier_available
+            else f"start={start_label}(classifier=UNAVAILABLE)"
+        ),
         f"llm_cvss={ctx.llm_cvss:.1f}",
         f"cvss_source={ctx.llm_cvss_source}",
     ]
@@ -1265,8 +1345,16 @@ def build_trace(
             "actionable_authorization_bypass="
             + ("YES" if ctx.actionable_authorization_bypass else "NO")
         )
+        # NEW70.1 diagnostic only: expose the exact tri-state value consumed by
+        # the H8 preservation guard. This does not alter reconciliation semantics.
+        parts.append(
+            "actionable_crash_only_low_eligible="
+            + ctx.actionable_crash_only_low_eligible
+        )
         # AutoDowngradeAllowed is retained for diagnostics and participates
-        # only in narrowly defined preservation guards such as NEW46.
+        # in explicit preservation guards (NEW46 and NEW64). NEW64 uses the
+        # exact REQUIRED + NO pair only to preserve an existing IMPORTANT
+        # boundary; it never creates IMPORTANT severity.
 
     if actionable_applied:
         parts.append(f"actionable_rules=[{', '.join(actionable_applied)}]")
@@ -1276,6 +1364,14 @@ def build_trace(
     parts.append(f"lowered={'YES' if ctx.lowered else 'NO'}")
     parts.append(f"dec_cnt={ctx.decrease_count}")
     parts.append(f"pushed_to_high={'YES' if ctx.pushed_to_high else 'NO'}")
+    parts.append(
+        "h1_actionable_downgrade_veto_preserved="
+        + ("YES" if ctx.h1_actionable_downgrade_veto_preserved else "NO")
+    )
+    parts.append(
+        "actionable_downgrade_veto_preserved="
+        + ("YES" if ctx.actionable_downgrade_veto_preserved else "NO")
+    )
     parts.append(
         "h11_clean_fix_preserved=" + ("YES" if ctx.h11_clean_fix_preserved else "NO")
     )
@@ -1362,7 +1458,7 @@ def _effective_primary_nullptr_related(
 def reconcile_kernel(
     output,
     call_str: str,
-    classifier_result: dict,
+    classifier_result: dict | None,
     second_opinion=None,
 ) -> str:
     """Threshold-based severity reconciliation for kernel CVEs.
@@ -1382,9 +1478,10 @@ def reconcile_kernel(
         output: Mutable ``SuggestImpactModel`` namespace; ``impact``
             is updated in place.
         call_str: CVE identifier string used in log messages.
-        classifier_result: Dict from the XGBoost cascade containing
-            ``impact``, ``confidence``, ``cvss_score``, ``cvss_issuer``,
-            and ``active_features``.
+        classifier_result: Dict from the XGBoost cascade when a trusted
+            result is available, otherwise ``None``.  ``None`` does not mean
+            non-kernel: reconciliation starts from Primary LLM impact and the
+            full H/AS pipeline still runs without inventing classifier flags.
 
     Returns:
         A trace string describing the full reconciliation path.
@@ -1452,16 +1549,32 @@ def reconcile_kernel(
     # WHY:    Perl applies one post-LLM cascade to the pre-hints model
     #         severity; stacking R5-R12 + the Perl port obscures parity.
     # --------------------------------------------------------------
-    adjusted_clf_impact = classifier_result.get("impact")
-    clf_impact = classifier_result.get("raw_prediction") or adjusted_clf_impact
-    active_features: set[str] = set(classifier_result.get("active_features", []))
+    # NEW69: absence/discard of XGBoost is not evidence for MODERATE.
+    # Keep classifier contribution explicitly UNKNOWN and start from Primary
+    # LLM impact.  Classifier-only flags (including KPANIC) remain empty unless
+    # a real classifier result supplied them; we never synthesize evidence.
+    classifier_available = isinstance(classifier_result, dict)
+    classifier_data = classifier_result if classifier_available else {}
+    adjusted_clf_impact = classifier_data.get("impact")
+    clf_impact = classifier_data.get("raw_prediction") or adjusted_clf_impact
+    active_features: set[str] = set(classifier_data.get("active_features", []))
 
-    severity = (
-        SEVERITY_ORDER[clf_impact]
-        if clf_impact and clf_impact in SEVERITY_ORDER
-        else MOD
-    )
-    start_label = IMPACT_LABELS.get(severity, clf_impact)
+    if classifier_available and clf_impact in SEVERITY_ORDER:
+        severity = SEVERITY_ORDER[clf_impact]
+        start_label = IMPACT_LABELS.get(severity, clf_impact)
+    else:
+        primary_impact = str(getattr(output, "impact", "") or "").strip().upper()
+        severity = SEVERITY_ORDER.get(primary_impact, MOD)
+        start_label = (
+            f"PRIMARY_{IMPACT_LABELS.get(severity, primary_impact or 'MODERATE')}"
+        )
+        logger.info(
+            "%s: NEW69 kernel classifier unavailable/discarded; starting "
+            "kernel reconciliation from Primary impact=%s with no synthetic "
+            "classifier flags",
+            call_str,
+            IMPACT_LABELS.get(severity, primary_impact or "MODERATE"),
+        )
 
     # A.Larkin false-LOW calibration v1.
     #
@@ -1542,9 +1655,10 @@ def reconcile_kernel(
         ),
         av_local=llm_vector.get("AV") == "L",
         pr_h_only=llm_vector.get("PR") == "H",
-        clf_cvss_score=classifier_result.get("cvss_score", 0.0) or 0.0,
-        clf_cvss_issuer=classifier_result.get("cvss_issuer", "") or "",
-        clf_confidence=classifier_result.get("confidence", 0.0) or 0.0,
+        clf_cvss_score=classifier_data.get("cvss_score", 0.0) or 0.0,
+        clf_cvss_issuer=classifier_data.get("cvss_issuer", "") or "",
+        clf_confidence=classifier_data.get("confidence", 0.0) or 0.0,
+        classifier_available=classifier_available,
         actionable_score=effective_actionable_score,
         actionable_score_lower=(
             getattr(second_opinion, "actionable_score_lower", None)
@@ -1585,6 +1699,14 @@ def reconcile_kernel(
             getattr(second_opinion, "auto_downgrade_allowed", "NO") == "YES"
             if second_opinion is not None
             else False
+        ),
+        actionable_crash_only_low_eligible=(
+            str(
+                getattr(second_opinion, "crash_only_low_eligible", "UNKNOWN")
+                or "UNKNOWN"
+            ).upper()
+            if second_opinion is not None
+            else "UNKNOWN"
         ),
         actionable_recommended_impact=(
             getattr(second_opinion, "recommended_impact", "")
@@ -1731,6 +1853,18 @@ def reconcile_kernel(
     output._kernel_lowered = ctx.lowered
     output._kernel_decrease_count = ctx.decrease_count
     output._kernel_pushed_to_high = ctx.pushed_to_high
+    # NEW65: export NEW64 provenance so the later asynchronous KPANIC review
+    # cannot re-cross an IMPORTANT -> MODERATE boundary that H1 deliberately
+    # preserved under ManualReview=REQUIRED + AutoDowngradeAllowed=NO.
+    output._kernel_h1_actionable_downgrade_veto_preserved = (
+        ctx.h1_actionable_downgrade_veto_preserved
+    )
+    # NEW67: export the pipeline-wide ActionableScore downgrade-veto provenance.
+    # This may be set by H1 or AS4 and is consumed by both later asynchronous
+    # precision reviews.  It preserves an existing IMPORTANT boundary only.
+    output._kernel_actionable_downgrade_veto_preserved = (
+        ctx.actionable_downgrade_veto_preserved
+    )
     output._kernel_as8_cow_preservation = ctx.as8_cow_preservation
 
     # NEW29_AS4_DOWNGRADE_STATE: record literal AS4 execution only.
@@ -1969,7 +2103,30 @@ def apply_kpanic_llm_review(
         # diagnostic state truthful and let AFTERPUSHED run for an independent
         # diagnostic review; its existing AS8 provenance guard owns the later
         # severity-preservation decision.
-        if bool(getattr(output, "_kernel_as8_cow_preservation", False)):
+        # NEW67: H1 or AS4 may already have adjudicated this exact IMPORTANT ->
+        # MODERATE boundary using the specialized ActionableScore contract. A
+        # later KPANIC false-positive review may independently reject factual
+        # panic support, but it must not erase that preservation decision. This
+        # is provenance-only: it never promotes severity.
+        if bool(
+            getattr(
+                output,
+                "_kernel_actionable_downgrade_veto_preserved",
+                False,
+            )
+        ):
+            traces.append(
+                "NEW67:KPANIC_DOWNGRADE_BLOCKED_BY_ACTIONABLE_AUTODOWNGRADE_VETO"
+            )
+            logger.info(
+                "%s: NEW67 ActionableScore veto preserved IMPORTANT across "
+                "KPANIC review (allow_high_to_mod7=YES; panic_supported=%s; "
+                "operational KPANIC marker preserved=%s)",
+                call_str,
+                "YES" if review.kernel_panic_supported else "NO",
+                "YES" if kpanic_marked else "NO",
+            )
+        elif bool(getattr(output, "_kernel_as8_cow_preservation", False)):
             # NEW53: AS8 vetoes only the severity downgrade.  Preserve the
             # existing operational marker here as well; factual panic support is
             # carried independently by review.kernel_panic_supported.
@@ -2241,6 +2398,25 @@ def apply_afterpushed_llm_review(
             " guard=NEW44_B8_REMOTE_UNAUTHENTICATED_KERNEL_CRASH)"
         )
 
+    # NEW67: H1/AS4 may have preserved an existing IMPORTANT boundary because
+    # ActionableScore explicitly requires manual review and forbids automatic
+    # downgrade. AFTERPUSHED is another automatic precision review over the same
+    # unresolved evidence, so it must not re-cross that preserved boundary.
+    # Preservation-only: this latch never promotes MODERATE to IMPORTANT.
+    if bool(getattr(output, "_kernel_actionable_downgrade_veto_preserved", False)):
+        logger.info(
+            "%s: NEW67 ActionableScore veto preserved IMPORTANT across "
+            "AFTERPUSHED review (requested_downgrade=%s)",
+            call_str,
+            "YES" if review.downgrade_to_moderate7 else "NO",
+        )
+        return (
+            "afterpushed_llm_review(downgrade=NO,"
+            " result=IMPORTANT-retained,"
+            " guard=NEW67_ACTIONABLE_AUTODOWNGRADE_VETO); "
+            "NEW67:AFTERPUSHED_DOWNGRADE_BLOCKED_BY_ACTIONABLE_AUTODOWNGRADE_VETO"
+        )
+
     if not review.downgrade_to_moderate7:
         return "afterpushed_llm_review(downgrade=NO, result=IMPORTANT-retained)"
 
@@ -2436,6 +2612,50 @@ def apply_deferred_low_review(
     except (TypeError, ValueError):
         low_confidence = 0.0
     if not low_supported or low_confidence < 0.85:
+        return ""
+
+    # NEW62: LOW is destructive/auto-closing, so the specialized review is
+    # necessary but no longer sufficient for MODERATE -> LOW.  Require the
+    # independently selected ActionableScore CVSS (primary CVSS only as a
+    # compatibility fallback) to agree with the LOW band.  This prevents a
+    # no-panic verdict from turning an otherwise consistently MODERATE case
+    # into LOW merely because operational KPANIC was removed.
+    selected_cvss = getattr(second_opinion, "cvss_selected_score", None)
+    cvss_source = "actionable_selected"
+    if selected_cvss is None:
+        selected_cvss = getattr(output, "cvss3_score", None)
+        cvss_source = "primary_fallback"
+    if selected_cvss is None:
+        return ""
+    try:
+        selected_cvss_value = float(selected_cvss)
+    except (TypeError, ValueError):
+        return ""
+    if score_to_band(selected_cvss_value) != "LOW":
+        logger.info(
+            "%s: NEW62 deferred LOW blocked: selected CVSS %.1f (%s) is %s, not LOW",
+            call_str,
+            selected_cvss_value,
+            cvss_source,
+            score_to_band(selected_cvss_value),
+        )
+        return ""
+
+    # NEW59: numeric AS<3 is only LOW eligibility.  Do not let this late
+    # deferred rule erase an explicit semantic MODERATE recommendation from
+    # the same ActionableScore pass.  LOW auto-close now requires affirmative
+    # agreement from both the structured recommendation and the specialized
+    # review.  This keeps the richer recommendation authoritative over the
+    # coarse numeric threshold at the destructive MODERATE -> LOW boundary.
+    actionable_recommended = str(
+        getattr(second_opinion, "recommended_impact", "") or ""
+    ).upper()
+    if actionable_recommended != "LOW":
+        logger.info(
+            "%s: NEW59 deferred LOW blocked: recommended_impact=%s, not LOW",
+            call_str,
+            actionable_recommended or "UNSET",
+        )
         return ""
 
     primitive_for_primary_supersede = str(
@@ -2778,11 +2998,20 @@ def apply_crash_only_no_review_low_override(
     if not bool(getattr(output, "_kernel_kpanic_marked", False)):
         return ""
 
-    # Deliberately do NOT require manual_review_still_required=false here.
-    # NEW61a.2 exists because that KPANIC-review axis was observed to follow the
-    # mere existence of a demonstrated crash. The independent crash-context proof
-    # above is the narrow superseding signal. All high-impact/preservation gates
-    # remain hard vetoes.
+    # NEW73: NEW61a.2 is an automatic LOW-closure path, so it must not reopen
+    # LOW after NEW58 has already honored a confident specialized KPANIC safety
+    # veto.  Reuse NEW58's exact confidence threshold instead of introducing a
+    # new policy scale: either a confident explicit LOW-auto-close rejection or
+    # a confident still-required manual-review verdict is sufficient to block
+    # this MODERATE7 -> LOW override.  This is preservation-only; it never
+    # promotes above MODERATE and does not change the ActionableScore/H8 gates.
+    try:
+        low_confidence = float(getattr(review, "low_auto_close_confidence", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        low_confidence = 0.0
+    low_supported = bool(getattr(review, "low_auto_close_supported", False))
+    low_veto = (not low_supported) and low_confidence >= 0.85
+
     manual_required = bool(getattr(review, "manual_review_still_required", False))
     try:
         manual_confidence = float(
@@ -2790,6 +3019,18 @@ def apply_crash_only_no_review_low_override(
         )
     except (TypeError, ValueError):
         manual_confidence = 0.0
+    review_veto = manual_required and manual_confidence >= 0.85
+
+    if low_veto or review_veto:
+        trace = (
+            "NEW73:NEW61A2_LOW_CLOSURE_BLOCKED_BY_KPANIC_SAFETY_VETO("
+            f"low_supported={'YES' if low_supported else 'NO'},"
+            f"low_confidence={low_confidence:.2f},"
+            f"manual_review={'YES' if manual_required else 'NO'},"
+            f"manual_confidence={manual_confidence:.2f})"
+        )
+        logger.info("%s: %s", call_str, trace)
+        return trace
 
     output.impact = "LOW"
     output._kernel_lowered = True
@@ -3019,6 +3260,7 @@ def apply_final_low_safety_invariant(
     output,
     call_str: str,
     review,
+    second_opinion=None,
 ) -> str:
     """Fail closed when the independent post-reconciliation review rejects LOW.
 
@@ -3054,6 +3296,15 @@ def apply_final_low_safety_invariant(
     if not (low_veto or review_veto):
         return ""
 
+    # NEW71: a high-confidence specialized KPANIC closure veto is final for
+    # automatic LOW.  NEW63 previously allowed a narrow CLASS_C/AS<=1 profile
+    # to bypass this function even when the later, more specialized review had
+    # explicitly concluded low_auto_close_supported=false and/or that manual
+    # review was still required.  That inverted the intended review ordering:
+    # earlier ActionableScore evidence could erase a later closure-specific
+    # verdict.  Preserve the specialized veto here; this still never promotes
+    # above MODERATE, and review_veto alone controls the MODERATE7 marker below.
+
     output.impact = "MODERATE"
 
     # NEW57's independent review verdict owns routing only.  Preserve/create
@@ -3083,6 +3334,48 @@ def apply_final_low_safety_invariant(
 #: Canonical ordering of CVSS v3.1 base metric keys used when
 #: reconstructing a vector string from individual metric values.
 _CVSS_BASE_KEYS = ("AV", "AC", "PR", "UI", "S", "C", "I", "A")
+
+
+def _merge_final_cvss_risk_metrics(
+    selected_vector: str, primary_vector: str
+) -> tuple[str, list[str]]:
+    """NEW68: conservatively merge only final analyst-facing CVSS metrics.
+
+    ``CVSSSelected`` remains authoritative for the impact/reconciliation pipeline.
+    This helper is intentionally used only by the late CVSS output override, after
+    impact has already been decided, so H1-H15, AS1-AS8, KPANIC/AFTERPUSHED review
+    gates, and severity bookkeeping cannot change because of this merge.
+
+    For the final analyst hint, prefer the more security-conservative value when
+    Primary and Selected disagree on the metrics most likely to understate risk:
+    AV (N > A > L > P), PR (N > L > H), and C/I/A (H > L > N).  AC, UI and S
+    remain exactly as chosen by CVSSSelected.  The intent is triage-oriented: when
+    two independent assessments disagree, it is safer for the analyst to see the
+    higher supported CVSS risk and correct it downward if appropriate than for the
+    automated hint to silently understate it.  This is presentation/CVSS logic only
+    and MUST NOT be treated as evidence for, or promotion of, kernel impact.
+    """
+    selected = cvss.CVSS3(selected_vector)
+    primary = cvss.CVSS3(primary_vector)
+    merged = dict(selected.metrics)
+    changed: list[str] = []
+
+    risk_order = {
+        "AV": {"P": 0, "L": 1, "A": 2, "N": 3},
+        "PR": {"H": 0, "L": 1, "N": 2},
+        "C": {"N": 0, "L": 1, "H": 2},
+        "I": {"N": 0, "L": 1, "H": 2},
+        "A": {"N": 0, "L": 1, "H": 2},
+    }
+    for metric, order in risk_order.items():
+        selected_value = merged[metric]
+        primary_value = primary.metrics[metric]
+        if order[primary_value] > order[selected_value]:
+            merged[metric] = primary_value
+            changed.append(f"{metric}:{selected_value}->{primary_value}")
+
+    vector = "CVSS:3.1/" + "/".join(f"{key}:{merged[key]}" for key in _CVSS_BASE_KEYS)
+    return vector, changed
 
 
 def apply_kpanic_cvss_override(
@@ -3133,10 +3426,11 @@ def apply_kpanic_cvss_override(
         )
         return ""
 
-    if not classifier_result or not isinstance(classifier_result, dict):
-        return None
-
-    active_features: set[str] = set(classifier_result.get("active_features", []))
+    # NEW69: an unavailable XGBoost result must not disable final CVSS handling
+    # for a kernel CVE.  Missing classifier data contributes no literal KPANIC
+    # evidence; IMPORTANT and the final mutable operational marker still work.
+    classifier_data = classifier_result if isinstance(classifier_result, dict) else {}
+    active_features: set[str] = set(classifier_data.get("active_features", []))
     literal_kpanic = (
         "kernel_panic" in active_features or "kernel_panic_plus_uaf" in active_features
     )
@@ -3194,6 +3488,29 @@ def apply_kpanic_cvss_override(
                 effective_vector = selected_vector
                 effective_score = selected_score_from_vector
                 cvss_source = "second_opinion_selected"
+
+                # NEW68: improve only the final analyst-facing CVSS.  Do not feed
+                # this conservative merge back into reconciliation/impact logic.
+                try:
+                    merged_vector, merged_metrics = _merge_final_cvss_risk_metrics(
+                        selected_vector, primary_vector
+                    )
+                    if merged_metrics:
+                        effective_vector = merged_vector
+                        effective_score = float(cvss.CVSS3(merged_vector).scores()[0])
+                        cvss_source = "second_opinion_selected+primary_final_risk_merge"
+                        logger.info(
+                            "%s: NEW68 final CVSS risk merge applied: %s",
+                            call_str,
+                            ",".join(merged_metrics),
+                        )
+                except Exception as exc:
+                    logger.warning(
+                        "%s: NEW68 final CVSS risk merge failed; keeping exact "
+                        "second-opinion selected CVSS: %s",
+                        call_str,
+                        exc,
+                    )
             except Exception as exc:
                 logger.warning(
                     "%s: invalid second-opinion selected CVSS at kpanic override "
