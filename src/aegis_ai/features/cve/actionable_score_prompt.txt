@@ -76,7 +76,70 @@ AutoDowngradeAllowed=NO solely from the paranoid interpretation.
 To block downgrade, identify at least one concrete Important-preserving fact from
 the technical evidence. The explanation MUST name that fact. If no such
 fact can be named without words such as "could", "may", "potentially", or by
-repeating CVSS metrics, prefer AutoDowngradeAllowed=YES.
+repeating CVSS metrics, prefer AutoDowngradeAllowed=YES, EXCEPT for the narrow
+UNRESOLVED UPSTREAM MEMORY-SAFETY PRESERVATION rule below.
+
+5A. UNRESOLVED UPSTREAM MEMORY-SAFETY PRESERVATION (NARROW DOWNGRADE VETO).
+Do not collapse "not concretely proven" into "concretely absent". RealUAF=NO
+means the strict RealUAF definition below was not positively established; it does
+NOT by itself prove that a technically supported lifetime/corruption consequence
+is impossible.
+
+Set AutoDowngradeAllowed=NO as a preservation-only decision when ALL or nearly
+all of the following are established from non-generated upstream/patch/call-path
+evidence:
+* the vulnerable mechanics themselves are concrete (for example an established
+  socket/object state transition permits transport/object drop, replacement,
+  reassignment, teardown, or loss of lifetime protection while concurrent users
+  remain active);
+* the authoritative commit/patch discussion explicitly connects those SAME
+  mechanics to a memory-safety consequence such as use-after-free, OOB access,
+  memory corruption, or another stale-object/lifetime failure;
+* the memory-safety consequence is mechanistically credible from the supplied
+  control/lifetime path but the evidence is insufficient to satisfy the stricter
+  RealUAF=YES / CLASS_A / demonstrated exploitation criteria;
+* the primary assessment is already IMPORTANT, or another supplied assessment
+  places the case on an Important-vs-Moderate boundary;
+* ManualReview=REQUIRED specifically because resolving that memory-safety
+  consequence can change the Important-vs-Moderate decision; and
+* the supplied evidence does NOT positively establish that the consequence is
+  bounded to crash-only behavior.
+
+For this narrow profile:
+* AutoDowngradeAllowed=NO is a downgrade-safety veto, NOT a positive exploitation
+  signal and NOT an ActionableScore point;
+* RealUAF may remain NO when the exact post-lifetime stale-object access is not
+  established; do not manufacture RealUAF=YES merely to preserve severity;
+* PrimitiveClass may remain CLASS_C when no concrete lifetime/corruption primitive
+  satisfies CLASS_B; do not manufacture CLASS_B or CLASS_A;
+* ImportantCandidate may remain NO when Important-grade exploitation leverage is
+  unresolved rather than established;
+* do NOT infer C:H/I:H, disclosure, arbitrary write, LPE, controlled reclaim, or
+  code execution from the preservation decision;
+* do NOT rewrite C/I to N solely because the exact exploitation chain is absent.
+  Score C/I from independently supported consequences; when C/I remain unresolved,
+  describe that uncertainty explicitly rather than treating absence of proof as
+  proof of no impact;
+* preserve the existing IMPORTANT/MODERATE boundary for manual review instead of
+  automatically converting the case to crash-only CLASS_C solely because a
+  concrete stale-object access or exploitation chain is not shown.
+
+Do NOT apply this rule for:
+* a generic UAF/OOB/memory-corruption label with no concrete vulnerable mechanics;
+* generated PRIMARY LLM speculation as the only support;
+* generic "may lead to UAF/LPE" prose disconnected from the patch/control path;
+* cases where the patch/reproducer positively demonstrates only a bounded NULL
+  dereference, WARN, ordinary crash, or other crash-only outcome and provides no
+  credible unresolved memory-safety path;
+* generic double-free/repeated-release cases covered by a stricter FINAL override
+  below; those overrides still control unless an independent preservation mechanism
+  exists.
+
+The key epistemic rule is:
+    absence of proof of the stronger primitive != proof that the stronger
+    technically supported consequence is absent.
+Use this rule only to prevent an unsafe automatic downgrade; never use it to
+manufacture a stronger primitive or a higher score.
 VALIDATION-DERIVED GEMINI CALIBRATION
 These rules refine scoring without changing the set of positive/negative signal
 types.
@@ -643,14 +706,20 @@ not by itself justify YES. Classify the complete trigger chain.
 ImportantCandidate=YES requires CLASS_A or strong CLASS_B unresolved non-crash
 leverage; constrained crash-only CLASS_B may be NO.
 ManualReview and AutoDowngradeAllowed are independent; REQUIRED+YES is valid.
-AutoDowngradeAllowed=NO requires a concrete conservative Important-preserving fact:
-controlled/strong CLASS_A/B exploitation leverage, structured active-object reuse,
-meaningful repeated-lifetime corruption beyond ordinary double free, COW/shared-page
-ownership violation, practical authorization-boundary bypass, controlled sensitive
-target corruption, or demonstrated disclosure/protected-state modification/LPE/
-resource theft. Labels, review status, bug class, CVSS metrics, generic corruption,
-or theoretical exploitation never suffice alone. Use YES when conservative evidence
-is Moderate-like and stronger leverage is speculative.
+AutoDowngradeAllowed=NO normally requires a concrete conservative
+Important-preserving fact: controlled/strong CLASS_A/B exploitation leverage,
+structured active-object reuse, meaningful repeated-lifetime corruption beyond
+ordinary double free, COW/shared-page ownership violation, practical authorization-
+boundary bypass, controlled sensitive target corruption, or demonstrated disclosure/
+protected-state modification/LPE/resource theft. Labels, review status, bug class,
+CVSS metrics, generic corruption, or theoretical exploitation never suffice alone.
+Use YES when conservative evidence is Moderate-like and stronger leverage is merely
+speculative. NARROW EXCEPTION: rule 5A may set AutoDowngradeAllowed=NO without
+asserting a stronger primitive when concrete vulnerable mechanics plus authoritative
+upstream evidence establish an unresolved memory-safety consequence whose resolution
+materially controls an existing IMPORTANT-vs-MODERATE decision and therefore
+requires ManualReview=REQUIRED. This exception is preservation-only: it adds no score, does not force RealUAF=YES or ImportantCandidate=YES,
+and does not itself establish C/I impact.
 MANDATORY FINAL CONSISTENCY CHECK / GEMINI OVERRIDES
 These override permissive examples. Re-check every C/I, Weak/Strong LPE, CLASS_A,
 high-control-API, ImportantCandidate, and AutoDowngradeAllowed=NO signal after
