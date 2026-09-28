@@ -164,6 +164,14 @@ class KernelSecondOpinionModel(BaseModel):
     manual_review: Literal["NO", "RECOMMENDED", "REQUIRED"]
     auto_downgrade_allowed: Literal["YES", "NO"]
 
+    # NEW70.1: structured crash-only closure metadata from the ActionableScore
+    # machine header. Defaults preserve fail-open compatibility with older or
+    # stochastic responses that omit these fields. Only an explicit NO for
+    # crash_only_low_eligible is allowed to veto H8 in kernel.py.
+    crash_reachability: str = "UNKNOWN"
+    crash_trigger_privilege: str = "UNKNOWN"
+    crash_only_low_eligible: Literal["YES", "NO", "UNKNOWN"] = "UNKNOWN"
+
     # A.Larkin second-opinion selected CVSS plumbing.
     # Optional by design: malformed/missing experimental CVSS must not discard
     # an otherwise useful ActionableScore result. kernel.py falls back to the
@@ -529,6 +537,20 @@ def _parse_actionable_score_response(
     manual_review = required("ManualReview")
     auto_downgrade = required("AutoDowngradeAllowed")
 
+    # NEW70.1: these machine-header fields are prompt-mandated, but parse them
+    # fail-open for compatibility with older/stochastic ActionableScore output.
+    # Missing fields must never manufacture eligibility for automatic LOW.
+    crash_reachability = optional("CrashReachability") or "UNKNOWN"
+    crash_trigger_privilege = optional("CrashTriggerPrivilege") or "UNKNOWN"
+    crash_only_low_eligible = optional("CrashOnlyLowEligible") or "UNKNOWN"
+    if crash_only_low_eligible not in {"YES", "NO", "UNKNOWN"}:
+        logger.warning(
+            "%s: ACTIONABLE_SCORE invalid CrashOnlyLowEligible=%r; using UNKNOWN",
+            call_str,
+            crash_only_low_eligible,
+        )
+        crash_only_low_eligible = "UNKNOWN"
+
     # Parse the independently computed selected CVSS emitted AFTER the
     # ActionableScore section. Fail open: bad/missing experimental CVSS keeps
     # the ActionableScore result and reconciliation falls back to primary CVSS.
@@ -652,6 +674,9 @@ def _parse_actionable_score_response(
         important_candidate=cast(Literal["YES", "NO"], important_candidate),
         manual_review=cast(Literal["NO", "RECOMMENDED", "REQUIRED"], manual_review),
         auto_downgrade_allowed=cast(Literal["YES", "NO"], auto_downgrade),
+        crash_reachability=crash_reachability,
+        crash_trigger_privilege=crash_trigger_privilege,
+        crash_only_low_eligible=crash_only_low_eligible,
         cvss_selected_score=cvss_selected_score,
         cvss_selected_vector=cvss_selected_vector,
         final_bucket=final_bucket,
@@ -662,7 +687,8 @@ def _parse_actionable_score_response(
     logger.info(
         "%s: ACTIONABLE_SCORE parsed score=%s lower=%s "
         "primitive=%s important_candidate=%s manual_review=%s "
-        "auto_downgrade=%s selected_cvss=%s selected_vector=%s "
+        "auto_downgrade=%s crash_reachability=%s crash_trigger_privilege=%s "
+        "crash_only_low_eligible=%s selected_cvss=%s selected_vector=%s "
         "bucket=%s mapped_impact=%s",
         call_str,
         parsed.actionable_score,
@@ -671,6 +697,9 @@ def _parse_actionable_score_response(
         parsed.important_candidate,
         parsed.manual_review,
         parsed.auto_downgrade_allowed,
+        parsed.crash_reachability,
+        parsed.crash_trigger_privilege,
+        parsed.crash_only_low_eligible,
         parsed.cvss_selected_score,
         parsed.cvss_selected_vector,
         parsed.final_bucket,
@@ -823,17 +852,19 @@ class SuggestImpact(Feature):
         call_str,
         classifier_result=None,
         second_opinion=None,
+        is_kernel: bool = False,
     ) -> str:
         """Bidirectional severity reconciliation.
 
         Dispatches to one of two paths:
 
-        **Kernel path** (classifier_result present): threshold-based
-        reconciliation ported from al-kernel.  The classifier's
-        cascade-adjusted prediction is the starting severity; the LLM's
-        own CVSS score drives deterministic threshold rules (H1–H11).
+        **Kernel path** (kernel CVE): threshold-based reconciliation ported
+        from al-kernel.  A trusted classifier prediction is the preferred
+        starting severity.  If XGBoost is unavailable/discarded, the kernel
+        pipeline still runs and starts from the Primary LLM impact instead;
+        missing classifier evidence is never synthesized as MODERATE/KPANIC.
 
-        **Non-kernel path** (no classifier): LLM self-consistency check.
+        **Non-kernel path**: LLM self-consistency check.
         If the LLM's stated impact matches its CVSS band, keep it.  If
         they disagree, trust the CVSS band (quantitative > qualitative).
         In both cases, CRITICAL is capped to IMPORTANT unless the
@@ -846,11 +877,14 @@ class SuggestImpact(Feature):
 
         Returns a trace string explaining the decision.
         """
-        if classifier_result and isinstance(classifier_result, dict):
+        # NEW69: kernel-ness and classifier availability are independent.
+        # A low-confidence/empty XGBoost result must not route a real kernel
+        # CVE through the generic non-kernel reconciliation path.
+        if is_kernel or (classifier_result and isinstance(classifier_result, dict)):
             return reconcile_kernel(
                 output,
                 call_str,
-                classifier_result,
+                classifier_result if isinstance(classifier_result, dict) else None,
                 second_opinion=second_opinion,
             )
 
@@ -1014,9 +1048,6 @@ class SuggestImpact(Feature):
         We parse that text locally and map the final semantic bucket to
         MODERATE or IMPORTANT.
         """
-
-        if not classifier_result or not isinstance(classifier_result, dict):
-            return None
 
         if not kernel_context:
             logger.warning(
@@ -2268,6 +2299,7 @@ class SuggestImpact(Feature):
             call_str,
             classifier_result=classifier_result,
             second_opinion=second_opinion,
+            is_kernel=True,
         )
 
         kpanic_review = await self._experimental_kernel_kpanic_review(
@@ -2330,6 +2362,7 @@ class SuggestImpact(Feature):
             result.output,
             call_str,
             kpanic_review,
+            second_opinion=second_opinion,
         )
         if final_low_safety_trace:
             trace = f"{trace}; {final_low_safety_trace}"
@@ -2337,9 +2370,9 @@ class SuggestImpact(Feature):
         # NEW61a.2: factual crash evidence and operational review routing are
         # independent axes.  After the general NEW58 fail-closed invariant,
         # permit only the narrow AS<=1/CLASS_C crash-only case where the
-        # ActionableScore independently proves a safe crash context. This may
-        # supersede a crash-correlated KPANIC manual-review verdict, but never
-        # preservation/high-impact or unprivileged-runtime evidence.
+        # ActionableScore independently proves a safe crash context. NEW73 keeps
+        # a confident specialized KPANIC LOW/manual-review safety veto final, so
+        # NEW61a.2 cannot reopen LOW after NEW58 preserved MODERATE/MODERATE7.
         crash_only_low_trace = apply_crash_only_no_review_low_override(
             result.output,
             call_str,
@@ -2497,11 +2530,19 @@ class SuggestImpact(Feature):
         # end of "Inserted by A.Larkin, dirty hack"
 
         impact_changed = result.output.impact != original_impact
+        score_changed = result.output.cvss3_score != original_score
         vector_changed = result.output.cvss3_vector != original_vector
-        guardrail_fired = classifier_result is not None and (
-            impact_changed or vector_changed
-        )
-        if guardrail_fired:
+
+        # NEW72: explanation synchronization belongs to post-processing, not to
+        # classifier availability.  A kernel classifier result may legitimately
+        # be unavailable/discarded (NEW69) while ActionableScore/KPANIC still
+        # changes the exported impact or CVSS.  In that case the old classifier
+        # gate left the primary explanation describing stale metrics (for
+        # example C:N/I:N beside a reconciled C:L/I:L vector).  Reuse the
+        # existing best-effort revision path whenever the exported result
+        # actually changed; no new CVSS or severity decision is introduced.
+        postprocessing_changed = impact_changed or score_changed or vector_changed
+        if postprocessing_changed:
             result.output._explanation_revised = await self._revise_explanation(
                 result,
                 original_score,
