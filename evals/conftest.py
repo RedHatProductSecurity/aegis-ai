@@ -261,6 +261,9 @@ def override_osidb_toolset():
     wrapped = ts.redhat_cve_toolset.wrapped
     if isinstance(wrapped, CombinedToolset):
         wrapped.toolsets[0] = cached  # type:ignore
+        # Drop the optional osidb_component_toolset so component tools
+        # cannot bypass the cached fixture and hit live OSIDB.
+        wrapped.toolsets[1:] = []  # type:ignore
 
 
 @pytest.fixture(scope="session", autouse=True)
