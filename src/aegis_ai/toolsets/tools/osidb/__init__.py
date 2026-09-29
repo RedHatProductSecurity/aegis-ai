@@ -399,9 +399,12 @@ async def component_flaw_tool(
         return []
 
 
-toolset: FunctionToolset[feature_deps] = FunctionToolset(
-    tools=[flaw_tool, component_count_tool, component_flaw_tool],
+_core_toolset: FunctionToolset[feature_deps] = FunctionToolset(
+    tools=[flaw_tool],
 )
+osidb_toolset = _core_toolset.prefixed("osidb")
 
-# osidb toolset
-osidb_toolset = toolset.prefixed("osidb")
+_component_toolset: FunctionToolset[feature_deps] = FunctionToolset(
+    tools=[component_count_tool, component_flaw_tool],
+)
+osidb_component_toolset = _component_toolset.prefixed("osidb")
