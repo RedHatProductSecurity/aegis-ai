@@ -310,6 +310,92 @@ class TestBuildCveInput:
         assert "None" not in r
         assert "components" not in r
 
+    def test_exclude_fields_nulls_matching_fields(self):
+        ctx = {
+            "title": "kernel: buffer overflow",
+            "comment_zero": "A flaw was found.",
+            "impact": "IMPORTANT",
+            "cwe_id": "CWE-120",
+            "statement": "Red Hat is aware.",
+            "mitigation": "Disable the module.",
+            "components": ["kernel"],
+            "affects": [{"ps_module": "rhel-9"}],
+        }
+        result = cve._build_cve_input(
+            "CVE-2025-1234", ctx, exclude_fields=["impact", "statement", "mitigation"]
+        )
+        assert result.title == "kernel: buffer overflow"
+        assert result.cwe_id == "CWE-120"
+        assert result.impact is None
+        assert result.statement is None
+        assert result.mitigation is None
+        assert result.components == ["kernel"]
+
+    def test_exclude_fields_rh_cvss_score_filters_rh_only(self):
+        ctx = {
+            "title": "test",
+            "comment_zero": "desc",
+            "cvss_scores": [
+                {
+                    "issuer": "RH",
+                    "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                },
+                {
+                    "issuer": "NIST",
+                    "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:L",
+                },
+            ],
+        }
+        result = cve._build_cve_input(
+            "CVE-2025-1234", ctx, exclude_fields=["rh_cvss_score"]
+        )
+        assert result.cvss_scores == [
+            {
+                "issuer": "NIST",
+                "vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:L",
+            },
+        ]
+
+    def test_exclude_fields_all_cvss_scores_nulls_cvss_scores(self):
+        ctx = {
+            "title": "test",
+            "comment_zero": "desc",
+            "cvss_scores": [
+                {
+                    "issuer": "NIST",
+                    "vector": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                }
+            ],
+        }
+        result = cve._build_cve_input(
+            "CVE-2025-1234", ctx, exclude_fields=["all_cvss_scores"]
+        )
+        assert result.cvss_scores is None
+
+    def test_exclude_fields_cve_description_maps_to_description(self):
+        ctx = {"title": "test", "comment_zero": "main desc"}
+        result = cve._build_cve_input(
+            "CVE-2025-1234", ctx, exclude_fields=["cve_description"]
+        )
+        assert result.description is None
+
+    def test_exclude_fields_unknown_field_ignored(self):
+        ctx = {"title": "test", "comment_zero": "desc", "impact": "LOW"}
+        result = cve._build_cve_input(
+            "CVE-2025-1234", ctx, exclude_fields=["nonexistent_field"]
+        )
+        assert result.impact == "LOW"
+
+    def test_exclude_fields_empty_list_noop(self):
+        ctx = {"title": "test", "comment_zero": "desc", "impact": "LOW"}
+        result = cve._build_cve_input("CVE-2025-1234", ctx, exclude_fields=[])
+        assert result.impact == "LOW"
+
+    def test_exclude_fields_none_noop(self):
+        ctx = {"title": "test", "comment_zero": "desc", "impact": "LOW"}
+        result = cve._build_cve_input("CVE-2025-1234", ctx)
+        assert result.impact == "LOW"
+
 
 def _fake_agent_run_result(tool_names):
     """Build a minimal AgentRunResult stub with the given tool call names."""

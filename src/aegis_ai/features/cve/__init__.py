@@ -37,14 +37,18 @@ from aegis_ai.toolsets.tools.cwe import cwe_manager
 logger = logging.getLogger(__name__)
 
 
-def _build_cve_input(cve_id: CVEID, static_context: Any = None) -> CVEFeatureInput:
+def _build_cve_input(
+    cve_id: CVEID,
+    static_context: Any = None,
+    exclude_fields: list[str] | None = None,
+) -> CVEFeatureInput:
     if isinstance(static_context, dict):
         desc = (
             static_context.get("comment_zero")
             or static_context.get("cve_description")
             or static_context.get("description")
         )
-        return CVEFeatureInput(
+        inp = CVEFeatureInput(
             cve_id=cve_id,
             title=static_context.get("title"),
             description=desc,
@@ -59,7 +63,28 @@ def _build_cve_input(cve_id: CVEID, static_context: Any = None) -> CVEFeatureInp
             affects=static_context.get("affects"),
             cvss_scores=static_context.get("cvss_scores"),
         )
-    return CVEFeatureInput(cve_id=cve_id)
+    else:
+        inp = CVEFeatureInput(cve_id=cve_id)
+
+    if exclude_fields:
+        updates: dict[str, Any] = {}
+        for field_name in exclude_fields:
+            normalized = field_name.replace("cve_description", "description")
+            if normalized == "all_cvss_scores":
+                updates["cvss_scores"] = None
+            elif normalized == "rh_cvss_score":
+                if inp.cvss_scores is not None:
+                    updates["cvss_scores"] = [
+                        s
+                        for s in inp.cvss_scores
+                        if not (isinstance(s, dict) and s.get("issuer") == "RH")
+                    ]
+            elif normalized in CVEFeatureInput.model_fields:
+                updates[normalized] = None
+        if updates:
+            inp = inp.model_copy(update=updates)
+
+    return inp
 
 
 # Classifier feature -> OSIDB label name.
@@ -448,15 +473,16 @@ class SuggestImpact(Feature):
         else:
             pre_clf = None
 
+        exclude = [
+            "affects",
+            "impact",
+            "mitigation",
+            "rh_cvss_score",
+            "statement",
+        ]
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=[
-                "affects",
-                "impact",
-                "mitigation",
-                "rh_cvss_score",
-                "statement",
-            ],
+            exclude_osidb_fields=exclude,
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
             classifier_attempted=use_kernel_classifier and is_kernel,
@@ -483,7 +509,7 @@ class SuggestImpact(Feature):
             rules=self._RULES_BASE + RULES_KERNEL_ADDENDUM
             if is_kernel
             else self._RULES_BASE,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=output_schema,
         )
 
@@ -538,9 +564,10 @@ class SuggestCWE(Feature):
     """Based on current CVE information and context assert CWE(s)."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        exclude = ["cwe_id"]
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=["cwe_id"],
+            exclude_osidb_fields=exclude,
             static_context=static_context,
         )
 
@@ -569,7 +596,7 @@ class SuggestCWE(Feature):
                 - explanation: 1–2 sentences connecting CVE details to the CWE.
                 - confidence: [0.00..1.00].
             """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestCWEModel.model_json_schema(),
         )
 
@@ -594,7 +621,8 @@ class IdentifyPII(Feature):
     """Based on current CVE information (public comments, description, statement) and context assert if it contains any PII."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=[])
+        exclude: list[str] = []
+        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=exclude)
         prompt = AegisPrompt(
             user_instruction="Examine the CVE JSON and identify any PII (names, emails, phone numbers, IDs, IPs, health/genetic info, etc.).",
             goals="""
@@ -613,7 +641,7 @@ class IdentifyPII(Feature):
                 
                 Only report PII present in the JSON. Do not add extra text or line breaks like \n inside items.
             """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=PIIReportModel.model_json_schema(),
         )
         return await self.guarded_run(prompt, deps=deps, output_type=PIIReportModel)
@@ -623,9 +651,10 @@ class SuggestDescriptionText(Feature):
     """Based on current CVE information and context suggest a description and title."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        exclude = ["title", "cve_description"]
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=["title", "cve_description"],
+            exclude_osidb_fields=exclude,
             static_context=static_context,
         )
         prompt = AegisPrompt(
@@ -665,7 +694,7 @@ class SuggestDescriptionText(Feature):
                 - 'description' and 'title' need to be consistent with each other.
                 - Never output meta-diagnostic text such as "information is inconsistent", "insufficient data", "cannot determine", or similar. Provide the best-supported description instead with calibrated confidence.
             """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestDescriptionModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -677,9 +706,10 @@ class SuggestStatementText(Feature):
     """Based on current CVE information and context suggest a statement and mitigation."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        exclude = ["statement", "mitigation"]
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=["statement", "mitigation"],
+            exclude_osidb_fields=exclude,
             static_context=static_context,
         )
         NO_MITIGATION_TEXT = (
@@ -748,7 +778,7 @@ class SuggestStatementText(Feature):
               "{NO_MITIGATION_TEXT}"
             - Length: < 2000 characters.
             """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestStatementModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -773,9 +803,10 @@ class SuggestAffectedComponents(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
+        exclude = ["affects", "components"]
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=["affects", "components"],
+            exclude_osidb_fields=exclude,
             static_context=static_context if use_static else None,
         )
         prompt = AegisPrompt(
@@ -813,7 +844,7 @@ class SuggestAffectedComponents(Feature):
                 - For Go packages outside stdlib, always use the full module path (e.g. 'github.com/external-secrets/external-secrets', 'golang.org/x/net/html'). Never shorten to just the repo name. Strip Go major-version suffixes like /v2, /v7 from the path.
                 - Output format: components (list of strings), ecosystems (list of strings), explanation (string), confidence (0.00–1.00).
             """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -825,7 +856,8 @@ class CVSSDiffExplainer(Feature):
     """Based on current CVE information and context explain CVSS score diff between nvd and rh."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
-        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=[])
+        exclude: list[str] = []
+        deps = feature_deps(cve_id=str(cve_id), exclude_osidb_fields=exclude)
         prompt = AegisPrompt(
             user_instruction="Compare Red Hat CVSS3 vs NVD CVSS3 for the CVE and explain any differences.",
             goals="""
@@ -837,7 +869,7 @@ class CVSSDiffExplainer(Feature):
                 - Expand especially on *why* the metrics are different in the Red Hat context.
                 - Keep the rationale brief and factual. If no difference, return an empty explanation.
             """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=CVSSDiffExplainerModel.model_json_schema(),
         )
         return await self.guarded_run(
@@ -934,9 +966,10 @@ class QualityReview(Feature):
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         """Run the quality review rubric against the given CVE flaw content."""
+        exclude: list[str] = []
         deps = feature_deps(
             cve_id=str(cve_id),
-            exclude_osidb_fields=[],
+            exclude_osidb_fields=exclude,
             static_context=static_context,
         )
 
@@ -1220,7 +1253,7 @@ The three core questions every review must address:
 - The explanation field should provide a brief summary of the quality review findings, highlighting the most significant strengths and gaps.
 - The disclaimer field MUST be exactly: "This response was generated by Aegis AI (https://github.com/RedHatProductSecurity/aegis-ai) using generative AI for informational purposes. All findings should be validated by a human expert."
 """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=QualityReviewModel.model_json_schema(),
         )
 
@@ -1265,8 +1298,11 @@ class SuggestAffectedPackages(Feature):
             and isinstance(static_context.get("affects"), list)
             else None
         )
+        exclude: list[str] = []
         deps = feature_deps(
-            cve_id=str(cve_id), exclude_osidb_fields=[], static_context=deps_context
+            cve_id=str(cve_id),
+            exclude_osidb_fields=exclude,
+            static_context=deps_context,
         )
         prompt = AegisPrompt(
             user_instruction=(
@@ -1298,7 +1334,7 @@ class SuggestAffectedPackages(Feature):
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
 """,
-            context=_build_cve_input(cve_id, static_context),
+            context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestAffectedPackagesModel.model_json_schema(),
         )
 
