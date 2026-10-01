@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.9.4] - 2026-10-01
+
+### Changed
+- gated OSIDB component tools (`component_count_tool`, `component_flaw_tool`) behind `AEGIS_USE_OSIDB_COMPONENT_TOOL_CONTEXT`, disabled by default, to reduce Aegis latency [\[AEGIS-522\]](https://redhat.atlassian.net/browse/AEGIS-522)
+- excluded `statement` and `mitigation` fields from `suggest-impact` input context, as these are typically empty when impact is being suggested in practice [\[AEGIS-516\]](https://redhat.atlassian.net/browse/AEGIS-516)
+
+### Added
+- added build system toolset for binary RPM enumeration via Deptopia/Koji, with pre-aggregated lookups to avoid LLM timeouts, gated behind `AEGIS_USE_BUILD_SYSTEM_TOOL_CONTEXT` [\[AEGIS-491\]](https://redhat.atlassian.net/browse/AEGIS-491)
+- added script to update kernel evals CSV from live OSIDB [\[AEGIS-511\]](https://redhat.atlassian.net/browse/AEGIS-511)
+
+### Fixed
+- `suggest-affected-components` now distinguishes vulnerable components from merely mentioned ones, reducing false affects [\[AEGIS-500\]](https://redhat.atlassian.net/browse/AEGIS-500)
+- excluded OSIDB fields are now also filtered from the prompt context, not just from tool responses, preventing the LLM from seeing ground-truth data it should predict [\[AEGIS-516\]](https://redhat.atlassian.net/browse/AEGIS-516)
+- fixed `osidb-bot` state tracking: use search-time `updated_dt` to avoid a TOCTOU race that silently skipped CVEs updated meanwhile [\[AEGIS-518\]](https://redhat.atlassian.net/browse/AEGIS-518)
+
+
 ## [0.9.3] - 2026-09-24
 
 ### Fixed
