@@ -24,7 +24,14 @@ from aegis_ai.features.cve.impact_mappings import (
     score_impact_diff,
 )
 from aegis_ai.state_file import StateFileHandler
-from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIResponse
+from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIEntry, BotKPIResponse
+from aegis_ai_web.src.endpoints.kpi_filters import (
+    NO_RECORD_FILTERS,
+    KPIRecordFilters,
+)
+from aegis_ai_web.src.endpoints.kpi_filters import (
+    timestamp_in_range as _timestamp_in_range,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +143,8 @@ class BotKPIResult:
     total_flaws_processed: int = 0
     features: dict[str, FeatureStats] = field(default_factory=dict)
     modified_counts: dict[str, int] = field(default_factory=dict)
+    entries: list[BotKPIEntry] | None = None
+    available_components: list[str] | None = None
 
 
 def _values_equal(suggested: Any, current: Any) -> bool:
@@ -182,6 +191,7 @@ def _suggestion_record(
             deviation = _compute_deviation(field_name, entry["value"], current_value)
     return SuggestionRecord(
         timestamp=entry.get("timestamp"),
+        aegis_version=entry.get("aegis_version") or "",
         type=entry_type,
         data_quality=_opt_float(entry.get("data_quality")),
         confidence=_opt_float(entry.get("confidence")),
@@ -268,31 +278,6 @@ def _score_records(
         stats.suggestions_compared += 1
 
     return stats
-
-
-def _timestamp_in_range(
-    timestamp: str | None,
-    changed_after: datetime | None,
-    changed_before: datetime | None,
-) -> bool:
-    if changed_after is None and changed_before is None:
-        return True
-    if timestamp is None:
-        return False
-    try:
-        value = datetime.fromisoformat(timestamp)
-    except ValueError:
-        return False
-
-    def _utc(value: datetime) -> datetime:
-        if value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value.astimezone(UTC)
-
-    value = _utc(value)
-    return (changed_after is None or value >= _utc(changed_after)) and (
-        changed_before is None or value <= _utc(changed_before)
-    )
 
 
 def _score_fields(
@@ -506,18 +491,19 @@ def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheDat
     advances.
     """
     if not _is_bot_processed(flaw_data):
-        return FlawCacheData(updated_dt=updated_dt, bot_processed=False)
+        return FlawCacheData(updated_dt=updated_dt, bot_processed=False, components=[])
     aegis_meta = flaw_data.get("aegis_meta") or {}
     return FlawCacheData(
         updated_dt=updated_dt,
         bot_processed=True,
+        components=flaw_data.get("components") or [],
         fields=_compact_fields(aegis_meta, flaw_data),
     )
 
 
 def _needs_fetch(cached: FlawCacheData | None, updated_dt: str) -> bool:
     """A flaw needs a full fetch when OSIDB's watermark is newer."""
-    if cached is None:
+    if cached is None or cached.components is None:
         return True
     try:
         cached_dt = datetime.fromisoformat(cached.updated_dt)
@@ -544,6 +530,7 @@ class SuggestionRecord(BaseModel):
     """
 
     timestamp: str | None = None
+    aegis_version: str = ""
     type: str = ""
     data_quality: float | None = None
     confidence: float | None = None
@@ -577,6 +564,9 @@ class FlawCacheData(BaseModel):
 
     updated_dt: str
     bot_processed: bool = True
+    # None identifies old caches missing component AND version provenance.
+    # Keep the marker across cache rewrites until this flaw has been fetched.
+    components: list[str] | None = None
     fields: dict[str, list[SuggestionRecord]] = {}
 
 
@@ -606,6 +596,8 @@ class BotKPICacheEntry(BaseModel):
         only_cve_ids: set[str] | None = None,
         changed_after: datetime | None = None,
         changed_before: datetime | None = None,
+        record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
+        detail: bool = False,
     ) -> BotKPIResult:
         """Re-score the bot-processed flaws restricted to the selected CVE IDs.
 
@@ -617,19 +609,56 @@ class BotKPICacheEntry(BaseModel):
         scores every cached flaw.
         """
         per_flaw: dict[str, dict[str, FeatureStats]] = {}
+        entries: list[BotKPIEntry] = []
+        components: set[str] = set()
         for cve_id, flaw in self.flaws.items():
             if only_cve_ids is not None and cve_id not in only_cve_ids:
                 continue
             if not flaw.bot_processed:
                 continue
+            components.update(flaw.components or [])
+            fields = {
+                name: [
+                    record
+                    for record in records
+                    if record_filters.matches(record.timestamp, record.aegis_version)
+                    and _timestamp_in_range(
+                        record.timestamp, changed_after, changed_before
+                    )
+                ]
+                for name, records in flaw.fields.items()
+            }
             stats_by_field = _score_fields(
-                flaw.fields,
-                changed_after=changed_after,
-                changed_before=changed_before,
+                fields,
             )
             if stats_by_field:
                 per_flaw[cve_id] = stats_by_field
-        return _resum(per_flaw)
+            if detail:
+                entries.extend(_detail_entries(cve_id, fields))
+        result = _resum(per_flaw)
+        if detail:
+            result.entries = entries
+            result.available_components = sorted(components)
+        return result
+
+
+def _detail_entries(
+    cve_id: str, fields: dict[str, list[SuggestionRecord]]
+) -> list[BotKPIEntry]:
+    return [
+        BotKPIEntry(
+            cve_id=cve_id,
+            feature=_display_name(name),
+            datetime=record.timestamp,
+            aegis_version=record.aegis_version,
+            type=record.type,
+            deviation=record.deviation,
+            data_quality=record.data_quality,
+            confidence=record.confidence,
+        )
+        for name, records in fields.items()
+        for record in records
+    ]
 
 
 # -- Response helpers ----------------------------------------------------------
@@ -656,13 +685,17 @@ def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKP
 
 
 def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
-    return BotKPIResponse(
+    response = BotKPIResponse(
         total_flaws_processed=result.total_flaws_processed,
         features={
             name: _stats_to_response(stats, result.modified_counts.get(name, 0))
             for name, stats in result.features.items()
         },
     )
+    if result.entries is not None:
+        response.entries = result.entries
+        response.available_components = result.available_components
+    return response
 
 
 # -- Cache helpers -------------------------------------------------------------
@@ -732,6 +765,8 @@ def _fetch_with_cache(
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
     component: str | None = None,
+    record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
+    detail: bool = False,
 ) -> BotKPIResult:
     """Select the requested flaws from OSIDB, refresh stale entries, then score.
 
@@ -791,6 +826,8 @@ def _fetch_with_cache(
         only_cve_ids=set(index),
         changed_after=changed_after,
         changed_before=changed_before,
+        record_filters=record_filters,
+        detail=detail,
     )
 
 
@@ -799,6 +836,8 @@ def get_osidb_bot_kpi(
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
     component: str | None = None,
+    record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
+    detail: bool = False,
 ) -> BotKPIResponse:
     """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
     try:
@@ -809,6 +848,8 @@ def get_osidb_bot_kpi(
             changed_after=changed_after,
             changed_before=changed_before,
             component=component,
+            record_filters=record_filters,
+            detail=detail,
         )
         return _result_to_response(result)
     except OSError:

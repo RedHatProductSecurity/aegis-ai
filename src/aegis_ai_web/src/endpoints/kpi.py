@@ -7,9 +7,12 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+import osidb_bindings
 from fastapi import HTTPException
 
+from aegis_ai import get_settings
 from aegis_ai_web.src.data_models import FeatureKPI, KPIComponentDetails, KPIEntry
+from aegis_ai_web.src.endpoints.kpi_filters import NO_RECORD_FILTERS, KPIRecordFilters
 from aegis_ai_web.src.feedback_logger import (
     feedback_logger,
     programmatic_feedback_logger,
@@ -181,6 +184,8 @@ def collect_normalized_entries(
     cve_id: str | None = None,
     source_component: str | None = None,
     multiple_source_components: bool = False,
+    component: str | None = None,
+    record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
 ) -> list[dict[str, Any]]:
     """Read and filter feedback log entries for a feature query.
 
@@ -208,7 +213,11 @@ def collect_normalized_entries(
             entries.append(normalized)
 
     deduped_programmatic = _deduplicate_programmatic_feedback(
-        programmatic_feedback_logger.read()
+        [
+            entry
+            for entry in programmatic_feedback_logger.read()
+            if record_filters.matches(entry.get("datetime"), entry.get("version", ""))
+        ]
     )
     for raw in deduped_programmatic:
         if not raw.get("feature"):
@@ -226,7 +235,42 @@ def collect_normalized_entries(
         ):
             entries.append(normalized)
 
-    return entries
+    entries = [
+        entry
+        for entry in entries
+        if record_filters.matches(entry["datetime"], entry["aegis_version"])
+    ]
+    return _filter_flaw_component(entries, component) if component else entries
+
+
+def _filter_flaw_component(
+    entries: list[dict[str, Any]], component: str
+) -> list[dict[str, Any]]:
+    """Intersect feedback CVEs with current OSIDB component membership.
+
+    Batch only CVEs present in feedback; unlike bot metrics, historical manual
+    feedback is not restricted to DONE flaws or the bot's introduction date.
+    """
+    cve_ids = sorted({entry["cve_id"] for entry in entries if entry["cve_id"]})
+    if not cve_ids:
+        return []
+    try:
+        osidb = osidb_bindings.new_session(
+            osidb_server_uri=get_settings().osidb_server_url
+        )
+        members: set[str] = set()
+        for offset in range(0, len(cve_ids), 100):
+            for flaw in osidb.flaws.retrieve_list_iterator(
+                cve_id=cve_ids[offset : offset + 100],
+                components=component,
+                include_fields="cve_id",
+                limit=200,
+            ):
+                members.add(flaw.to_dict().get("cve_id", ""))
+        return [entry for entry in entries if entry["cve_id"] in members]
+    except OSError:
+        logging.debug("OSIDB component lookup failed", exc_info=True)
+        raise HTTPException(503, "Unable to connect to OSIDB.") from None
 
 
 def to_kpi_entry(entry: dict[str, Any], detail: bool) -> KPIEntry:
@@ -286,6 +330,8 @@ def _get_all_features_kpi(
     source_component: str | None = None,
     multiple_source_components: bool = False,
     detail: bool = False,
+    component: str | None = None,
+    record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
 ) -> dict[str, FeatureKPI]:
     """Get KPI metrics for all features in a single pass over log data."""
     entries_by_feature: dict[str, list[dict[str, Any]]] = {}
@@ -295,6 +341,8 @@ def _get_all_features_kpi(
         cve_id=cve_id,
         source_component=source_component,
         multiple_source_components=multiple_source_components,
+        component=component,
+        record_filters=record_filters,
     ):
         feature_key = entry.get("feature", "")
         if feature_key:
@@ -306,6 +354,20 @@ def _get_all_features_kpi(
     }
 
 
+def _with_version_facets(
+    result: dict[str, FeatureKPI], detail: bool
+) -> dict[str, FeatureKPI]:
+    if not detail:
+        return result
+    versions: dict[str, set[str]] = {}
+    for row in feedback_logger.read() + programmatic_feedback_logger.read():
+        feature = canonical_feature(row.get("feature", ""))
+        versions.setdefault(feature, set()).add(row.get("version", ""))
+    for feature, metrics in result.items():
+        metrics.available_versions = sorted(versions.get(feature, set()))
+    return result
+
+
 def get_cve_kpi(
     feature: str,
     order: SortOrder = SortOrder.ASC,
@@ -314,6 +376,8 @@ def get_cve_kpi(
     source_component: str | None = None,
     multiple_source_components: bool = False,
     detail: bool = False,
+    component: str | None = None,
+    record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
 ) -> dict[str, FeatureKPI]:
     """
     Get KPI metrics for CVE analysis feedback filtered by feature.
@@ -331,13 +395,18 @@ def get_cve_kpi(
     """
     if feature == "all":
         try:
-            return _get_all_features_kpi(
+            result = _get_all_features_kpi(
                 order,
                 cve_id=cve_id,
                 source_component=source_component,
                 multiple_source_components=multiple_source_components,
                 detail=detail,
+                component=component,
+                record_filters=record_filters,
             )
+            return _with_version_facets(result, detail)
+        except HTTPException:
+            raise
         except Exception:
             logging.error(  # noqa: G201
                 "Error retrieving KPI data for all features",
@@ -354,11 +423,16 @@ def get_cve_kpi(
             cve_id=cve_id,
             source_component=source_component,
             multiple_source_components=multiple_source_components,
+            component=component,
+            record_filters=record_filters,
         )
-        return {
+        result = {
             canonical_feature(feature): _compute_kpi(normalized_entries, order, detail)
         }
+        return _with_version_facets(result, detail)
 
+    except HTTPException:
+        raise
     except Exception:
         logging.error(  # noqa: G201
             f"Error retrieving KPI data for feature '{feature}'",

@@ -54,6 +54,7 @@ from .data_models import (
 )
 from .endpoints.bot_kpi import get_osidb_bot_kpi
 from .endpoints.kpi import SortOrder, get_cve_kpi
+from .endpoints.kpi_filters import KPIRecordFilters, utc
 from .feedback_logger import feedback_logger, programmatic_feedback_logger
 from .semantic_scoring import (
     calculate_semantic_proximity_score,
@@ -763,6 +764,22 @@ async def cve_kpi(
         default=False,
         description="When true, include CVE and component context fields on each entry.",
     ),
+    component: str | None = Query(
+        default=None,
+        description="Filter all features by the flaw's current affected component in OSIDB.",
+    ),
+    recorded_after: datetime | None = Query(  # noqa: B008
+        default=None,
+        description="Inclusive feedback timestamp lower bound (ISO 8601; UTC if no timezone).",
+    ),
+    recorded_before: datetime | None = Query(  # noqa: B008
+        default=None,
+        description="Inclusive feedback timestamp upper bound (ISO 8601; UTC if no timezone).",
+    ),
+    aegis_version: list[str] | None = Query(  # noqa: B008
+        default=None,
+        description="Allowed Aegis versions/builds; repeat for multiple versions, empty string for unknown.",
+    ),
 ) -> dict[str, FeatureKPI]:
     """
     Get KPI metrics for CVE analysis feedback filtered by feature.
@@ -792,13 +809,19 @@ async def cve_kpi(
     GET /api/v1/analysis/kpi/cve?feature=all
     ```
     """
-    result = get_cve_kpi(
+    record_filters = KPIRecordFilters(
+        recorded_after, recorded_before, tuple(aegis_version or [])
+    )
+    result = await asyncio.to_thread(
+        get_cve_kpi,
         feature,
         order,
         cve_id=cve_id,
         source_component=source_component,
         multiple_source_components=multiple_source_components,
         detail=detail,
+        component=component or None,
+        record_filters=record_filters,
     )
     return result
 
@@ -815,6 +838,7 @@ async def cve_kpi(
         "a flaw is automatically re-scored whenever it changes in OSIDB."
     ),
     response_model=BotKPIResponse,
+    response_model_exclude_unset=True,
     responses={
         200: {
             "description": "Successful response with bot KPI metrics",
@@ -861,18 +885,39 @@ async def osidb_bot_kpi(
         default=None,
         description="Scope KPI metrics to flaws affecting this component, e.g. 'kernel'.",
     ),
+    detail: bool = Query(
+        default=False,
+        description="Include compact suggestion/skip records and unique affected components. History compares suggestions with current OSIDB values, not past snapshots.",
+    ),
+    recorded_after: datetime | None = Query(  # noqa: B008
+        default=None,
+        description="Inclusive suggestion timestamp lower bound; does not filter flaw updated_dt.",
+    ),
+    recorded_before: datetime | None = Query(  # noqa: B008
+        default=None,
+        description="Inclusive suggestion timestamp upper bound; does not filter flaw updated_dt.",
+    ),
+    aegis_version: list[str] | None = Query(  # noqa: B008
+        default=None,
+        description="Allowed Aegis versions/builds; repeat for multiple versions, empty string for unknown.",
+    ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
-    if changed_after and changed_before and changed_after > changed_before:
+    if changed_after and changed_before and utc(changed_after) > utc(changed_before):
         raise HTTPException(
             status_code=422,
             detail="changed_after must be earlier than changed_before.",
         )
+    record_filters = KPIRecordFilters(
+        recorded_after, recorded_before, tuple(aegis_version or [])
+    )
     return await asyncio.to_thread(
         get_osidb_bot_kpi,
         changed_after=changed_after,
         changed_before=changed_before,
         component=component or None,
+        detail=detail,
+        record_filters=record_filters,
     )
 
 
