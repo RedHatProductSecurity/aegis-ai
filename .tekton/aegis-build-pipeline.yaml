@@ -1103,7 +1103,7 @@ spec:
                       name: gemini-key
                       key: token
                 - name: AEGIS_USE_KERNEL_CLASSIFIER
-                  value: "true"
+                  value: "false"
                 - name: AEGIS_USE_BUILD_SYSTEM_TOOL_CONTEXT
                   value: "true"
                 - name: AEGIS_USE_EXT_REFS_TOOL_CONTEXT
