@@ -445,20 +445,17 @@ class SuggestImpact(Feature):
             and static_context.get("cvss_scores") is not None
         )
         resolved_static_context = static_context if use_static else None
-        is_kernel = False
+        components = []
+        if isinstance(static_context, dict):
+            components = static_context.get("components") or []
 
-        if use_kernel_classifier:
-            components = []
-            if isinstance(static_context, dict):
-                components = static_context.get("components") or []
+        # Only fetch from OSIDB directly when the agent has the OSIDB
+        # toolset; otherwise let the LLM call it through its own tools.
+        if not components and self.agent.name == "RHFeatureAgent":
+            cve_data = await osidb_tool.cve_retrieve(cve_id)
+            components = cve_data.components
 
-            # Only fetch from OSIDB directly when the agent has the OSIDB
-            # toolset; otherwise let the LLM call it through its own tools.
-            if not components and self.agent.name == "RHFeatureAgent":
-                cve_data = await osidb_tool.cve_retrieve(cve_id)
-                components = cve_data.components
-
-            is_kernel = is_kernel_component(components)
+        is_kernel = is_kernel_component(components)
 
         # Eagerly run the kernel classifier so the result is available on
         # deps for both the tool fast-path and post-processing.
