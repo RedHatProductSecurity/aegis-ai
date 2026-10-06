@@ -148,12 +148,30 @@ class MitigationRewriteRulesEvaluator(Evaluator[str, QualityReviewModel]):
 
         lower = mit.lower()
         violations = []
-        if "update" in lower:
-            violations.append("contains 'update'")
-        if "upgrade" in lower:
-            violations.append("contains 'upgrade'")
-        # Check for prescriptive patching phrases; skip descriptive uses
-        # like "unpatched" or "no patch is available"
+        # Check for prescriptive update/upgrade/patch phrases; skip
+        # incidental uses like RBAC verbs ("create or update resources")
+        # or descriptive uses like "unpatched" / "no patch is available"
+        update_phrases = [
+            "update to ",
+            "update the package",
+            "update the software",
+            "update your",
+            "apply the update",
+            "apply updates",
+            "install the update",
+            "install updates",
+        ]
+        if any(phrase in lower for phrase in update_phrases):
+            violations.append("suggests updating")
+        upgrade_phrases = [
+            "upgrade to ",
+            "upgrade the package",
+            "upgrade the software",
+            "upgrade your",
+            "apply the upgrade",
+        ]
+        if any(phrase in lower for phrase in upgrade_phrases):
+            violations.append("suggests upgrading")
         patch_phrases = [
             "apply the patch",
             "apply patch",
