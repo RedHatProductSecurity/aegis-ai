@@ -31,6 +31,7 @@ from aegis_ai.agents import (
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import component, cve
 from aegis_ai.features.data_models import AegisAnswer
+from aegis_ai.request_context import OSIDB_ACCESS_TOKEN_KEY, get_request_scope
 from aegis_ai.toolsets.tools.osidb.osidb_client import (
     OSIDBAuthError,
     OSIDBFlawNotFoundError,
@@ -812,6 +813,8 @@ async def cve_kpi(
     record_filters = KPIRecordFilters(
         recorded_after, recorded_before, tuple(aegis_version or [])
     )
+    scope = get_request_scope()
+    osidb_token = scope.get(OSIDB_ACCESS_TOKEN_KEY) if scope else None
     result = await asyncio.to_thread(
         get_cve_kpi,
         feature,
@@ -821,6 +824,7 @@ async def cve_kpi(
         multiple_source_components=multiple_source_components,
         detail=detail,
         component=component or None,
+        osidb_token=osidb_token,
         record_filters=record_filters,
     )
     return result
@@ -911,6 +915,22 @@ async def osidb_bot_kpi(
     record_filters = KPIRecordFilters(
         recorded_after, recorded_before, tuple(aegis_version or [])
     )
+    scope = get_request_scope()
+    osidb_token = scope.get(OSIDB_ACCESS_TOKEN_KEY) if scope else None
+    delegated_ccache = None
+    context = scope.get("gssapi_context") if scope else None
+    delegated_creds = getattr(context, "delegated_creds", None)
+    if delegated_creds:
+        from aegis_ai.toolsets.tools.osidb.osidb_delegation import (
+            _prepare_delegated_creds_for_thread,
+        )
+
+        delegated_ccache = _prepare_delegated_creds_for_thread(delegated_creds)
+        if delegated_ccache is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to prepare delegated OSIDB credentials.",
+            )
     return await asyncio.to_thread(
         get_osidb_bot_kpi,
         changed_after=changed_after,
@@ -918,6 +938,8 @@ async def osidb_bot_kpi(
         component=component or None,
         detail=detail,
         record_filters=record_filters,
+        delegated_ccache=delegated_ccache,
+        osidb_token=osidb_token,
     )
 
 

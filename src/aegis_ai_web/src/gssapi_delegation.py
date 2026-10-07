@@ -13,6 +13,8 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from aegis_ai.request_context import OSIDB_ACCESS_TOKEN_KEY
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,6 +39,12 @@ class GSSAPIDelegationMiddleware:
 
         headers = Headers(scope=scope)
         auth = headers.get("Authorization", "")
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
+            if token:
+                scope[OSIDB_ACCESS_TOKEN_KEY] = token
+                await self.app(scope, receive, send)
+                return
         if not auth or not auth.startswith("Negotiate "):
             resp = Response(
                 status_code=401,

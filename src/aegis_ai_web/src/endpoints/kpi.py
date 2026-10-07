@@ -11,6 +11,7 @@ import osidb_bindings
 from fastapi import HTTPException
 
 from aegis_ai import get_settings
+from aegis_ai.toolsets.tools.osidb.osidb_bearer import BearerOSIDBSession
 from aegis_ai_web.src.data_models import FeatureKPI, KPIComponentDetails, KPIEntry
 from aegis_ai_web.src.endpoints.kpi_filters import NO_RECORD_FILTERS, KPIRecordFilters
 from aegis_ai_web.src.feedback_logger import (
@@ -185,6 +186,7 @@ def collect_normalized_entries(
     source_component: str | None = None,
     multiple_source_components: bool = False,
     component: str | None = None,
+    osidb_token: str | None = None,
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
 ) -> list[dict[str, Any]]:
     """Read and filter feedback log entries for a feature query.
@@ -240,11 +242,15 @@ def collect_normalized_entries(
         for entry in entries
         if record_filters.matches(entry["datetime"], entry["aegis_version"])
     ]
-    return _filter_flaw_component(entries, component) if component else entries
+    return (
+        _filter_flaw_component(entries, component, osidb_token)
+        if component
+        else entries
+    )
 
 
 def _filter_flaw_component(
-    entries: list[dict[str, Any]], component: str
+    entries: list[dict[str, Any]], component: str, osidb_token: str | None = None
 ) -> list[dict[str, Any]]:
     """Intersect feedback CVEs with current OSIDB component membership.
 
@@ -255,8 +261,12 @@ def _filter_flaw_component(
     if not cve_ids:
         return []
     try:
-        osidb = osidb_bindings.new_session(
-            osidb_server_uri=get_settings().osidb_server_url
+        osidb = (
+            BearerOSIDBSession(get_settings().osidb_server_url, osidb_token)
+            if osidb_token
+            else osidb_bindings.new_session(
+                osidb_server_uri=get_settings().osidb_server_url
+            )
         )
         members: set[str] = set()
         for offset in range(0, len(cve_ids), 100):
@@ -331,6 +341,7 @@ def _get_all_features_kpi(
     multiple_source_components: bool = False,
     detail: bool = False,
     component: str | None = None,
+    osidb_token: str | None = None,
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
 ) -> dict[str, FeatureKPI]:
     """Get KPI metrics for all features in a single pass over log data."""
@@ -342,6 +353,7 @@ def _get_all_features_kpi(
         source_component=source_component,
         multiple_source_components=multiple_source_components,
         component=component,
+        osidb_token=osidb_token,
         record_filters=record_filters,
     ):
         feature_key = entry.get("feature", "")
@@ -377,6 +389,7 @@ def get_cve_kpi(
     multiple_source_components: bool = False,
     detail: bool = False,
     component: str | None = None,
+    osidb_token: str | None = None,
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
 ) -> dict[str, FeatureKPI]:
     """
@@ -402,6 +415,7 @@ def get_cve_kpi(
                 multiple_source_components=multiple_source_components,
                 detail=detail,
                 component=component,
+                osidb_token=osidb_token,
                 record_filters=record_filters,
             )
             return _with_version_facets(result, detail)
@@ -424,6 +438,7 @@ def get_cve_kpi(
             source_component=source_component,
             multiple_source_components=multiple_source_components,
             component=component,
+            osidb_token=osidb_token,
             record_filters=record_filters,
         )
         result = {

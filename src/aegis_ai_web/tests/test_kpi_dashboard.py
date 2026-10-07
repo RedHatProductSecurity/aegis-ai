@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from aegis_ai.features.data_models import AegisFeatureModel
 from aegis_ai.osidb_bot.suggest import record_aegis_meta
+from aegis_ai_web.src import main
 from aegis_ai_web.src.endpoints import bot_kpi, kpi
 from aegis_ai_web.src.main import app
 
@@ -94,6 +95,14 @@ def test_bot_detail_matches_aggregate_and_preserves_unknown_versions(dashboard):
     assert body["available_components"] == ["kernel", "openssl"]
     legacy = client.get("/api/v1/analysis/kpi/osidb-bot").json()
     assert set(legacy) == {"total_flaws_processed", "features"}
+
+
+def test_bot_kpi_uses_process_credentials_without_delegation(dashboard, monkeypatch):
+    monkeypatch.setattr(main, "kerberos_spn", "HTTP/aegis.example.com@REALM")
+
+    response = client.get("/api/v1/analysis/kpi/osidb-bot")
+
+    assert response.status_code == 200
 
 
 @pytest.mark.parametrize("endpoint", ["cve?feature=all&", "osidb-bot?"])
@@ -211,6 +220,25 @@ def test_feedback_component_lookup_failure_is_not_empty_success(dashboard, monke
     monkeypatch.setattr(kpi.osidb_bindings, "new_session", unavailable)
     response = client.get("/api/v1/analysis/kpi/cve?feature=all&component=kernel")
     assert response.status_code == 503
+
+
+def test_cve_kpi_uses_forwarded_osidb_token_for_component_lookup(
+    dashboard, monkeypatch
+):
+    session, _ = dashboard
+    monkeypatch.setattr(
+        kpi,
+        "get_settings",
+        lambda: MagicMock(osidb_server_url="https://osidb.example.com"),
+    )
+    bearer_session = MagicMock(return_value=session)
+    monkeypatch.setattr(kpi, "BearerOSIDBSession", bearer_session)
+
+    kpi.get_cve_kpi("all", component="kernel", osidb_token="user-access-token")
+
+    bearer_session.assert_called_once_with(
+        "https://osidb.example.com", "user-access-token"
+    )
 
 
 def test_new_bot_records_include_running_version(monkeypatch):

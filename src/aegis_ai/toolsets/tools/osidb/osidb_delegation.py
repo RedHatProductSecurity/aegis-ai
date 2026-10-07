@@ -18,6 +18,7 @@ import logging
 import os
 import threading
 import uuid
+from contextlib import contextmanager
 from typing import Any, cast
 
 from osidb_bindings.bindings.python_client import AuthenticatedClient
@@ -35,20 +36,35 @@ logger = logging.getLogger(__name__)
 _ccache_env_lock = threading.Lock()
 
 
+@contextmanager
+def use_kerberos_ccache(ccache_name: str):
+    """Use a delegated ccache for a synchronous OSIDB client operation."""
+    with _ccache_env_lock:
+        old_values = {
+            name: os.environ.pop(name, None)
+            for name in ("KRB5CCNAME", "KRB5_KTNAME", "KRB5_CLIENT_KTNAME")
+        }
+        os.environ["KRB5CCNAME"] = ccache_name
+        # Prevent requests-gssapi from merging credentials from a keytab.
+        os.environ["KRB5_KTNAME"] = "FILE:/nonexistent_aegis_deleg"
+        os.environ["KRB5_CLIENT_KTNAME"] = "FILE:/nonexistent_aegis_deleg_client"
+        try:
+            yield
+        finally:
+            for name, value in old_values.items():
+                if value is not None:
+                    os.environ[name] = value
+                else:
+                    os.environ.pop(name, None)
+
+
 def _fetch_token_via_ccache(ccache_name: str, base: str) -> str | None:
     """
     Call OSIDB GET /auth/token using KRB5CCNAME to force credential use from
     the given MEMORY ccache. HTTPSPNEGOAuth() without creds uses the default
     ccache (KRB5CCNAME), avoiding keytab merging.
     """
-    with _ccache_env_lock:
-        old_ccname = os.environ.pop("KRB5CCNAME", None)
-        old_ktname = os.environ.pop("KRB5_KTNAME", None)
-        old_client_ktname = os.environ.pop("KRB5_CLIENT_KTNAME", None)
-        os.environ["KRB5CCNAME"] = ccache_name
-        # Prevent keytab lookup; use nonexistent paths so only ccache is used
-        os.environ["KRB5_KTNAME"] = "FILE:/nonexistent_aegis_deleg"
-        os.environ["KRB5_CLIENT_KTNAME"] = "FILE:/nonexistent_aegis_deleg_client"
+    with use_kerberos_ccache(ccache_name):
         try:
             client = AuthenticatedClient(
                 base_url=base,
@@ -62,19 +78,6 @@ def _fetch_token_via_ccache(ccache_name: str, base: str) -> str | None:
         except Exception as e:
             logger.warning("OSIDB token fetch via ccache failed: %s", e)
             return None
-        finally:
-            if old_ccname is not None:
-                os.environ["KRB5CCNAME"] = old_ccname
-            else:
-                os.environ.pop("KRB5CCNAME", None)
-            if old_ktname is not None:
-                os.environ["KRB5_KTNAME"] = old_ktname
-            else:
-                os.environ.pop("KRB5_KTNAME", None)
-            if old_client_ktname is not None:
-                os.environ["KRB5_CLIENT_KTNAME"] = old_client_ktname
-            else:
-                os.environ.pop("KRB5_CLIENT_KTNAME", None)
 
 
 def _prepare_delegated_creds_for_thread(delegated_creds) -> str | None:

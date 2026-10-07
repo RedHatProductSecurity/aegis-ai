@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from aegis_ai_web.src.endpoints.bot_kpi import get_osidb_bot_kpi
 from aegis_ai_web.src.main import app
 
 client = TestClient(app)
@@ -253,6 +254,21 @@ class TestOsidbBotKpiEndpoint:
 
         response = client.get("/api/v1/analysis/kpi/osidb-bot")
         assert response.status_code == 503
+
+    @patch("aegis_ai_web.src.endpoints.bot_kpi._result_to_response")
+    @patch("aegis_ai_web.src.endpoints.bot_kpi._fetch_with_cache")
+    @patch("aegis_ai_web.src.endpoints.bot_kpi.BearerOSIDBSession")
+    @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
+    def test_uses_forwarded_osidb_token(
+        self, mock_settings, mock_session, mock_fetch, mock_response
+    ):
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+
+        get_osidb_bot_kpi(osidb_token="user-access-token")
+
+        mock_session.assert_called_once_with(
+            "https://osidb.example.com", "user-access-token"
+        )
 
     def test_invalid_changed_after_returns_422(self):
         response = client.get("/api/v1/analysis/kpi/osidb-bot?changed_after=not-a-date")

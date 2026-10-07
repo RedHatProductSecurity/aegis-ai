@@ -13,7 +13,7 @@ from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_retrieve_re
 )
 
 from aegis_ai import get_settings
-from aegis_ai.request_context import get_request_scope
+from aegis_ai.request_context import OSIDB_ACCESS_TOKEN_KEY, get_request_scope
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,9 @@ class OSIDBClient:
         cached = scope.get(_OSIDB_DELEGATED_TOKEN_KEY)
         if cached is not None:
             return cached
+        access_token = scope.get(OSIDB_ACCESS_TOKEN_KEY)
+        if access_token is not None:
+            return access_token
         ctx = scope.get("gssapi_context")
         if not ctx or not getattr(ctx, "delegated_creds", None):
             return None
