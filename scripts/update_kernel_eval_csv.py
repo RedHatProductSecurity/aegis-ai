@@ -182,7 +182,7 @@ def main() -> None:
 
     fieldnames = ["CVE", "OSIDB Impact", "OSIDB CVSS", "OSIDB CVSS Vector"]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
