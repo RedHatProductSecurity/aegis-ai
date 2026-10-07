@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi10-minimal:10.2-1791321979@sha256:295f32b566834844b98ca6b51152b0a8a43d9d1d85d9bfd1cc6ce97748ef55d8
+FROM registry.access.redhat.com/ubi10-minimal:10.2-1791346265@sha256:91eaa992c90c4271691b047c12fec69cdabe7977305e168c4060f094ff2a73e0
 
 LABEL summary="AEGIS" \
       maintainer="Product Security DevOps <prodsec-dev@redhat.com>"
