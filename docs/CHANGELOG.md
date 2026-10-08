@@ -5,6 +5,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.0] - 2026-10-08
+
+### Changed
+- `suggest-impact` for kernel CVEs now provides more accurate suggestions with the `XGBoost` classifier disabled [\[AEGIS-507\]](https://redhat.atlassian.net/browse/AEGIS-507)
+
+### Added
+- established a shared, reproducible evaluation baseline for kernel-related Aegis changes [\[AEGIS-510\]](https://redhat.atlassian.net/browse/AEGIS-510)
+- added scripts to identify embargoed CVEs via OSIDB and filter them from feedback CSVs [\[AEGIS-514\]](https://redhat.atlassian.net/browse/AEGIS-514)
+- extended kernel CVE evaluation dataset from 44 to 111 CVEs with ground-truth data from security analysts [\[AEGIS-516\]](https://redhat.atlassian.net/browse/AEGIS-516)
+
+### Fixed
+- `suggest-impact` for kernel CVEs now applies kernel-specific CVSS rules (`RULES_KERNEL_ADDENDUM`) unconditionally, without requiring the kernel classifier to be enabled [\[AEGIS-516\]](https://redhat.atlassian.net/browse/AEGIS-516)
+- improved `suggest-impact` CVSS accuracy for kernel CVEs with rules for user-namespace capabilities, KVM scope changes, availability severity, cross-namespace network control, Bluetooth socket privileges, BPF token assessment, attacker-controlled races, device-driver integrity, and UAF confidentiality/integrity [\[AEGIS-516\]](https://redhat.atlassian.net/browse/AEGIS-516)
+- improved `quality-review` evaluator to use phrase-based matching for mitigation rewrite rules, eliminating false positives
+- improved kernel CVSS evaluation rubric to accept UAF code execution, authoritative issuer citations, data-carrying kernel structures, and KVM boundary crossings as valid justification [\[AEGIS-516\]](https://redhat.atlassian.net/browse/AEGIS-516)
+
+
 ## [0.9.4] - 2026-10-01
 
 ### Changed
