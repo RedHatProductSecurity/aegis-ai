@@ -16,6 +16,7 @@ default ccache path does not trigger keytab merging.
 
 import logging
 import os
+import subprocess
 import threading
 import uuid
 from contextlib import contextmanager
@@ -96,6 +97,20 @@ def _prepare_delegated_creds_for_thread(delegated_creds) -> str | None:
     except Exception as e:
         logger.debug("Could not store delegated creds in MEMORY ccache: %s", e)
         return None
+
+
+def destroy_kerberos_ccache(ccache_name: str) -> None:
+    """Destroy a temporary delegated credential cache."""
+    try:
+        subprocess.run(
+            ["kdestroy", "-c", ccache_name],
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        logger.debug(
+            "Could not destroy delegated ccache %s", ccache_name, exc_info=True
+        )
 
 
 def get_osidb_token_for_delegated_cred(

@@ -106,6 +106,7 @@ class OSIDBClient:
             return None
         from aegis_ai.toolsets.tools.osidb.osidb_delegation import (
             _prepare_delegated_creds_for_thread,
+            destroy_kerberos_ccache,
             get_osidb_token_for_delegated_cred,
         )
 
@@ -113,11 +114,15 @@ class OSIDBClient:
         ccache_name = _prepare_delegated_creds_for_thread(delegated_creds)
         creds_arg = ccache_name if ccache_name is not None else delegated_creds
 
-        token = await asyncio.to_thread(
-            get_osidb_token_for_delegated_cred,
-            creds_arg,
-            get_settings().osidb_server_url,
-        )
+        try:
+            token = await asyncio.to_thread(
+                get_osidb_token_for_delegated_cred,
+                creds_arg,
+                get_settings().osidb_server_url,
+            )
+        finally:
+            if ccache_name is not None:
+                await asyncio.to_thread(destroy_kerberos_ccache, ccache_name)
         if token:
             scope[_OSIDB_DELEGATED_TOKEN_KEY] = token
         return token

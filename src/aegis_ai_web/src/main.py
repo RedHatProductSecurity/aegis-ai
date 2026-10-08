@@ -813,8 +813,7 @@ async def cve_kpi(
     record_filters = KPIRecordFilters(
         recorded_after, recorded_before, tuple(aegis_version or [])
     )
-    scope = get_request_scope()
-    osidb_token = scope.get(OSIDB_ACCESS_TOKEN_KEY) if scope else None
+    osidb_token = await _get_request_osidb_token() if component else None
     result = await asyncio.to_thread(
         get_cve_kpi,
         feature,
@@ -915,22 +914,7 @@ async def osidb_bot_kpi(
     record_filters = KPIRecordFilters(
         recorded_after, recorded_before, tuple(aegis_version or [])
     )
-    scope = get_request_scope()
-    osidb_token = scope.get(OSIDB_ACCESS_TOKEN_KEY) if scope else None
-    delegated_ccache = None
-    context = scope.get("gssapi_context") if scope else None
-    delegated_creds = getattr(context, "delegated_creds", None)
-    if delegated_creds:
-        from aegis_ai.toolsets.tools.osidb.osidb_delegation import (
-            _prepare_delegated_creds_for_thread,
-        )
-
-        delegated_ccache = _prepare_delegated_creds_for_thread(delegated_creds)
-        if delegated_ccache is None:
-            raise HTTPException(
-                status_code=503,
-                detail="Unable to prepare delegated OSIDB credentials.",
-            )
+    osidb_token = await _get_request_osidb_token()
     return await asyncio.to_thread(
         get_osidb_bot_kpi,
         changed_after=changed_after,
@@ -938,9 +922,48 @@ async def osidb_bot_kpi(
         component=component or None,
         detail=detail,
         record_filters=record_filters,
-        delegated_ccache=delegated_ccache,
         osidb_token=osidb_token,
     )
+
+
+async def _get_request_osidb_token() -> str | None:
+    """Return a forwarded or delegated OSIDB token for the current request."""
+    scope = get_request_scope()
+    if not scope:
+        return None
+    if osidb_token := scope.get(OSIDB_ACCESS_TOKEN_KEY):
+        return osidb_token
+    context = scope.get("gssapi_context")
+    delegated_creds = getattr(context, "delegated_creds", None)
+    if not delegated_creds:
+        return None
+
+    from aegis_ai.toolsets.tools.osidb.osidb_delegation import (
+        _prepare_delegated_creds_for_thread,
+        destroy_kerberos_ccache,
+        get_osidb_token_for_delegated_cred,
+    )
+
+    delegated_ccache = _prepare_delegated_creds_for_thread(delegated_creds)
+    if delegated_ccache is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to prepare delegated OSIDB credentials.",
+        )
+    try:
+        token = await asyncio.to_thread(
+            get_osidb_token_for_delegated_cred,
+            delegated_ccache,
+            get_settings().osidb_server_url,
+        )
+    finally:
+        await asyncio.to_thread(destroy_kerberos_ccache, delegated_ccache)
+    if token is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to authenticate to OSIDB with delegated credentials.",
+        )
+    return token
 
 
 def log_email_mismatch(request: Request, email: str) -> None:

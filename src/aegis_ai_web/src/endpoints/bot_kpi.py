@@ -25,7 +25,6 @@ from aegis_ai.features.cve.impact_mappings import (
 )
 from aegis_ai.state_file import StateFileHandler
 from aegis_ai.toolsets.tools.osidb.osidb_bearer import BearerOSIDBSession
-from aegis_ai.toolsets.tools.osidb.osidb_delegation import use_kerberos_ccache
 from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIEntry, BotKPIResponse
 from aegis_ai_web.src.endpoints.kpi_filters import (
     NO_RECORD_FILTERS,
@@ -840,7 +839,6 @@ def get_osidb_bot_kpi(
     component: str | None = None,
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
     detail: bool = False,
-    delegated_ccache: str | None = None,
     osidb_token: str | None = None,
 ) -> BotKPIResponse:
     """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
@@ -863,9 +861,6 @@ def get_osidb_bot_kpi(
             )
             return _result_to_response(result)
 
-        if delegated_ccache:
-            with use_kerberos_ccache(delegated_ccache):
-                return fetch()
         return fetch()
     except OSError:
         # OSError also covers requests.exceptions.RequestException (it subclasses

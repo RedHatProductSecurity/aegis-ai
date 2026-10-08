@@ -1,6 +1,9 @@
 """Cross-endpoint dashboard contract and historical provenance regressions."""
 
+import os
+import time
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -72,7 +75,7 @@ def dashboard(monkeypatch, tmp_path):
                 "feature": "suggest-impact",
                 "cve_id": flaw["cve_id"],
                 "accept": "true",
-                "datetime": "2026-09-02 00:00:00",
+                "datetime": "2026-09-02T00:00:00Z",
                 "version": "0.9.2",
             }
             for flaw in flaws
@@ -103,6 +106,40 @@ def test_bot_kpi_uses_process_credentials_without_delegation(dashboard, monkeypa
     response = client.get("/api/v1/analysis/kpi/osidb-bot")
 
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_delegated_token_cache_is_destroyed_on_failure(monkeypatch):
+    from aegis_ai.toolsets.tools.osidb import osidb_delegation
+
+    monkeypatch.setattr(
+        main,
+        "get_request_scope",
+        lambda: {
+            "gssapi_context": SimpleNamespace(delegated_creds=MagicMock()),
+        },
+    )
+    monkeypatch.setattr(
+        osidb_delegation,
+        "_prepare_delegated_creds_for_thread",
+        lambda _: "MEMORY:test-cache",
+    )
+
+    def fail_token_exchange(*_):
+        raise RuntimeError("token exchange failed")
+
+    monkeypatch.setattr(
+        osidb_delegation,
+        "get_osidb_token_for_delegated_cred",
+        fail_token_exchange,
+    )
+    destroy = MagicMock()
+    monkeypatch.setattr(osidb_delegation, "destroy_kerberos_ccache", destroy)
+
+    with pytest.raises(RuntimeError, match="token exchange failed"):
+        await main._get_request_osidb_token()
+
+    destroy.assert_called_once_with("MEMORY:test-cache")
 
 
 @pytest.mark.parametrize("endpoint", ["cve?feature=all&", "osidb-bot?"])
@@ -211,6 +248,23 @@ def test_invalid_record_window_is_422(endpoint):
         "&recorded_before=2026-09-02T00:00:00Z"
     )
     assert response.status_code == 422
+
+
+def test_naive_record_timestamps_use_local_timezone(monkeypatch):
+    old_timezone = os.environ.get("TZ")
+    monkeypatch.setenv("TZ", "Etc/GMT+4")
+    time.tzset()
+    try:
+        assert kpi.KPIRecordFilters(
+            recorded_after=datetime(2026, 9, 2, 16, tzinfo=UTC),
+            recorded_before=datetime(2026, 9, 2, 16, tzinfo=UTC),
+        ).matches("2026-09-02T12:00:00", "")
+    finally:
+        if old_timezone is None:
+            monkeypatch.delenv("TZ")
+        else:
+            monkeypatch.setenv("TZ", old_timezone)
+        time.tzset()
 
 
 def test_feedback_component_lookup_failure_is_not_empty_success(dashboard, monkeypatch):

@@ -3,6 +3,7 @@ GSSAPI middleware that requests credential delegation and stores the security
 context in the request scope so OSIDB can use the client's Kerberos identity
 """
 
+import asyncio
 import base64
 import logging
 
@@ -13,7 +14,9 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from aegis_ai import get_settings
 from aegis_ai.request_context import OSIDB_ACCESS_TOKEN_KEY
+from aegis_ai.toolsets.tools.osidb.osidb_bearer import validate_osidb_token
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +45,14 @@ class GSSAPIDelegationMiddleware:
         if auth.lower().startswith("bearer "):
             token = auth[7:].strip()
             if token:
-                scope[OSIDB_ACCESS_TOKEN_KEY] = token
-                await self.app(scope, receive, send)
-                return
+                username = await asyncio.to_thread(
+                    validate_osidb_token, get_settings().osidb_server_url, token
+                )
+                if username:
+                    scope[OSIDB_ACCESS_TOKEN_KEY] = token
+                    scope["username"] = username
+                    await self.app(scope, receive, send)
+                    return
         if not auth or not auth.startswith("Negotiate "):
             resp = Response(
                 status_code=401,

@@ -18,7 +18,7 @@ def timestamp_in_range(
     if not timestamp:
         return False
     try:
-        value = utc(datetime.fromisoformat(timestamp))
+        value = datetime.fromisoformat(timestamp).astimezone(UTC)
     except ValueError:
         return False
     return (after is None or value >= utc(after)) and (
