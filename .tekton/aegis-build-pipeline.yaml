@@ -1100,6 +1100,9 @@ spec:
                   value: "gemini-3.8-flash"
                 - name: AEGIS_LLM_MAX_JOBS
                   value: "8"
+                # only a few evaluation cases timed out occasionally with the default 300s timeout
+                - name: AEGIS_LLM_TIMEOUT_SECS
+                  value: "480"
                 - name: GEMINI_API_KEY
                   valueFrom:
                     secretKeyRef:
