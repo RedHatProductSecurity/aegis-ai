@@ -941,6 +941,9 @@ spec:
       value: $(tasks.build-image-index.results.IMAGE_URL)
     - name: IMAGE_DIGEST
       value: $(tasks.build-image-index.results.IMAGE_DIGEST)
+    # used by the `read-git-tags` task for tagging of stable Aegis releases
+    - name: ADDITIONAL_TAGS_FROM_LABEL
+      value: konflux.additional-tags
     - name: ADDITIONAL_TAGS
       value: $(params.ADDITIONAL_TAGS[*])
     runAfter:
