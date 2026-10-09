@@ -28,6 +28,22 @@ from aegis_ai.toolsets.tools.osidb.osidb_client import (
 _OSIDB_DELEGATED_TOKEN_KEY = "_osidb_delegated_token"
 
 
+def _flaw(cve_id):
+    return {
+        "cve_id": cve_id,
+        "title": "Component flaw",
+        "cve_description": "",
+        "impact": "",
+        "statement": "",
+        "comment_zero": "",
+        "embargoed": False,
+        "comments": [],
+        "affects": [],
+        "references": [],
+        "cvss_scores": [],
+    }
+
+
 class TestRequestScopeContext:
     """Test request-scope contextvar used by delegated auth middleware."""
 
@@ -217,6 +233,112 @@ class TestOSIDBClientDelegatedTokenPath:
         assert mock_get.call_args.kwargs["headers"]["Authorization"] == (
             "Bearer test-delegated-jwt"
         )
+
+    async def test_list_component_flaws_follows_pages_until_no_next(self):
+        client = osidb_client.OSIDBClient()
+        pages = [
+            {
+                "count": 3,
+                "next": "https://osidb.example/flaws?offset=2",
+                "results": [_flaw("CVE-2024-0001"), _flaw("CVE-2024-0002")],
+            },
+            {"count": 3, "results": [_flaw("CVE-2024-0003")]},
+        ]
+        offsets = []
+
+        async def get_page(**kwargs):
+            offsets.append(kwargs["params"].get("offset", 0))
+            return pages.pop(0)
+
+        with patch.object(client, "_token_get", get_page):
+            flaws = [flaw async for flaw in client.list_component_flaws("curl")]
+
+        assert [flaw.cve_id for flaw in flaws] == [
+            "CVE-2024-0001",
+            "CVE-2024-0002",
+            "CVE-2024-0003",
+        ]
+        assert offsets == [0, 2]
+
+    async def test_list_component_flaws_stops_on_empty_page(self):
+        client = osidb_client.OSIDBClient()
+        get_page = AsyncMock(
+            side_effect=[
+                {
+                    "count": 2,
+                    "next": "https://osidb.example/flaws?offset=1",
+                    "results": [_flaw("CVE-2024-0001")],
+                },
+                {
+                    "count": 2,
+                    "next": "https://osidb.example/flaws?offset=2",
+                    "results": [],
+                },
+            ]
+        )
+
+        with patch.object(client, "_token_get", get_page):
+            flaws = [flaw async for flaw in client.list_component_flaws("curl")]
+
+        assert [flaw.cve_id for flaw in flaws] == ["CVE-2024-0001"]
+        assert get_page.await_count == 2
+
+    @pytest.mark.parametrize(
+        "limit, expected, expected_requests", [(3, 3, 2), (0, 0, 0), (-1, 0, 0)]
+    )
+    async def test_list_component_flaws_applies_limit_across_pages(
+        self, limit, expected, expected_requests
+    ):
+        client = osidb_client.OSIDBClient()
+        get_page = AsyncMock(
+            side_effect=[
+                {
+                    "count": 4,
+                    "next": "https://osidb.example/flaws?offset=2",
+                    "results": [_flaw("CVE-2024-0001"), _flaw("CVE-2024-0002")],
+                },
+                {
+                    "count": 4,
+                    "next": None,
+                    "results": [_flaw("CVE-2024-0003"), _flaw("CVE-2024-0004")],
+                },
+            ]
+        )
+
+        with patch.object(client, "_token_get", get_page):
+            flaws = [
+                flaw async for flaw in client.list_component_flaws("curl", limit=limit)
+            ]
+
+        assert len(flaws) == expected
+        assert get_page.await_count == expected_requests
+        assert all(
+            call.kwargs["params"]["limit"] == limit for call in get_page.call_args_list
+        )
+
+    async def test_list_component_flaws_maps_later_page_401(self):
+        client = osidb_client.OSIDBClient()
+        request = osidb_client.httpx.Request("GET", "https://osidb.example/flaws")
+        response = osidb_client.httpx.Response(401, request=request)
+        unauthorized = osidb_client.httpx.HTTPStatusError(
+            "unauthorized", request=request, response=response
+        )
+        get_page = AsyncMock(
+            side_effect=[
+                {
+                    "count": 2,
+                    "next": "https://osidb.example/flaws?offset=1",
+                    "results": [_flaw("CVE-2024-0001")],
+                },
+                unauthorized,
+            ]
+        )
+
+        with (
+            patch.object(client, "_token_get", get_page),
+            pytest.raises(OSIDBUnauthorizedError),
+        ):
+            _ = [flaw async for flaw in client.list_component_flaws("curl")]
 
     async def test_count_component_flaws_uses_token_when_scope_has_token(self):
         """When scope has token, count_component_flaws uses Bearer token and returns count."""

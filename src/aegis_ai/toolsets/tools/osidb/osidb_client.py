@@ -11,6 +11,7 @@ from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_list_respon
 from osidb_bindings.bindings.python_client.models.osidb_api_v1_flaws_retrieve_response_200 import (
     OsidbApiV1FlawsRetrieveResponse200,
 )
+from osidb_bindings.bindings.python_client.types import Unset
 
 from aegis_ai import get_settings
 from aegis_ai.request_context import OSIDB_ACCESS_TOKEN_KEY, get_request_scope
@@ -247,6 +248,8 @@ class OSIDBClient:
         logger.info(
             f"[component_flaw_tool] Listing flaws for component '{component_name}'."
         )
+        if limit is not None and limit <= 0:
+            return
         params: dict[str, Any] = {
             "components": component_name,
             "include_fields": _FLAW_LIST_FIELDS,
@@ -257,20 +260,30 @@ class OSIDBClient:
             params["embargoed"] = False
         session, token = await self._get_session_or_token()
         if token:
-            try:
-                data = await self._token_get(
-                    path="/osidb/api/v2/flaws",
-                    params=params,
-                    token=token,
-                    timeout=30.0,
-                )
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 401:
-                    raise OSIDBUnauthorizedError() from e
-                raise
-            parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
-            for item in parsed.results or []:
-                yield item
+            count = 0
+            while True:
+                try:
+                    data = await self._token_get(
+                        path="/osidb/api/v2/flaws",
+                        params=params,
+                        token=token,
+                        timeout=30.0,
+                    )
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 401:
+                        raise OSIDBUnauthorizedError() from e
+                    raise
+                parsed = OsidbApiV1FlawsListResponse200.from_dict(data)
+                if not parsed.results:
+                    break
+                for item in parsed.results:
+                    yield item
+                    count += 1
+                    if limit is not None and count >= limit:
+                        return
+                if isinstance(parsed.next_, Unset) or not parsed.next_:
+                    break
+                params["offset"] = params.get("offset", 0) + len(parsed.results)
             return
         session = cast(Any, session)
         # retrieve_list_iterator treats `limit` as page size and follows all

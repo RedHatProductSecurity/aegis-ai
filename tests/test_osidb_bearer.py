@@ -75,3 +75,27 @@ def test_validate_osidb_token_returns_verified_identity(mocker):
         == "user@example.com"
     )
     assert verify.call_args.kwargs["body"].token == token
+
+
+def test_validate_osidb_token_accepts_verified_opaque_token(mocker):
+    response = MagicMock(status_code=200, content=b"{}", headers={})
+    response.json.return_value = {}
+    post = mocker.patch.object(
+        osidb_bearer.auth_api.auth_token_verify_create.requests,
+        "post",
+        return_value=response,
+    )
+    token = "opaque-access-token"
+
+    assert (
+        osidb_bearer.validate_osidb_token("https://osidb.example.com/", token)
+        == "verified-osidb-user"
+    )
+    post.assert_called_once_with(
+        verify=True,
+        auth=None,
+        timeout=300.0,
+        url="https://osidb.example.com/auth/token/verify",
+        json={"token": token},
+        headers={"Content-Type": "application/json"},
+    )
