@@ -74,9 +74,80 @@ components:
       - acceptance_rate
       title: BotFeatureKPI
       type: object
+    BotKPIEntry:
+      description: 'A compact bot record, included with detail=true.
+
+
+        For each CVE/feature, count suggestions and skips once and compare only the
+
+        latest in-window suggestion. Deviation is against the current flaw value,
+
+        not a historical snapshot. Null deviation means the record was not scored.'
+      properties:
+        aegis_version:
+          default: ''
+          description: Empty for unknown historical versions
+          title: Aegis Version
+          type: string
+        confidence:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Confidence
+        cve_id:
+          title: Cve Id
+          type: string
+        data_quality:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Data Quality
+        datetime:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Datetime
+        deviation:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Deviation
+        feature:
+          title: Feature
+          type: string
+        type:
+          title: Type
+          type: string
+      required:
+      - cve_id
+      - feature
+      - datetime
+      - type
+      - deviation
+      - data_quality
+      - confidence
+      title: BotKPIEntry
+      type: object
     BotKPIResponse:
       description: Response model for osidb-bot KPI metrics endpoint.
       properties:
+        available_components:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Sorted unique affected components in the selected bot flaws,
+            only with detail=true
+          title: Available Components
+        entries:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/BotKPIEntry'
+            type: array
+          - type: 'null'
+          description: Compact suggestion/skip records, only with detail=true
+          title: Entries
         features:
           additionalProperties:
             $ref: '#/components/schemas/BotFeatureKPI'
@@ -215,6 +286,15 @@ components:
           minimum: 0.0
           title: Acceptance Percentage
           type: number
+        available_versions:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Unfiltered versions for this feature, including superseded
+            programmatic records; only with detail=true. Empty string means unknown.
+          title: Available Versions
         entries:
           description: List of log entries filtered by feature, sorted by datetime
           items:
@@ -707,6 +787,58 @@ paths:
             entry.
           title: Detail
           type: boolean
+      - description: Filter all features by the flaw's current affected component
+          in OSIDB.
+        in: query
+        name: component
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Filter all features by the flaw's current affected component
+            in OSIDB.
+          title: Component
+      - description: Inclusive feedback timestamp lower bound (ISO 8601; UTC if no
+          timezone).
+        in: query
+        name: recorded_after
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Inclusive feedback timestamp lower bound (ISO 8601; UTC if
+            no timezone).
+          title: Recorded After
+      - description: Inclusive feedback timestamp upper bound (ISO 8601; UTC if no
+          timezone).
+        in: query
+        name: recorded_before
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Inclusive feedback timestamp upper bound (ISO 8601; UTC if
+            no timezone).
+          title: Recorded Before
+      - description: Allowed Aegis versions/builds; repeat for multiple versions,
+          empty string for unknown.
+        in: query
+        name: aegis_version
+        required: false
+        schema:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Allowed Aegis versions/builds; repeat for multiple versions,
+            empty string for unknown.
+          title: Aegis Version
       responses:
         '200':
           content:
@@ -815,6 +947,58 @@ paths:
           - type: 'null'
           description: Scope KPI metrics to flaws affecting this component, e.g. 'kernel'.
           title: Component
+      - description: Include compact suggestion/skip records and unique affected components.
+          History compares suggestions with current OSIDB values, not past snapshots.
+        in: query
+        name: detail
+        required: false
+        schema:
+          default: false
+          description: Include compact suggestion/skip records and unique affected
+            components. History compares suggestions with current OSIDB values, not
+            past snapshots.
+          title: Detail
+          type: boolean
+      - description: Inclusive suggestion timestamp lower bound; does not filter flaw
+          updated_dt.
+        in: query
+        name: recorded_after
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Inclusive suggestion timestamp lower bound; does not filter
+            flaw updated_dt.
+          title: Recorded After
+      - description: Inclusive suggestion timestamp upper bound; does not filter flaw
+          updated_dt.
+        in: query
+        name: recorded_before
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Inclusive suggestion timestamp upper bound; does not filter
+            flaw updated_dt.
+          title: Recorded Before
+      - description: Allowed Aegis versions/builds; repeat for multiple versions,
+          empty string for unknown.
+        in: query
+        name: aegis_version
+        required: false
+        schema:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          description: Allowed Aegis versions/builds; repeat for multiple versions,
+            empty string for unknown.
+          title: Aegis Version
       responses:
         '200':
           content:

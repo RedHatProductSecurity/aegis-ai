@@ -3,6 +3,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 
+from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
 from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
@@ -75,6 +76,7 @@ def record_aegis_meta(
     dst_field = aegis_meta.setdefault(dst, [])
     entry: dict[str, Any] = {
         "timestamp": timestamp.isoformat(),
+        "aegis_version": get_settings().app_version,
         "data_quality": output.data_quality,
         "confidence": output.confidence,
         "tools_used": output.tools_used,

@@ -404,6 +404,26 @@ class BotFeatureKPI(BaseModel):
     )
 
 
+class BotKPIEntry(BaseModel):
+    """A compact bot record, included with detail=true.
+
+    For each CVE/feature, count suggestions and skips once and compare only the
+    latest in-window suggestion. Deviation is against the current flaw value,
+    not a historical snapshot. Null deviation means the record was not scored.
+    """
+
+    cve_id: str
+    feature: str
+    datetime: str | None
+    aegis_version: str = Field(
+        default="", description="Empty for unknown historical versions"
+    )
+    type: str
+    deviation: float | None
+    data_quality: float | None
+    confidence: float | None
+
+
 class BotKPIResponse(BaseModel):
     """Response model for osidb-bot KPI metrics endpoint."""
 
@@ -418,6 +438,14 @@ class BotKPIResponse(BaseModel):
     )
     features: dict[str, BotFeatureKPI] = Field(
         ..., description="Per-feature KPI metrics keyed by field name"
+    )
+    entries: list[BotKPIEntry] | None = Field(
+        default=None,
+        description="Compact suggestion/skip records, only with detail=true",
+    )
+    available_components: list[str] | None = Field(
+        default=None,
+        description="Sorted unique affected components in the selected bot flaws, only with detail=true",
     )
 
 
@@ -484,4 +512,8 @@ class FeatureKPI(BaseModel):
     entries: list[KPIEntry] = Field(
         ...,
         description="List of log entries filtered by feature, sorted by datetime",
+    )
+    available_versions: list[str] | None = Field(
+        default=None,
+        description="Unfiltered versions for this feature, including superseded programmatic records; only with detail=true. Empty string means unknown.",
     )

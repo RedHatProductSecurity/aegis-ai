@@ -9,6 +9,8 @@ GSSAPI delegated credentials for pass-through authentication to OSIDB.
 from contextvars import ContextVar
 from typing import Any
 
+OSIDB_ACCESS_TOKEN_KEY = "_osidb_access_token"
+
 # Current request's ASGI scope (set by web middleware, read by OSIDB client).
 # Scope may contain "gssapi_context" with delegated_creds when Kerberos delegation is used.
 request_scope_var: ContextVar[dict[str, Any] | None] = ContextVar(
