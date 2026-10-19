@@ -77,6 +77,31 @@ class QueryAffectedComponentsModel(BaseModel):
         return f"{len(self.affected_components)} affected component(s)"
 
 
+class BinaryAffectednessEntry(BaseModel):
+    """Per-binary affectedness within a source RPM package."""
+
+    binary_rpm: str = Field(
+        ...,
+        description="Binary RPM name (e.g., 'libcurl').",
+    )
+
+    affected: bool = Field(
+        ...,
+        description="Whether this binary is affected by the vulnerability.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Rationale for the determination.",
+    )
+
+    subcomponent_hint: str | None = Field(
+        default=None,
+        description="Optional free-text hint about which internal component within "
+        "the binary is affected (e.g., 'XFS kernel module', 'HTTP/2 handler').",
+    )
+
+
 class AffectedPackageEntry(BaseModel):
     """A single package-level affectedness suggestion with rationale."""
 
@@ -100,10 +125,10 @@ class AffectedPackageEntry(BaseModel):
         description="Per-package rationale for the affectedness determination.",
     )
 
-    affected_subcomponents: str | None = Field(
-        default=None,
-        description="Optional free-text hint about which internal components within "
-        "the package are affected (e.g., 'XFS kernel module', 'libcurl HTTP/2 handler').",
+    affected_binaries: list[BinaryAffectednessEntry] = Field(
+        default_factory=list,
+        description="Per-binary affectedness assessments for the binary RPMs "
+        "produced by this source package.",
     )
 
 
@@ -128,7 +153,9 @@ class SuggestAffectedPackagesModel(AegisFeatureModel):
     def printable_outcome(self) -> str:
         affected = sum(1 for p in self.affected_packages if p.affected)
         total = len(self.affected_packages)
-        return f"{affected}/{total} package(s) affected"
+        binaries = sum(len(p.affected_binaries) for p in self.affected_packages)
+        suffix = f", {binaries} binaries assessed" if binaries else ""
+        return f"{affected}/{total} package(s) affected{suffix}"
 
 
 class SuggestAffectedComponentsModel(AegisFeatureModel):
