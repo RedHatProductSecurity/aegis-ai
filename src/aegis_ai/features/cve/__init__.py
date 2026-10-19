@@ -1321,7 +1321,7 @@ class SuggestAffectedPackages(Feature):
             goals="""\
 - For each affect entry with a PURL, determine whether the source RPM package is affected by the specific vulnerability described in the CVE.
 - Produce a per-package affectedness suggestion with rationale.
-- Where possible, identify which internal sub-components within the package are affected (e.g., a specific kernel module, a library within a larger source package).
+- For affected packages with binary RPM data, produce per-binary affectedness assessments in affected_binaries, with optional subcomponent_hint for sub-binary granularity (e.g., a specific kernel module, an HTTP handler within a library).
 - Signal low data_quality when the CVE description or affects data is insufficient for confident analysis.
 - Provide an overall explanation summarizing the affectedness analysis.
 """,
@@ -1335,9 +1335,11 @@ class SuggestAffectedPackages(Feature):
   - Determine whether the package contains the vulnerable code or functionality.
   - Consider the ps_update_stream context — different streams may have different codebases.
   - Provide a concise per-package explanation.
-  - If you can identify specific sub-components (kernel modules, libraries, binaries) within the package that are affected, include them in affected_subcomponents.
 - Use github MCP tool to inspect commit diffs or repository structure when reference URLs are available.
-- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. Use this data to identify which specific binaries within the package are affected and record them in affected_subcomponents. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream. If an affect entry has binary_rpms_not_found set to true, no build was found for that package/stream combination — do not call list_binary_rpms_tool for it again.
+- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream. If an affect entry has binary_rpms_not_found set to true, no build was found for that package/stream combination — do not call list_binary_rpms_tool for it again.
+- When binary RPM names are available (from binary_rpms or list_binary_rpms_tool), populate affected_binaries with one BinaryAffectednessEntry per binary RPM. For each binary, set affected to whether the vulnerability impacts that specific binary, and provide a concise one-sentence explanation.
+- Use subcomponent_hint on a BinaryAffectednessEntry when the affected component is more specific than the binary itself (e.g., 'XFS kernel module', 'HTTP/2 handler'). Do not use it to list individual source files.
+- When binary RPM data is not available, leave affected_binaries empty. The package-level explanation should still describe which sub-components are affected when known.
 - The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
