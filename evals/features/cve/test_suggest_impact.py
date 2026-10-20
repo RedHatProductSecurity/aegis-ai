@@ -116,7 +116,11 @@ kernel_scope_judge = create_llm_judge(
         "program loading via unprivileged BPF, device events during normal use, "
         "worker/interrupt-context races), that is also consistent — accept it. "
         "Fail only when the explanation describes exclusively admin-only trigger paths with "
-        "no plausible unprivileged alternative and the vector still uses PR:L."
+        "no plausible unprivileged alternative and the vector still uses PR:L. "
+        "Exception for guest VMs: privileges inside a guest virtual machine (e.g. guest root, "
+        "guest admin performing IOMMU/DMA/device operations) are PR:L from the CVSS perspective "
+        "because the attacker is scoped to the guest, not the host — accept PR:L even when the "
+        "explanation mentions 'administrative' operations inside the guest."
     ),
 )
 
