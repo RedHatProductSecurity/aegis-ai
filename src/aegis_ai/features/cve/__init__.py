@@ -1361,7 +1361,37 @@ class SuggestAffectedPackages(Feature):
             if tool_name not in result.output.tools_used:
                 result.output.tools_used.append(tool_name)
 
+        if isinstance(static_context, dict) and isinstance(
+            static_context.get("affects"), list
+        ):
+            self._reattach_build_nvr(result.output, static_context["affects"])
+
         return result
+
+    @staticmethod
+    def _reattach_build_nvr(
+        output: SuggestAffectedPackagesModel, affects: list
+    ) -> None:
+        """Stamp build_nvr deterministically from enriched affects data.
+
+        The LLM may omit or alter build_nvr, so we overwrite it from the
+        authoritative enrichment data keyed by (purl, ps_update_stream).
+        """
+        nvr_map: dict[tuple[str, str], str] = {}
+        for a in affects:
+            if not isinstance(a, dict):
+                continue
+            purl = a.get("purl")
+            stream = a.get("ps_update_stream")
+            nvr = a.get("build_nvr")
+            if purl and stream and nvr:
+                nvr_map[(purl, stream)] = nvr
+
+        for pkg in output.affected_packages:
+            key = (pkg.purl, pkg.ps_update_stream)
+            nvr = nvr_map.get(key)
+            if nvr is not None:
+                pkg.build_nvr = nvr
 
     @staticmethod
     async def _enrich_affects_with_binary_rpms(affects: list) -> bool:
@@ -1408,17 +1438,19 @@ class SuggestAffectedPackages(Feature):
 
         _NOT_FOUND: list[str] = []
 
+        _LookupResult = tuple[list[str] | None, str | None]
+
         async def _lookup_package(
             pkg: str, streams: list[str]
-        ) -> list[tuple[tuple[str, str], list[str] | None]]:
+        ) -> list[tuple[tuple[str, str], _LookupResult]]:
             """Batch-resolve all streams for one package."""
             try:
                 batch = await asyncio.to_thread(_lookup_binary_rpms_batch, pkg, streams)
             except Exception:
                 logger.exception("[list_binary_rpms] %s unexpected error", pkg)
-                return [((pkg, s), None) for s in streams]
+                return [((pkg, s), (None, None)) for s in streams]
 
-            mapped: list[tuple[tuple[str, str], list[str] | None]] = []
+            mapped: list[tuple[tuple[str, str], _LookupResult]] = []
             for result in batch:
                 key = (result.package, result.ps_update_stream)
                 if result.status == "success":
@@ -1428,9 +1460,9 @@ class SuggestAffectedPackages(Feature):
                         result.ps_update_stream,
                         len(result.binary_rpms),
                     )
-                    mapped.append((key, result.binary_rpms))
+                    mapped.append((key, (result.binary_rpms, result.build_nvr)))
                 elif result.status == "not_found":
-                    mapped.append((key, _NOT_FOUND))
+                    mapped.append((key, (_NOT_FOUND, None)))
                 else:
                     logger.warning(
                         "[list_binary_rpms] %s/%s failed: %s",
@@ -1438,15 +1470,17 @@ class SuggestAffectedPackages(Feature):
                         result.ps_update_stream,
                         result.error_message,
                     )
-                    mapped.append((key, None))
+                    mapped.append((key, (None, None)))
             return mapped
 
         batch_results = await asyncio.gather(
             *[_lookup_package(pkg, streams) for pkg, streams in pkg_streams.items()]
         )
-        rpm_cache: dict[tuple[str, str], list[str] | None] = {
-            k: rpms for batch in batch_results for k, rpms in batch
+        rpm_cache: dict[tuple[str, str], _LookupResult] = {
+            k: lr for batch in batch_results for k, lr in batch
         }
+
+        _ENRICHMENT_KEYS = ("binary_rpms", "binary_rpms_not_found", "build_nvr")
 
         enriched = 0
         for a in affects:
@@ -1461,13 +1495,17 @@ class SuggestAffectedPackages(Feature):
             except ValueError:
                 continue
             key = (pkg_name, stream)
-            rpms = rpm_cache.get(key)
+            rpms, build_nvr = rpm_cache.get(key, (None, None))
             if rpms is None:
                 continue
+            for ek in _ENRICHMENT_KEYS:
+                a.pop(ek, None)
             if rpms is _NOT_FOUND:
                 a["binary_rpms_not_found"] = True
             else:
                 a["binary_rpms"] = rpms
+                if build_nvr:
+                    a["build_nvr"] = build_nvr
             enriched += 1
 
         logger.info("[list_binary_rpms] enriched %d/%d affects", enriched, len(affects))
