@@ -1340,6 +1340,7 @@ class SuggestAffectedPackages(Feature):
 - When binary RPM names are available (from binary_rpms or list_binary_rpms_tool), populate affected_binaries with one BinaryAffectednessEntry per binary RPM. For each binary, set affected to whether the vulnerability impacts that specific binary, and provide a concise one-sentence explanation.
 - Use subcomponent_hint on a BinaryAffectednessEntry when the affected component is more specific than the binary itself (e.g., 'XFS kernel module', 'HTTP/2 handler'). Do not use it to list individual source files.
 - When binary RPM data is not available, leave affected_binaries empty. The package-level explanation should still describe which sub-components are affected when known.
+- If the affect entry includes a build_nvr field, propagate it to the build_nvr field in the corresponding AffectedPackageEntry.
 - The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
@@ -1408,17 +1409,19 @@ class SuggestAffectedPackages(Feature):
 
         _NOT_FOUND: list[str] = []
 
+        _LookupResult = tuple[list[str] | None, str | None]
+
         async def _lookup_package(
             pkg: str, streams: list[str]
-        ) -> list[tuple[tuple[str, str], list[str] | None]]:
+        ) -> list[tuple[tuple[str, str], _LookupResult]]:
             """Batch-resolve all streams for one package."""
             try:
                 batch = await asyncio.to_thread(_lookup_binary_rpms_batch, pkg, streams)
             except Exception:
                 logger.exception("[list_binary_rpms] %s unexpected error", pkg)
-                return [((pkg, s), None) for s in streams]
+                return [((pkg, s), (None, None)) for s in streams]
 
-            mapped: list[tuple[tuple[str, str], list[str] | None]] = []
+            mapped: list[tuple[tuple[str, str], _LookupResult]] = []
             for result in batch:
                 key = (result.package, result.ps_update_stream)
                 if result.status == "success":
@@ -1428,9 +1431,9 @@ class SuggestAffectedPackages(Feature):
                         result.ps_update_stream,
                         len(result.binary_rpms),
                     )
-                    mapped.append((key, result.binary_rpms))
+                    mapped.append((key, (result.binary_rpms, result.build_nvr)))
                 elif result.status == "not_found":
-                    mapped.append((key, _NOT_FOUND))
+                    mapped.append((key, (_NOT_FOUND, None)))
                 else:
                     logger.warning(
                         "[list_binary_rpms] %s/%s failed: %s",
@@ -1438,14 +1441,14 @@ class SuggestAffectedPackages(Feature):
                         result.ps_update_stream,
                         result.error_message,
                     )
-                    mapped.append((key, None))
+                    mapped.append((key, (None, None)))
             return mapped
 
         batch_results = await asyncio.gather(
             *[_lookup_package(pkg, streams) for pkg, streams in pkg_streams.items()]
         )
-        rpm_cache: dict[tuple[str, str], list[str] | None] = {
-            k: rpms for batch in batch_results for k, rpms in batch
+        rpm_cache: dict[tuple[str, str], _LookupResult] = {
+            k: lr for batch in batch_results for k, lr in batch
         }
 
         enriched = 0
@@ -1461,13 +1464,15 @@ class SuggestAffectedPackages(Feature):
             except ValueError:
                 continue
             key = (pkg_name, stream)
-            rpms = rpm_cache.get(key)
+            rpms, build_nvr = rpm_cache.get(key, (None, None))
             if rpms is None:
                 continue
             if rpms is _NOT_FOUND:
                 a["binary_rpms_not_found"] = True
             else:
                 a["binary_rpms"] = rpms
+                if build_nvr:
+                    a["build_nvr"] = build_nvr
             enriched += 1
 
         logger.info("[list_binary_rpms] enriched %d/%d affects", enriched, len(affects))

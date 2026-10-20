@@ -131,6 +131,11 @@ class AffectedPackageEntry(BaseModel):
         "produced by this source package.",
     )
 
+    build_nvr: str | None = Field(
+        default=None,
+        description="The NVR (name-version-release) of the resolved Brew build.",
+    )
+
 
 class SuggestAffectedPackagesModel(AegisFeatureModel):
     """LLM-driven suggestion of source RPM package affectedness."""

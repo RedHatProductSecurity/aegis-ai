@@ -94,6 +94,28 @@ class TestAffectedPackageEntry:
         )
         assert entry.affected_binaries == []
 
+    def test_build_nvr_round_trip(self):
+        entry = AffectedPackageEntry(
+            purl="pkg:rpm/redhat/curl",
+            ps_update_stream="rhel-9.6.0.z",
+            affected=True,
+            explanation="Affected.",
+            build_nvr="curl-8.6.0-3.el9",
+        )
+        data = entry.model_dump()
+        assert data["build_nvr"] == "curl-8.6.0-3.el9"
+        restored = AffectedPackageEntry(**data)
+        assert restored.build_nvr == "curl-8.6.0-3.el9"
+
+    def test_build_nvr_defaults_to_none(self):
+        entry = AffectedPackageEntry(
+            purl="pkg:rpm/redhat/curl",
+            ps_update_stream="rhel-9.6.0.z",
+            affected=True,
+            explanation="Affected.",
+        )
+        assert entry.build_nvr is None
+
     def test_affected_subcomponents_not_in_schema(self):
         assert "affected_subcomponents" not in AffectedPackageEntry.model_fields
         assert "affected_binaries" in AffectedPackageEntry.model_fields
