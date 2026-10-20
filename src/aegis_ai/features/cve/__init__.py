@@ -800,12 +800,23 @@ def _has_sufficient_static_context(static_context: Any) -> bool:
     return bool(desc)
 
 
+# Package extensions appended after the module's major-version segment.
+GO_MODULE_PACKAGE_EXTENSIONS: dict[str, str] = {
+    "github.com/grpc-ecosystem/grpc-gateway/v2": "runtime",
+}
+
+
 class SuggestAffectedComponents(Feature):
     """Infer affected components from CVE data using all available OSIDB fields."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
         exclude = ["affects", "components"]
+        package_extension_rules = "\n".join(
+            f"- For '{module}', use '{module}/{extension}' as the affected component "
+            f"instead of the module root; keep '/{extension}' after the major-version segment."
+            for module, extension in GO_MODULE_PACKAGE_EXTENSIONS.items()
+        )
         deps = feature_deps(
             cve_id=str(cve_id),
             exclude_osidb_fields=exclude,
@@ -851,7 +862,9 @@ class SuggestAffectedComponents(Feature):
                 - Use 'unknown' for the ecosystem only when it genuinely cannot be determined from available data.
                 - For Go packages outside stdlib, use the full canonical affected module or package path, including any major-version segment (e.g. 'github.com/containerd/containerd/v2', 'github.com/external-secrets/external-secrets', 'golang.org/x/net/html'). A package import path may include subdirectories within a module; retain that package specificity when the CVE identifies it, including when advisory module metadata names only the containing module. Never shorten to just the repo name, collapse an affected package path to its module root, or strip /v2, /v7, etc. Use advisory package names, PURLs, or upstream module declarations to establish the path; do not invent a version segment from a release version alone, since some modules have unsuffixed paths even at version 2 or later. When authoritative affected-package data identifies multiple module paths, list each distinct path separately, including the unsuffixed path only if it is also affected; do not collapse them into one repository name.
                 - Output format: components (list of strings), ecosystems (list of strings), explanation (string), confidence (0.00–1.00).
-            """,
+            """
+            + "\n"
+            + package_extension_rules,
             context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
         )

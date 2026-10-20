@@ -244,7 +244,8 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
 # AEGIS-496: preserve versioned module identities and affected package paths.
 # The ticket examples use OSIDB descriptions/references, with expected /v2 names
 # verified against mongo-driver's pkg.go.dev reference and grpc-gateway's
-# v2.28.0 go.mod. MongoDB triage comments are reduced to the affected-version
+# v2.28.0 go.mod; grpc-gateway retains the affected /v2/runtime package path.
+# MongoDB triage comments are reduced to the affected-version
 # context. Other module expectations match the cached OSIDB component paths.
 GO_MODULE_IDENTITY_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-22868",  # oauth2/jws: retain affected package specificity
@@ -253,7 +254,7 @@ GO_MODULE_IDENTITY_CVE_IDS: tuple[str, ...] = (
     "CVE-2025-64329",  # containerd: unsuffixed and /v2, deduplicated across ranges
     "CVE-2026-22822",  # external-secrets: v0/v1 module remains unsuffixed
     "CVE-2026-33414",  # podman: /v4 and /v5, no unsuffixed module
-    "CVE-2026-37236",  # AEGIS-496: grpc-gateway/v2, not the unsuffixed module
+    "CVE-2026-37236",  # AEGIS-496: grpc-gateway/v2/runtime, not the module root
     "CVE-2026-40575",  # oauth2-proxy: /v7 only
     "CVE-2026-40611",  # lego: /v4, /v3, and unsuffixed v2 (no invented /v2)
     "CVE-2026-81521",  # AEGIS-496: mongo-driver/v2; v1 lacks Client.BulkWrite
