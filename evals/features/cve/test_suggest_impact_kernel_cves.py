@@ -71,10 +71,6 @@ KNOWN_FAILURES: dict[str, dict] = {
         "known_to_fail_evaluators": ["UnderestimationEvaluator"],
         "reason": "underestimation: predicted LOW, expected MODERATE",
     },
-    "CVE-2026-46333": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": "underestimation: predicted MODERATE, expected IMPORTANT",
-    },
 }
 
 # CVEs where KpanicOverestimationEvaluator runs: AEGIS-441 benchmark
