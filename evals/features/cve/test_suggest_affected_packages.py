@@ -226,6 +226,31 @@ class PackageOverlapEvaluator(Evaluator[str, SuggestAffectedPackagesModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
+class BinaryPresenceEvaluator(Evaluator[str, SuggestAffectedPackagesModel]):
+    """Checks that affected packages have non-empty affected_binaries.
+
+    Scores the fraction of affected packages that have at least one
+    BinaryAffectednessEntry populated.  Packages marked not-affected are
+    excluded (they may legitimately have an empty list).
+    """
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestAffectedPackagesModel]
+    ) -> EvaluationReason:
+        suggested = getattr(ctx.output, "affected_packages", None) or []
+        affected_pkgs = [p for p in suggested if p.affected]
+        if not affected_pkgs:
+            return EvaluationReason(value=1.0, reason="no affected packages")
+        with_binaries = sum(1 for p in affected_pkgs if p.affected_binaries)
+        score = with_binaries / len(affected_pkgs)
+        reason = (
+            None
+            if score == 1.0
+            else f"{with_binaries}/{len(affected_pkgs)} affected packages have affected_binaries"
+        )
+        return EvaluationReason(value=score, reason=reason)
+
+
 class LowQualityCase(Case[str, Any, Any]):
     """Evaluation case for CVEs with insufficient affects data."""
 
@@ -238,6 +263,7 @@ async def suggest_affected_packages(cve_id: CVEID) -> SuggestAffectedPackagesMod
 
 
 evals = [
+    BinaryPresenceEvaluator(),
     ToolsUsedEvaluator(),
     PackageOverlapEvaluator(),
 ]
