@@ -59,10 +59,6 @@ SEVERITY_RANK = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "NONE":
 # To waive an evaluator for a case, add its CVE ID here.  Review
 # kernel_eval_results.json after each run to confirm before waiving.
 KNOWN_FAILURES: dict[str, dict] = {
-    "CVE-2023-54213": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": "underestimation: predicted LOW, expected MODERATE",
-    },
     "CVE-2025-39809": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": "sets C:H and I:H for internal kernel stack buffer overflow without plausible user-data impact path",
