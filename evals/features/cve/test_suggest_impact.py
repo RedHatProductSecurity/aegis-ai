@@ -89,8 +89,9 @@ kernel_scope_judge = create_llm_judge(
         "in a way consistent with the vector: use PR:H when admin-class capabilities "
         "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
         "unless the described effect crosses a security boundary (e.g. container escape to host, "
-        "guest-to-host breakout via KVM/hypervisor, or userspace corruption of kernel-managed "
-        "hypervisor state such as shadow page tables or EPT/NPT entries); "
+        "guest-to-host breakout via KVM/hypervisor, userspace corruption of kernel-managed "
+        "hypervisor state such as shadow page tables or EPT/NPT entries, or cross-namespace "
+        "boundary crossing where a user in one network namespace manipulates resources in another); "
         "do not set C:H/I:H for purely internal kernel state issues without a plausible "
         "user-data impact path. However, kernel structures that carry or mediate user data "
         "(network/Bluetooth channel state, socket buffers, filesystem inodes, memory mappings) "
@@ -116,7 +117,11 @@ kernel_scope_judge = create_llm_judge(
         "program loading via unprivileged BPF, device events during normal use, "
         "worker/interrupt-context races), that is also consistent — accept it. "
         "Fail only when the explanation describes exclusively admin-only trigger paths with "
-        "no plausible unprivileged alternative and the vector still uses PR:L."
+        "no plausible unprivileged alternative and the vector still uses PR:L. "
+        "Exception for guest VMs: privileges inside a guest virtual machine (e.g. guest root, "
+        "guest admin performing IOMMU/DMA/device operations) are PR:L from the CVSS perspective "
+        "because the attacker is scoped to the guest, not the host — accept PR:L even when the "
+        "explanation mentions 'administrative' operations inside the guest."
     ),
 )
 

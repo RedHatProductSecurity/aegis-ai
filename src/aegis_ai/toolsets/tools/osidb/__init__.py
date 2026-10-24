@@ -294,6 +294,18 @@ async def flaw_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE
     """
     logger.debug(input.cve_id)
 
+    deps = ctx.deps
+    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+        logger.info(
+            f"osidb_flaw_tool: rejecting lookup for {input.cve_id} "
+            f"(expected {deps.cve_id})"
+        )
+        return CVE(
+            cve_id=input.cve_id,
+            title=f"Lookup for {input.cve_id} is not permitted — only {deps.cve_id} is being analyzed",
+            description="",
+        )
+
     try:
         static_ctx = getattr(ctx.deps, "static_context", None)
         if (
