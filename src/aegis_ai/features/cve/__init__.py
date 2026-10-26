@@ -62,6 +62,7 @@ def _build_cve_input(
             references=static_context.get("references"),
             affects=static_context.get("affects"),
             cvss_scores=static_context.get("cvss_scores"),
+            steering_notes=static_context.get("steering_notes"),
         )
     else:
         inp = CVEFeatureInput(cve_id=cve_id)
@@ -370,6 +371,9 @@ class SuggestImpact(Feature):
                 parts.append(f"Components: {', '.join(components)}")
             if description_text:
                 parts.append(f"Description: {description_text}")
+            steering_notes = cve_context.get("steering_notes")
+            if steering_notes is not None:
+                parts.append(f"Internal analyst steering notes: {steering_notes}")
             if parts:
                 context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
 
@@ -540,7 +544,9 @@ class SuggestImpact(Feature):
                 original_vector,
                 trace,
                 call_str,
-                cve_context=resolved_static_context,
+                cve_context=static_context
+                if isinstance(static_context, dict)
+                else None,
             )
 
         result.output._classifier_diagnostics = classifier_result
@@ -1284,7 +1290,10 @@ class SuggestAffectedPackages(Feature):
         elif self.agent.name == "RHFeatureAgent":
             cve_data = await osidb_tool.cve_retrieve(cve_id)
             affects = cve_data.affects
-            static_context = cve_data.model_dump()
+            retrieved_context = cve_data.model_dump()
+            if isinstance(static_context, dict) and "steering_notes" in static_context:
+                retrieved_context["steering_notes"] = static_context["steering_notes"]
+            static_context = retrieved_context
             pre_invoked_tools.append("osidb_tool")
         else:
             affects = []

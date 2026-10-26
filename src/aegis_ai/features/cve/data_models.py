@@ -20,6 +20,9 @@ class CVEFeatureInput(BaseModel):
     references: list | None = Field(None, description="List of references")
     affects: list | None = Field(None, description="List of affects")
     cvss_scores: list | None = Field(None, description="List of CVSS scores")
+    steering_notes: str | None = Field(
+        None, description="Internal analyst notes providing additional flaw context"
+    )
 
     def __repr__(self) -> str:
         fields = {k: v for k, v in self.__dict__.items() if v is not None}

@@ -5,12 +5,17 @@ import yaml
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
+from aegis_ai import get_settings
 from aegis_ai.agents import public_feature_agent, rh_feature_agent
 from aegis_ai.features import Feature
 from aegis_ai.features import component as component_features
 from aegis_ai.features import cve as cve_features
 from aegis_ai.features.component.data_models import ComponentIntelligenceModel
-from aegis_ai.features.cve.data_models import SuggestAffectedComponentsModel
+from aegis_ai.features.cve.data_models import (
+    SuggestAffectedComponentsModel,
+    SuggestDescriptionModel,
+    SuggestStatementModel,
+)
 from aegis_ai.toolsets.tools.osidb.osidb_client import (
     OSIDBFlawNotFoundError,
     OSIDBUnauthorizedError,
@@ -376,6 +381,148 @@ def _patch_all_cve_feature_execs(mock_result):
             )
         )
     return stack
+
+
+def _make_steering_notes_outputs():
+    components = _make_sac_output().model_copy(update={"components": ["curl"]})
+    common = components.model_dump(exclude={"components", "ecosystems"})
+    return {
+        SuggestAffectedComponentsModel: components,
+        SuggestDescriptionModel: SuggestDescriptionModel(
+            **common,
+            components=["curl"],
+            suggested_title="Suggested public title",
+            suggested_description="Suggested public description.",
+        ),
+        SuggestStatementModel: SuggestStatementModel(
+            **common,
+            title="Public title",
+            description="Public description.",
+            suggested_statement="Suggested public statement.",
+            suggested_mitigation=None,
+        ),
+    }
+
+
+@pytest.fixture
+def recorded_cve_prompts(monkeypatch):
+    """Stub only the agent: routing, enrichment, feature exec and rendering stay real."""
+    monkeypatch.setattr(get_settings(), "safety_enabled", False)
+    outputs = _make_steering_notes_outputs()
+    prompts: list[tuple[type, str]] = []
+
+    async def record(prompt, *, output_type, **kwargs):
+        prompts.append((output_type, prompt))
+        result = _make_mock_result(outputs[output_type])
+        result.all_messages.return_value = []
+        return result
+
+    with patch.object(public_feature_agent, "run", side_effect=record):
+        yield prompts
+
+
+def _steering_notes_request_context(notes_context):
+    return {
+        "cve_id": "CVE-2024-1234",
+        "agent": "public",
+        "title": "Public title",
+        "comment_zero": "Public description.",
+        "statement": "Existing public statement.",
+        "mitigation": "Existing public mitigation.",
+        **notes_context,
+    }
+
+
+def _assert_enriched_steering_notes_prompts(prompts, notes):
+    for model, prompt in prompts:
+        context = prompt.partition("\n\nContext:\n")[2].partition("\n\nFormat:")[0]
+        assert context.startswith("CVEFeatureInput(")
+        if notes is None:
+            assert "steering_notes=" not in context
+        else:
+            assert f"steering_notes={notes!r}" in context
+        if model is SuggestAffectedComponentsModel:
+            assert "components=" not in context
+        else:
+            assert "components=['curl']" in context
+        if model is SuggestDescriptionModel:
+            assert " title=" not in context
+            assert " description=" not in context
+        if model is SuggestStatementModel:
+            assert " statement=" not in context
+            assert " mitigation=" not in context
+
+
+class TestSteeringNotesPromptContext:
+    @pytest.mark.parametrize(
+        "endpoint", ["single", "multi-inferred", "multi-explicit-sac"]
+    )
+    @pytest.mark.parametrize(
+        "notes_context",
+        [
+            pytest.param({}, id="omitted"),
+            pytest.param({"steering_notes": None}, id="null"),
+            pytest.param({"steering_notes": ""}, id="empty"),
+            pytest.param(
+                {
+                    "steering_notes": "  Internal: café — 確認 🔎\n\tCheck reproduction.\r\n  "
+                },
+                id="unicode-multiline",
+            ),
+        ],
+    )
+    def test_notes_reach_prompts_after_component_enrichment(
+        self, endpoint, notes_context, recorded_cve_prompts
+    ):
+        payload = _steering_notes_request_context(notes_context)
+        path = "/api/v1/analysis/cve/suggest-statement"
+        expected_types = {SuggestAffectedComponentsModel, SuggestStatementModel}
+        if endpoint != "single":
+            path = "/api/v1/analysis/cve"
+            payload["features"] = ["suggest-description", "suggest-statement"]
+            if endpoint == "multi-explicit-sac":
+                payload["features"].append("suggest-affected-components")
+            expected_types.add(SuggestDescriptionModel)
+
+        response = client.post(path, json=payload)
+        assert response.status_code == 200, response.text
+        if endpoint != "single":
+            assert response.json()["errors"] == {}
+            assert set(response.json()["results"]) == set(payload["features"])
+        assert len(recorded_cve_prompts) == len(expected_types)
+        assert {model for model, _ in recorded_cve_prompts} == expected_types
+        assert recorded_cve_prompts[0][0] is SuggestAffectedComponentsModel
+        _assert_enriched_steering_notes_prompts(
+            recorded_cve_prompts, notes_context.get("steering_notes")
+        )
+
+    @pytest.mark.parametrize("endpoint", ["single", "multi"])
+    def test_failed_component_inference_keeps_notes_for_requested_feature(
+        self, endpoint, recorded_cve_prompts
+    ):
+        notes = "Internal reproduction is awaiting component confirmation."
+        payload = _steering_notes_request_context({"steering_notes": notes})
+        path = "/api/v1/analysis/cve/suggest-statement"
+        if endpoint == "multi":
+            path = "/api/v1/analysis/cve"
+            payload["features"] = ["suggest-statement"]
+        with patch.object(
+            cve_features.SuggestAffectedComponents,
+            "_run",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("Component inference failed"),
+        ):
+            response = client.post(path, json=payload)
+
+        assert response.status_code == 200, response.text
+        if endpoint == "multi":
+            assert response.json()["errors"] == {}
+        assert len(recorded_cve_prompts) == 1
+        model, prompt = recorded_cve_prompts[0]
+        assert model is SuggestStatementModel
+        context = prompt.partition("\n\nContext:\n")[2].partition("\n\nFormat:")[0]
+        assert f"steering_notes={notes!r}" in context
+        assert "components=" not in context
 
 
 class TestCveMultiAnalysis:
