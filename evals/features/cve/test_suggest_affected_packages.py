@@ -59,7 +59,11 @@ LOW_QUALITY_CVE_IDS: dict[str, tuple[float, float]] = {
     "CVE-2026-84327": (0.5, 0.5),
 }
 
-KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = ()
+KNOWN_TO_FAIL_CVE_IDS: dict[str, list[str]] = {
+    "CVE-2026-3904": [
+        "BinaryPresenceEvaluator"
+    ],  # TODO: remove this once https://redhat.atlassian.net/browse/AEGIS-533 is resolved
+}
 
 
 def _affects_with_purls(cve: CVE) -> list[dict[str, Any]]:
@@ -119,7 +123,7 @@ def _build_cases(
         ]
         metadata: dict[str, Any] = {"cve_id": cve_id}
         if cve_id in KNOWN_TO_FAIL_CVE_IDS:
-            metadata["known_to_fail_evaluators"] = ["PackageOverlapEvaluator"]
+            metadata["known_to_fail_evaluators"] = KNOWN_TO_FAIL_CVE_IDS[cve_id]
 
         case = SuggestAffectedPackagesCase(
             name=f"suggest-affected-packages-{cve_id}",
