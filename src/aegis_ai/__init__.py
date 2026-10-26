@@ -184,11 +184,10 @@ class AppSettings(BaseSettings):
     default_llm_host: str = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
     default_llm_model_name: str = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
     default_llm_settings: Any = Field(default_factory=dict)
-    default_llm_temperature: float = get_env_float("AEGIS_LLM_TEMPERATURE", 0.055)
-    default_llm_top_p: float = get_env_float("AEGIS_LLM_TOP_P", 0.8)
     default_llm_max_tokens: int = get_env_int("AEGIS_LLM_MAX_TOKENS", 0)
     default_llm_prompt_timeout: int = get_env_int("AEGIS_LLM_TIMEOUT_SECS", 200)
     llm_max_jobs: int = get_env_int("AEGIS_LLM_MAX_JOBS", 4)
+    google_provider: bool = False
 
     # Aegis safety subagent
     safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
@@ -274,10 +273,7 @@ class AppSettings(BaseSettings):
         host = self.default_llm_host
         llm_hostname = _llm_base_url_hostname(host)
 
-        self.model_kwargs: dict[str, Any] = {
-            "temperature": self.default_llm_temperature,
-            "top_p": self.default_llm_top_p,
-        }
+        self.model_kwargs: dict[str, Any] = {}
 
         # only override the max_tokens settings when a value is provided in env
         if self.default_llm_max_tokens != 0:
@@ -289,6 +285,7 @@ class AppSettings(BaseSettings):
             self.default_llm_settings = AnthropicModelSettings(**self.model_kwargs)
 
         elif llm_hostname == "generativelanguage.googleapis.com":
+            self.google_provider = True
             # lazy import of modules to speed up Aegis CLI
             from google.genai.types import (
                 HarmBlockThreshold,

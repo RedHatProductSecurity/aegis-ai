@@ -315,8 +315,9 @@ class Feature(ABC):
                     # a fresh run gives a full new set of validation attempts.
                     # Temperature jitter helps the model escape repeated
                     # failures (originally added for RECITATION — see #271).
-                    model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
-                    msg += f" with temperature={PROMPT_RETRY_TEMPERATURE}"
+                    if not get_settings().google_provider:
+                        model_settings["temperature"] = PROMPT_RETRY_TEMPERATURE
+                        msg += f" with temperature={PROMPT_RETRY_TEMPERATURE}"
 
                 # increment the counter of retries
                 attempt += 1
