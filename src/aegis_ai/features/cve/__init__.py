@@ -1473,9 +1473,21 @@ class SuggestAffectedPackages(Feature):
                     mapped.append((key, (None, None)))
             return mapped
 
-        batch_results = await asyncio.gather(
-            *[_lookup_package(pkg, streams) for pkg, streams in pkg_streams.items()]
-        )
+        try:
+            async with asyncio.timeout(60):
+                batch_results = await asyncio.gather(
+                    *[
+                        _lookup_package(pkg, streams)
+                        for pkg, streams in pkg_streams.items()
+                    ]
+                )
+        except TimeoutError:
+            logger.warning(
+                "[list_binary_rpms] enrichment timed out after 60s, "
+                "skipping binary RPM pre-computation"
+            )
+            return bool(pkg_streams)
+
         rpm_cache: dict[tuple[str, str], _LookupResult] = {
             k: lr for batch in batch_results for k, lr in batch
         }
