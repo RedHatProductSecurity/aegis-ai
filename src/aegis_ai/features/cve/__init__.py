@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Any
 
 import cvss
@@ -1408,7 +1409,10 @@ class SuggestAffectedPackages(Feature):
 
         from packageurl import PackageURL
 
-        from aegis_ai.toolsets.tools.build_system import _lookup_binary_rpms_batch
+        from aegis_ai.toolsets.tools.build_system import (
+            ENRICHMENT_TIMEOUT_SECS,
+            _lookup_binary_rpms_batch,
+        )
 
         pkg_streams: dict[str, list[str]] = defaultdict(list)
         for a in affects:
@@ -1440,12 +1444,16 @@ class SuggestAffectedPackages(Feature):
 
         _LookupResult = tuple[list[str] | None, str | None]
 
+        deadline = time.monotonic() + ENRICHMENT_TIMEOUT_SECS
+
         async def _lookup_package(
             pkg: str, streams: list[str]
         ) -> list[tuple[tuple[str, str], _LookupResult]]:
             """Batch-resolve all streams for one package."""
             try:
-                batch = await asyncio.to_thread(_lookup_binary_rpms_batch, pkg, streams)
+                batch = await asyncio.to_thread(
+                    _lookup_binary_rpms_batch, pkg, streams, deadline=deadline
+                )
             except Exception:
                 logger.exception("[list_binary_rpms] %s unexpected error", pkg)
                 return [((pkg, s), (None, None)) for s in streams]
@@ -1473,20 +1481,9 @@ class SuggestAffectedPackages(Feature):
                     mapped.append((key, (None, None)))
             return mapped
 
-        try:
-            async with asyncio.timeout(60):
-                batch_results = await asyncio.gather(
-                    *[
-                        _lookup_package(pkg, streams)
-                        for pkg, streams in pkg_streams.items()
-                    ]
-                )
-        except TimeoutError:
-            logger.warning(
-                "[list_binary_rpms] enrichment timed out after 60s, "
-                "skipping binary RPM pre-computation"
-            )
-            return bool(pkg_streams)
+        batch_results = await asyncio.gather(
+            *[_lookup_package(pkg, streams) for pkg, streams in pkg_streams.items()]
+        )
 
         rpm_cache: dict[tuple[str, str], _LookupResult] = {
             k: lr for batch in batch_results for k, lr in batch

@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -31,7 +32,18 @@ _EXCLUDED_RPM_PATTERNS = re.compile(
 )
 
 BREW_MAX_CONCURRENT = 4
+ENRICHMENT_TIMEOUT_SECS = 60
 _brew_sem = threading.Semaphore(BREW_MAX_CONCURRENT)
+
+
+def _remaining(deadline: float | None) -> float:
+    """Return seconds left until *deadline*, raising on expiry."""
+    if deadline is None:
+        return 30.0
+    left = deadline - time.monotonic()
+    if left <= 0:
+        raise TimeoutError("build system lookup deadline exceeded")
+    return left
 
 
 class ListBinaryRPMsInput(BaseToolInput):
@@ -71,12 +83,12 @@ def _create_brew_session() -> koji.ClientSession:
     return koji.ClientSession(config["server"], session_opts)
 
 
-def _fetch_bomq_builds(package: str) -> list[dict]:
+def _fetch_bomq_builds(package: str, *, deadline: float | None = None) -> list[dict]:
     """Query bomq for all builds of a package."""
     base = get_settings().bomq_url.rstrip("/")
     params = urllib.parse.urlencode({"name": package, "strict": "true"})
     url = f"{base}{BOMQ_API_PATH}?{params}"
-    with urllib.request.urlopen(url, timeout=30) as resp:
+    with urllib.request.urlopen(url, timeout=_remaining(deadline)) as resp:
         data = json.loads(resp.read())
     if not isinstance(data, dict):
         raise TypeError(f"bomq returned {type(data).__name__}, expected object")
@@ -92,13 +104,18 @@ def _fetch_bomq_builds(package: str) -> list[dict]:
 
 
 def _resolve_build_id(
-    session: koji.ClientSession, builds: list[dict], ps_update_stream: str
+    session: koji.ClientSession,
+    builds: list[dict],
+    ps_update_stream: str,
+    *,
+    deadline: float | None = None,
 ) -> tuple[int, str] | None:
     """Find a build matching the stream and resolve it to a Koji build ID."""
     matches = [b for b in builds if b.get("stream_name") == ps_update_stream]
     if not matches:
         return None
     nvr = matches[0]["build_nvr"]
+    session.opts["timeout"] = _remaining(deadline)
     build = session.getBuild(nvr)
     if not build:
         return None
@@ -106,18 +123,25 @@ def _resolve_build_id(
 
 
 def _resolve_build_from_stream(
-    session: koji.ClientSession, package: str, ps_update_stream: str
+    session: koji.ClientSession,
+    package: str,
+    ps_update_stream: str,
+    *,
+    deadline: float | None = None,
 ) -> tuple[int, str] | None:
     """Query bomq for a build NVR, then resolve it to a Koji build ID.
 
     Returns (build_id, build_nvr) or None if no matching build is found.
     """
-    builds = _fetch_bomq_builds(package)
-    return _resolve_build_id(session, builds, ps_update_stream)
+    builds = _fetch_bomq_builds(package, deadline=deadline)
+    return _resolve_build_id(session, builds, ps_update_stream, deadline=deadline)
 
 
-def _list_binary_rpms(session: koji.ClientSession, build_id: int) -> list[str]:
+def _list_binary_rpms(
+    session: koji.ClientSession, build_id: int, *, deadline: float | None = None
+) -> list[str]:
     """List binary RPM names for a build, excluding source RPMs and noise."""
+    session.opts["timeout"] = _remaining(deadline)
     rpms = session.listRPMs(buildID=build_id)
     return sorted(
         {
@@ -133,10 +157,14 @@ def _resolve_stream(
     package: str,
     builds: list[dict],
     ps_update_stream: str,
+    *,
+    deadline: float | None = None,
 ) -> ListBinaryRPMsOutput:
     """Resolve one stream from pre-fetched bomq builds."""
     try:
-        resolved = _resolve_build_id(session, builds, ps_update_stream)
+        resolved = _resolve_build_id(
+            session, builds, ps_update_stream, deadline=deadline
+        )
     except koji.GenericError as e:
         return ListBinaryRPMsOutput(
             package=package,
@@ -159,7 +187,7 @@ def _resolve_stream(
     build_id, build_nvr = resolved
 
     try:
-        binary_rpms = _list_binary_rpms(session, build_id)
+        binary_rpms = _list_binary_rpms(session, build_id, deadline=deadline)
     except (koji.GenericError, KeyError, TypeError) as e:
         return ListBinaryRPMsOutput(
             package=package,
@@ -177,7 +205,9 @@ def _resolve_stream(
     )
 
 
-def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOutput:
+def _lookup_binary_rpms(
+    package: str, ps_update_stream: str, *, deadline: float | None = None
+) -> ListBinaryRPMsOutput:
     """Synchronous lookup of binary RPMs for a single (package, stream) pair."""
     with _brew_sem:
         try:
@@ -191,7 +221,7 @@ def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOu
             )
 
         try:
-            builds = _fetch_bomq_builds(package)
+            builds = _fetch_bomq_builds(package, deadline=deadline)
         except urllib.error.HTTPError as e:
             return ListBinaryRPMsOutput(
                 package=package,
@@ -213,18 +243,46 @@ def _lookup_binary_rpms(package: str, ps_update_stream: str) -> ListBinaryRPMsOu
                 status="error",
                 error_message=f"bomq response error: {e}",
             )
+        except TimeoutError:
+            return ListBinaryRPMsOutput(
+                package=package,
+                ps_update_stream=ps_update_stream,
+                status="error",
+                error_message="build system lookup deadline exceeded",
+            )
 
-        return _resolve_stream(session, package, builds, ps_update_stream)
+        try:
+            return _resolve_stream(
+                session, package, builds, ps_update_stream, deadline=deadline
+            )
+        except TimeoutError:
+            return ListBinaryRPMsOutput(
+                package=package,
+                ps_update_stream=ps_update_stream,
+                status="error",
+                error_message="build system lookup deadline exceeded",
+            )
 
 
 def _lookup_binary_rpms_batch(
-    package: str, streams: list[str]
+    package: str, streams: list[str], *, deadline: float | None = None
 ) -> list[ListBinaryRPMsOutput]:
     """Batch lookup: one bomq request per package, one Brew session.
 
     Acquires the Brew semaphore once for the entire batch so that a
     single package with many streams does not hold multiple slots.
     """
+    if deadline is None:
+        deadline = time.monotonic() + ENRICHMENT_TIMEOUT_SECS
+
+    def _timeout_result(stream: str) -> ListBinaryRPMsOutput:
+        return ListBinaryRPMsOutput(
+            package=package,
+            ps_update_stream=stream,
+            status="error",
+            error_message="build system lookup deadline exceeded",
+        )
+
     with _brew_sem:
         try:
             session = _create_brew_session()
@@ -240,7 +298,7 @@ def _lookup_binary_rpms_batch(
             ]
 
         try:
-            builds = _fetch_bomq_builds(package)
+            builds = _fetch_bomq_builds(package, deadline=deadline)
         except urllib.error.HTTPError as e:
             return [
                 ListBinaryRPMsOutput(
@@ -271,8 +329,19 @@ def _lookup_binary_rpms_batch(
                 )
                 for s in streams
             ]
+        except TimeoutError:
+            return [_timeout_result(s) for s in streams]
 
-        return [_resolve_stream(session, package, builds, s) for s in streams]
+        results: list[ListBinaryRPMsOutput] = []
+        for i, s in enumerate(streams):
+            try:
+                results.append(
+                    _resolve_stream(session, package, builds, s, deadline=deadline)
+                )
+            except TimeoutError:
+                results.extend(_timeout_result(s) for s in streams[i:])
+                break
+        return results
 
 
 @Tool
