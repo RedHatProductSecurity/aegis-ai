@@ -5,6 +5,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.2] - 2026-10-26
+
+### Changed
+- `osidb-bot` now initializes empty `impact` fields from the LLM even when confidence or data quality is below the threshold [\[AEGIS-523\]](https://redhat.atlassian.net/browse/AEGIS-523)
+- `osidb-bot` now overwrites placeholder `From CVEorg collector` titles with LLM-generated descriptions [\[AEGIS-528\]](https://redhat.atlassian.net/browse/AEGIS-528)
+
+### Added
+- offloaded blocking OSIDB calls to threads, which significantly increased the Aegis throughput in case OSIDB takes long time to respond [\[AEGIS-534\]](https://redhat.atlassian.net/browse/AEGIS-534)
+- evaluation suite now supports evaluator-specific score thresholds, with `EcosystemEvaluator` threshold set to 0.8 [\[AEGIS-517\]](https://redhat.atlassian.net/browse/AEGIS-517)
+
+### Fixed
+- improved `suggest-impact` CVSS accuracy for kernel CVEs with rules for USB driver physical attack vectors, KVM guest availability assessment, and process resource theft via file descriptor capabilities [\[AEGIS-529\]](https://redhat.atlassian.net/browse/AEGIS-529)
+- restricted `osidb_flaw_tool` to the CVE being analyzed, preventing unnecessary network requests and significant slowdowns with `gemini-3.8-flash` [\[AEGIS-529\]](https://redhat.atlassian.net/browse/AEGIS-529)
+- bundled CWE definitions as fallback for offline use, with proper cache invalidation and deferred cache directory creation to prevent startup crashes [\[AEGIS-536\]](https://redhat.atlassian.net/browse/AEGIS-536)
+- fixed `osidb-bot` `_ecosystems` change tracking in `suggest_components()` [\[AEGIS-523\]](https://redhat.atlassian.net/browse/AEGIS-523)
+- improved `suggest-affected-components` ecosystem suggestions for standalone server software like Apache Tomcat [\[AEGIS-517\]](https://redhat.atlassian.net/browse/AEGIS-517)
+- improved kernel CVSS evaluation rubric to accept cross-namespace boundary crossings and guest VM privilege mappings [\[AEGIS-529\]](https://redhat.atlassian.net/browse/AEGIS-529)
+
+
 ## [0.10.1] - 2026-10-16
 
 ### Changed
