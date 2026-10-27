@@ -627,7 +627,8 @@ spec:
         Discover SARIF artifacts attached to the built image by the SAST tasks,
         pull them, format findings with csgrep, log a human-readable summary,
         fail the pipeline when error-level findings are present, and upload
-        SARIF results to GitHub Code Scanning.
+        SARIF results to GitHub Code Scanning. Report upload failures and
+        approaching GitHub token expiration as non-blocking Konflux warnings.
       params:
       - name: image-url
         type: string
@@ -639,6 +640,9 @@ spec:
         type: string
       - name: revision
         type: string
+      results:
+      - name: TEST_OUTPUT
+        description: SAST findings and SARIF upload status in Konflux test result format.
       volumes:
       - name: sarif-data
         emptyDir: {}
@@ -649,6 +653,7 @@ spec:
       steps:
       - name: pull-sarif
         image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:de598135beab3bfb3e7902e59c9f656f92b6147c4bfd76ad1fc92fbb237abfa4
+        onError: continue
         env:
         - name: IMAGE_URL
           value: $(params.image-url)
@@ -660,6 +665,10 @@ spec:
 
           SARIF_DIR="/var/workdir/sarif"
           mkdir -p "$SARIF_DIR"
+
+          # Report a failure even if discovery or retrieval exits unexpectedly.
+          echo "1" > "$SARIF_DIR/gate_exit"
+          printf 'TOTAL_ERRORS=0\nTOTAL_WARNINGS=0\nTOTAL_NOTES=0\nPULL_FAILURES=1\n' > "$SARIF_DIR/summary.env"
 
           [ -n "$IMAGE_URL" ] && [ -n "$IMAGE_DIGEST" ] || {
             echo "ERROR: IMAGE_URL or IMAGE_DIGEST is empty"; exit 1
@@ -677,7 +686,10 @@ spec:
           }
           rm -f "$DISCOVER_ERR"
 
-          if ! SARIF_REFS=$(echo "$DISCOVER_JSON" | jq -r --arg base "$IMAGE_URL" '
+          if ! SARIF_REFS=$(echo "$DISCOVER_JSON" | jq -rs --arg base "$IMAGE_URL" '
+            if length != 1 or (.[0] | type) != "object" then
+              error("Expected one OCI discovery response object")
+            else .[0] end |
             [(.referrers // .manifests // [])[]
              | select(.artifactType == "application/sarif+json")
              | (.reference // ($base + "@" + .digest))]
@@ -754,6 +766,7 @@ spec:
           echo "$GATE_EXIT" > "$SARIF_DIR/gate_exit"
       - name: upload-sarif
         image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:de598135beab3bfb3e7902e59c9f656f92b6147c4bfd76ad1fc92fbb237abfa4
+        onError: continue
         env:
         - name: GIT_URL
           value: $(params.git-url)
@@ -772,13 +785,31 @@ spec:
           set -euo pipefail
 
           SARIF_DIR="/var/workdir/sarif"
+          TOKEN_EXPIRY_WARNING_DAYS=14
+          UPLOAD_WARNINGS=0
+          UPLOAD_NOTE=""
+
+          write_upload_status() {
+            jq -cn --argjson warnings "$1" --arg note "$2" \
+              '{warnings: $warnings, note: $note}' > "$SARIF_DIR/upload_status.json"
+          }
+
+          warn_upload() {
+            echo "WARNING: $1"
+            UPLOAD_WARNINGS=$((UPLOAD_WARNINGS + 1))
+            UPLOAD_NOTE="${UPLOAD_NOTE:+${UPLOAD_NOTE} }$1"
+            write_upload_status "$UPLOAD_WARNINGS" "$UPLOAD_NOTE"
+          }
+
+          # Keep unexpected script failures visible while allowing report to run.
+          write_upload_status 1 "SARIF upload did not complete; review the upload-sarif logs."
 
           echo "=========================================="
           echo "GitHub Code Scanning SARIF Upload"
           echo "=========================================="
 
           if [ -z "${GIT_COMMIT_SHA:-}" ] || [ -z "${GIT_REF:-}" ]; then
-            echo "Skipping: revision or git-ref not set."
+            warn_upload "SARIF upload skipped: revision or git-ref is not set."
             exit 0
           fi
 
@@ -812,6 +843,7 @@ spec:
 
           if [ "$FIRST" = true ]; then
             echo "Skipping: no SARIF files to upload."
+            write_upload_status 0 "SARIF upload skipped: no SARIF files to upload."
             exit 0
           fi
 
@@ -819,20 +851,22 @@ spec:
           echo "Merged SARIF: 1 run, ${RESULT_COUNT} result(s)."
 
           if [ -z "${GITHUB_TOKEN:-}" ]; then
-            echo "Skipping: GITHUB_TOKEN not set (aegis-ai-code-scanning-alerts secret may be missing)."
+            warn_upload "SARIF upload skipped: the token in secret aegis-ai-code-scanning-alerts is missing."
             exit 0
           fi
           TOKEN="$GITHUB_TOKEN"
 
           REPO_SLUG=$(echo "$GIT_URL" | sed -n 's|.*github\.com[/:]||p' | sed 's|\.git$||' | sed 's|[?#].*||')
           if [ -z "$REPO_SLUG" ]; then
-            echo "Skipping: could not extract owner/repo from git-url."
+            warn_upload "SARIF upload skipped: could not extract owner/repo from git-url."
             exit 0
           fi
 
           UPLOAD_URL="https://api.github.com/repos/${REPO_SLUG}/code-scanning/sarifs"
           TMP_PAYLOAD=$(mktemp)
           TMP_RESP=$(mktemp)
+          TMP_HEADERS=$(mktemp)
+          trap 'rm -f "$TMP_PAYLOAD" "$TMP_RESP" "$TMP_HEADERS"' EXIT
           # ref determines which Code Scanning "bucket" results appear under
           gzip -c "$MERGED" | base64 -w0 | \
             jq -Rs --arg sha "$GIT_COMMIT_SHA" --arg ref "$GIT_REF" \
@@ -845,6 +879,7 @@ spec:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -H "Content-Type: application/json" \
             -d @"$TMP_PAYLOAD" \
+            -D "$TMP_HEADERS" \
             -o "$TMP_RESP" -w '%{http_code}')
           RC=$?
           set -e
@@ -853,10 +888,39 @@ spec:
             echo "SARIF upload: success (HTTP 202)"
             cat "$TMP_RESP" 2>/dev/null || true
           else
-            echo "SARIF upload: failed (HTTP ${HTTP_CODE})"
+            warn_upload "SARIF upload failed (HTTP ${HTTP_CODE}, curl exit ${RC}); review the upload-sarif logs and the token in aegis-ai-code-scanning-alerts."
             cat "$TMP_RESP" 2>/dev/null || true
           fi
-          rm -f "$TMP_RESP"
+
+          TOKEN_EXPIRY=""
+          TOKEN_EXPIRY_REPORTED=false
+          while IFS= read -r HEADER; do
+            if [[ "${HEADER,,}" == github-authentication-token-expiration:* ]]; then
+              TOKEN_EXPIRY_REPORTED=true
+              TOKEN_EXPIRY="${HEADER#*:}"
+              TOKEN_EXPIRY="${TOKEN_EXPIRY//$'\r'/}"
+              TOKEN_EXPIRY="${TOKEN_EXPIRY# }"
+            fi
+          done < "$TMP_HEADERS"
+
+          if [ "$TOKEN_EXPIRY_REPORTED" = true ]; then
+            if [ -n "$TOKEN_EXPIRY" ] && EXPIRY_EPOCH=$(date -u -d "$TOKEN_EXPIRY" +%s 2>/dev/null); then
+              SECONDS_LEFT=$((EXPIRY_EPOCH - $(date -u +%s)))
+              echo "GitHub upload token expires at: ${TOKEN_EXPIRY}"
+              if [ "$SECONDS_LEFT" -le 0 ]; then
+                warn_upload "GitHub upload token expired at ${TOKEN_EXPIRY}; rotate the token in aegis-ai-code-scanning-alerts."
+              elif [ "$SECONDS_LEFT" -le "$((TOKEN_EXPIRY_WARNING_DAYS * 86400))" ]; then
+                DAYS_LEFT=$(((SECONDS_LEFT + 86399) / 86400))
+                warn_upload "GitHub upload token expires in ${DAYS_LEFT} day(s) (${TOKEN_EXPIRY}); rotate the token in aegis-ai-code-scanning-alerts."
+              fi
+            else
+              warn_upload "GitHub token expiration could not be parsed; check the token's expiration date manually."
+            fi
+          else
+            echo "GitHub did not report a token expiration date; expiry monitoring is unavailable for this upload."
+          fi
+
+          write_upload_status "$UPLOAD_WARNINGS" "${UPLOAD_NOTE:-SARIF upload accepted by GitHub.}"
       - name: report
         image: quay.io/konflux-ci/konflux-test:v1.5.9@sha256:7faaebc542c61704003fecbab81a9c81c9770b4df8c5bba18459fba3f58e9c51
         script: |
@@ -906,6 +970,19 @@ spec:
 
           source "$SARIF_DIR/summary.env"
 
+          UPLOAD_WARNINGS=1
+          UPLOAD_NOTE="SARIF upload status is unavailable; review the upload-sarif logs."
+          # Require one status object with a count safe for shell arithmetic.
+          if jq -se '
+            length == 1 and (.[0] |
+              (.warnings | type == "number") and
+              (.warnings >= 0 and .warnings <= 2147483647) and
+              (.warnings == (.warnings | floor)) and (.note | type == "string"))
+          ' "$SARIF_DIR/upload_status.json" >/dev/null 2>&1; then
+            UPLOAD_WARNINGS=$(jq -r '.warnings | floor' "$SARIF_DIR/upload_status.json")
+            UPLOAD_NOTE=$(jq -r '.note' "$SARIF_DIR/upload_status.json")
+          fi
+
           echo ""
           echo "=========================================="
           echo "SAST Summary"
@@ -913,14 +990,26 @@ spec:
           echo "  Total errors:   ${TOTAL_ERRORS}"
           echo "  Total warnings: ${TOTAL_WARNINGS}"
           echo "  Total notes:    ${TOTAL_NOTES}"
+          echo "  Upload warnings: ${UPLOAD_WARNINGS}"
           echo "=========================================="
 
           GATE_EXIT=$(cat "$SARIF_DIR/gate_exit")
+          RESULT=SUCCESS
+          SUCCESSES=1
+          FAILURES=$((TOTAL_ERRORS + PULL_FAILURES))
+          WARNINGS=$((TOTAL_WARNINGS + UPLOAD_WARNINGS))
+          RESULT_NOTE="No error-level SAST findings."
 
           if [ "$PULL_FAILURES" -gt 0 ]; then
+            RESULT=FAILURE
+            SUCCESSES=0
+            RESULT_NOTE="${PULL_FAILURES} SARIF artifact(s) could not be retrieved."
             echo ""
             echo "FAILED: ${PULL_FAILURES} SARIF artifact(s) could not be retrieved."
           elif [ "$TOTAL_ERRORS" -gt 0 ]; then
+            RESULT=FAILURE
+            SUCCESSES=0
+            RESULT_NOTE="${TOTAL_ERRORS} error-level SAST finding(s) detected."
             echo ""
             echo "FAILED: ${TOTAL_ERRORS} error-level SAST finding(s) detected."
             echo "Review the findings above and fix them before merging."
@@ -928,6 +1017,26 @@ spec:
             echo ""
             echo "PASSED: No error-level SAST findings."
           fi
+
+          if [ "$WARNINGS" -gt 0 ] && [ "$RESULT" = SUCCESS ]; then
+            RESULT=WARNING
+          fi
+          if [ "$UPLOAD_WARNINGS" -gt 0 ]; then
+            echo "WARNING: $UPLOAD_NOTE"
+          fi
+          RESULT_NOTE="$RESULT_NOTE $UPLOAD_NOTE"
+
+          jq -cn \
+            --arg result "$RESULT" \
+            --arg note "$RESULT_NOTE" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson successes "$SUCCESSES" \
+            --argjson failures "$FAILURES" \
+            --argjson warnings "$WARNINGS" \
+            '{result: $result, note: $note, timestamp: $timestamp,
+              namespace: "sast-report", version: "0.1",
+              successes: $successes, failures: $failures, warnings: $warnings}' \
+            > "$(results.TEST_OUTPUT.path)"
 
           exit "$GATE_EXIT"
   - name: apply-tags
