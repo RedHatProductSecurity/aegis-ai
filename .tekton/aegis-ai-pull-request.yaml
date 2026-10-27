@@ -22,6 +22,8 @@ spec:
     value: '{{source_url}}'
   - name: revision
     value: '{{revision}}'
+  - name: pipeline-revision
+    value: '{{revision}}'
   - name: output-image
     value: quay.io/redhat-user-workloads/aegis-tenant/aegis-ai:on-pr-{{revision}}
   - name: image-expires-after
@@ -37,7 +39,7 @@ spec:
   - name: evals-skip-keyword
     value: "CI: skip-pr-evals"
   # Becomes the `ref` field in the GitHub Code Scanning SARIF upload payload
-  # (see sast-report's upload-sarif step in aegis-build-pipeline.yaml). This is
+  # (see the upload-sarif step in sast-report.yaml). This is
   # what lets findings for this PR be queried separately in the Security >
   # Code Scanning tab via `ref:refs/pull/<N>/head`, instead of only showing up
   # under the default branch's ref.
