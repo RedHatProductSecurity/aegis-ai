@@ -201,6 +201,30 @@ Optionally one can set krb5 config as well:
 podman run --rm -it -v /etc/krb5.conf:/etc/krb5.conf -p 9000:9000 localhost/aegis-ai:latest
 ```
 
+### Konflux SAST reporting and token rotation
+
+The `sast-report` task in `.tekton/aegis-build-pipeline.yaml` uploads SARIF
+results to GitHub Code Scanning using the `token` key of the
+`aegis-ai-code-scanning-alerts` secret in the PipelineRun's namespace
+(`aegis-tenant` for the checked-in PipelineRuns). The fine-grained GitHub PAT
+must have access to the target repository and **Code scanning alerts: Read
+and write** permission.
+
+Each upload checks GitHub's `GitHub-Authentication-Token-Expiration` response
+header. A token expiring within 14 days produces a non-blocking `WARNING` in
+the task's `TEST_OUTPUT`, which Konflux displays with a yellow warning icon.
+The task logs the expiration date and includes a rotation reminder in the
+result note. This check runs during builds; if GitHub omits the header, the
+logs state that expiry monitoring is unavailable for that upload.
+
+Upload failures (including an expired, revoked, or missing token) also produce
+a warning. Error-level SAST findings and failures to retrieve SARIF artifacts
+still fail the task and take precedence over upload warnings.
+
+To rotate the PAT, replace the secret's `token` value with a new PAT having
+the same repository access and permission, then check the next build's
+`upload-sarif` logs for an accepted upload and the new expiration date.
+
 -----
 
 ## Publishing & Releasing
