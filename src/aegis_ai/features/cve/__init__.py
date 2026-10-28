@@ -371,9 +371,6 @@ class SuggestImpact(Feature):
                 parts.append(f"Components: {', '.join(components)}")
             if description_text:
                 parts.append(f"Description: {description_text}")
-            steering_notes = cve_context.get("steering_notes")
-            if steering_notes is not None:
-                parts.append(f"Internal analyst steering notes: {steering_notes}")
             if parts:
                 context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
 
