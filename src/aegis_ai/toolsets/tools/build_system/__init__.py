@@ -2,7 +2,8 @@
 
 Queries the bomq REST API to resolve a source package + product stream
 to a Brew build NVR, then uses the Koji/Brew API to list the binary RPM
-names produced by that build.
+names produced by that build. ``_bomq_get`` is also the HTTP client for
+the component catalog in ``aegis_ai.features.cve.catalog``.
 """
 
 import asyncio
@@ -83,24 +84,40 @@ def _create_brew_session() -> koji.ClientSession:
     return koji.ClientSession(config["server"], session_opts)
 
 
-def _fetch_bomq_builds(package: str, *, deadline: float | None = None) -> list[dict]:
-    """Query bomq for all builds of a package."""
-    base = get_settings().bomq_url.rstrip("/")
-    params = urllib.parse.urlencode({"name": package, "strict": "true"})
-    url = f"{base}{BOMQ_API_PATH}?{params}"
-    with urllib.request.urlopen(url, timeout=_remaining(deadline)) as resp:
+def _bomq_get(
+    base: str,
+    path: str,
+    params: dict[str, str],
+    *,
+    timeout: float = 30,
+) -> dict:
+    """GET a bomq JSON object and check that ``data`` is a list of objects."""
+    query = urllib.parse.urlencode(params)
+    url = f"{base.rstrip('/')}{path}?{query}"
+    with urllib.request.urlopen(url, timeout=timeout) as resp:
         data = json.loads(resp.read())
     if not isinstance(data, dict):
         raise TypeError(f"bomq returned {type(data).__name__}, expected object")
-    builds = data.get("data", [])
-    if not isinstance(builds, list):
-        raise TypeError(f"bomq 'data' is {type(builds).__name__}, expected list")
-    for i, entry in enumerate(builds):
+    rows = data.get("data", [])
+    if not isinstance(rows, list):
+        raise TypeError(f"bomq 'data' is {type(rows).__name__}, expected list")
+    for i, entry in enumerate(rows):
         if not isinstance(entry, dict):
             raise TypeError(
                 f"bomq 'data[{i}]' is {type(entry).__name__}, expected object"
             )
-    return builds
+    return data
+
+
+def _fetch_bomq_builds(package: str, *, deadline: float | None = None) -> list[dict]:
+    """Query bomq for all builds of a package."""
+    data = _bomq_get(
+        get_settings().bomq_url,
+        BOMQ_API_PATH,
+        {"name": package, "strict": "true"},
+        timeout=_remaining(deadline),
+    )
+    return data["data"]
 
 
 def _resolve_build_id(

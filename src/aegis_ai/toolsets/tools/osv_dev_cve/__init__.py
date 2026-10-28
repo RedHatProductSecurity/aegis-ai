@@ -175,10 +175,11 @@ async def osv_dev_cve_tool(ctx: RunContext[feature_deps], input: OSVToolInput):
     Lookup CVE definition in osv.dev and return as much metadata as possible.
     """
     deps = ctx.deps
-    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+    expected_cve = getattr(deps, "cve_id", None)
+    if expected_cve is not None and str(input.cve_id) != expected_cve:
         logger.info(
             f"osv_dev_cve_tool: rejecting lookup for {input.cve_id} "
-            f"(expected {deps.cve_id})"
+            f"(expected {expected_cve})"
         )
         return {}
     logger.info(f"Looking up osv.dev vulnerability for {input.cve_id}...")

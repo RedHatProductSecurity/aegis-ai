@@ -157,6 +157,7 @@ class TestFetchBomqBuilds:
 
         assert len(builds) == 2
         assert builds[0]["build_nvr"] == "curl-8.6.0-3.el9"
+        assert "/api/v0/search/builds?" in mock_urlopen.call_args.args[0]
 
     def test_empty_response(self):
         with patch("urllib.request.urlopen") as mock_urlopen:

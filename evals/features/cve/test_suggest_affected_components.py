@@ -40,6 +40,8 @@ SAMPLE_SEED = int(
 # Used when AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_CVE_IDS env is not set.
 # Excludes CVEs with cpython as expected (model tends to suggest 'python' instead).
 # Excludes CVE-2025-23083 (nodejs): model often returns 'Node.js', causing flaky evals.
+# Excludes CVE-2026-11573 (qtbase): model returns umbrella names qt/qt5/qt6.
+# Excludes CVE-2026-19667 (bind): model returns bind, expected bind9 and bind.
 DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2006-10002",
     "CVE-2025-3416",
@@ -171,9 +173,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-102555",  # libsoup / libsoup3
     "CVE-2026-9672",  # libgd / gd
     "CVE-2026-18090",  # gdk-pixbuf / gdk-pixbuf2
-    "CVE-2026-11573",  # qtbase / qt5-qtbase / qt6-qtbase
     "CVE-2026-106026",  # tftp-hpa / tftp
-    "CVE-2026-19667",  # bind9 / bind
     "CVE-2026-67231",  # rabbitmq / rabbitmq-server
     "CVE-2026-14456",  # openssl / openssl3
     "CVE-2026-17526",  # keycloak-services / org.keycloak/keycloak-services
