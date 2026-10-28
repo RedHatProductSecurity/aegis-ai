@@ -671,6 +671,7 @@ class SuggestDescriptionText(Feature):
                 - The title should briefly summarize the core issue in one line; keep headline-level detail only (do not mirror the full description).
             """,
             rules="""
+                - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the title or description.
                 - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve additional context about the vulnerability from upstream advisories.
                 'description': one short paragraph.
                 - Begin with: "A flaw was found in <component>."
@@ -732,6 +733,7 @@ class SuggestStatementText(Feature):
             - Keep outputs concise and consistent; avoid contradiction between fields.
             """,
             rules=f"""
+            - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the statement or mitigation.
             - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve detailed impact context from upstream advisories and GHSAs.
             ### STATEMENT (suggested_statement)
             - Focus on impact and RH relevance (deployment model, defaults, hardening).
@@ -1001,6 +1003,7 @@ class QualityReview(Feature):
 - Assess whether the flaw content adds value beyond what customers can find in public CVE databases.
 """,
             rules="""\
+- Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in `suggested_statement` or `suggested_mitigation`.
 ### RUBRIC CATEGORIES
 
 IMPORTANT: You MUST score ALL 30 criteria below (5 per category x 6 categories). Do not skip any category or criterion. Keep each justification to one sentence. Use the exact criterion_id values shown below.
