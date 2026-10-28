@@ -11,6 +11,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from aegis_ai.data_models import CVEID
+from aegis_ai.features.cve.data_models import STEERING_NOTES_MAX_LENGTH
 
 
 class FeatureError(BaseModel):
@@ -24,6 +25,7 @@ class CVEAnalysisRequestBase(BaseModel):
     cve_id: CVEID = Field(..., description="CVE identifier (e.g. CVE-2025-12345)")
     steering_notes: str | None = Field(
         default=None,
+        max_length=STEERING_NOTES_MAX_LENGTH,
         description="Internal analyst notes providing additional flaw context",
     )
     agent: str | None = Field(

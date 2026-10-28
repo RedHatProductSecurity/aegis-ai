@@ -502,6 +502,40 @@ class TestSteeringNotesRequests:
         assert errors[0]["type"] == "string_type"
         assert errors[0]["input"] == notes
 
+    @pytest.mark.parametrize(
+        "endpoint", ["single", "multi-inferred", "multi-explicit-sac"]
+    )
+    @pytest.mark.parametrize(
+        "notes",
+        ["a" * 5001, "🔎" * 5001, "a" * 10000],
+        ids=["ascii-over-limit", "unicode-over-limit", "well-over-limit"],
+    )
+    def test_overlong_notes_rejected_before_any_feature_execution(
+        self, endpoint, notes
+    ):
+        payload = _steering_notes_request_context({"steering_notes": notes})
+        path = "/api/v1/analysis/cve/suggest-statement"
+        if endpoint != "single":
+            path = "/api/v1/analysis/cve"
+            payload["features"] = ["suggest-description", "suggest-statement"]
+            if endpoint == "multi-explicit-sac":
+                payload["features"].append("suggest-affected-components")
+
+        with _patch_all_cve_feature_execs(
+            _make_mock_result(_make_sac_output())
+        ) as feature_execs:
+            response = client.post(path, json=payload)
+            for feature_exec in feature_execs:
+                feature_exec.assert_not_called()
+
+        assert response.status_code == 422, response.text
+        errors = response.json()["detail"]
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ["body", "steering_notes"]
+        assert errors[0]["type"] == "string_too_long"
+        assert errors[0]["ctx"]["max_length"] == 5000
+        assert errors[0]["input"] == notes
+
     @pytest.mark.parametrize("endpoint", ["single", "multi"])
     def test_notes_and_extra_context_are_preserved_without_routing_controls(
         self, endpoint
@@ -550,6 +584,10 @@ class TestSteeringNotesRequests:
                 "string",
                 "null",
             }
+            string_schema = next(
+                option for option in notes_schema["anyOf"] if option["type"] == "string"
+            )
+            assert string_schema["maxLength"] == 5000
 
 
 class TestSteeringNotesPromptContext:
@@ -568,6 +606,8 @@ class TestSteeringNotesPromptContext:
                 },
                 id="unicode-multiline",
             ),
+            pytest.param({"steering_notes": "a" * 5000}, id="ascii-limit"),
+            pytest.param({"steering_notes": "🔎" * 5000}, id="unicode-limit"),
         ],
     )
     def test_notes_reach_prompts_after_component_enrichment(

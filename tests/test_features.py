@@ -226,8 +226,19 @@ class TestBuildCveInput:
             "  Analyst: café — 確認 🔎\n\tPreserve 'quotes' and whitespace.\r\n  ",
             "",
             " \t\n ",
+            "a" * 4999,
+            "a" * 5000,
+            "🔎" * 5000,
         ],
-        ids=["text", "unicode-multiline", "empty", "whitespace-only"],
+        ids=[
+            "text",
+            "unicode-multiline",
+            "empty",
+            "whitespace-only",
+            "below-limit",
+            "ascii-limit",
+            "unicode-limit",
+        ],
     )
     def test_steering_notes_preserved_in_input_and_rendered_prompt(self, notes):
         inp = cve._build_cve_input(
@@ -295,6 +306,22 @@ class TestBuildCveInput:
         with pytest.raises(ValidationError) as exc_info:
             cve._build_cve_input("CVE-2025-1234", {"steering_notes": notes})
         assert exc_info.value.errors()[0]["loc"] == ("steering_notes",)
+
+    @pytest.mark.parametrize(
+        "notes",
+        ["a" * 5001, "🔎" * 5001, "a" * 10000],
+        ids=["ascii-over-limit", "unicode-over-limit", "well-over-limit"],
+    )
+    def test_steering_notes_reject_overlong_input(self, notes):
+        with pytest.raises(ValidationError) as exc_info:
+            cve._build_cve_input("CVE-2025-1234", {"steering_notes": notes})
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("steering_notes",)
+        assert errors[0]["type"] == "string_too_long"
+        assert errors[0]["ctx"]["max_length"] == 5000
+        assert errors[0]["input"] == notes
 
     def test_no_static_context(self):
         result = cve._build_cve_input("CVE-2025-1234")

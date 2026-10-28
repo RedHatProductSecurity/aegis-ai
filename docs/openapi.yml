@@ -206,7 +206,8 @@ components:
           title: Features
         steering_notes:
           anyOf:
-          - type: string
+          - maxLength: 5000
+            type: string
           - type: 'null'
           description: Internal analyst notes providing additional flaw context
           title: Steering Notes
@@ -246,7 +247,8 @@ components:
           type: string
         steering_notes:
           anyOf:
-          - type: string
+          - maxLength: 5000
+            type: string
           - type: 'null'
           description: Internal analyst notes providing additional flaw context
           title: Steering Notes

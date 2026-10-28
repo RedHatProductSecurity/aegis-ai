@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from aegis_ai.data_models import CVEID, CWEID, CVSS3Vector
 from aegis_ai.features.data_models import AegisFeatureModel
 
+STEERING_NOTES_MAX_LENGTH = 5000
+
 
 class CVEFeatureInput(BaseModel):
     cve_id: CVEID = Field(..., description="CVE ID input")
@@ -21,7 +23,9 @@ class CVEFeatureInput(BaseModel):
     affects: list | None = Field(None, description="List of affects")
     cvss_scores: list | None = Field(None, description="List of CVSS scores")
     steering_notes: str | None = Field(
-        None, description="Internal analyst notes providing additional flaw context"
+        None,
+        max_length=STEERING_NOTES_MAX_LENGTH,
+        description="Internal analyst notes providing additional flaw context",
     )
 
     def __repr__(self) -> str:

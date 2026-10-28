@@ -276,6 +276,7 @@
           "steering_notes": {
             "anyOf": [
               {
+                "maxLength": 5000,
                 "type": "string"
               },
               {
@@ -336,6 +337,7 @@
           "steering_notes": {
             "anyOf": [
               {
+                "maxLength": 5000,
                 "type": "string"
               },
               {
