@@ -1020,6 +1020,8 @@ class QualityReview(Feature):
 """,
             rules="""\
 - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in `suggested_statement` or `suggested_mitigation`.
+- For all rubric scores and justifications, strengths, critical gaps, value_add, and Customer Lens assessments, use only existing customer-visible flaw content as evidence, including publicly accessible references. Do not treat `steering_notes`, other non-public data, or proposed rewrites as existing customer-visible content.
+- If information appears only in `steering_notes` or other non-public data, treat it as missing from the customer-visible content. Score the relevant criteria accordingly and identify what remains unclear or needs manual context; do not assume customers can see or infer it.
 ### RUBRIC CATEGORIES
 
 IMPORTANT: You MUST score ALL 30 criteria below (5 per category x 6 categories). Do not skip any category or criterion. Keep each justification to one sentence. Use the exact criterion_id values shown below.
