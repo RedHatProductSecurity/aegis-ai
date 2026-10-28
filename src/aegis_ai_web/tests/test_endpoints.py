@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -369,18 +370,25 @@ def _make_sac_output(cve_id="CVE-2024-1234"):
     )
 
 
+@contextmanager
 def _patch_all_cve_feature_execs(mock_result):
-    """Context manager that patches exec() on all CVE feature classes."""
+    """Patch exec() on all CVE feature classes and yield the execution mocks."""
     from contextlib import ExitStack
 
-    stack = ExitStack()
-    for feature_cls in cve_feature_registry.values():
-        stack.enter_context(
-            patch.object(
-                feature_cls, "exec", new_callable=AsyncMock, return_value=mock_result
+    with ExitStack() as stack:
+        exec_mocks = []
+        for feature_cls in cve_feature_registry.values():
+            exec_mocks.append(
+                stack.enter_context(
+                    patch.object(
+                        feature_cls,
+                        "exec",
+                        new_callable=AsyncMock,
+                        return_value=mock_result,
+                    )
+                )
             )
-        )
-    return stack
+        yield exec_mocks
 
 
 def _make_steering_notes_outputs():
@@ -451,6 +459,97 @@ def _assert_enriched_steering_notes_prompts(prompts, notes):
         if model is SuggestStatementModel:
             assert " statement=" not in context
             assert " mitigation=" not in context
+
+
+class TestSteeringNotesRequests:
+    @pytest.mark.parametrize(
+        "endpoint", ["single", "multi-inferred", "multi-explicit-sac"]
+    )
+    @pytest.mark.parametrize(
+        "notes",
+        [
+            pytest.param(0, id="integer-zero"),
+            pytest.param(1.5, id="float"),
+            pytest.param(True, id="true"),
+            pytest.param(False, id="false"),
+            pytest.param([], id="empty-array"),
+            pytest.param(["notes"], id="array"),
+            pytest.param({}, id="empty-object"),
+            pytest.param({"text": "notes"}, id="object"),
+        ],
+    )
+    def test_invalid_notes_rejected_before_any_feature_execution(self, endpoint, notes):
+        payload = _steering_notes_request_context({"steering_notes": notes})
+        path = "/api/v1/analysis/cve/suggest-statement"
+        if endpoint != "single":
+            path = "/api/v1/analysis/cve"
+            payload["features"] = ["suggest-statement"]
+            if endpoint == "multi-explicit-sac":
+                payload["features"].append("suggest-affected-components")
+
+        with _patch_all_cve_feature_execs(
+            _make_mock_result(_make_sac_output())
+        ) as feature_execs:
+            response = client.post(path, json=payload)
+            assert response.status_code == 422, response.text
+            for feature_exec in feature_execs:
+                feature_exec.assert_not_called()
+
+        errors = response.json()["detail"]
+        assert isinstance(errors, list)
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ["body", "steering_notes"]
+        assert errors[0]["type"] == "string_type"
+        assert errors[0]["input"] == notes
+
+    @pytest.mark.parametrize("endpoint", ["single", "multi"])
+    def test_notes_and_extra_context_are_preserved_without_routing_controls(
+        self, endpoint
+    ):
+        context = {
+            "cve_id": "CVE-2024-1234",
+            "steering_notes": "  Internal: café — 確認 🔎\n\tCheck reproduction.\r\n  ",
+            "components": ["curl"],
+            "references": [
+                {"url": "https://example.com/advisory", "tags": ["upstream"]}
+            ],
+            "extra_context": {"reproduced": False, "attempts": 0},
+        }
+        payload = {**context, "agent": "public"}
+        path = "/api/v1/analysis/cve/suggest-affected-components"
+        if endpoint == "multi":
+            path = "/api/v1/analysis/cve"
+            payload["features"] = ["suggest-affected-components"]
+
+        with patch.object(
+            cve_features.SuggestAffectedComponents,
+            "exec",
+            new_callable=AsyncMock,
+            return_value=_make_mock_result(_make_sac_output()),
+        ) as feature_exec:
+            response = client.post(path, json=payload)
+
+        assert response.status_code == 200, response.text
+        feature_exec.assert_awaited_once_with(context["cve_id"], static_context=context)
+
+    @pytest.mark.parametrize("openapi_path", ["/openapi.json", "/openapi.yml"])
+    def test_openapi_advertises_optional_nullable_string_notes(self, openapi_path):
+        response = client.get(openapi_path)
+        assert response.status_code == 200
+        specification = yaml.safe_load(response.text)
+
+        for path in ("/api/v1/analysis/cve/{feature}", "/api/v1/analysis/cve"):
+            request_body = specification["paths"][path]["post"]["requestBody"]
+            schema_ref = request_body["content"]["application/json"]["schema"]["$ref"]
+            schema_name = schema_ref.rsplit("/", 1)[1]
+            request_schema = specification["components"]["schemas"][schema_name]
+            notes_schema = request_schema["properties"]["steering_notes"]
+
+            assert "steering_notes" not in request_schema.get("required", [])
+            assert {option["type"] for option in notes_schema["anyOf"]} == {
+                "string",
+                "null",
+            }
 
 
 class TestSteeringNotesPromptContext:

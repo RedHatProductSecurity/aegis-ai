@@ -22,6 +22,10 @@ class CVEAnalysisRequestBase(BaseModel):
     model_config = {"extra": "allow"}
 
     cve_id: CVEID = Field(..., description="CVE identifier (e.g. CVE-2025-12345)")
+    steering_notes: str | None = Field(
+        default=None,
+        description="Internal analyst notes providing additional flaw context",
+    )
     agent: str | None = Field(
         default=None,
         description="Agent to use: 'public' (no OSIDB tools) or 'redhat' (with OSIDB tools). "
