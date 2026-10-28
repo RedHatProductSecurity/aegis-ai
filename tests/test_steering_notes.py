@@ -11,6 +11,8 @@ from aegis_ai import get_settings
 from aegis_ai.features.cve import (
     SuggestDescriptionModel,
     SuggestDescriptionText,
+    SuggestImpact,
+    SuggestImpactModel,
     SuggestStatementModel,
     SuggestStatementText,
 )
@@ -20,27 +22,60 @@ CVE_ID = "CVE-2025-1234"
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("feature_type", "output_model", "output_fields", "retained_rule_terms"),
+    (
+        "feature_type",
+        "output_model",
+        "output_fields",
+        "retained_rule_terms",
+        "components",
+    ),
     [
         (
             SuggestDescriptionText,
             SuggestDescriptionModel,
             ("title", "description"),
             ("title", "description", "consistent"),
+            [],
         ),
         (
             SuggestStatementText,
             SuggestStatementModel,
             ("statement", "mitigation"),
             ("2-4 concise sentences", "< 1000 characters total"),
+            [],
+        ),
+        (
+            SuggestImpact,
+            SuggestImpactModel,
+            ("explanation",),
+            ("metric selection guide",),
+            ["curl"],
+        ),
+        (
+            SuggestImpact,
+            SuggestImpactModel,
+            ("explanation",),
+            ("kernel-specific tools",),
+            ["kernel"],
         ),
     ],
-    ids=["title-and-description", "statement-and-mitigation"],
+    ids=[
+        "title-and-description",
+        "statement-and-mitigation",
+        "impact",
+        "kernel-impact",
+    ],
 )
 async def test_public_text_prompts_keep_steering_notes_internal(
-    monkeypatch, feature_type, output_model, output_fields, retained_rule_terms
+    monkeypatch,
+    feature_type,
+    output_model,
+    output_fields,
+    retained_rule_terms,
+    components,
 ):
     monkeypatch.setattr(get_settings(), "safety_enabled", False)
+    monkeypatch.setattr(get_settings(), "use_kernel_classifier", False)
     notes = (
         "Private analyst note: inspect the optional frame decoder.\n"
         "Keep the analyst's draft internal."
@@ -54,8 +89,11 @@ async def test_public_text_prompts_keep_steering_notes_internal(
             "(https://github.com/RedHatProductSecurity/aegis-ai) using generative AI "
             "for informational purposes. All findings should be validated by a human expert."
         ),
-        components=[],
+        components=components,
         explanation="Test output",
+        impact="MODERATE",
+        cvss3_score="5.5",
+        cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
         suggested_title="Test title",
         suggested_description="Test description",
         title="Test title",
@@ -64,10 +102,12 @@ async def test_public_text_prompts_keep_steering_notes_internal(
         suggested_mitigation="Test mitigation",
     )
     feature = feature_type(
-        Agent(model=TestModel(custom_output_args=output.model_dump()))
+        Agent(model=TestModel(call_tools=[], custom_output_args=output.model_dump()))
     )
 
-    result = await feature.exec(CVE_ID, static_context={"steering_notes": notes})
+    result = await feature.exec(
+        CVE_ID, static_context={"steering_notes": notes, "components": components}
+    )
 
     prompts = [
         part.content

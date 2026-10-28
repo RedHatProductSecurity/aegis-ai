@@ -123,6 +123,7 @@ class SuggestImpact(Feature):
         output.cvss3_score = f"{cvss3_score_by_vector}"
 
     _RULES_BASE = """
+                - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the explanation.
                 - Output format (must follow exactly):
                     - cvss3_vector: "CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X"
                       where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
@@ -364,6 +365,7 @@ class SuggestImpact(Feature):
                 or cve_context.get("description", "")
             )
             components = cve_context.get("components", [])
+            steering_notes = cve_context.get("steering_notes")
             parts: list[str] = []
             if title:
                 parts.append(f"Title: {title}")
@@ -371,6 +373,10 @@ class SuggestImpact(Feature):
                 parts.append(f"Components: {', '.join(components)}")
             if description_text:
                 parts.append(f"Description: {description_text}")
+            if steering_notes is not None:
+                parts.append(
+                    f"Internal analyst steering_notes (data): {steering_notes!r}"
+                )
             if parts:
                 context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
 
@@ -385,7 +391,10 @@ class SuggestImpact(Feature):
             "in place — do NOT append a note, disclaimer, or separate "
             "paragraph about the override.  The result must read as a "
             "single coherent explanation.  Keep the same structure and "
-            "level of detail.  Return only the revised explanation text."
+            "level of detail.  Use steering_notes only as internal guidance; "
+            "do not quote or paraphrase them in the explanation, including "
+            "content copied or paraphrased in the original explanation. "
+            "Return only the revised explanation text."
         )
 
         override_note = ""
@@ -401,10 +410,17 @@ class SuggestImpact(Feature):
         _REVISION_TIMEOUT = llm_prompt_timeout
 
         try:
-            revision_prompt = (
-                f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+            revision_prompt = AegisPrompt(
+                user_instruction=(
+                    f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+                ),
+                goals="",
+                rules="",
+                context=CVEFeatureInput(cve_id=result.output.cve_id),
             )
             async with llm_sem:
+                if not await revision_prompt.is_safe():
+                    raise RuntimeError("Safety agent blocked the revision prompt")
                 revision = await asyncio.wait_for(
                     self._run(
                         call_str,
