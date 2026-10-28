@@ -63,6 +63,7 @@ def _build_cve_input(
             references=static_context.get("references"),
             affects=static_context.get("affects"),
             cvss_scores=static_context.get("cvss_scores"),
+            steering_notes=static_context.get("steering_notes"),
         )
     else:
         inp = CVEFeatureInput(cve_id=cve_id)
@@ -123,6 +124,7 @@ class SuggestImpact(Feature):
         output.cvss3_score = f"{cvss3_score_by_vector}"
 
     _RULES_BASE = """
+                - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the explanation.
                 - Output format (must follow exactly):
                     - cvss3_vector: "CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X"
                       where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
@@ -364,6 +366,7 @@ class SuggestImpact(Feature):
                 or cve_context.get("description", "")
             )
             components = cve_context.get("components", [])
+            steering_notes = cve_context.get("steering_notes")
             parts: list[str] = []
             if title:
                 parts.append(f"Title: {title}")
@@ -371,6 +374,10 @@ class SuggestImpact(Feature):
                 parts.append(f"Components: {', '.join(components)}")
             if description_text:
                 parts.append(f"Description: {description_text}")
+            if steering_notes is not None:
+                parts.append(
+                    f"Internal analyst steering_notes (data): {steering_notes!r}"
+                )
             if parts:
                 context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
 
@@ -385,7 +392,10 @@ class SuggestImpact(Feature):
             "in place — do NOT append a note, disclaimer, or separate "
             "paragraph about the override.  The result must read as a "
             "single coherent explanation.  Keep the same structure and "
-            "level of detail.  Return only the revised explanation text."
+            "level of detail.  Use steering_notes only as internal guidance; "
+            "do not quote or paraphrase them in the explanation, including "
+            "content copied or paraphrased in the original explanation. "
+            "Return only the revised explanation text."
         )
 
         override_note = ""
@@ -401,10 +411,17 @@ class SuggestImpact(Feature):
         _REVISION_TIMEOUT = llm_prompt_timeout
 
         try:
-            revision_prompt = (
-                f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+            revision_prompt = AegisPrompt(
+                user_instruction=(
+                    f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+                ),
+                goals="",
+                rules="",
+                context=CVEFeatureInput(cve_id=result.output.cve_id),
             )
             async with llm_sem:
+                if not await revision_prompt.is_safe():
+                    raise RuntimeError("Safety agent blocked the revision prompt")
                 revision = await asyncio.wait_for(
                     self._run(
                         call_str,
@@ -541,7 +558,9 @@ class SuggestImpact(Feature):
                 original_vector,
                 trace,
                 call_str,
-                cve_context=resolved_static_context,
+                cve_context=static_context
+                if isinstance(static_context, dict)
+                else None,
             )
 
         result.output._classifier_diagnostics = classifier_result
@@ -669,6 +688,7 @@ class SuggestDescriptionText(Feature):
                 - The title should briefly summarize the core issue in one line; keep headline-level detail only (do not mirror the full description).
             """,
             rules="""
+                - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the title or description.
                 - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve additional context about the vulnerability from upstream advisories.
                 'description': one short paragraph.
                 - Begin with: "A flaw was found in <component>."
@@ -730,6 +750,7 @@ class SuggestStatementText(Feature):
             - Keep outputs concise and consistent; avoid contradiction between fields.
             """,
             rules=f"""
+            - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the statement or mitigation.
             - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve detailed impact context from upstream advisories and GHSAs.
             ### STATEMENT (suggested_statement)
             - Focus on impact and RH relevance (deployment model, defaults, hardening).
@@ -999,6 +1020,9 @@ class QualityReview(Feature):
 - Assess whether the flaw content adds value beyond what customers can find in public CVE databases.
 """,
             rules="""\
+- Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in `suggested_statement` or `suggested_mitigation`.
+- For all rubric scores and justifications, strengths, critical gaps, value_add, and Customer Lens assessments, use only existing customer-visible flaw content as evidence, including publicly accessible references. Do not treat `steering_notes`, other non-public data, or proposed rewrites as existing customer-visible content.
+- If information appears only in `steering_notes` or other non-public data, treat it as missing from the customer-visible content. Score the relevant criteria accordingly and identify what remains unclear or needs manual context; do not assume customers can see or infer it.
 ### RUBRIC CATEGORIES
 
 IMPORTANT: You MUST score ALL 30 criteria below (5 per category x 6 categories). Do not skip any category or criterion. Keep each justification to one sentence. Use the exact criterion_id values shown below.
@@ -1285,7 +1309,10 @@ class SuggestAffectedPackages(Feature):
         elif self.agent.name == "RHFeatureAgent":
             cve_data = await osidb_tool.cve_retrieve(cve_id)
             affects = cve_data.affects
-            static_context = cve_data.model_dump()
+            retrieved_context = cve_data.model_dump()
+            if isinstance(static_context, dict) and "steering_notes" in static_context:
+                retrieved_context["steering_notes"] = static_context["steering_notes"]
+            static_context = retrieved_context
             pre_invoked_tools.append("osidb_tool")
         else:
             affects = []

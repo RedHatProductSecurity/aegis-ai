@@ -1,9 +1,12 @@
 from datetime import UTC, datetime
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic_core import ValidationError
 
-from aegis_ai.agents import rh_feature_agent
+from aegis_ai import get_settings
+from aegis_ai.agents import public_feature_agent, rh_feature_agent
 from aegis_ai.features import _extract_tools_used, component, cve
 from aegis_ai.features.cve import QualityReview
 from aegis_ai.features.cve.data_models import (
@@ -13,6 +16,7 @@ from aegis_ai.features.cve.data_models import (
     RATING_GOOD,
     RATING_NEEDS_IMPROVEMENT,
 )
+from aegis_ai.prompt import AegisPrompt
 from tests.utils.llm_cache import cache_response, get_cached_response
 
 
@@ -215,6 +219,110 @@ async def test_quality_review_with_test_model():
 class TestBuildCveInput:
     """Tests for _build_cve_input() helper that populates prompt context."""
 
+    @pytest.mark.parametrize(
+        "notes",
+        [
+            "Check the internal reproduction before assessing impact.",
+            "  Analyst: café — 確認 🔎\n\tPreserve 'quotes' and whitespace.\r\n  ",
+            "",
+            " \t\n ",
+            "a" * 4999,
+            "a" * 5000,
+            "🔎" * 5000,
+        ],
+        ids=[
+            "text",
+            "unicode-multiline",
+            "empty",
+            "whitespace-only",
+            "below-limit",
+            "ascii-limit",
+            "unicode-limit",
+        ],
+    )
+    def test_steering_notes_preserved_in_input_and_rendered_prompt(self, notes):
+        inp = cve._build_cve_input(
+            "CVE-2025-1234",
+            {
+                "comment_zero": "Public description.",
+                "statement": "Public statement.",
+                "steering_notes": notes,
+            },
+        )
+        assert inp.steering_notes == notes
+        prompt = AegisPrompt(
+            user_instruction="Analyze the CVE.", goals="", rules="", context=inp
+        )
+        rendered_context = prompt.to_string().partition("\n\nContext:\n")[2]
+        assert f"steering_notes={notes!r}" in rendered_context
+
+    @pytest.mark.parametrize(
+        "static_context",
+        [None, {}, {"steering_notes": None}],
+        ids=["no-context", "omitted", "null"],
+    )
+    def test_optional_steering_notes_leave_legacy_prompt_unchanged(
+        self, static_context
+    ):
+        inp = cve._build_cve_input("CVE-2025-1234", static_context)
+        assert inp.steering_notes is None
+        prompt = AegisPrompt(
+            system_instruction="CVE analyst",
+            user_instruction="Analyze the CVE.",
+            goals="",
+            rules="",
+            context=inp,
+        )
+        assert prompt.to_string() == (
+            "system: CVE analyst\n\n\nuser: Analyze the CVE.\n\n\n"
+            "Context:\nCVEFeatureInput(cve_id='CVE-2025-1234')"
+        )
+
+    def test_public_field_edits_do_not_replace_steering_notes(self):
+        context = {
+            "comment_zero": "Original public description.",
+            "statement": "Original public statement.",
+            "steering_notes": "Internal reproduction requires an unusual configuration.",
+        }
+        original = cve._build_cve_input("CVE-2025-1234", context)
+        edited = cve._build_cve_input(
+            "CVE-2025-1234",
+            {
+                **context,
+                "comment_zero": "Revised public description.",
+                "statement": "Revised public statement.",
+            },
+        )
+        assert edited.description == "Revised public description."
+        assert edited.statement == "Revised public statement."
+        assert (
+            edited.steering_notes
+            == original.steering_notes
+            == context["steering_notes"]
+        )
+
+    @pytest.mark.parametrize("notes", [42, ["not", "text"], {"text": "not a string"}])
+    def test_steering_notes_reject_non_strings(self, notes):
+        with pytest.raises(ValidationError) as exc_info:
+            cve._build_cve_input("CVE-2025-1234", {"steering_notes": notes})
+        assert exc_info.value.errors()[0]["loc"] == ("steering_notes",)
+
+    @pytest.mark.parametrize(
+        "notes",
+        ["a" * 5001, "🔎" * 5001, "a" * 10000],
+        ids=["ascii-over-limit", "unicode-over-limit", "well-over-limit"],
+    )
+    def test_steering_notes_reject_overlong_input(self, notes):
+        with pytest.raises(ValidationError) as exc_info:
+            cve._build_cve_input("CVE-2025-1234", {"steering_notes": notes})
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("steering_notes",)
+        assert errors[0]["type"] == "string_too_long"
+        assert errors[0]["ctx"]["max_length"] == 5000
+        assert errors[0]["input"] == notes
+
     def test_no_static_context(self):
         result = cve._build_cve_input("CVE-2025-1234")
         assert result.cve_id == "CVE-2025-1234"
@@ -395,6 +503,101 @@ class TestBuildCveInput:
         ctx = {"title": "test", "comment_zero": "desc", "impact": "LOW"}
         result = cve._build_cve_input("CVE-2025-1234", ctx)
         assert result.impact == "LOW"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "feature_cls",
+    [
+        cve.SuggestImpact,
+        cve.SuggestCWE,
+        cve.IdentifyPII,
+        cve.SuggestDescriptionText,
+        cve.SuggestStatementText,
+        cve.SuggestAffectedComponents,
+        cve.CVSSDiffExplainer,
+        cve.QualityReview,
+        cve.SuggestAffectedPackages,
+    ],
+)
+async def test_feature_exclusions_preserve_steering_notes(feature_cls):
+    """Inspect each real feature's prompt at the inference boundary."""
+    notes = "  Internal only: résumé — 確認\n\tCheck the reproduction.  "
+    feature = feature_cls(public_feature_agent)
+    context = {
+        "title": "curl: public title",
+        "comment_zero": "Public description.",
+        "statement": "Public statement.",
+        "mitigation": "Public mitigation.",
+        "cwe_id": "CWE-120",
+        "impact": "LOW",
+        "components": ["curl"],
+        "affects": [],
+        "cvss_scores": [{"issuer": "RH", "vector": "existing public vector"}],
+        "steering_notes": notes,
+    }
+    with (
+        patch.object(
+            feature,
+            "guarded_run",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("stop at inference boundary"),
+        ) as run,
+        pytest.raises(RuntimeError, match="stop at inference boundary"),
+    ):
+        await feature.exec("CVE-2025-1234", static_context=context)
+
+    prompt = run.call_args.args[0]
+    assert isinstance(prompt, AegisPrompt)
+    assert prompt.context.steering_notes == notes
+    rendered_context = prompt.to_string().partition("\n\nContext:\n")[2]
+    assert f"steering_notes={notes!r}" in rendered_context
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "notes", ["  Internal: café — 確認\n\tCheck libcurl.  ", ""], ids=["text", "empty"]
+)
+@pytest.mark.parametrize(
+    "affects_context", [{}, {"affects": None}], ids=["absent", "null"]
+)
+async def test_package_osidb_prefetch_preserves_request_steering_notes(
+    monkeypatch, notes, affects_context
+):
+    monkeypatch.setattr(get_settings(), "use_build_system_tool", False)
+    retrieved = cve.osidb_tool.CVE(
+        cve_id="CVE-2025-1234",
+        description="Public description retrieved from OSIDB.",
+        affects=[{"purl": "pkg:rpm/redhat/curl", "ps_update_stream": "rhel-9"}],
+    )
+    feature = cve.SuggestAffectedPackages(rh_feature_agent)
+    with (
+        patch.object(
+            cve.osidb_tool,
+            "cve_retrieve",
+            new_callable=AsyncMock,
+            return_value=retrieved,
+        ) as retrieve,
+        patch.object(
+            feature,
+            "guarded_run",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(output=SimpleNamespace(tools_used=[])),
+        ) as run,
+    ):
+        await feature.exec(
+            "CVE-2025-1234", static_context={**affects_context, "steering_notes": notes}
+        )
+
+    retrieve.assert_awaited_once_with("CVE-2025-1234")
+    prompt = run.call_args.args[0]
+    assert prompt.context.description == retrieved.description
+    assert prompt.context.affects == retrieved.affects
+    assert prompt.context.steering_notes == notes
+    assert (
+        f"steering_notes={notes!r}" in prompt.to_string().partition("\n\nContext:\n")[2]
+    )
+    assert run.call_args.kwargs["deps"].static_context["steering_notes"] == notes
 
 
 def _fake_agent_run_result(tool_names):
