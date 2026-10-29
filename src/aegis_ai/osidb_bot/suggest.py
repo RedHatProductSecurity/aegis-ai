@@ -175,11 +175,39 @@ async def suggest_components(
     feature = cve.SuggestAffectedComponents(agent)
     output = await exec_feature(feature, flaw_data)
 
-    changed = update_field(flaw_data, ts, "components", output)
+    # Extract component names from structured ComponentMatch objects for OSIDB
+    # OSIDB expects a list of strings, but we keep the full structured data in aegis_meta
+    component_names = [comp.name for comp in output.components]
+
+    changed = update_field(flaw_data, ts, "components", output, value=component_names)
 
     # record suggested ecosystems in aegis_meta if any
     if output.ecosystems:
         changed |= update_field(flaw_data, ts, "_ecosystems", output, src="ecosystems")
+
+    # Save structured component data to aegis_meta for ACE to consume
+    # ACE needs namespace, ecosystem, PURL, and VERSION RANGES to filter affects correctly
+    if output.components:
+        aegis_meta = flaw_data.setdefault("aegis_meta", {})
+        aegis_meta["structured_components"] = [
+            {
+                "name": comp.name,
+                "namespace": comp.namespace,
+                "ecosystem": comp.ecosystem,
+                "purl": comp.purl,
+                "first_introduced": comp.first_introduced,
+                "last_affected": comp.last_affected,
+                "fixed_in": comp.fixed_in,
+                "evidence": comp.evidence,
+                "confidence": comp.confidence,
+            }
+            for comp in output.components
+        ]
+        changed.add("aegis_meta")
+        logger.info(
+            f"{flaw_data.get('cve_id', '?')}: saved {len(output.components)} "
+            f"structured components to aegis_meta"
+        )
 
     return changed
 

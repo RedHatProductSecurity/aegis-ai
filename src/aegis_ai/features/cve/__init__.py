@@ -817,8 +817,16 @@ class SuggestAffectedComponents(Feature):
             goals="""
                 - Only list components that are *directly vulnerable* — the upstream artifact where the bug exists and the fix is applied. Do not list libraries, runtimes, or standard library modules that the CVE description merely *mentions*, *uses*, or *references* as execution context. Each component you list must be one where an upstream patch or release directly addresses the flaw.
                 - From all available CVE/OSIDB data (title, comment_zero, description, statement, mitigation, comments, references, affects, cvss_scores, cwe_id, impact), identify the affected software component(s).
-                - List component names (package names) in the output 'components' field.
-                - Where a Package URL (PURL) is identified use the name part of the PURL, without any namespace or type prefix. Exception: for Maven packages, always include the groupId and use groupId/artifactId format with a forward slash separator (e.g. 'com.mchange/mchange-commons-java' not 'mchange-commons-java', 'org.traccar/traccar' not 'org.traccar:traccar', 'org.apache.sshd/sshd-core' not just 'sshd-core'). Similarly, for PHP Composer packages, always include the vendor and use vendor/package format (e.g. 'phpseclib/phpseclib' not 'phpseclib').
+                - For EACH component, provide structured data in ComponentMatch format:
+                  * name: Component/package name
+                  * namespace: Component namespace/group (see namespace rules below)
+                  * ecosystem: Package ecosystem (cargo, golang, npm, pypi, maven, gem, generic, unknown)
+                  * purl: Properly formatted Package URL with version when available
+                  * evidence: Brief evidence for why this component is vulnerable
+                  * confidence: Per-component confidence (0.0-1.0)
+                - Component naming rules:
+                  * For Maven: Always include groupId (e.g. name='spring-webmvc', namespace='org.springframework', purl='pkg:maven/org.springframework/spring-webmvc')
+                  * For PHP Composer: Include vendor (e.g. name='phpseclib', namespace='phpseclib', purl='pkg:composer/phpseclib/phpseclib')
                 - Never prefix component names with ecosystem identifiers: no 'python-', 'nodejs-', or 'rubygem-' prefixes. Use the bare package name (e.g. 'cryptography' not 'python-cryptography', 'dotenv' not 'python-dotenv', 'axios' not 'nodejs-axios', 'rack' not 'rubygem-rack'). Strip the prefix even when the upstream project name includes it (e.g. PyPI package 'python-dotenv' → 'dotenv'). Only strip the exact prefixes listed above — 'node-' is NOT an ecosystem prefix (e.g. npm package 'node-forge' → 'node-forge', not 'forge'). Exception: keep the 'rust-' prefix — it is a Red Hat distro naming convention, not an ecosystem prefix (e.g. 'rust-openssl', 'rust-coreutils').
                 - For Go packages outside stdlib, always use the full module path as the component name. This applies to github.com/ packages (e.g. 'github.com/containerd/containerd' not 'containerd', 'github.com/go-acme/lego' not 'lego') and golang.org/x/ packages (e.g. 'golang.org/x/net/html' not 'net/html', 'golang.org/x/oauth2/jws' not 'oauth2/jws'). Strip Go major-version suffixes (/v2, /v3, /v7, etc.) from the module path (e.g. 'github.com/oauth2-proxy/oauth2-proxy' not 'github.com/oauth2-proxy/oauth2-proxy/v7').
                 - If the component is from the Python standard library, use 'python' as the component name.
@@ -840,7 +848,22 @@ class SuggestAffectedComponents(Feature):
                 - Leverage title, description (or comment_zero), statement, references, affects, comments, and any other fields to infer affected components.
                 - Use github mcp tool to resolve vulnerability reference URLs if present (e.g. to confirm repo/component names, inspect commit diffs to identify which specific submodules or artifacts are affected).
                 - When a CVE mentions an umbrella project (e.g. 'Spring Framework', 'Apache Commons'), do not return the umbrella name — use tools to identify the specific affected Maven artifacts or submodules (e.g. 'org.springframework/spring-webmvc' not 'Spring Framework').
-                - If GHSA reference URLs are present in the flaw data, pass them to the osv_dev_ghsa tool to get structured affected-package data (package names, ecosystems, PURLs, version ranges) for component identification.
+                - **CRITICAL: Extract version ranges from GHSA/OSV data**:
+                  * If GHSA reference URLs are present in the flaw data, ALWAYS pass them to osv_dev_ghsa_tool
+                  * osv_dev_ghsa_tool returns: affected[].package (name, ecosystem, purl) and affected[].ranges[].events[] (version constraints)
+                  * Extract fields from GHSA ranges[].events[]:
+                    - first_introduced = events[].introduced (e.g., "0", "1.0.0", "5.3.0")
+                    - fixed_in = events[].fixed (e.g., "1.75.1", "5.3.21")
+                    - last_affected = version before fixed OR from database_specific.last_known_affected_version_range
+                  * Example GHSA extraction:
+                    - GHSA ranges: [{"introduced": "0", "fixed": "1.75.1"}]
+                    - Output: first_introduced="0", last_affected="1.75.0", fixed_in="1.75.1"
+                  * Example GHSA with database_specific:
+                    - GHSA: {"introduced": "0", "fixed": "1.75.1"}, database_specific: {"last_known_affected_version_range": "<= 1.75.0"}
+                    - Output: first_introduced="0", last_affected="1.75.0", fixed_in="1.75.1"
+                  * For multiple ranges (rare): choose the earliest introduced and latest affected, document in evidence
+                  * Without version ranges, ACE will create affects for EVERY version of the component (thousands of false positives)
+                  * ACE filtering logic: if first_introduced <= SBOM_version <= last_affected: create_affect()
                 - Use osv_dev_ghsa_tool responses to determine impacted ecosystems — the affected[].package.ecosystem field is the most authoritative ecosystem signal.
                 - When osv_dev_ghsa_tool returns an affected package name, prefer it over names derived from the CVE title or description — the GHSA package name is the canonical registry identifier.
                 - Analyze CVE reference URLs to determine ecosystem: advisory URLs often indicate it (GHSA advisories, npmjs.com, pypi.org links, commit URLs pointing to upstream source). A vulnerability in core source code does not automatically mean every language binding is affected.
@@ -850,7 +873,44 @@ class SuggestAffectedComponents(Feature):
                 - When no tool data (OSV.dev, GHSA) provides an explicit ecosystem for software distributed outside a package registry, prefer 'generic' over a language ecosystem inferred only from implementation language.
                 - Use 'unknown' for the ecosystem only when it genuinely cannot be determined from available data.
                 - For Go packages outside stdlib, always use the full module path (e.g. 'github.com/external-secrets/external-secrets', 'golang.org/x/net/html'). Never shorten to just the repo name. Strip Go major-version suffixes like /v2, /v7 from the path.
-                - Output format: components (list of strings), ecosystems (list of strings), explanation (string), confidence (0.00–1.00).
+                - Namespace rules by ecosystem:
+                  * RPM: ALWAYS include distro namespace (namespace='redhat', purl='pkg:rpm/redhat/python-cffi@2.0.0'). This fixes the 114,931 missing-namespace SBOM errors.
+                  * Go: namespace is the path prefix (name='rclone', namespace='github.com/rclone', purl='pkg:golang/github.com/rclone/rclone')
+                  * Maven: namespace is groupId (name='spring-webmvc', namespace='org.springframework')
+                  * npm: namespace is scope if scoped (name='react-core', namespace='@patternfly' for @patternfly/react-core)
+                  * PyPI, Cargo, Gem: namespace=null (these ecosystems don't use namespaces)
+                  * Generic: namespace=null
+                - PURL construction:
+                  * MUST include version when available from CVE data, GHSA, or affects
+                  * MUST use proper encoding (e.g., @ for scopes in npm: pkg:npm/%40patternfly/react-core)
+                  * RPM epoch goes in qualifiers: pkg:rpm/redhat/bash@4.4.12-2?epoch=0
+                  * Reference SBOM Issues.docx findings to avoid: no versionless PURLs, no missing namespaces, no malformed PURLs
+                - VERSION RANGES (CRITICAL for ACE):
+                  * ALWAYS extract first_introduced, last_affected, and fixed_in from GHSA/OSV data when available
+                  * GHSA data format: ranges[].events[] with "introduced" and "fixed" values
+                  * Map GHSA to fields:
+                    - ranges[].events[].introduced → first_introduced (e.g., "0", "1.0.0")
+                    - ranges[].events[].fixed → fixed_in (e.g., "1.75.1")
+                    - Calculate last_affected as version before fixed (e.g., if fixed="1.75.1", then last_affected="1.75.0")
+                    - If GHSA has database_specific.last_known_affected_version_range, use that for last_affected
+                  * If no GHSA/OSV data, try to extract from CVE description (e.g., "affects versions through 3.0.5" → last_affected="3.0.5")
+                  * Use "0" for first_introduced when vulnerable in all versions
+                  * Include version source in evidence field
+                  * Without version ranges, ACE creates affects for ALL versions (thousands of false positives!)
+                - Evidence field examples with version sources:
+                  * "GHSA-p6m2-r3w9-mpxw: introduced in 0, fixed in 1.75.1"
+                  * "OSV.dev advisory: affected from 1.0.0 through 2.4.9, fixed in 2.5.0"
+                  * "Fix released in v3.1.0 per GitHub release notes"
+                  * "CVE description: vulnerability affects versions through 5.3.20"
+                  * "OSIDB affects includes specific version 2.0.0-2.el10ap"
+                - ComponentMatch examples WITH VERSION RANGES:
+                  * Go module: {name: "rclone", namespace: "github.com/rclone", ecosystem: "golang", purl: "pkg:golang/github.com/rclone/rclone", first_introduced: "0", last_affected: "1.75.0", fixed_in: "1.75.1", evidence: "GHSA-p6m2-r3w9-mpxw: introduced in all versions, fixed in 1.75.1", confidence: 0.95}
+                  * Maven: {name: "spring-webmvc", namespace: "org.springframework", ecosystem: "maven", purl: "pkg:maven/org.springframework/spring-webmvc", first_introduced: "5.0.0", last_affected: "5.3.20", fixed_in: "5.3.21", evidence: "GHSA advisory: affects Spring 5.0.0 through 5.3.20", confidence: 0.90}
+                  * RPM: {name: "python-cffi", namespace: "redhat", ecosystem: "rpm", purl: "pkg:rpm/redhat/python-cffi", first_introduced: "0", last_affected: "2.0.0-2.el10ap", fixed_in: "2.0.0-3.el10ap", evidence: "OSIDB affects: vulnerable through 2.0.0-2.el10ap", confidence: 0.95}
+                  * npm scoped: {name: "react-core", namespace: "@patternfly", ecosystem: "npm", purl: "pkg:npm/%40patternfly/react-core", first_introduced: "0", last_affected: "4.276.7", fixed_in: "4.276.8", evidence: "npm advisory: fixed in 4.276.8", confidence: 0.90}
+                  * PyPI: {name: "cryptography", namespace: null, ecosystem: "pypi", purl: "pkg:pypi/cryptography", first_introduced: "0", last_affected: "40.0.2", fixed_in: "41.0.0", evidence: "GHSA: vulnerable in versions before 41.0.0", confidence: 0.95}
+                  * Browser (no version data): {name: "chromium-browser", namespace: null, ecosystem: "generic", purl: "pkg:generic/chromium-browser", first_introduced: null, last_affected: null, fixed_in: null, evidence: "CVE title mentions Chromium Skia - no version constraints available", confidence: 0.75}
+                - Output format: components (list of ComponentMatch objects with name, namespace, ecosystem, purl, evidence, confidence), ecosystems (derived list), explanation (overall rationale).
             """,
             context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
