@@ -38,9 +38,8 @@ class KernelImpactToolResponse(BaseToolOutput):
 
     Contains the classifier's predicted impact label, active feature flags
     (e.g. ``uaf``, ``networking``, ``kernel_panic``), and raw patch diffs.
-    The classified impact is supporting evidence for the LLM's assessment;
-    CVSS metrics and severity are derived from the exploit mechanics rather
-    than fitted to the classifier's predicted severity band.
+    The LLM is instructed to use the classified impact and assign a CVSS
+    vector whose score falls within the matching severity band.
     """
 
     cve_id: CVEID = Field(

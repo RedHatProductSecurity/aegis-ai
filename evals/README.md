@@ -70,93 +70,6 @@ make populate-kernel-caches     # populate kernel CVE context + patch/HTML cache
 
 A session-scoped conftest fixture will **fail** if the CSV is missing.
 
-### Kernel memory-corruption and race regressions (AEGIS-545)
-
-The SuggestImpact dataset includes a focused group with hard assertions for
-`AC`, `C`, `I`, `A`, and the impact label when supplied for the positive
-memory-corruption/race regressions. Negative controls require `C:N/I:N`, guarding
-against invented kernel-memory impact. Their AC/A/impact expectations remain
-part of the general soft vector, score, and impact comparisons. The hard
-assertions fail even when the similarity scores exceed their thresholds.
-Run just this group (live LLM inference, cached tool evidence):
-
-```bash
-uv run pytest -vv -s --show-capture=no evals/features/cve/test_suggest_impact.py --kernel-memory-regressions-only
-```
-
-The default SuggestImpact run evaluates the complete dataset, including these
-regressions, with each case executed once.
-
-| CVE | Coverage and hard assertions | Calibration expectations |
-| --- | --- | --- |
-| CVE-2026-98432 | IPv4 TCP option UAF; attacker-induced handshake/teardown and retransmission race, kernel heap disclosure and writes. Require `AC:L/C:H/I:H/A:H` and CRITICAL. | 9.8 |
-| CVE-2025-38052 | TIPC asynchronous encryption races namespace teardown; a reported read-after-free must not erase plausible kernel-memory impact. Existing RH/NIST vectors: `AC:L/C:H/I:H/A:H`. | 7.8; no expected impact label |
-| CVE-2025-40248 | vsock transport lifetime race induced by concurrent connect/sendmsg and signals. Require `AC:L/C:H/I:H/A:H` (CVEORG) and IMPORTANT. | 7.8 |
-| CVE-2023-53733 | Negative control: failed traffic-control filter binding affects internal state/references. Require `C:N/I:N`. | Existing dataset: `AC:L/A:H`, MODERATE, 5.5 (soft) |
-| CVE-2022-50865 | Negative control: TCP backlog-limit arithmetic can drop packets, without a kernel-memory access primitive. Require `C:N/I:N`. | RH: `AC:H/A:L`, LOW, 3.7 (soft) |
-
-**Control scope and baseline.** The backlog fix
-`ec791d8149ff60c40ad2074af3b92a39c916a03f` changes a socket queue-limit
-calculation, not a kernel-memory read/write primitive. Its cached RH and CVEORG
-vectors disagree about AC and A. The filter-binding fix
-`9cb36faedeafb9720ac236aeae2ea57091d90a09` balances references on hardware-offload
-error paths; the upstream patch does not demonstrate attacker-controlled memory
-reuse or establish the extent of an outage. Both are useful controls for
-unjustified C/I inflation. Exact availability and severity calibration is a
-different question from the AEGIS-545 memory-corruption/attacker-race invariant.
-
-A live control baseline on 2026-10-30 used `gemini-3.8-flash`, the kernel
-classifier enabled, and the original prompts from `origin/main` commit
-`b7690d4d1452472afc82482a0b00f8394955fd2c`. A temporary pytest plugin extracted
-the original prompt literals with AST parsing and replaced the runtime
-constants, including the imported kernel-rule alias; production files were
-not edited.
-
-| CVE | Observed origin/main assessment | Original all-metrics hard assertion |
-| --- | --- | --- |
-| CVE-2022-50865 | IMPORTANT 7.5, `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H` | Failed AC, A, and impact: this calibration discrepancy predates AEGIS-545. |
-| CVE-2023-53733 | MODERATE 5.5, `CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H` | Passed. |
-
-These observations do not replace source ground truth. C/I-only hard checks
-retain the controls' relevant invariant, while their original vector/score/impact
-expectations continue to expose calibration differences through soft scores.
-The positive cases retain exact AC/CIA assertions and supplied impact labels;
-CVE-2026-98432 requires CRITICAL with no failure waiver.
-
-**CVE-2026-98432 evidence**, retrieved 2026-10-30:
-
-- `osidb_cache/CVE-2026-98432.json` is a live OSIDB response serialized by
-  `write_cache_entry` (affects omitted). RH and CVEORG both supply the vector
-  `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`; OSIDB reports CRITICAL.
-  The corresponding row in `eval-kernel-cves.csv` uses this OSIDB ground truth.
-- The [public Linux CNA record](https://cveawg.mitre.org/api/cve/CVE-2026-98432)
-  reports the same 9.8 CRITICAL vector and explains the attacker-controlled race,
-  stale-option disclosure, and kernel-write primitives.
-- `kernel_cve_context_cache/CVE-2026-98432.json` contains the real Linux vulns
-  repository JSON and mbox retrieved from its configured
-  [Google mirror](https://kernel.googlesource.com/pub/scm/linux/security/vulns/+/refs/heads/master/cve/published/2026/).
-  `metadata.source_files` records the retrieval URLs. The mirrored CNA metrics
-  were checked against the public CVE API when captured.
-- `external_references_cache/09a2ecf5167032b71946bf5a6d6a24cb6bc51208108e3ccfd44d503400e49d11.json`
-  serves that same decoded mbox under the original kernel.org URL from OSIDB.
-  The kernel.org HTTP endpoint returned an Anubis challenge, so this cache uses
-  the genuine mirrored advisory with the normal email sanitization/truncation.
-- All eight referenced fix commits have raw patches and stripped commit-page
-  text in `kernel_patch_cache/{patches,text}/`, fetched by
-  `populate_kernel_cve_cache.py` from the `gregkh/linux` GitHub mirror.
-  These include mainline `e3f33b0a1d89d738e2b913dab519226eaf76e15b` and stable
-  `b3b027ef0cd322bfa839b9aaf5b27551eea54cf6`.
-- `ghsa_cache/CVE-2026-98432.json` is the authentic raw
-  [OSV.dev response](https://api.osv.dev/v1/vulns/CVE-2026-98432) captured during
-  the live regression run by `ghsa_cache_retrieve` / `write_ghsa_cache_entry`
-  (enumerated versions omitted by the normal cache writer). Its CVSS vector
-  and all eight git fix commits match the CNA. Deterministic tests exercise
-  cache-only retrieval and the same filtered description/ranges used by the
-  OSV tool, rejecting any live fallback on a missing fixture.
-
-Deterministic evaluator and cache-completeness checks run with
-`uv run pytest tests/test_impact_regression_evaluator.py`.
-
 ### Configuration Notes
 
 If `AEGIS_EVALS_LLM_HOST` is `https://generativelanguage.googleapis.com`, the suite configures a **Google** eval model; otherwise it uses an **OpenAI-compatible** client against `{AEGIS_EVALS_LLM_HOST}/v1/`. If these variables are unset, evaluators reuse `default_llm_model` / `default_llm_settings` from app settings (`evals/features/common.py`).
@@ -233,7 +146,6 @@ Used by all CVE feature evals that import `common_feature_evals`:
 | `ImpactEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | ✓ | | Compares impact labels when the case expects an impact. |
 | `CVSSScoreEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | ✓ | | Compares numeric `cvss3_score` when expected. |
 | `CVSSVectorEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | ✓ | | Compares CVSS v3.1 vectors metric-wise when expected. |
-| `KernelImpactRegressionEvaluator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | ✓ | Positive AEGIS-545 cases require exact AC/CIA and supplied impact. Negative controls require exact C/I only, retaining soft AC/A/impact calibration. Missing or invalid vectors fail in both modes. |
 | `CVSSValidator` | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | ✓ | Parsed `cvss3_score` matches score implied by `cvss3_vector`. |
 | `LLMJudge` (`NoAffectsInExplanation`) | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | ✓ | Explanation does not list affected Red Hat products as a product list. |
 | `LLMJudge` (`CVSSKernelScopeAndPrivileges`) | [test_suggest_impact.py](features/cve/test_suggest_impact.py) | | ✓ | For kernel-style issues, explanation should justify PR/S/C/I consistently with the vector. |
