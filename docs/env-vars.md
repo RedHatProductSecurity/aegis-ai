@@ -6,6 +6,8 @@
 | `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile               | `public`               |
 | `AEGIS_LLM_HOST`               | Aegis LLM host                                  | `localhost:11434`      |
 | `AEGIS_LLM_MODEL`              | Aegis LLM model                                 | `llama3.2:latest`      |
+| `AEGIS_LLM_PROVIDER`           | Force the API to speak: `openai`, `anthropic` or `google`. Unset means infer it from `AEGIS_LLM_HOST`. Needed for gateways (EnMaaS, LiteLLM, ...) serving a non-OpenAI API | |
+| `AEGIS_LLM_API_KEY`            | Provider-neutral API key. Unset means use the vendor variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`) | |
 | `AEGIS_LLM_MAX_TOKENS`         | Aegis LLM max tokens (0 means model default)    | 0                      |
 | `AEGIS_LLM_INPUT_TOKENS_WARN_THR` | Threshold for LLM input tokens to log a warning | 131072              |
 | `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently      | 4                      |

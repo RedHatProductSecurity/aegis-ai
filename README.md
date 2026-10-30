@@ -96,6 +96,31 @@ export AEGIS_LLM_MODEL=llama3.2:3b
 # Ensure Ollama is running and 'llama3.2:3b' model is pulled
 ```
 
+**Using Aegis with an API gateway (MaaS):**
+Gateways such as Red Hat's EnMaaS, LiteLLM or vLLM re-export vendor APIs under their own
+hostname, so point `AEGIS_LLM_HOST` at the gateway and pass its token in `AEGIS_LLM_API_KEY`:
+
+```bash
+export AEGIS_LLM_HOST="https://api.enmaas.devshift.net"
+export AEGIS_LLM_MODEL="rits/zai-org/glm-5-3"
+export AEGIS_LLM_API_KEY="YOUR_GATEWAY_TOKEN"
+```
+
+Aegis assumes a gateway speaks the OpenAI API, since that is what most of them serve. If the
+model you want is served over the Anthropic Messages API instead, say so explicitly — Aegis
+cannot infer it from the gateway's hostname:
+
+```bash
+export AEGIS_LLM_HOST="https://api.enmaas.devshift.net"
+export AEGIS_LLM_PROVIDER="anthropic"
+export AEGIS_LLM_MODEL="claude-sonnet-5"
+export AEGIS_LLM_API_KEY="YOUR_GATEWAY_TOKEN"
+```
+
+`AEGIS_LLM_PROVIDER` accepts `openai`, `anthropic` or `google`. Leave it unset to keep the
+default behaviour of inferring the provider from `AEGIS_LLM_HOST`. Ask your gateway operator
+which models it serves over which API; a model offered on one is usually not offered on the other.
+
 **Note:** For other LLM providers (e.g., OpenAI), similar environment variables will have to set. Refer to the `DEVELOP.md` for environment var information.
 
 Be aware that `Aegis` is an agent (which autonomously invokes tools) so any LLM model you use must be secure/trusted.

@@ -275,6 +275,32 @@ export AEGIS_LLM_MODEL="openai:gpt-4"
 export OPENAI_API_KEY="your-api-key"
 ```
 
+#### API gateway / MaaS (EnMaaS, LiteLLM, vLLM, ...)
+
+A gateway re-exports vendor APIs under its own hostname, so point `AEGIS_LLM_HOST` at the
+gateway and pass its token in `AEGIS_LLM_API_KEY`:
+
+```bash
+export AEGIS_LLM_HOST="https://api.enmaas.devshift.net"
+export AEGIS_LLM_MODEL="rits/zai-org/glm-5-3"
+export AEGIS_LLM_API_KEY="your-gateway-token"
+```
+
+Aegis assumes a gateway speaks the OpenAI API. When the model you want is served over the
+Anthropic Messages API instead, name the provider explicitly — it cannot be inferred from
+the gateway's hostname:
+
+```bash
+export AEGIS_LLM_HOST="https://api.enmaas.devshift.net"
+export AEGIS_LLM_PROVIDER="anthropic"
+export AEGIS_LLM_MODEL="claude-sonnet-5"
+export AEGIS_LLM_API_KEY="your-gateway-token"
+```
+
+`AEGIS_LLM_PROVIDER` accepts `openai`, `anthropic` or `google`; leave it unset to infer the
+provider from `AEGIS_LLM_HOST`. Which models are served over which API is a property of the
+gateway, so check with its operator — a model offered on one is usually not offered on the other.
+
 ### Security Considerations for LLM Selection
 
 | Data Classification | Recommended Model Type |
