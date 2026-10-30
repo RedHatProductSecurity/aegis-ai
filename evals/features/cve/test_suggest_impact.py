@@ -584,6 +584,12 @@ cases = [
             ]
         },
     ),
+    # AEGIS-545: Linux CNA and RH agree on CRITICAL and this CVSS vector.
+    SuggestImpactCase(
+        cve_id="CVE-2026-98432",
+        expected_impact="CRITICAL",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    ),
     # Analyst feedback (AEGIS-368): upstream CVSS from cve.org shows AV:N/PR:N/UI:N,
     # but Aegis previously suggested AV:L/PR:L/UI:R without reading external references.
     SuggestImpactCase(
