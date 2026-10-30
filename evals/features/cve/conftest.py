@@ -16,7 +16,7 @@ _EVAL_CSV = _EVAL_DIR / "eval-kernel-cves.csv"
 
 
 def pytest_addoption(parser):
-    """Register --sample for suggest-affected-components eval."""
+    """Register focused-run and reporting options for CVE evals."""
     parser.addoption(
         "--sample",
         type=int,
@@ -28,6 +28,12 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Run post-eval audit after kernel eval and write kernel_eval_audit.json.",
+    )
+    parser.addoption(
+        "--kernel-memory-regressions-only",
+        action="store_true",
+        default=False,
+        help="Suggest-impact eval: run only the AEGIS-545 kernel memory/race regressions and controls.",
     )
 
 

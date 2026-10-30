@@ -75,6 +75,53 @@ class CVSSVectorEvaluator(Evaluator[str, SuggestImpactModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
+class KernelImpactRegressionEvaluator(Evaluator[str, SuggestImpactModel]):
+    """Require AC/CIA and supplied impact for selected kernel regressions.
+
+    The general vector/impact similarity scores can pass despite the AEGIS-545
+    regression. These checks are assertions, independent of confidence and score
+    thresholds. Negative controls check only C/I: they guard against invented
+    kernel-memory impact while keeping AC/A/severity calibration in soft scores.
+    """
+
+    def __init__(self, *, confidentiality_integrity_only: bool = False):
+        super().__init__()
+        self._ci_only = confidentiality_integrity_only
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestImpactModel]
+    ) -> EvaluationReason:
+        expected_output = ctx.expected_output
+        if expected_output is None or not expected_output.cvss3_vector:
+            return make_eval_reason(
+                fail_reason="kernel regression requires an expected CVSS vector"
+            )
+        if not ctx.output.cvss3_vector:
+            return make_eval_reason(fail_reason="missing cvss3_vector")
+
+        try:
+            actual = cvss.CVSS3(ctx.output.cvss3_vector).metrics
+            expected = cvss.CVSS3(expected_output.cvss3_vector).metrics
+        except cvss.CVSS3Error as exc:
+            return make_eval_reason(fail_reason=f"invalid CVSS vector: {exc}")
+
+        metrics = ("C", "I") if self._ci_only else ("AC", "C", "I", "A")
+        mismatches = [
+            f"{metric}: got {actual[metric]}, expected {expected[metric]}"
+            for metric in metrics
+            if actual[metric] != expected[metric]
+        ]
+        if (
+            not self._ci_only
+            and expected_output.impact is not None
+            and ctx.output.impact != expected_output.impact
+        ):
+            mismatches.append(
+                f"impact: got {ctx.output.impact}, expected {expected_output.impact}"
+            )
+        return make_eval_reason(not mismatches, "; ".join(mismatches))
+
+
 # some evaluators are only applicable if the expected output for a specific field is provided
 field_evaluators = {
     "impact": ImpactEvaluator(),
@@ -134,6 +181,8 @@ class SuggestImpactCase(Case):
         expected_cvss3_score=None,
         expected_cvss3_vector=None,
         data_quality=None,
+        kernel_regression=False,
+        kernel_negative_control=False,
         **kwargs,
     ):
         """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
@@ -169,6 +218,13 @@ class SuggestImpactCase(Case):
 
         if data_quality is not None:
             evaluators.append(DataQualityEvaluator())
+
+        if kernel_regression or kernel_negative_control:
+            evaluators.append(
+                KernelImpactRegressionEvaluator(
+                    confidentiality_integrity_only=kernel_negative_control
+                )
+            )
 
         cached = read_cache_json(cve_id)
         components = cached.get("components", []) if cached else []
@@ -232,6 +288,14 @@ cases = [
         expected_impact="MODERATE",
         expected_cvss3_score=4.9,
     ),
+    # Negative control: TCP backlog-limit arithmetic, not kernel-memory corruption.
+    # Retain RH's AC/A/impact calibration as soft expectations; require only C:N/I:N.
+    SuggestImpactCase(
+        cve_id="CVE-2022-50865",
+        expected_impact="LOW",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+        kernel_negative_control=True,
+    ),
     SuggestImpactCase(
         cve_id="CVE-2023-39326",
         expected_impact="MODERATE",
@@ -268,6 +332,8 @@ cases = [
         expected_impact="MODERATE",
         expected_cvss3_score=5.5,
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+        # Negative control: failed filter binding affects internal state/references.
+        kernel_negative_control=True,
     ),
     SuggestImpactCase(
         cve_id="CVE-2023-53764",
@@ -333,6 +399,13 @@ cases = [
             "known_to_fail_evaluators": ["CVSSVectorEvaluator", "CVSSScoreEvaluator"]
         },
     ),
+    # A KASAN read-after-free report is not evidence of availability-only impact:
+    # namespace teardown races asynchronous TIPC encryption. RH/NIST agree on AC/CIA.
+    SuggestImpactCase(
+        cve_id="CVE-2025-38052",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+        kernel_regression=True,
+    ),
     SuggestImpactCase(
         cve_id="CVE-2025-38512",
         expected_cvss3_vector="CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:L",
@@ -395,6 +468,14 @@ cases = [
                 "CVSSKernelScopeAndPrivileges",
             ]
         },
+    ),
+    # Attacker-controlled connect/sendmsg/signal operations race a vsock transport
+    # lifetime. The cached CVEORG vector uses AC:L even though RH uses AC:H.
+    SuggestImpactCase(
+        cve_id="CVE-2025-40248",
+        expected_impact="IMPORTANT",
+        expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+        kernel_regression=True,
     ),
     # FIXME: scope is wrong (Aegis suggests S:C while S:U is expected)
     SuggestImpactCase(
@@ -584,6 +665,15 @@ cases = [
             ]
         },
     ),
+    # AEGIS-545: unauthenticated IPv4 TCP UAF; both racing paths are peer-induced.
+    # Linux CNA and RH: 9.8 CRITICAL, including kernel heap disclosure and writes.
+    # https://www.cve.org/CVERecord?id=CVE-2026-98432 (captured 2026-10-30)
+    SuggestImpactCase(
+        cve_id="CVE-2026-98432",
+        expected_impact="CRITICAL",
+        expected_cvss3_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        kernel_regression=True,
+    ),
     # Analyst feedback (AEGIS-368): upstream CVSS from cve.org shows AV:N/PR:N/UI:N,
     # but Aegis previously suggested AV:L/PR:L/UI:R without reading external references.
     SuggestImpactCase(
@@ -623,6 +713,21 @@ evals = common_feature_evals + [
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-async def test_eval_suggest_impact():
+kernel_memory_regression_cases = [
+    case
+    for case in cases
+    if any(
+        isinstance(evaluator, KernelImpactRegressionEvaluator)
+        for evaluator in case.evaluators
+    )
+]
+
+
+async def test_eval_suggest_impact(request):
     """suggest_impact evaluation entry point"""
-    await run_evaluation(cases, evals, suggest_impact, agent=rh_feature_agent)
+    selected_cases = (
+        kernel_memory_regression_cases
+        if request.config.getoption("--kernel-memory-regressions-only")
+        else cases
+    )
+    await run_evaluation(selected_cases, evals, suggest_impact, agent=rh_feature_agent)
