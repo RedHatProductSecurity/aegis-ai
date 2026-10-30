@@ -40,6 +40,8 @@ SAMPLE_SEED = int(
 # Used when AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_CVE_IDS env is not set.
 # Excludes CVEs with cpython as expected (model tends to suggest 'python' instead).
 # Excludes CVE-2025-23083 (nodejs): model often returns 'Node.js', causing flaky evals.
+# Excludes CVE-2026-11573 (qtbase): model returns umbrella names qt/qt5/qt6.
+# Excludes CVE-2026-19667 (bind): model returns bind, expected bind9 and bind.
 DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2006-10002",
     "CVE-2025-3416",
@@ -166,6 +168,16 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-86350",
     "CVE-2026-87022",
     "CVE-2026-88015",
+    # AEGIS-537: bomq alias pairs (advisory name + community/prod catalog name)
+    "CVE-2026-88360",  # libvips / vips
+    "CVE-2026-102555",  # libsoup / libsoup3
+    "CVE-2026-9672",  # libgd / gd
+    "CVE-2026-18090",  # gdk-pixbuf / gdk-pixbuf2
+    "CVE-2026-106026",  # tftp-hpa / tftp
+    "CVE-2026-67231",  # rabbitmq / rabbitmq-server
+    "CVE-2026-14456",  # openssl / openssl3
+    "CVE-2026-17526",  # keycloak-services / org.keycloak/keycloak-services
+    "CVE-2026-81856",  # hex; bomq type otp (not generic)
 )
 
 
@@ -180,7 +192,9 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 
 
 # Expected ecosystems for CVEs where ground-truth is known.
-# Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.
+# SuggestAffectedComponents allowlist: cargo, golang, npm, pypi, maven, gem,
+# generic, unknown. Bomq component types are also valid expected values
+# (AEGIS-537); use the type bomq returns, including types outside that list.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-22815": ["pypi"],
     "CVE-2026-22822": ["golang"],
@@ -227,6 +241,7 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-78383": ["generic"],
     "CVE-2026-78437": ["generic"],
     "CVE-2026-79677": ["generic"],
+    "CVE-2026-81856": ["otp"],
     "CVE-2026-86350": ["generic"],
     "CVE-2026-87022": ["generic"],
     "CVE-2026-88015": ["golang"],

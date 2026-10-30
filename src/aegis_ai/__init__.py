@@ -229,8 +229,11 @@ class AppSettings(BaseSettings):
     # osidb-bot KPI cache
     bot_kpi_cache_dir: str = os.getenv("AEGIS_BOT_KPI_CACHE_DIR", "")
 
-    # bomq
+    # Local stand-ins on separate ports. An empty value skips that catalog.
     bomq_url: str = os.getenv("AEGIS_BOMQ_URL", "https://localhost:8080")
+    bomq_community_url: str = os.getenv(
+        "AEGIS_BOMQ_COMMUNITY_URL", "https://localhost:8081"
+    )
 
     # OSIDB
     osidb_server_url: str = os.getenv(

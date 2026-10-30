@@ -86,13 +86,14 @@ from evals.utils.osidb_cache import (
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
     deps = ctx.deps
-    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+    expected_cve = getattr(deps, "cve_id", None)
+    if expected_cve is not None and str(input.cve_id) != expected_cve:
         logger.info(
-            f"osidb_tool: rejecting lookup for {input.cve_id} (expected {deps.cve_id})"
+            f"osidb_tool: rejecting lookup for {input.cve_id} (expected {expected_cve})"
         )
         return CVE(
             cve_id=input.cve_id,
-            title=f"Flaw {input.cve_id} lookup rejected (unrelated to {deps.cve_id})",
+            title=f"Flaw {input.cve_id} lookup rejected (unrelated to {expected_cve})",
             description="",
         )
     try:
@@ -104,8 +105,8 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
             title=f"Flaw {input.cve_id} was not found in OSIDB cache",
             description="",
         )
-    if ctx.deps.allowed_reference_urls is None and cve.references:
-        ctx.deps.allowed_reference_urls = {
+    if deps is not None and deps.allowed_reference_urls is None and cve.references:
+        deps.allowed_reference_urls = {
             ref["url"]
             for ref in cve.references
             if isinstance(ref, dict) and ref.get("url")
@@ -113,7 +114,7 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
 
     return cve_exclude_fields(
         cve,
-        ctx.deps.exclude_osidb_fields,
+        getattr(deps, "exclude_osidb_fields", None) or [],
         strip_component_prefix_for_osidb_cache=True,
     )
 
@@ -137,10 +138,11 @@ async def osv_dev_ghsa_tool(ctx: RunContext[feature_deps], input: GHSAToolInput)
 async def osv_dev_cve_tool(ctx: RunContext[feature_deps], input: OSVCVEToolInput):
     """wrapper around osv_dev_cve that caches OSV.dev responses"""
     deps = ctx.deps
-    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
+    expected_cve = getattr(deps, "cve_id", None)
+    if expected_cve is not None and str(input.cve_id) != expected_cve:
         logger.info(
             f"osv_dev_cve_tool: rejecting lookup for {input.cve_id} "
-            f"(expected {deps.cve_id})"
+            f"(expected {expected_cve})"
         )
         return {}
     raw = await ghsa_cache_retrieve(str(input.cve_id))
