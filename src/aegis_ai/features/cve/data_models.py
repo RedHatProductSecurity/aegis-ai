@@ -163,6 +163,66 @@ class SuggestAffectedPackagesModel(AegisFeatureModel):
         return f"{affected}/{total} package(s) affected{suffix}"
 
 
+class ComponentMatch(BaseModel):
+    """
+    A structured component match with full identification metadata.
+
+    This provides the data ACE/BOMQ needs for deterministic SBOM matching,
+    addressing the 706 low-confidence match failures by including
+    namespace, ecosystem, properly formatted PURLs, and VULNERABLE VERSION RANGES.
+
+    The version range fields are CRITICAL to prevent ACE from creating affects
+    for ALL versions of a component across all Red Hat builds.
+    """
+
+    name: str = Field(
+        ...,
+        description="Component name (e.g., 'chromium-browser', 'rclone', 'spring-webmvc')",
+    )
+
+    namespace: str | None = Field(
+        default=None,
+        description="Component namespace/group (e.g., 'redhat' for RPMs, 'github.com/rclone' for Go, 'org.springframework' for Maven). Null for generic packages.",
+    )
+
+    ecosystem: str = Field(
+        ...,
+        description="Package ecosystem. Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.",
+    )
+
+    purl: str | None = Field(
+        default=None,
+        description="Properly formatted Package URL (e.g., 'pkg:rpm/redhat/python-cffi@2.0.0', 'pkg:golang/github.com/rclone/rclone'). Include base PURL without specific version (version constraints go in vulnerable_versions field).",
+    )
+
+    first_introduced: str | None = Field(
+        default=None,
+        description="First version where vulnerability was introduced (e.g., '0', '1.0.0', '5.3.0'). Extract from GHSA ranges[].events[].introduced or CVE description. Use '0' if vulnerable in all versions. CRITICAL for ACE to filter affects correctly.",
+    )
+
+    last_affected: str | None = Field(
+        default=None,
+        description="Last version affected by vulnerability (e.g., '1.75.0', '5.3.20'). This is the version BEFORE the fix. Extract from GHSA ranges or CVE description. CRITICAL for ACE to filter affects correctly.",
+    )
+
+    fixed_in: str | None = Field(
+        default=None,
+        description="First version where vulnerability is fixed (e.g., '1.75.1', '5.3.21'). Extract from GHSA ranges[].events[].fixed, release notes, or CVE description.",
+    )
+
+    evidence: str = Field(
+        ...,
+        description="Brief evidence for why this component is vulnerable and version range source (e.g., 'GHSA-xxxx: vulnerable in versions < 1.75.1', 'Fix released in v2.5.1 per GitHub advisory', 'CVE description: affects versions through 3.0.5')",
+    )
+
+    confidence: float = Field(
+        default=0.9,
+        ge=0.0,
+        le=1.0,
+        description="Per-component confidence score (0.0-1.0)",
+    )
+
+
 class SuggestAffectedComponentsModel(AegisFeatureModel):
     """Model for suggested affected components inferred from CVE data."""
 
@@ -171,27 +231,28 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
-    components: list[str] = Field(
+    components: list[ComponentMatch] = Field(
         ...,
-        description="Suggested affected component names.",
+        description="Structured list of affected components with ecosystem, namespace, PURL, and evidence.",
     )
 
     ecosystems: list[str] = Field(
         default_factory=list,
-        description="Package ecosystems impacted by this vulnerability. "
+        description="Package ecosystems impacted by this vulnerability (derived from components). "
         "Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.",
     )
 
     explanation: str = Field(
         ...,
-        description="Rationale for component suggestions.",
+        description="Overall rationale for component suggestions.",
     )
 
     def printable_outcome(self) -> str:
         """Override the logging hook to print the resulting suggestion."""
+        component_names = [c.name for c in self.components]
         if self.ecosystems:
-            return f"{self.components} ecosystems={self.ecosystems}"
-        return str(self.components)
+            return f"{component_names} ecosystems={self.ecosystems}"
+        return str(component_names)
 
 
 class SuggestImpactModel(AegisFeatureModel):
