@@ -428,12 +428,18 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-11429",
-        cwe_list=["CWE-613"],
+        cwe_list=[
+            "CWE-1464",
+            "CWE-1463",
+            "CWE-1462",
+        ],  # kdudka: replaced prohibited/deprecated CWE-613
     ),
     SuggestCweCase(
         cve_id="CVE-2025-12110",
-        cwe_list=["CWE-613"],
-        metadata={"known_to_fail_evaluators": ["SuggestCweEvaluator"]},
+        cwe_list=[
+            "CWE-1464",
+            "CWE-1462",
+        ],  # kdudka: replaced prohibited/deprecated CWE-613
     ),
     SuggestCweCase(
         cve_id="CVE-2025-12200",
@@ -881,13 +887,7 @@ cases = [
     ),
     SuggestCweCase(
         cve_id="CVE-2025-67639",
-        cwe_list=["CWE-613"],
-        metadata={
-            "known_to_fail_evaluators": [
-                "CWEExplanationRootCause",
-                "SuggestCweEvaluator",
-            ]
-        },
+        cwe_list=["CWE-346"],  # kdudka: replaced prohibited/deprecated CWE-613
     ),
     SuggestCweCase(
         cve_id="CVE-2025-69196",
