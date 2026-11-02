@@ -86,6 +86,7 @@ spec:
         echo "SAST tasks may have been skipped or produced no output."
         echo "0" > "$SARIF_DIR/gate_exit"
         printf 'TOTAL_ERRORS=0\nTOTAL_WARNINGS=0\nTOTAL_NOTES=0\nPULL_FAILURES=0\n' > "$SARIF_DIR/summary.env"
+        echo "complete" > "$SARIF_DIR/retrieval_complete"
         exit 0
       fi
 
@@ -144,6 +145,9 @@ spec:
         GATE_EXIT=1
       fi
       echo "$GATE_EXIT" > "$SARIF_DIR/gate_exit"
+      if [ "$PULL_FAILURES" -eq 0 ]; then
+        echo "complete" > "$SARIF_DIR/retrieval_complete"
+      fi
   - name: upload-sarif
     image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:6df16e808f147926a2ba5f88588350bd8f77e73fde43614e79ddbd6e2b097d2e
     onError: continue
@@ -187,6 +191,11 @@ spec:
       echo "=========================================="
       echo "GitHub Code Scanning SARIF Upload"
       echo "=========================================="
+
+      if [ ! -f "$SARIF_DIR/retrieval_complete" ]; then
+        warn_upload "SARIF upload skipped: artifact retrieval did not complete; review the pull-sarif logs."
+        exit 0
+      fi
 
       if [ -z "${GIT_COMMIT_SHA:-}" ] || [ -z "${GIT_REF:-}" ]; then
         warn_upload "SARIF upload skipped: revision or git-ref is not set."
@@ -393,6 +402,13 @@ spec:
         echo ""
         echo "FAILED: ${TOTAL_ERRORS} error-level SAST finding(s) detected."
         echo "Review the findings above and fix them before merging."
+      elif [ "$GATE_EXIT" -ne 0 ]; then
+        RESULT=FAILURE
+        SUCCESSES=0
+        FAILURES=$((FAILURES + 1))
+        RESULT_NOTE="SARIF retrieval did not complete; review the pull-sarif logs."
+        echo ""
+        echo "FAILED: $RESULT_NOTE"
       else
         echo ""
         echo "PASSED: No error-level SAST findings."
