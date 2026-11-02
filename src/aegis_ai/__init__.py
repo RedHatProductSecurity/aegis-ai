@@ -138,6 +138,18 @@ def _resolve_llm_provider(provider: str, host: str) -> str:
         return "openai"
 
 
+def _gateway_base_url(host: str, vendor_hostname: str) -> str | None:
+    """Return the base URL to hand a vendor SDK, or ``None`` for its default.
+
+    Only redirect the SDK when ``AEGIS_LLM_HOST`` names something other than
+    the vendor itself, i.e. a gateway. Returning ``None`` for the vendor's own
+    hostname keeps its SDK defaults (and its own base-URL env var) in play.
+    Without this an explicit ``AEGIS_LLM_PROVIDER`` would send the gateway's
+    token, and the prompt, to the vendor's public endpoint instead.
+    """
+    return None if _llm_base_url_hostname(host) == vendor_hostname else host
+
+
 # Ensure console logs include project-relative path and line number
 class RelativePathFilter(logging.Filter):
     def __init__(self) -> None:
@@ -393,16 +405,12 @@ class AppSettings(BaseSettings):
             from pydantic_ai.models.anthropic import AnthropicModel
             from pydantic_ai.providers.anthropic import AnthropicProvider
 
-            # Only point the SDK elsewhere when talking to a gateway; against
-            # Anthropic itself let it keep using its own default base URL.
-            base_url = (
-                None if _llm_base_url_hostname(host) == ANTHROPIC_API_HOSTNAME else host
-            )
-
             return AnthropicModel(
                 model_name=self.default_llm_model_name,
                 provider=AnthropicProvider(
-                    api_key=api_key, base_url=base_url, **provider_kwargs
+                    api_key=api_key,
+                    base_url=_gateway_base_url(host, ANTHROPIC_API_HOSTNAME),
+                    **provider_kwargs,
                 ),
             )
 
@@ -413,7 +421,11 @@ class AppSettings(BaseSettings):
 
             return GoogleModel(
                 model_name=self.default_llm_model_name,
-                provider=GoogleProvider(api_key=api_key, **provider_kwargs),
+                provider=GoogleProvider(
+                    api_key=api_key,
+                    base_url=_gateway_base_url(host, GOOGLE_API_HOSTNAME),
+                    **provider_kwargs,
+                ),
             )
 
         else:
