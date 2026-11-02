@@ -120,7 +120,7 @@ dev = [
     "isort>=6.0.1",
     "lxml>=5.4.0",
     "mypy>=1.16.0",
-    "pytest>=8.4.0",
+    "pytest<9.2.0",  # 9.2.0 breaks pytest-sugar 1.1.1
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.2.1",
     "pytest-env>=1.1.5",
