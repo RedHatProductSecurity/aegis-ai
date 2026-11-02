@@ -216,6 +216,7 @@ class AppSettings(BaseSettings):
     use_osidb_component_tool: bool = get_env_flag(
         "AEGIS_USE_OSIDB_COMPONENT_TOOL_CONTEXT", False
     )
+    use_osv_dev_tool: bool = get_env_flag("AEGIS_USE_OSV_DEV_TOOL_CONTEXT", True)
 
     # Enables the kernel-specific XGBoost impact classifier for Linux kernel CVEs.
     # When true, kernel CVEs are routed through the patch-feature pipeline before

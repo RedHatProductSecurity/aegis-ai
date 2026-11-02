@@ -20,8 +20,6 @@ from pydantic_ai.toolsets.wrapper import WrapperToolset
 
 from aegis_ai import get_settings
 from aegis_ai.toolsets.tools.osidb import osidb_component_toolset, osidb_toolset
-from aegis_ai.toolsets.tools.osv_dev_cve import osv_dev_cve_tool
-from aegis_ai.toolsets.tools.osv_dev_ghsa import osv_dev_ghsa_tool
 
 logger = logging.getLogger(__name__)
 
@@ -214,9 +212,15 @@ build_system_toolset = CombinedToolset(build_system_toolset_list)
 
 
 # Toolset containing generic tooling for CVE
-public_cve_toolset_list: list[AbstractToolset[Any]] = [
-    FunctionToolset(tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]),
-]
+public_cve_toolset_list: list[AbstractToolset[Any]] = []
+
+if get_settings().use_osv_dev_tool:
+    from aegis_ai.toolsets.tools.osv_dev_cve import osv_dev_cve_tool
+    from aegis_ai.toolsets.tools.osv_dev_ghsa import osv_dev_ghsa_tool
+
+    public_cve_toolset_list.append(
+        FunctionToolset(tools=[osv_dev_cve_tool, osv_dev_ghsa_tool])
+    )
 
 if get_settings().use_nvd_dev_tool:
     public_cve_toolset_list.append(nvd_mcp_toolset)
