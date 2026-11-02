@@ -36,6 +36,41 @@ _LLM_FREE_COMMANDS = frozenset(
 )
 
 
+def _apply_fixtures():
+    """Swap live toolsets with cached fixtures from evals/."""
+    from pathlib import Path
+
+    from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
+
+    project_root = str(Path(__file__).resolve().parents[2])
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
+    import aegis_ai.toolsets as ts
+    import aegis_ai.toolsets.tools.osidb as osidb_mod
+    from aegis_ai.features.data_models import feature_deps
+    from evals.utils.cached_tools import osidb_tool, osv_dev_cve_tool, osv_dev_ghsa_tool
+    from evals.utils.osidb_cache import osidb_cache_retrieve
+
+    wrapped = ts.redhat_cve_toolset.wrapped
+    if isinstance(wrapped, CombinedToolset):
+        wrapped.toolsets[0] = FunctionToolset[feature_deps](tools=[osidb_tool])  # type:ignore
+        wrapped.toolsets[1:] = []  # type:ignore
+
+    wrapped = ts.public_cve_toolset.wrapped
+    if isinstance(wrapped, CombinedToolset) and get_settings().use_osv_dev_tool:
+        cached_osv = FunctionToolset[feature_deps](
+            tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]
+        )
+        for i, t in enumerate(wrapped.toolsets):
+            if isinstance(t, FunctionToolset):
+                wrapped.toolsets[i] = cached_osv  # type:ignore
+                break
+
+    osidb_mod.cve_retrieve = osidb_cache_retrieve  # type:ignore
+    logging.info("Using eval fixtures instead of live data sources")
+
+
 @click.group()
 @click.option(
     "--version",
@@ -47,8 +82,14 @@ _LLM_FREE_COMMANDS = frozenset(
     help="Display griffon version.",
 )
 @click.option("--debug", "-d", is_flag=True, help="Debug log level.")
+@click.option(
+    "--use-fixtures",
+    is_flag=True,
+    default=False,
+    help="Use eval fixtures (evals/*_cache/) instead of live data sources.",
+)
 @click.pass_context
-def aegis_cli(ctx, debug):
+def aegis_cli(ctx, debug, use_fixtures):
     """Top level click entrypoint"""
 
     if not debug:
@@ -57,6 +98,9 @@ def aegis_cli(ctx, debug):
         config_logging(level="DEBUG")
 
     logging.info(f"Aegis version: {get_settings().app_version}")
+
+    if use_fixtures:
+        _apply_fixtures()
 
     if ctx.invoked_subcommand in _LLM_FREE_COMMANDS:
         return
