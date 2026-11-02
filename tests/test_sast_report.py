@@ -6,6 +6,7 @@ controlled. The subprocess PATH contains only explicitly provisioned commands.
 """
 
 import base64
+import copy
 import gzip
 import json
 import shutil
@@ -215,10 +216,17 @@ class SastScripts:
     ):
         self.case["headers"] = f"HTTP/2 202\r\n{name}: {expiry}\r\n\r\n"
 
-    def fail_command(self, name: str):
+    def fail_command(self, name: str, *, on_call: int = 1):
         command = self.root / "bin" / name
         command.unlink()
-        command.write_text(f"#!{self.tools['bash']}\nexit 73\n")
+        command.write_text(
+            f"#!{self.tools['bash']}\n"
+            "count=0\n"
+            f'[[ ! -f "{command}.calls" ]] || read -r count < "{command}.calls"\n'
+            f'echo "$((count + 1))" > "{command}.calls"\n'
+            f"[[ $((count + 1)) -ne {on_call} ]] || exit 73\n"
+            f'exec "{self.tools[name]}" "$@"\n'
+        )
         command.chmod(0o755)
 
 
@@ -515,16 +523,13 @@ def test_unusable_upload_metadata_warns_without_attempting_upload(
     assert not sast.request_path.exists()
 
 
-@pytest.mark.parametrize("gate_problem", [None, "error", "pull"])
+@pytest.mark.parametrize("gate_problem", [None, "error"])
 def test_unexpected_preparation_failure_still_runs_report_and_preserves_gate(
     sast: SastScripts, gate_problem
 ):
-    # Keep a SARIF file available even when another artifact cannot be pulled.
-    artifacts: list[dict[str, Any] | None] = [sarif()]
+    artifacts = [sarif()]
     if gate_problem == "error":
         artifacts.append(sarif("error"))
-    elif gate_problem == "pull":
-        artifacts.append(None)
     sast.case["artifacts"] = artifacts
     # A local command failure before curl exercises set -e and Tekton onError.
     sast.fail_command("gzip")
@@ -539,14 +544,11 @@ def test_unexpected_preparation_failure_still_runs_report_and_preserves_gate(
     assert not sast.request_path.exists()
 
 
-@pytest.mark.parametrize("gate_problem", ["error", "pull"])
 @pytest.mark.parametrize("upload_problem", ["http", "expiry"])
-def test_sast_errors_and_artifact_pull_failures_take_precedence_over_warnings(
-    sast: SastScripts, gate_problem, upload_problem
+def test_sast_errors_take_precedence_over_upload_warnings(
+    sast: SastScripts, upload_problem
 ):
-    sast.case["artifacts"] = (
-        [sarif("error", "warning")] if gate_problem == "error" else [None, sarif()]
-    )
+    sast.case["artifacts"] = [sarif("error", "warning")]
     if upload_problem == "http":
         sast.case["http_code"] = "403"
     else:
@@ -557,7 +559,103 @@ def test_sast_errors_and_artifact_pull_failures_take_precedence_over_warnings(
     assert result["successes"] == 0
     assert result["warnings"] >= 1
     assert SECRET in result["note"]
-    assert ("error-level" if gate_problem == "error" else "retrieved") in result["note"]
+    assert "error-level" in result["note"]
+    assert sast.request_path.exists()
+
+
+@pytest.mark.parametrize("failed_first", [False, True])
+def test_partial_artifact_retrieval_never_merges_or_uploads(
+    sast: SastScripts, failed_first
+):
+    sast.case["artifacts"] = (
+        [None, sarif("note")] if failed_first else [sarif("note"), None]
+    )
+    assert sast.run().returncode == 1, sast.logs
+    assert list(sast.sarif_dir.glob("*_scan.sarif"))
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["successes"] == 0
+    assert result["failures"] > 0
+    assert result["warnings"] > 0
+    assert "skipped" in result["note"]
+    assert not sast.request_path.exists()
+    assert not (sast.sarif_dir / "merged.sarif.json").exists()
+
+
+def test_interruption_after_first_artifact_never_uploads_partial_results(
+    sast: SastScripts,
+):
+    sast.case["artifacts"] = [sarif("note"), sarif("error")]
+    sast.fail_command("mv", on_call=2)
+    assert sast.run().returncode == 1, sast.logs
+    assert sast.steps["pull-sarif"].returncode == 73
+    assert (sast.sarif_dir / "1_scan.sarif").exists()
+    assert not (sast.sarif_dir / "2_scan.sarif").exists()
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["successes"] == 0
+    assert result["failures"] > 0
+    assert not sast.request_path.exists()
+    assert not (sast.sarif_dir / "merged.sarif.json").exists()
+
+
+@pytest.mark.parametrize("gate_written", [False, True])
+def test_interrupted_final_bookkeeping_cannot_upload(sast: SastScripts, gate_written):
+    # Simulate the pull process dying after writing its zero-count summary,
+    # on either side of committing its gate status. All artifact files exist.
+    sast.spec = copy.deepcopy(sast.spec)
+    pull = next(step for step in sast.spec["steps"] if step["name"] == "pull-sarif")
+    boundary = (
+        'echo "$GATE_EXIT" > "$SARIF_DIR/gate_exit"' if gate_written else "GATE_EXIT=0"
+    )
+    assert boundary in pull["script"]
+    interruption = f"{boundary}\nexit 73" if gate_written else f"exit 73\n{boundary}"
+    pull["script"] = pull["script"].replace(boundary, interruption, 1)
+    expected_exit = 0 if gate_written else 1
+    assert sast.run().returncode == expected_exit, sast.logs
+    assert sast.steps["pull-sarif"].returncode == 73
+    assert (sast.sarif_dir / "1_scan.sarif").exists()
+    summary = (sast.sarif_dir / "summary.env").read_text().splitlines()
+    assert summary and all(line.endswith("=0") for line in summary)
+    result = sast.assert_result(
+        "WARNING" if gate_written else "FAILURE", exit_code=expected_exit
+    )
+    assert result["warnings"] > 0
+    if not gate_written:
+        assert result["successes"] == 0
+        assert result["failures"] > 0
+    assert not sast.request_path.exists()
+    assert not (sast.sarif_dir / "merged.sarif.json").exists()
+
+
+@pytest.mark.parametrize("upload_warnings", [0, 2])
+def test_nonzero_gate_overrides_zero_summary_counts(sast: SastScripts, upload_warnings):
+    sast.sarif_dir.mkdir(parents=True)
+    (sast.sarif_dir / "summary.env").write_text(
+        "TOTAL_ERRORS=0\nTOTAL_WARNINGS=0\nTOTAL_NOTES=0\nPULL_FAILURES=0\n"
+    )
+    (sast.sarif_dir / "gate_exit").write_text("1\n")
+    (sast.sarif_dir / "upload_status.json").write_text(
+        json.dumps({"warnings": upload_warnings, "note": "test upload status"})
+    )
+    assert sast.run_step("report").returncode != 0, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["successes"] == 0
+    assert result["failures"] > 0
+    assert result["warnings"] == upload_warnings
+
+
+def test_fully_retrieved_error_findings_still_upload(sast: SastScripts):
+    artifact = sarif("error", "warning")
+    sast.case["artifacts"] = [artifact]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["successes"] == 0
+    assert result["failures"] == 1
+    request = json.loads(sast.request_path.read_text())
+    assert "POST" in request["arguments"]
+    uploaded = json.loads(
+        gzip.decompress(base64.b64decode(request["payload"]["sarif"]))
+    )
+    assert uploaded == artifact
 
 
 def test_upload_and_expiry_warnings_are_both_visible(sast: SastScripts):
