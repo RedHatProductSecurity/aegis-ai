@@ -204,6 +204,13 @@ components:
           description: Feature names to run. If omitted or empty, a default set of
             stable features is run.
           title: Features
+        steering_notes:
+          anyOf:
+          - maxLength: 5000
+            type: string
+          - type: 'null'
+          description: Internal analyst notes providing additional flaw context
+          title: Steering Notes
       required:
       - cve_id
       title: CVEMultiAnalysisRequest
@@ -238,6 +245,13 @@ components:
           pattern: ^CVE-[0-9]{4}-[0-9]{4,16}$
           title: Cve Id
           type: string
+        steering_notes:
+          anyOf:
+          - maxLength: 5000
+            type: string
+          - type: 'null'
+          description: Internal analyst notes providing additional flaw context
+          title: Steering Notes
       required:
       - cve_id
       title: CVESingleAnalysisRequest

@@ -483,9 +483,9 @@ async def cve_multi_analysis(
         # deduplicate to avoid redundant LLM calls from repeated feature names
         requested_features = list(dict.fromkeys(requested_features))
 
-    validated_input: dict[str, Any] = {"cve_id": cve_id}
-    if request_body.model_extra:
-        validated_input.update(request_body.model_extra)
+    validated_input = request_body.model_dump(
+        exclude={"agent", "features"}, exclude_unset=True
+    )
 
     results: dict[str, Any] = {}
     errors: dict[str, FeatureError] = {}
@@ -551,9 +551,7 @@ async def cve_analysis_with_body(
         raise HTTPException(404, detail=f"CVE feature '{feature_name}' not found.")
     FeatureClass = cve_feature_registry[feature_name]
 
-    validated_input: dict[str, Any] = {"cve_id": cve_id}
-    if request_body.model_extra:
-        validated_input.update(request_body.model_extra)
+    validated_input = request_body.model_dump(exclude={"agent"}, exclude_unset=True)
 
     validated_input = await _maybe_infer_components(
         cve_id,
