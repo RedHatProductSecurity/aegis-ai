@@ -582,7 +582,9 @@ async def test_package_osidb_prefetch_preserves_request_steering_notes(
             feature,
             "guarded_run",
             new_callable=AsyncMock,
-            return_value=SimpleNamespace(output=SimpleNamespace(tools_used=[])),
+            return_value=SimpleNamespace(
+                output=SimpleNamespace(tools_used=[], affected_packages=[])
+            ),
         ) as run,
     ):
         await feature.exec(
