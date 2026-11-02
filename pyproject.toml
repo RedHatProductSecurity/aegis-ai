@@ -82,6 +82,7 @@ allowed-unresolved-imports = ["xgboost.**"]
 ignore_no_config = true
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
 pythonpath = ["."]
 testpaths = "tests"
 python_files = "test_*.py"
