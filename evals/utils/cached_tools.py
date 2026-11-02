@@ -12,6 +12,13 @@ from evals.utils.osidb_cache import osidb_cache_retrieve
 
 logger = logging.getLogger(__name__)
 
+_osidb_field_masks: dict[str, list[str]] = {}
+
+
+def mask_osidb_fields(cve_id: str, fields: list[str]) -> None:
+    """Register extra fields to mask when the cached osidb_tool returns data for *cve_id*."""
+    _osidb_field_masks.setdefault(cve_id, []).extend(fields)
+
 
 @Tool
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
@@ -42,11 +49,15 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
             if isinstance(ref, dict) and ref.get("url")
         }
 
-    return cve_exclude_fields(
+    cve = cve_exclude_fields(
         cve,
         ctx.deps.exclude_osidb_fields,
         strip_component_prefix_for_osidb_cache=True,
     )
+    extra_mask = _osidb_field_masks.get(str(input.cve_id))
+    if extra_mask:
+        cve = cve_exclude_fields(cve, extra_mask)
+    return cve
 
 
 @Tool
