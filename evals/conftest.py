@@ -6,9 +6,10 @@ import pytest
 
 logger = logging.getLogger(__name__)
 from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
+from pydantic_ai.toolsets.filtered import FilteredToolset
 
 import aegis_ai.toolsets as ts
-from aegis_ai import config_logging
+from aegis_ai import config_logging, get_settings
 from aegis_ai.features.data_models import feature_deps
 from evals.features.common import eval_metrics, eval_summary
 from evals.utils.build_system_cache import (
@@ -24,7 +25,12 @@ from evals.utils.build_system_cache import (
 from evals.utils.build_system_cache import (
     write_misses_report as write_build_system_misses_report,
 )
-from evals.utils.cached_tools import osidb_tool, osv_dev_cve_tool, osv_dev_ghsa_tool
+from evals.utils.cached_tools import (
+    is_tool_disabled,
+    osidb_tool,
+    osv_dev_cve_tool,
+    osv_dev_ghsa_tool,
+)
 from evals.utils.external_references_cache import (
     cache_misses as extref_cache_misses,
 )
@@ -180,6 +186,10 @@ def setup_logging_for_session():
 
 # Cache OSIDB responses (maintained in git) so evals are invariant to
 # future OSIDB data changes.
+def _tool_filter(ctx, td) -> bool:
+    return not is_tool_disabled(ctx.deps.cve_id, td.name)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def override_osidb_toolset():
     cached = FunctionToolset[feature_deps](tools=[osidb_tool])
@@ -189,16 +199,32 @@ def override_osidb_toolset():
         # Drop the optional osidb_component_toolset so component tools
         # cannot bypass the cached fixture and hit live OSIDB.
         wrapped.toolsets[1:] = []  # type:ignore
+    ts.redhat_cve_toolset.wrapped = FilteredToolset(
+        ts.redhat_cve_toolset.wrapped, filter_func=_tool_filter
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
 def override_public_cve_toolset():
-    cached: FunctionToolset[feature_deps] = FunctionToolset(
-        tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]
-    )
     wrapped = ts.public_cve_toolset.wrapped
-    if isinstance(wrapped, CombinedToolset):
-        wrapped.toolsets[0] = cached  # type:ignore
+    if isinstance(wrapped, CombinedToolset) and get_settings().use_osv_dev_tool:
+        cached: FunctionToolset[feature_deps] = FunctionToolset(
+            tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]
+        )
+        for i, t in enumerate(wrapped.toolsets):
+            if isinstance(t, FunctionToolset):
+                wrapped.toolsets[i] = cached  # type:ignore
+                break
+    ts.public_cve_toolset.wrapped = FilteredToolset(
+        ts.public_cve_toolset.wrapped, filter_func=_tool_filter
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def filter_public_toolset():
+    ts.public_toolset.wrapped = FilteredToolset(
+        ts.public_toolset.wrapped, filter_func=_tool_filter
+    )
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded

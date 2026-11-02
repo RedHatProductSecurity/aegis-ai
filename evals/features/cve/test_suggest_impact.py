@@ -135,6 +135,7 @@ class SuggestImpactCase(Case):
         expected_cvss3_vector=None,
         data_quality=None,
         mask_osidb_fields: list[str] | None = None,
+        disable_tools: list[str] | None = None,
         **kwargs,
     ):
         """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
@@ -181,6 +182,11 @@ class SuggestImpactCase(Case):
             from evals.utils.cached_tools import mask_osidb_fields as register_mask
 
             register_mask(cve_id, mask_osidb_fields)
+
+        if disable_tools:
+            from evals.utils.cached_tools import disable_tools as register_disable
+
+            register_disable(cve_id, disable_tools)
 
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",

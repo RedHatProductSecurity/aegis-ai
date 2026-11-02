@@ -50,6 +50,15 @@ OSIDB_FIELD_MASKS: dict[str, list[str]] = {
     "CVE-2026-98432": ["cvss_scores", "references"],
 }
 
+# per evaluation case disabling of tools
+DISABLED_TOOLS: dict[str, list[str]] = {
+    "CVE-2026-98432": [
+        "external_references_tool",
+        "osv_dev_cve_tool",
+        "osv_dev_ghsa_tool",
+    ],
+}
+
 # Cases where underestimation failures are expected due to structural gaps
 # that cannot be resolved by prompt or classifier tuning alone.  Each entry
 # maps a CVE ID to a dict with ``known_to_fail_evaluators`` (list of
@@ -217,6 +226,7 @@ def _load_cases() -> list[SuggestImpactCase]:
                 expected_cvss3_score=expected_cvss,
                 expected_cvss3_vector=expected_vector,
                 mask_osidb_fields=OSIDB_FIELD_MASKS.get(cve_id),
+                disable_tools=DISABLED_TOOLS.get(cve_id),
                 metadata=metadata,
             )
             cases.append(case)

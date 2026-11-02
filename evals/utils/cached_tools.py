@@ -20,6 +20,21 @@ def mask_osidb_fields(cve_id: str, fields: list[str]) -> None:
     _osidb_field_masks.setdefault(cve_id, []).extend(fields)
 
 
+_disabled_tools: dict[str, set[str]] = {}
+
+
+def disable_tools(cve_id: str, tool_names: list[str]) -> None:
+    """Register tools to hide from the agent when evaluating *cve_id*."""
+    _disabled_tools.setdefault(cve_id, set()).update(tool_names)
+
+
+def is_tool_disabled(cve_id: str | None, tool_name: str) -> bool:
+    """Return True if *tool_name* should be filtered out for *cve_id*."""
+    if cve_id is None:
+        return False
+    return tool_name in _disabled_tools.get(cve_id, set())
+
+
 @Tool
 async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
     """wrapper around aegis.tools.osidb that caches OSIDB responses"""
