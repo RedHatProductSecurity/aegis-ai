@@ -326,7 +326,7 @@ spec:
           value: $(params.APPLY_GIT_TAG_LABELS)
         script: |
           #!/bin/bash -ex
-          git describe --tags
+          git describe --tags ||:
           if [[ "$APPLY_GIT_TAG_LABELS" != "true" ]]; then
             echo "[]" > "$(results.IMAGE_LABELS.path)"
             exit 0
