@@ -242,9 +242,19 @@ evals = common_feature_evals + [
 ]
 
 
+_case_overrides: dict[str, SuggestImpactCase] = {
+    c.inputs: c for c in cases if c._extra_exclude_osidb_fields or c._disabled_tools
+}
+
+
 async def suggest_impact_kernel(cve_id: CVEID) -> SuggestImpactModel:
     feature = SuggestImpact(rh_feature_agent)
-    result = await feature.exec(cve_id)
+    case = _case_overrides.get(str(cve_id))
+    result = await feature.exec(
+        cve_id,
+        extra_exclude_osidb_fields=case._extra_exclude_osidb_fields if case else None,
+        disabled_tools=case._disabled_tools if case else None,
+    )
     return result.output
 
 

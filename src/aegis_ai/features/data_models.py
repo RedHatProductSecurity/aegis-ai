@@ -53,6 +53,10 @@ class feature_deps:
     # the LLM from fetching invented or cross-referenced URLs.  None means no
     # restriction.
     allowed_reference_urls: set[str] | None = field(default=None)
+    # Extra OSIDB fields to mask for this run (eval-only, per-case overrides).
+    extra_exclude_osidb_fields: list[str] = field(default_factory=list)
+    # Tool names to hide from the agent for this run (eval-only, per-case).
+    disabled_tools: set[str] = field(default_factory=set)
 
 
 class FeatureQueryInput(BaseModel):

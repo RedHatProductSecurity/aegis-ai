@@ -12,27 +12,10 @@ from evals.utils.osidb_cache import osidb_cache_retrieve
 
 logger = logging.getLogger(__name__)
 
-_osidb_field_masks: dict[str, list[str]] = {}
 
-
-def mask_osidb_fields(cve_id: str, fields: list[str]) -> None:
-    """Register extra fields to mask when the cached osidb_tool returns data for *cve_id*."""
-    _osidb_field_masks.setdefault(cve_id, []).extend(fields)
-
-
-_disabled_tools: dict[str, set[str]] = {}
-
-
-def disable_tools(cve_id: str, tool_names: list[str]) -> None:
-    """Register tools to hide from the agent when evaluating *cve_id*."""
-    _disabled_tools.setdefault(cve_id, set()).update(tool_names)
-
-
-def is_tool_disabled(cve_id: str | None, tool_name: str) -> bool:
-    """Return True if *tool_name* should be filtered out for *cve_id*."""
-    if cve_id is None:
-        return False
-    return tool_name in _disabled_tools.get(cve_id, set())
+def is_tool_disabled(ctx, tool_name: str) -> bool:
+    """Return True if *tool_name* is in the per-run disabled_tools set on deps."""
+    return tool_name in getattr(ctx.deps, "disabled_tools", set())
 
 
 @Tool
@@ -69,9 +52,9 @@ async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CV
         ctx.deps.exclude_osidb_fields,
         strip_component_prefix_for_osidb_cache=True,
     )
-    extra_mask = _osidb_field_masks.get(str(input.cve_id))
-    if extra_mask:
-        cve = cve_exclude_fields(cve, extra_mask)
+    extra = ctx.deps.extra_exclude_osidb_fields
+    if extra:
+        cve = cve_exclude_fields(cve, extra)
     return cve
 
 

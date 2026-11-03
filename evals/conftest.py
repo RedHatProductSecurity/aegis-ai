@@ -187,7 +187,7 @@ def setup_logging_for_session():
 # Cache OSIDB responses (maintained in git) so evals are invariant to
 # future OSIDB data changes.
 def _tool_filter(ctx, td) -> bool:
-    return not is_tool_disabled(ctx.deps.cve_id, td.name)
+    return not is_tool_disabled(ctx, td.name)
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -178,15 +178,8 @@ class SuggestImpactCase(Case):
         if is_kernel_component(components):
             evaluators.append(kernel_scope_judge)
 
-        if mask_osidb_fields:
-            from evals.utils.cached_tools import mask_osidb_fields as register_mask
-
-            register_mask(cve_id, mask_osidb_fields)
-
-        if disable_tools:
-            from evals.utils.cached_tools import disable_tools as register_disable
-
-            register_disable(cve_id, disable_tools)
+        self._extra_exclude_osidb_fields = mask_osidb_fields or []
+        self._disabled_tools = set(disable_tools) if disable_tools else set()
 
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",
@@ -224,13 +217,6 @@ class CVSSValidator(Evaluator[str, SuggestImpactModel]):
 
         # no problem detected
         return EvaluationReason(True)
-
-
-async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
-    """use rh_feature_agent to suggest Impact for the given CVE"""
-    feature = SuggestImpact(rh_feature_agent)
-    result = await feature.exec(cve_id)
-    return result.output
 
 
 # test cases
@@ -621,6 +607,23 @@ cases = [
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
     ),
 ]
+
+_case_overrides: dict[str, SuggestImpactCase] = {
+    c.inputs: c for c in cases if c._extra_exclude_osidb_fields or c._disabled_tools
+}
+
+
+async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
+    """use rh_feature_agent to suggest Impact for the given CVE"""
+    feature = SuggestImpact(rh_feature_agent)
+    case = _case_overrides.get(str(cve_id))
+    result = await feature.exec(
+        cve_id,
+        extra_exclude_osidb_fields=case._extra_exclude_osidb_fields if case else None,
+        disabled_tools=case._disabled_tools if case else None,
+    )
+    return result.output
+
 
 # evaluators
 evals = common_feature_evals + [

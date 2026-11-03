@@ -454,7 +454,14 @@ class SuggestImpact(Feature):
                 result.output.explanation += override_note
             return False
 
-    async def exec(self, cve_id: CVEID, static_context: Any = None):
+    async def exec(
+        self,
+        cve_id: CVEID,
+        static_context: Any = None,
+        *,
+        extra_exclude_osidb_fields: list[str] | None = None,
+        disabled_tools: set[str] | None = None,
+    ):
         use_kernel_classifier = get_settings().use_kernel_classifier
 
         use_static = (
@@ -501,6 +508,8 @@ class SuggestImpact(Feature):
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
             classifier_attempted=use_kernel_classifier and is_kernel,
+            extra_exclude_osidb_fields=extra_exclude_osidb_fields or [],
+            disabled_tools=disabled_tools or set(),
         )
         if pre_clf is not None:
             deps.classifier_result = pre_clf
