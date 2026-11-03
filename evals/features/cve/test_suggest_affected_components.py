@@ -166,6 +166,9 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-86350",
     "CVE-2026-87022",
     "CVE-2026-88015",
+    # AEGIS-537: widened ecosystem allowlist (hex.pm → otp). Other candidate
+    # CVEs were dropped because their OSIDB components were set manually.
+    "CVE-2026-81856",
 )
 
 
@@ -180,7 +183,8 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 
 
 # Expected ecosystems for CVEs where ground-truth is known.
-# Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.
+# Allowed values include non-distribution manifest-cube types (AEGIS-537),
+# e.g. otp, plus generic/unknown.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-22815": ["pypi"],
     "CVE-2026-22822": ["golang"],
@@ -227,6 +231,7 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-78383": ["generic"],
     "CVE-2026-78437": ["generic"],
     "CVE-2026-79677": ["generic"],
+    "CVE-2026-81856": ["otp"],
     "CVE-2026-86350": ["generic"],
     "CVE-2026-87022": ["generic"],
     "CVE-2026-88015": ["golang"],

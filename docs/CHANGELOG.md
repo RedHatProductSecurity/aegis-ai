@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Changed
+- `suggest-affected-components` allows additional non-distribution package ecosystems from the component catalog (`composer`, `conan`, `cran`, `hex`, `luarocks`, `nuget`, `opam`, `otp`, `pub`, `swift`) alongside the previous list [\[AEGIS-537\]](https://redhat.atlassian.net/browse/AEGIS-537)
+
 ## [0.10.2] - 2026-10-26
 
 ### Changed
