@@ -928,6 +928,76 @@ def test_merged_upload_preserves_colliding_rules_and_uri_bases(sast: SastScripts
     }
 
 
+def test_merged_upload_rewrites_undeclared_result_rule_ids(sast: SastScripts):
+    # SARIF does not require a rules entry for every ruleId: a later
+    # scanner's result that reuses a base rule id without declaring it must
+    # not be attributed to the base scanner's rule.
+    base = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "error"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0}],
+        tool="tool-a",
+    )
+    later = sarif_with_rules([], [{"ruleId": "rule-0"}], tool="tool-b")
+    sast.case["artifacts"] = [base, later]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["failures"] == 1
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == ["rule-0"]
+    assert [res["ruleId"] for res in run["results"]] == ["rule-0", "tool-b/rule-0"]
+
+
+def test_merged_upload_reserves_base_result_only_rule_ids(sast: SastScripts):
+    # A result-only ruleId in the base run occupies the id for its tool: a
+    # later scanner reusing it must be renamed instead of sharing the rule
+    # identity, while the same tool keeps its own id.
+    base = sarif_with_rules([], [{"ruleId": "rule-0", "level": "note"}], tool="tool-a")
+    later = sarif_with_rules([], [{"ruleId": "rule-0", "level": "note"}], tool="tool-b")
+    repeat = sarif_with_rules(
+        [], [{"ruleId": "rule-0", "level": "note"}], tool="tool-a"
+    )
+    sast.case["artifacts"] = [base, later, repeat]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    assert [res["ruleId"] for res in merged["runs"][0]["results"]] == [
+        "rule-0",
+        "tool-b/rule-0",
+        "rule-0",
+    ]
+
+
+def test_merged_upload_replacement_avoids_incoming_declared_ids(sast: SastScripts):
+    # A renamed reference must not collide with an unrelated rule the same
+    # run declares; the replacement gets a distinct "#2" suffix instead.
+    base = sarif_with_rules(
+        [{"id": "rule-0"}], [{"ruleId": "rule-0", "level": "note"}], tool="tool-a"
+    )
+    later = sarif_with_rules(
+        [{"id": "tool-b/rule-0"}],
+        [
+            {"ruleId": "tool-b/rule-0", "level": "note"},
+            {"ruleId": "rule-0", "level": "note"},
+        ],
+        tool="tool-b",
+    )
+    sast.case["artifacts"] = [base, later]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "tool-b/rule-0",
+    ]
+    assert [res["ruleId"] for res in run["results"]] == [
+        "rule-0",
+        "tool-b/rule-0",
+        "tool-b/rule-0#2",
+    ]
+
+
 def test_merged_upload_keeps_identical_uri_base_keys(sast: SastScripts):
     def artifact(tool: str, uri: str) -> dict[str, Any]:
         return sarif_with_rules(

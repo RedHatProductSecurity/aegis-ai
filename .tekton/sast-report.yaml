@@ -278,9 +278,11 @@ spec:
       # file, and uploading separate files causes later (empty) uploads to
       # mark earlier findings as "fixed". Merge everything into one run
       # while keeping every result resolvable: rules from later scanners are
-      # appended with ruleIndex values remapped, rule ids that collide are
-      # rewritten as "<tool>/<id>" (with the results' ruleId references
-      # updated), and originalUriBaseIds keys that collide with a different
+      # appended with ruleIndex values remapped, and rule ids that collide
+      # — including undeclared result ruleId values reused by a different
+      # scanner — are rewritten as "<tool>/<id>" with every reference
+      # updated, while the same tool reusing its own ids keeps them, and
+      # originalUriBaseIds keys that collide with a different
       # value are renamed the same way, with the results' uriBaseId
       # references updated to match.
       SARIF_FILES=()
@@ -308,9 +310,12 @@ spec:
           (($run.results? // []) | if type == "array" then . else [] end);
         def tool_tag($runs; $i):
           (($runs[$i].tool?.driver?.name? // "run\($i)") | tostring);
-        def ids_of($rules):
-          reduce ($rules[]?) as $rule ({};
-            if (($rule.id? // null) | type) == "string" then .[$rule.id] = true else . end);
+        def field_ids($arr; $field):
+          ($arr | map(.[$field]? // empty) | map(select(type == "string")) | unique);
+        def rule_id_candidates($run):
+          (field_ids(rules_of($run); "id") + field_ids(results_of($run); "ruleId"));
+        def ids_of($ids):
+          reduce ($ids[]?) as $rid ({}; .[$rid] = true);
         def unique_key($map; $key):
           if ($map | has($key) | not) then $key
           else first(range(2; 10000) as $n
@@ -328,17 +333,48 @@ spec:
                   rules: rules_of($base),
                   uriBases: bases_of($base),
                   results: results_of($base),
-                  ruleIds: ids_of(rules_of($base))
+                  ruleIds: ids_of(field_ids(rules_of($base); "id")),
+                  resultOwners: (reduce field_ids(results_of($base); "ruleId")[] as $rid
+                                 ({}; .[$rid] = tool_tag($all; 0))),
+                  toolRemaps: {}
                 };
                 . as $state
                 | ($all[$i]) as $run
                 | (tool_tag($all; $i)) as $tag
                 | (rules_of($run)) as $runRules
                 | ($state.rules | length) as $offset
-                | (reduce ($runRules | map(.id? // empty) | unique[]) as $rid ({};
-                    if ($state.ruleIds | has($rid))
-                    then . + {($rid): unique_key($state.ruleIds; "\($tag)/\($rid)")}
-                    else . end)) as $idRemap
+                | (rule_id_candidates($run)) as $candidates
+                # Reserve the merged namespace plus the incoming ids of the
+                # current run when allocating replacement ids, and reserve
+                # each replacement as it is allocated, so renamed references
+                # can never collide with each other or with ids declared by
+                # the same run. Result-only references stay untouched when
+                # the same tool reuses its own id, and each tool keeps a
+                # stable mapping from its original ids to replacements.
+                | (reduce $candidates[] as $rid (
+                    {
+                      remap: {},
+                      occupied: ($state.ruleIds
+                                 + ids_of((($state.resultOwners | keys) + $candidates))),
+                      toolRemaps: ($state.toolRemaps[$tag] // {})
+                    };
+                    if .toolRemaps[$rid] != null
+                    then {
+                      remap: (.remap + {($rid): .toolRemaps[$rid]}),
+                      occupied: (.occupied + {(.toolRemaps[$rid]): true}),
+                      toolRemaps: .toolRemaps
+                    }
+                    elif ($state.ruleIds | has($rid))
+                         or (($state.resultOwners | has($rid))
+                             and $state.resultOwners[$rid] != $tag)
+                    then (unique_key(.occupied; "\($tag)/\($rid)")) as $new
+                      | {
+                          remap: (.remap + {($rid): $new}),
+                          occupied: (.occupied + {($new): true}),
+                          toolRemaps: (.toolRemaps + {($rid): $new})
+                        }
+                    else . end)) as $idRemapState
+                | ($idRemapState.remap) as $idRemap
                 | ($runRules | map(
                     . as $rule
                     | (($rule.id? // null)) as $rid
@@ -371,8 +407,12 @@ spec:
                     rules: ($state.rules + $newRules),
                     uriBases: $newBases,
                     results: ($state.results + $newResults),
-                    ruleIds: (reduce ($newRules | map(.id? // empty) | unique[]) as $rid
-                              ($state.ruleIds; .[$rid] = true))
+                    ruleIds: (reduce field_ids($newRules; "id")[] as $rid
+                              ($state.ruleIds; .[$rid] = true)),
+                    resultOwners: (reduce field_ids($newResults; "ruleId")[] as $rid
+                                   ($state.resultOwners; .[$rid] = $tag)),
+                    toolRemaps: ($state.toolRemaps
+                                 + {($tag): $idRemapState.toolRemaps})
                   })) as $final
             | .[0]
             | .runs = [($base
