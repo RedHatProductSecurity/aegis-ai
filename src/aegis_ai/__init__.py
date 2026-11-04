@@ -282,6 +282,10 @@ class AppSettings(BaseSettings):
 
     # osidb-bot KPI cache
     bot_kpi_cache_dir: str = os.getenv("AEGIS_BOT_KPI_CACHE_DIR", "")
+    # time budget for the osidb-bot KPI endpoint's per-request cache refresh
+    bot_kpi_max_refresh_seconds: int = int(
+        os.getenv("AEGIS_BOT_KPI_MAX_REFRESH_SECS", "20")
+    )
 
     # bomq
     bomq_url: str = os.getenv("AEGIS_BOMQ_URL", "https://localhost:8080")

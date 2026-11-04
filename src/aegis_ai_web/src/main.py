@@ -836,7 +836,13 @@ async def cve_kpi(
         "how often analysts keep, modify, or skip bot suggestions. "
         "Only flaws in DONE workflow state are included. "
         "Results are cached and incrementally updated on subsequent requests; "
-        "a flaw is automatically re-scored whenever it changes in OSIDB."
+        "a flaw is automatically re-scored whenever it changes in OSIDB. "
+        "Responses are paginated over the selected flaws: each request "
+        "refreshes only one page-sized slice of the OSIDB cache (also bounded "
+        "by a server-side time budget) and returns that slice's detail "
+        "entries, a progress block, and a next_cursor to continue from; the "
+        "final page carries the aggregate metrics. A fully cached selection "
+        "is served as a single final page."
     ),
     response_model=BotKPIResponse,
     response_model_exclude_unset=True,
@@ -858,6 +864,11 @@ async def cve_kpi(
                                 "avg_confidence": 0.82,
                                 "avg_suggestion_deviation": 0.35,
                             },
+                        },
+                        "progress": {
+                            "selected_flaws": 142,
+                            "refreshed_flaws": 142,
+                            "complete": True,
                         },
                     },
                 }
@@ -902,6 +913,19 @@ async def osidb_bot_kpi(
         default=None,
         description="Allowed Aegis versions/builds; repeat for multiple versions, empty string for unknown.",
     ),
+    cursor: str | None = Query(
+        default=None,
+        description=(
+            "Pagination cursor: the cve_id of the last flaw received from the "
+            "previous page. Omit for the first page."
+        ),
+    ),
+    limit: int = Query(
+        default=400,
+        ge=1,
+        le=1000,
+        description="Maximum number of flaws served (and refreshed) per page.",
+    ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
     if changed_after and changed_before and utc(changed_after) > utc(changed_before):
@@ -921,6 +945,8 @@ async def osidb_bot_kpi(
         detail=detail,
         record_filters=record_filters,
         osidb_token=osidb_token,
+        cursor=cursor,
+        limit=limit,
     )
 
 

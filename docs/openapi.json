@@ -166,8 +166,37 @@
         "title": "BotKPIEntry",
         "type": "object"
       },
+      "BotKPIProgress": {
+        "description": "osidb-bot KPI cache refresh progress for a paginated response.",
+        "properties": {
+          "complete": {
+            "description": "True when every selected flaw is refreshed in the cache.",
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "refreshed_flaws": {
+            "description": "Of the selected flaws, those already refreshed in the KPI cache at the time of this response.",
+            "minimum": 0.0,
+            "title": "Refreshed Flaws",
+            "type": "integer"
+          },
+          "selected_flaws": {
+            "description": "Flaws matching the request's selection filters.",
+            "minimum": 0.0,
+            "title": "Selected Flaws",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "selected_flaws",
+          "refreshed_flaws",
+          "complete"
+        ],
+        "title": "BotKPIProgress",
+        "type": "object"
+      },
       "BotKPIResponse": {
-        "description": "Response model for osidb-bot KPI metrics endpoint.",
+        "description": "Response model for osidb-bot KPI metrics endpoint.\n\nThe response is paginated over the selected flaws: each page carries the\ndetail ``entries`` for its slice of the selection, a ``progress`` block,\nand a ``next_cursor`` to continue from (absent/null on the final page).\nIntermediate pages carry placeholder aggregates (``total_flaws_processed``\n0, empty ``features``); the final page carries the complete aggregate.\nA request whose selection is already fully cached is served as a single\nfinal page, which is the pre-pagination response shape.",
         "properties": {
           "available_components": {
             "anyOf": [
@@ -181,7 +210,7 @@
                 "type": "null"
               }
             ],
-            "description": "Sorted unique affected components in the selected bot flaws, only with detail=true",
+            "description": "Sorted unique affected components in the selected bot flaws, only with detail=true on the final page of a paginated response",
             "title": "Available Components"
           },
           "entries": {
@@ -196,19 +225,42 @@
                 "type": "null"
               }
             ],
-            "description": "Compact suggestion/skip records, only with detail=true",
+            "description": "Compact suggestion/skip records for this page's flaws, only with detail=true",
             "title": "Entries"
           },
           "features": {
             "additionalProperties": {
               "$ref": "#/components/schemas/BotFeatureKPI"
             },
-            "description": "Per-feature KPI metrics keyed by field name",
+            "description": "Per-feature KPI metrics keyed by field name. Empty placeholder on non-final pages of a paginated response.",
             "title": "Features",
             "type": "object"
           },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CVE ID of the last flaw delivered by this page; pass it as the cursor query parameter to fetch the next page. Absent (or null) on the final page.",
+            "title": "Next Cursor"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BotKPIProgress"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cache refresh progress. Present on responses served through pagination (including its final page); absent when the whole selection was served fully cached in one response, which clients should treat as complete."
+          },
           "total_flaws_processed": {
-            "description": "Number of bot-processed flaws that contributed to the result: those with at least one suggestion whose timestamp falls in the selected time range, or all bot-processed flaws when no range is given.",
+            "description": "Number of bot-processed flaws that contributed to the result: those with at least one suggestion whose timestamp falls in the selected time range, or all bot-processed flaws when no range is given. Placeholder 0 on non-final pages of a paginated response.",
             "minimum": 0.0,
             "title": "Total Flaws Processed",
             "type": "integer"
@@ -1378,7 +1430,7 @@
     },
     "/api/v1/analysis/kpi/osidb-bot": {
       "get": {
-        "description": "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. Compares bot suggestions against current flaw values to measure how often analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow state are included. Results are cached and incrementally updated on subsequent requests; a flaw is automatically re-scored whenever it changes in OSIDB.",
+        "description": "Retrieve KPI metrics for flaws auto-processed by the osidb-bot. Compares bot suggestions against current flaw values to measure how often analysts keep, modify, or skip bot suggestions. Only flaws in DONE workflow state are included. Results are cached and incrementally updated on subsequent requests; a flaw is automatically re-scored whenever it changes in OSIDB. Responses are paginated over the selected flaws: each request refreshes only one page-sized slice of the OSIDB cache (also bounded by a server-side time budget) and returns that slice's detail entries, a progress block, and a next_cursor to continue from; the final page carries the aggregate metrics. A fully cached selection is served as a single final page.",
         "operationId": "osidb_bot_kpi_api_v1_analysis_kpi_osidb_bot_get",
         "parameters": [
           {
@@ -1507,6 +1559,38 @@
               "description": "Allowed Aegis versions/builds; repeat for multiple versions, empty string for unknown.",
               "title": "Aegis Version"
             }
+          },
+          {
+            "description": "Pagination cursor: the cve_id of the last flaw received from the previous page. Omit for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Pagination cursor: the cve_id of the last flaw received from the previous page. Omit for the first page.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Maximum number of flaws served (and refreshed) per page.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 400,
+              "description": "Maximum number of flaws served (and refreshed) per page.",
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -1525,6 +1609,11 @@
                       "skipped": 12,
                       "suggested": 133
                     }
+                  },
+                  "progress": {
+                    "complete": true,
+                    "refreshed_flaws": 142,
+                    "selected_flaws": 142
                   },
                   "total_flaws_processed": 142
                 },

@@ -7,6 +7,7 @@ values to measure how often analysts keep, modify, or skip bot suggestions.
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -25,7 +26,12 @@ from aegis_ai.features.cve.impact_mappings import (
 )
 from aegis_ai.state_file import StateFileHandler
 from aegis_ai.toolsets.tools.osidb.osidb_bearer import BearerOSIDBSession
-from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIEntry, BotKPIResponse
+from aegis_ai_web.src.data_models import (
+    BotFeatureKPI,
+    BotKPIEntry,
+    BotKPIProgress,
+    BotKPIResponse,
+)
 from aegis_ai_web.src.endpoints.kpi_filters import (
     NO_RECORD_FILTERS,
     KPIRecordFilters,
@@ -146,6 +152,12 @@ class BotKPIResult:
     modified_counts: dict[str, int] = field(default_factory=dict)
     entries: list[BotKPIEntry] | None = None
     available_components: list[str] | None = None
+    # Pagination metadata (see _fetch_with_cache): ``final_page`` marks the
+    # response that carries the aggregate over the whole selection;
+    # ``next_cursor`` is set on intermediate pages only.
+    final_page: bool = True
+    next_cursor: str | None = None
+    progress: BotKPIProgress | None = None
 
 
 def _values_equal(suggested: Any, current: Any) -> bool:
@@ -458,6 +470,9 @@ def _fetch_flaw_index(
 
 _BATCH_SIZE = 100
 
+# Default number of selected flaws served (and at most refreshed) per request.
+_DEFAULT_PAGE_SIZE = 400
+
 
 def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, Any]]:
     """Fetch full KPI-relevant fields for multiple flaws in batched queries.
@@ -479,6 +494,44 @@ def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, An
                 result[cve_id] = flaw_dict
     logger.info("fetched %d/%d flaws", len(result), len(cve_ids))
     return result
+
+
+def _refresh_page_slice(
+    osidb: Any, index: dict[str, str], stale_ids: list[str]
+) -> dict[str, FlawCacheData]:
+    """Fetch one page's stale flaws under the refresh time budget.
+
+    Flaws are fetched in ``_BATCH_SIZE`` batches in page order. When the time
+    budget (``AEGIS_BOT_KPI_MAX_REFRESH_SECS``) is exhausted, the remaining
+    flaws are left for the next page request; at least one batch always runs
+    so every request makes progress. A flaw that vanished between the index
+    query and the fetch (e.g. deleted) is tombstoned as a non-bot-processed
+    skip marker at its indexed watermark, so pagination still completes.
+    """
+    fetched: dict[str, FlawCacheData] = {}
+    deadline = time.monotonic() + get_settings().bot_kpi_max_refresh_seconds
+    for offset in range(0, len(stale_ids), _BATCH_SIZE):
+        if fetched and time.monotonic() > deadline:
+            logger.info(
+                "KPI refresh time budget exhausted after %d flaws; "
+                "deferring %d flaws to the next page",
+                len(fetched),
+                len(stale_ids) - offset,
+            )
+            break
+        chunk = stale_ids[offset : offset + _BATCH_SIZE]
+        batch = _fetch_flaws_batch(osidb, chunk)
+        for cve_id in chunk:
+            flaw_data = batch.get(cve_id)
+            if flaw_data is None:
+                fetched[cve_id] = FlawCacheData(
+                    updated_dt=index.get(cve_id, ""),
+                    bot_processed=False,
+                    components=[],
+                )
+            else:
+                fetched[cve_id] = _flaw_cache_data(flaw_data, index.get(cve_id, ""))
+    return fetched
 
 
 def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheData:
@@ -686,16 +739,34 @@ def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKP
 
 
 def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
-    response = BotKPIResponse(
-        total_flaws_processed=result.total_flaws_processed,
-        features={
+    """Map an internal result to the API response.
+
+    Intermediate pages of a paginated response carry placeholder aggregates
+    (``total_flaws_processed`` 0, empty ``features``) plus their slice's
+    ``entries``, the refresh ``progress``, and the ``next_cursor`` to
+    continue from; the final page carries the complete aggregate.
+    """
+    if result.final_page:
+        features = {
             name: _stats_to_response(stats, result.modified_counts.get(name, 0))
             for name, stats in result.features.items()
-        },
+        }
+        total_flaws_processed = result.total_flaws_processed
+    else:
+        features = {}
+        total_flaws_processed = 0
+    response = BotKPIResponse(
+        total_flaws_processed=total_flaws_processed,
+        features=features,
     )
     if result.entries is not None:
         response.entries = result.entries
+    if result.final_page and result.available_components is not None:
         response.available_components = result.available_components
+    if not result.final_page:
+        response.next_cursor = result.next_cursor
+    if result.progress is not None:
+        response.progress = result.progress
     return response
 
 
@@ -768,27 +839,35 @@ def _fetch_with_cache(
     component: str | None = None,
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
     detail: bool = False,
+    cursor: str | None = None,
+    limit: int = _DEFAULT_PAGE_SIZE,
 ) -> BotKPIResult:
-    """Select the requested flaws from OSIDB, refresh stale entries, then score.
+    """Select the requested flaws from OSIDB, refresh one page, then score.
 
     The request's filters drive a single *selection* query and nothing else:
 
     *Select* -- one cheap ``{cve_id: updated_dt}`` index is fetched with the
     request's ``changed_after`` / ``changed_before`` (as ``updated_dt`` bounds)
     and ``component`` pushed down server-side (see :func:`_fetch_flaw_index`).
-    Its CVE IDs are exactly the flaws the response covers.
+    Its CVE IDs, sorted, are exactly the flaws the response covers.
 
-    *Refresh* -- each selected flaw's full data is fetched only when it is
-    uncached or its own ``updated_dt`` watermark advanced past the cached one
-    (see :func:`_needs_fetch`); an unchanged flaw is served from its cache entry.
-    A cache entry is thus invalidated solely by its own watermark, never by the
-    request's filters. Fetches run outside the cache lock so a slow query can't
-    block other requests; when nothing is stale, the cache is served without a
-    write, and only the refreshed CVE keys are ever overwritten -- a narrow
-    request never evicts another window's or component's flaws.
+    *Refresh* -- the selection is served in ``limit``-sized pages: this request
+    refreshes only the stale flaws of its own page (after ``cursor``, the last
+    CVE ID a previous page delivered), bounded also by a wall-clock budget (see
+    :func:`_refresh_page_slice`), so no single request performs the minutes of
+    OSIDB fetches that gateways time out. An unchanged flaw is served from its
+    cache entry; a cache entry is invalidated solely by its own ``updated_dt``
+    watermark, never by the request's filters. Fetches run outside the cache
+    lock so a slow query can't block other requests, and only the refreshed
+    CVE keys are ever overwritten -- a narrow request never evicts another
+    window's or component's flaws. A selection that is entirely current is
+    served as a single final page (the pre-pagination response shape).
 
-    The aggregate is recomputed fresh from the cached records for the selected
-    CVE IDs, never cached itself.
+    The aggregate is recomputed fresh from the cached records, never cached
+    itself. Intermediate pages carry only their own slice's ``entries`` plus
+    pagination metadata; the final page adds the aggregate over the whole
+    selection, so a client that accumulates pages ends with exactly one copy
+    of every entry.
     """
     index = _fetch_flaw_index(
         osidb,
@@ -800,21 +879,36 @@ def _fetch_with_cache(
     cached = _read_cache()
     cached_flaws = cached.flaws if cached is not None else {}
 
-    stale_ids = [
-        cve_id
-        for cve_id, updated_dt in index.items()
-        if _needs_fetch(cached_flaws.get(cve_id), updated_dt)
-    ]
-    batch = _fetch_flaws_batch(osidb, stale_ids)
-    fetched: dict[str, FlawCacheData] = {}
-    for cve_id, flaw_data in batch.items():
-        fetched[cve_id] = _flaw_cache_data(flaw_data, index.get(cve_id, ""))
+    selected = sorted(index)
 
-    if not fetched:
-        # Every selected flaw was already current, so there is nothing to write;
-        # serve the cache as-is.
+    if cursor is None and all(
+        not _needs_fetch(cached_flaws.get(cve_id), updated_dt)
+        for cve_id, updated_dt in index.items()
+    ):
+        # Every selected flaw is already current: serve the whole selection as
+        # one final page without writing anything to the cache. This is the
+        # pre-pagination response shape (no progress/cursor fields), which
+        # keeps fully-cached requests indistinguishable from the legacy API.
         entry = cached if cached is not None else BotKPICacheEntry(flaws={})
-    else:
+        return entry.to_kpi_result(
+            only_cve_ids=set(index),
+            changed_after=changed_after,
+            changed_before=changed_before,
+            record_filters=record_filters,
+            detail=detail,
+        )
+
+    page_ids = [cve_id for cve_id in selected if cursor is None or cve_id > cursor][
+        :limit
+    ]
+    stale_page = [
+        cve_id
+        for cve_id in page_ids
+        if _needs_fetch(cached_flaws.get(cve_id), index[cve_id])
+    ]
+    fetched = _refresh_page_slice(osidb, index, stale_page)
+
+    if fetched:
         with _cache_handler() as handler:
             latest = handler.read()
             existing = latest.flaws if latest is not None else cached_flaws
@@ -822,14 +916,61 @@ def _fetch_with_cache(
                 flaws=_merge_fetched(existing, fetched, cached_flaws)
             )
             handler.write(entry)
+    else:
+        # Every flaw in the page was already current, so there is nothing to
+        # write; score from the cache as-is.
+        entry = cached if cached is not None else BotKPICacheEntry(flaws={})
 
-    return entry.to_kpi_result(
-        only_cve_ids=set(index),
+    live = entry.flaws
+
+    # Only a contiguous fresh prefix of the page may be delivered: entries
+    # after an unrefreshed flaw must wait for a later page, because a cursor
+    # beyond them would skip them forever.
+    delivered: list[str] = []
+    for cve_id in page_ids:
+        if _needs_fetch(live.get(cve_id), index[cve_id]):
+            break
+        delivered.append(cve_id)
+
+    final_page = not page_ids or (
+        len(delivered) == len(page_ids) and page_ids[-1] == selected[-1]
+    )
+
+    page_result = entry.to_kpi_result(
+        only_cve_ids=set(delivered),
         changed_after=changed_after,
         changed_before=changed_before,
         record_filters=record_filters,
         detail=detail,
     )
+    if final_page:
+        # The final page's aggregate covers the whole selection; its entries
+        # stay scoped to the page so accumulating clients don't double-count.
+        result = entry.to_kpi_result(
+            only_cve_ids=set(index),
+            changed_after=changed_after,
+            changed_before=changed_before,
+            record_filters=record_filters,
+            detail=detail,
+        )
+        if detail:
+            result.entries = page_result.entries
+    else:
+        result = page_result
+
+    refreshed = sum(
+        1 for cve_id in selected if not _needs_fetch(live.get(cve_id), index[cve_id])
+    )
+    result.final_page = final_page
+    result.next_cursor = (
+        None if final_page else (delivered[-1] if delivered else cursor)
+    )
+    result.progress = BotKPIProgress(
+        selected_flaws=len(selected),
+        refreshed_flaws=refreshed,
+        complete=refreshed == len(selected),
+    )
+    return result
 
 
 def get_osidb_bot_kpi(
@@ -840,8 +981,15 @@ def get_osidb_bot_kpi(
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
     detail: bool = False,
     osidb_token: str | None = None,
+    cursor: str | None = None,
+    limit: int = _DEFAULT_PAGE_SIZE,
 ) -> BotKPIResponse:
-    """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
+    """Fetch bot-processed flaws from OSIDB and compute KPI metrics.
+
+    The response is paginated over the selected flaws: follow ``next_cursor``
+    (passing it back as ``cursor``) until it is absent, accumulating each
+    page's ``entries``; the final page carries the aggregate metrics.
+    """
     try:
 
         def fetch() -> BotKPIResponse:
@@ -858,6 +1006,8 @@ def get_osidb_bot_kpi(
                 component=component,
                 record_filters=record_filters,
                 detail=detail,
+                cursor=cursor,
+                limit=limit,
             )
             return _result_to_response(result)
 

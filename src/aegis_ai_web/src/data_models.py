@@ -430,8 +430,39 @@ class BotKPIEntry(BaseModel):
     confidence: float | None
 
 
+class BotKPIProgress(BaseModel):
+    """osidb-bot KPI cache refresh progress for a paginated response."""
+
+    selected_flaws: int = Field(
+        ...,
+        ge=0,
+        description="Flaws matching the request's selection filters.",
+    )
+    refreshed_flaws: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Of the selected flaws, those already refreshed in the KPI cache "
+            "at the time of this response."
+        ),
+    )
+    complete: bool = Field(
+        ...,
+        description="True when every selected flaw is refreshed in the cache.",
+    )
+
+
 class BotKPIResponse(BaseModel):
-    """Response model for osidb-bot KPI metrics endpoint."""
+    """Response model for osidb-bot KPI metrics endpoint.
+
+    The response is paginated over the selected flaws: each page carries the
+    detail ``entries`` for its slice of the selection, a ``progress`` block,
+    and a ``next_cursor`` to continue from (absent/null on the final page).
+    Intermediate pages carry placeholder aggregates (``total_flaws_processed``
+    0, empty ``features``); the final page carries the complete aggregate.
+    A request whose selection is already fully cached is served as a single
+    final page, which is the pre-pagination response shape.
+    """
 
     total_flaws_processed: int = Field(
         ...,
@@ -439,19 +470,47 @@ class BotKPIResponse(BaseModel):
         description=(
             "Number of bot-processed flaws that contributed to the result: those "
             "with at least one suggestion whose timestamp falls in the selected "
-            "time range, or all bot-processed flaws when no range is given."
+            "time range, or all bot-processed flaws when no range is given. "
+            "Placeholder 0 on non-final pages of a paginated response."
         ),
     )
     features: dict[str, BotFeatureKPI] = Field(
-        ..., description="Per-feature KPI metrics keyed by field name"
+        ...,
+        description=(
+            "Per-feature KPI metrics keyed by field name. Empty placeholder on "
+            "non-final pages of a paginated response."
+        ),
     )
     entries: list[BotKPIEntry] | None = Field(
         default=None,
-        description="Compact suggestion/skip records, only with detail=true",
+        description=(
+            "Compact suggestion/skip records for this page's flaws, "
+            "only with detail=true"
+        ),
     )
     available_components: list[str] | None = Field(
         default=None,
-        description="Sorted unique affected components in the selected bot flaws, only with detail=true",
+        description=(
+            "Sorted unique affected components in the selected bot flaws, only "
+            "with detail=true on the final page of a paginated response"
+        ),
+    )
+    progress: BotKPIProgress | None = Field(
+        default=None,
+        description=(
+            "Cache refresh progress. Present on responses served through "
+            "pagination (including its final page); absent when the whole "
+            "selection was served fully cached in one response, which "
+            "clients should treat as complete."
+        ),
+    )
+    next_cursor: str | None = Field(
+        default=None,
+        description=(
+            "CVE ID of the last flaw delivered by this page; pass it as the "
+            "cursor query parameter to fetch the next page. Absent (or null) "
+            "on the final page."
+        ),
     )
 
 
