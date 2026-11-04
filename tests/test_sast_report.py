@@ -41,6 +41,7 @@ REAL_COMMANDS = (
     "basename",
     "rmdir",
     "wc",
+    "find",
 )
 
 # One small multicall executable replaces the two services, the presentation
@@ -88,7 +89,20 @@ def oras():
     if artifact is None:
         print("simulated SARIF retrieval failure", file=sys.stderr)
         return 1
-    (Path(option("-o")) / "scan.sarif").write_text(json.dumps(artifact))
+    out = Path(option("-o"))
+    # An artifact of the form {"layout": {relpath: content}} writes files at
+    # arbitrary relative paths; a str content is written verbatim (raw bytes,
+    # e.g. unparseable text), anything else is written as JSON.
+    if "layout" in artifact:
+        for rel, content in artifact["layout"].items():
+            target = out / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if isinstance(content, str):
+                target.write_text(content)
+            else:
+                target.write_text(json.dumps(content))
+        return 0
+    (out / "scan.sarif").write_text(json.dumps(artifact))
     return 0
 
 command = Path(sys.argv[0]).name
@@ -121,6 +135,22 @@ def sarif(*levels: str | None) -> dict[str, Any]:
             }
         ],
     }
+
+
+def sarif_with_rules(
+    rules: list[dict[str, Any]],
+    results: list[dict[str, Any]],
+    *,
+    tool: str = "test-scanner",
+    bases: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    run: dict[str, Any] = {
+        "tool": {"driver": {"name": tool, "rules": rules}},
+        "results": results,
+    }
+    if bases is not None:
+        run["originalUriBaseIds"] = bases
+    return {"version": "2.1.0", "runs": [run]}
 
 
 @pytest.fixture(scope="module")
@@ -215,6 +245,14 @@ class SastScripts:
         self, expiry: str, name: str = "GitHub-Authentication-Token-Expiration"
     ):
         self.case["headers"] = f"HTTP/2 202\r\n{name}: {expiry}\r\n\r\n"
+
+    def uploaded_sarif(self) -> dict[str, Any]:
+        request = json.loads(self.request_path.read_text())
+        return json.loads(
+            gzip.decompress(
+                base64.b64decode(request["payload"]["sarif"], validate=True)
+            )
+        )
 
     def fail_command(self, name: str, *, on_call: int = 1):
         command = self.root / "bin" / name
@@ -581,18 +619,29 @@ def test_partial_artifact_retrieval_never_merges_or_uploads(
     assert not (sast.sarif_dir / "merged.sarif.json").exists()
 
 
-def test_interruption_after_first_artifact_never_uploads_partial_results(
+def test_collection_failure_after_first_artifact_never_uploads_partial_results(
     sast: SastScripts,
 ):
+    # A move failure mid-collection is a handled pull failure: the step
+    # still completes so the report can run, but retrieval stays incomplete
+    # and nothing partially collected is ever uploaded or merged.
     sast.case["artifacts"] = [sarif("note"), sarif("error")]
     sast.fail_command("mv", on_call=2)
     assert sast.run().returncode == 1, sast.logs
-    assert sast.steps["pull-sarif"].returncode == 73
+    assert sast.steps["pull-sarif"].returncode == 0, sast.logs
     assert (sast.sarif_dir / "1_scan.sarif").exists()
     assert not (sast.sarif_dir / "2_scan.sarif").exists()
+    assert (sast.sarif_dir / "ref_2").is_dir()
+    summary = dict(
+        line.split("=", 1)
+        for line in (sast.sarif_dir / "summary.env").read_text().splitlines()
+    )
+    assert summary["PULL_FAILURES"] == "1"
     result = sast.assert_result("FAILURE", exit_code=1)
     assert result["successes"] == 0
     assert result["failures"] > 0
+    assert result["warnings"] > 0
+    assert "skipped" in result["note"]
     assert not sast.request_path.exists()
     assert not (sast.sarif_dir / "merged.sarif.json").exists()
 
@@ -675,6 +724,245 @@ def test_warning_findings_remain_nonblocking_and_are_not_lost(sast: SastScripts)
     assert result["warnings"] == 2
     assert result["failures"] == 0
     assert "formatted SAST findings" in sast.logs
+
+
+def test_nested_and_hidden_sarif_files_are_collected_counted_and_merged(
+    sast: SastScripts,
+):
+    sast.case["artifacts"] = [
+        {
+            "layout": {
+                "reports/tool-a.sarif": sarif("note"),
+                "deep/dir/tool-b.sarif": sarif("warning"),
+                ".hidden.sarif": sarif(None),
+            }
+        }
+    ]
+    assert sast.run().returncode == 0, sast.logs
+    names = sorted(path.name for path in sast.sarif_dir.glob("1_*"))
+    assert names == [
+        "1_.hidden.sarif",
+        "1_deep_sdir_stool-b.sarif",
+        "1_reports_stool-a.sarif",
+    ]
+    result = sast.assert_result("WARNING")
+    assert result["warnings"] == 2
+    assert result["failures"] == 0
+    merged = sast.uploaded_sarif()
+    assert len(merged["runs"]) == 1
+    assert len(merged["runs"][0]["results"]) == 3
+
+
+def test_collection_flattening_keeps_underscore_and_separator_names_distinct(
+    sast: SastScripts,
+):
+    sast.case["artifacts"] = [
+        {"layout": {"a_b.sarif": sarif("note"), "a/b.sarif": sarif("warning")}}
+    ]
+    assert sast.run().returncode == 0, sast.logs
+    assert (sast.sarif_dir / "1_a__b.sarif").exists()
+    assert (sast.sarif_dir / "1_a_sb.sarif").exists()
+    result = sast.assert_result("WARNING")
+    assert result["warnings"] == 1
+    assert result["failures"] == 0
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        pytest.param("not json at all", id="invalid-json"),
+        pytest.param('{"version": "2.1.0"}', id="missing-runs"),
+        pytest.param('{"runs": "hello"}', id="runs-not-an-array"),
+        pytest.param('{"runs": [1, 2]}', id="runs-not-objects"),
+        pytest.param(
+            json.dumps(sarif("note")) + json.dumps(sarif("error")),
+            id="two-concatenated-documents",
+        ),
+        pytest.param(
+            json.dumps(sarif("note")) + "trailing garbage",
+            id="trailing-garbage",
+        ),
+    ],
+)
+def test_unparseable_sarif_counts_as_retrieval_failure(sast: SastScripts, content):
+    sast.case["artifacts"] = [{"layout": {"scan.sarif": content}}]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["successes"] == 0
+    assert result["failures"] >= 1
+    assert "could not be retrieved" in result["note"]
+    summary = dict(
+        line.split("=", 1)
+        for line in (sast.sarif_dir / "summary.env").read_text().splitlines()
+    )
+    assert summary["PULL_FAILURES"] == "1"
+    assert summary["TOTAL_ERRORS"] == "0"
+    assert not sast.request_path.exists()
+    assert not (sast.sarif_dir / "merged.sarif.json").exists()
+
+
+@pytest.mark.parametrize("reference", ["rule-index", "rule-id"])
+def test_rule_default_error_level_fails_the_gate(sast: SastScripts, reference):
+    results: list[dict[str, Any]] = [{"ruleId": "rule-0"}]
+    if reference == "rule-index":
+        results[0]["ruleIndex"] = 0
+    sast.case["artifacts"] = [
+        sarif_with_rules(
+            [{"id": "rule-0", "defaultConfiguration": {"level": "error"}}], results
+        )
+    ]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["failures"] == 1
+    assert result["warnings"] == 0
+    assert "error-level" in result["note"]
+
+
+def test_out_of_bounds_rule_index_falls_back_to_rule_id_lookup(sast: SastScripts):
+    sast.case["artifacts"] = [
+        sarif_with_rules(
+            [{"id": "rule-0", "defaultConfiguration": {"level": "error"}}],
+            [{"ruleId": "rule-0", "ruleIndex": 7}],
+        )
+    ]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["failures"] == 1
+
+
+def test_rule_default_note_level_stays_nonblocking(sast: SastScripts):
+    sast.case["artifacts"] = [
+        sarif_with_rules(
+            [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+            [{"ruleId": "rule-0"}],
+        )
+    ]
+    assert sast.run().returncode == 0, sast.logs
+    result = sast.assert_result("SUCCESS")
+    assert result["failures"] == result["warnings"] == 0
+
+
+def test_result_kind_other_than_fail_counts_as_none(sast: SastScripts):
+    sast.case["artifacts"] = [
+        sarif_with_rules([], [{"ruleId": "rule-0", "kind": "pass"}])
+    ]
+    assert sast.run().returncode == 0, sast.logs
+    result = sast.assert_result("SUCCESS")
+    assert result["failures"] == result["warnings"] == 0
+
+
+def test_merged_upload_preserves_colliding_rules_and_uri_bases(sast: SastScripts):
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "error"}}],
+        [
+            {
+                "ruleId": "rule-0",
+                "ruleIndex": 0,
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {
+                                "uri": "a.py",
+                                "uriBaseId": "%SRCROOT%",
+                            }
+                        }
+                    }
+                ],
+            }
+        ],
+        tool="tool-a",
+        bases={"%SRCROOT%": {"uri": "file:///a"}},
+    )
+    second = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [
+            {
+                "ruleId": "rule-0",
+                "ruleIndex": 0,
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {
+                                "uri": "b.py",
+                                "uriBaseId": "%SRCROOT%",
+                            }
+                        }
+                    }
+                ],
+            }
+        ],
+        tool="tool-b",
+        bases={"%SRCROOT%": {"uri": "file:///b"}},
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["failures"] == 1
+    merged = sast.uploaded_sarif()
+    assert len(merged["runs"]) == 1
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "tool-b/rule-0",
+    ]
+    first_result, second_result = run["results"]
+    assert first_result["ruleId"] == "rule-0"
+    assert first_result["ruleIndex"] == 0
+    assert (
+        first_result["locations"][0]["physicalLocation"]["artifactLocation"][
+            "uriBaseId"
+        ]
+        == "%SRCROOT%"
+    )
+    assert second_result["ruleId"] == "tool-b/rule-0"
+    assert second_result["ruleIndex"] == 1
+    assert (
+        second_result["locations"][0]["physicalLocation"]["artifactLocation"][
+            "uriBaseId"
+        ]
+        == "tool-b/%SRCROOT%"
+    )
+    assert run["originalUriBaseIds"] == {
+        "%SRCROOT%": {"uri": "file:///a"},
+        "tool-b/%SRCROOT%": {"uri": "file:///b"},
+    }
+
+
+def test_merged_upload_keeps_identical_uri_base_keys(sast: SastScripts):
+    def artifact(tool: str, uri: str) -> dict[str, Any]:
+        return sarif_with_rules(
+            [],
+            [
+                {
+                    "ruleId": "rule-0",
+                    "level": "note",
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": uri,
+                                    "uriBaseId": "%SRCROOT%",
+                                }
+                            }
+                        }
+                    ],
+                }
+            ],
+            tool=tool,
+            bases={"%SRCROOT%": {"uri": "file:///shared"}},
+        )
+
+    sast.case["artifacts"] = [artifact("tool-a", "a.py"), artifact("tool-b", "b.py")]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert run["originalUriBaseIds"] == {"%SRCROOT%": {"uri": "file:///shared"}}
+    for result in run["results"]:
+        assert (
+            result["locations"][0]["physicalLocation"]["artifactLocation"]["uriBaseId"]
+            == "%SRCROOT%"
+        )
 
 
 def test_no_sarif_artifacts_is_a_legitimate_skip_even_without_a_token(
@@ -783,6 +1071,11 @@ def test_unexpected_error_after_artifact_pull_preserves_failure_fallback(
 ):
     sast.fail_command("mv")
     assert sast.run().returncode == 1, sast.logs
-    assert sast.steps["pull-sarif"].returncode != 0
+    # The collection failure is surfaced through the gate rather than by
+    # killing the step, so the report still runs and fails the pipeline.
+    assert sast.steps["pull-sarif"].returncode == 0, sast.logs
     result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["successes"] == 0
     assert result["failures"] >= 1
+    assert not sast.request_path.exists()
+    assert not (sast.sarif_dir / "merged.sarif.json").exists()
