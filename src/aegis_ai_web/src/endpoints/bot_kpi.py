@@ -925,10 +925,13 @@ def _fetch_with_cache(
 
     # Only a contiguous fresh prefix of the page may be delivered: entries
     # after an unrefreshed flaw must wait for a later page, because a cursor
-    # beyond them would skip them forever.
+    # beyond them would skip them forever. A flaw refreshed by this very
+    # request counts as delivered even when its indexed watermark is
+    # unparseable (``_needs_fetch`` can never be satisfied for it); it is as
+    # fresh as OSIDB allows, and re-requesting its page would livelock.
     delivered: list[str] = []
     for cve_id in page_ids:
-        if _needs_fetch(live.get(cve_id), index[cve_id]):
+        if cve_id not in fetched and _needs_fetch(live.get(cve_id), index[cve_id]):
             break
         delivered.append(cve_id)
 
