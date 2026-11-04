@@ -1241,6 +1241,62 @@ class TestGetOsidbBotKpiPagination:
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_unparseable_index_watermark_does_not_livelock_pagination(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Regression test for the pagination livelock: a flaw whose indexed
+        updated_dt is missing (None) can never satisfy _needs_fetch, so it can
+        never be reported as refreshed. It must still be delivered once this
+        request has fetched it -- it is as fresh as OSIDB allows -- so a client
+        following next_cursor terminates and receives its entries instead of
+        looping forever on the same cursor. progress.complete stays honestly
+        False; termination is carried by next_cursor alone."""
+        self._mock_settings(mock_settings, cache_dir, budget=0)
+
+        # 100 flaws with valid watermarks, then the unparseable-watermark flaw
+        # sorting last, so the refresh budget defers its fetch to the request
+        # that resumes from page 1's cursor.
+        unparseable = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0101",
+            updated_dt=None,
+        )
+        session = _make_session(*_numbered_flaws(100), unparseable, batch_delay=0.05)
+        mock_bindings.new_session.return_value = session
+
+        # Page 1: the budget refreshes only the first batch (the 100 valid
+        # flaws); the cursor stops just before the deferred unparseable flaw.
+        page1 = get_osidb_bot_kpi(detail=True, limit=200)
+        assert page1.next_cursor == "CVE-2025-0100"
+        assert _page_progress(page1).selected_flaws == 101
+        assert _page_progress(page1).refreshed_flaws == 100
+        assert _page_progress(page1).complete is False
+
+        # The client follows the cursor: the page headed by the unparseable
+        # flaw fetches it, delivers it, and reaches a final page -- instead of
+        # returning the same cursor forever.
+        pages = _paginate(detail=True, limit=200, cursor=page1.next_cursor)
+        final = pages[-1]
+        assert final.next_cursor is None
+        assert final.total_flaws_processed == 101
+        assert [e.cve_id for e in _page_entries(final)] == ["CVE-2025-0101"]
+
+        # The whole selection's records were delivered exactly once.
+        accumulated = [e for page in (page1, *pages) for e in _page_entries(page)]
+        assert len(accumulated) == 101
+        assert {e.cve_id for e in accumulated} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 102)
+        }
+
+        # progress stays honest: the unparseable watermark can never be
+        # reported as refreshed, so complete remains False on the final page.
+        assert _page_progress(final).selected_flaws == 101
+        assert _page_progress(final).refreshed_flaws == 100
+        assert _page_progress(final).complete is False
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
     def test_flaw_vanishing_after_index_is_tombstoned_not_blocking(
         self, mock_settings, mock_bindings, cache_dir
     ):
