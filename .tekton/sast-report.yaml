@@ -97,6 +97,7 @@ spec:
       TOTAL_WARNINGS=0
       TOTAL_NOTES=0
       PULL_FAILURES=0
+      COLLECTED_FILES=()
 
       REF_IDX=0
       while IFS= read -r ref; do
@@ -111,21 +112,86 @@ spec:
           PULL_FAILURES=$((PULL_FAILURES + 1))
           continue
         fi
-        # Move pulled SARIF files up so all steps see a flat directory.
-        # Prefix with ref index to avoid filename collisions across tasks.
-        for f in "$PULL_DIR"/*; do
-          [ -f "$f" ] || continue
-          mv "$f" "$SARIF_DIR/${REF_IDX}_$(basename "$f")"
-        done
-        rmdir "$PULL_DIR" 2>/dev/null || true
+        # Collect pulled SARIF files into the flat directory all steps read.
+        # Prefix with the ref index and escape each file's relative path
+        # ("_" -> "__", "/" -> "_s") so nested files cannot collide across
+        # tasks or names. Listing, collision, or move failures count as pull
+        # failures, and the pull directory is only removed after a fully
+        # successful collection.
+        collect_list="$(mktemp)"
+        if ! find "$PULL_DIR" -type f -print0 > "$collect_list"; then
+          echo "ERROR: Failed to list files pulled for ${ref}."
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          rm -f "$collect_list"
+          continue
+        fi
+        collect_ok=1
+        while IFS= read -r -d '' f; do
+          rel="${f#"$PULL_DIR"/}"
+          enc="${rel//_/__}"
+          enc="${enc//\//_s}"
+          dest="$SARIF_DIR/${REF_IDX}_${enc}"
+          if [ -e "$dest" ] || ! mv "$f" "$dest"; then
+            echo "ERROR: Failed to collect ${rel} from ${ref}."
+            collect_ok=0
+            break
+          fi
+          COLLECTED_FILES+=("$dest")
+        done < "$collect_list"
+        rm -f "$collect_list"
+        if [ "$collect_ok" -eq 0 ]; then
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          continue
+        fi
+        rm -rf "$PULL_DIR"
       done <<< "$SARIF_REFS"
 
-      for sarif_file in "$SARIF_DIR"/*; do
-        [ -f "$sarif_file" ] || continue
-        jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
-        ERRORS=$(jq '[.runs[] | (.results // [])[] | select(.level == "error")] | length' "$sarif_file" 2>/dev/null) || ERRORS=0
-        WARNINGS=$(jq '[.runs[] | (.results // [])[] | select(.level == "warning" or .level == null)] | length' "$sarif_file" 2>/dev/null) || WARNINGS=0
-        NOTES=$(jq '[.runs[] | (.results // [])[] | select(.level == "note" or .level == "none")] | length' "$sarif_file" 2>/dev/null) || NOTES=0
+      # Tally findings per collected file. A file that cannot be parsed is a
+      # retrieval failure, never a silently skipped one. Results without an
+      # explicit level follow SARIF 2.1.0 section 3.27.10: kind != "fail"
+      # means "none"; otherwise the rule's defaultConfiguration.level
+      # applies (resolved through ruleIndex, then ruleId), and the final
+      # fallback is "warning".
+      for sarif_file in "${COLLECTED_FILES[@]}"; do
+        if ! { read -r ERRORS; read -r WARNINGS; read -r NOTES; } < <(
+          jq -rs '
+            if length != 1 then error("expected exactly one JSON document")
+            else .[0] end
+            | if (.runs | type) != "array" then error("missing runs array")
+            elif ([.runs[] | select((. | type) != "object")] | length) > 0
+            then error("runs contains non-object entries")
+            else . end
+            | [.runs[]
+               | . as $run
+               | (($run.tool?.driver?.rules? // [])
+                  | if type == "array" then . else [] end) as $rules
+               | (($run.results? // [])
+                  | if type == "array" then . else [] end)[]
+               | . as $r
+               | ($r.level? // null) as $explicit
+               | (if $explicit != null then $explicit
+                  elif (($r.kind? // "fail") != "fail") then "none"
+                  else (if (($r.ruleIndex? // null) | type) == "number"
+                          and $r.ruleIndex >= 0
+                          and ($rules | length) > $r.ruleIndex
+                        then $rules[$r.ruleIndex].defaultConfiguration?.level?
+                        else null end)
+                       // (if (($r.ruleId? // null) | type) == "string"
+                          then ([$rules[]
+                                 | select((.id? // null) == $r.ruleId)
+                                 | .defaultConfiguration?.level?] | first)
+                          else null end)
+                       // "warning"
+                  end)]
+            | ([.[] | select(. == "error")] | length),
+              ([.[] | select(. == "warning" or . == null)] | length),
+              ([.[] | select(. == "note" or . == "none")] | length)
+          ' "$sarif_file" 2>/dev/null
+        ); then
+          echo "ERROR: ${sarif_file} is not readable SARIF; counting it as a retrieval failure."
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          continue
+        fi
         TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
         TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
         TOTAL_NOTES=$((TOTAL_NOTES + NOTES))
@@ -210,31 +276,112 @@ spec:
 
       # GitHub rejects multiple runs with the same category in one SARIF
       # file, and uploading separate files causes later (empty) uploads to
-      # mark earlier findings as "fixed". Merge all results into one run.
-      MERGED="$SARIF_DIR/merged.sarif.json"
-      FIRST=true
+      # mark earlier findings as "fixed". Merge everything into one run
+      # while keeping every result resolvable: rules from later scanners are
+      # appended with ruleIndex values remapped, rule ids that collide are
+      # rewritten as "<tool>/<id>" (with the results' ruleId references
+      # updated), and originalUriBaseIds keys that collide with a different
+      # value are renamed the same way, with the results' uriBaseId
+      # references updated to match.
+      SARIF_FILES=()
       for sarif_file in "$SARIF_DIR"/*; do
         [ -f "$sarif_file" ] || continue
-        jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
-        if $FIRST; then
-          cp "$sarif_file" "$MERGED"
-          FIRST=false
-        else
-          jq -s '
-            .[0].runs[0].results = (
-              (.[0].runs[0].results // []) +
-              [.[1].runs[].results // [] | .[]]
-            ) | .[0]
-          ' "$MERGED" "$sarif_file" > "$MERGED.tmp"
-          mv "$MERGED.tmp" "$MERGED"
-        fi
+        jq -e '(.runs | type) == "array"' "$sarif_file" >/dev/null 2>&1 || continue
+        SARIF_FILES+=("$sarif_file")
       done
 
-      if [ "$FIRST" = true ]; then
+      if [ "${#SARIF_FILES[@]}" -eq 0 ]; then
         echo "Skipping: no SARIF files to upload."
         write_upload_status 0 "SARIF upload skipped: no SARIF files to upload."
         exit 0
       fi
+
+      MERGED="$SARIF_DIR/merged.sarif.json"
+      jq -s '
+        def runs_of($doc):
+          (($doc.runs? // []) | if type == "array" then . else [] end);
+        def rules_of($run):
+          (($run.tool?.driver?.rules? // []) | if type == "array" then . else [] end);
+        def bases_of($run):
+          (($run.originalUriBaseIds? // {}) | if type == "object" then . else {} end);
+        def results_of($run):
+          (($run.results? // []) | if type == "array" then . else [] end);
+        def tool_tag($runs; $i):
+          (($runs[$i].tool?.driver?.name? // "run\($i)") | tostring);
+        def ids_of($rules):
+          reduce ($rules[]?) as $rule ({};
+            if (($rule.id? // null) | type) == "string" then .[$rule.id] = true else . end);
+        def unique_key($map; $key):
+          if ($map | has($key) | not) then $key
+          else first(range(2; 10000) as $n
+                | "\($key)#\($n)"
+                | select(. as $c | $map | has($c) | not))
+          end;
+
+        if length <= 1 and ([.[] | runs_of(.)[]] | length) <= 1 then .[0]
+        else ([.[] | runs_of(.)[]]) as $all
+        | if ($all | length) == 0 then .[0]
+          else
+            ($all[0]) as $base
+            | (reduce range(1; $all | length) as $i (
+                {
+                  rules: rules_of($base),
+                  uriBases: bases_of($base),
+                  results: results_of($base),
+                  ruleIds: ids_of(rules_of($base))
+                };
+                . as $state
+                | ($all[$i]) as $run
+                | (tool_tag($all; $i)) as $tag
+                | (rules_of($run)) as $runRules
+                | ($state.rules | length) as $offset
+                | (reduce ($runRules | map(.id? // empty) | unique[]) as $rid ({};
+                    if ($state.ruleIds | has($rid))
+                    then . + {($rid): unique_key($state.ruleIds; "\($tag)/\($rid)")}
+                    else . end)) as $idRemap
+                | ($runRules | map(
+                    . as $rule
+                    | (($rule.id? // null)) as $rid
+                    | if ($rid | type) == "string" and ($idRemap | has($rid))
+                      then .id = $idRemap[$rid] else . end)) as $newRules
+                | (reduce (bases_of($run) | keys[]) as $k ({};
+                    if ($state.uriBases | has($k)) and ($state.uriBases[$k] != bases_of($run)[$k])
+                    then . + {($k): unique_key($state.uriBases; "\($tag)/\($k)")}
+                    else . end)) as $uriRemap
+                | ($state.uriBases + (bases_of($run) | with_entries(
+                    . as $entry
+                    | if ($uriRemap | has($entry.key))
+                      then .key = $uriRemap[$entry.key] else . end))) as $newBases
+                | (results_of($run) | map(
+                    . as $res
+                    | if (($runRules | length) > 0) and ((($res.ruleIndex? // null) | type) == "number") and ($res.ruleIndex >= 0)
+                      then .ruleIndex = ($res.ruleIndex + $offset) else . end
+                    | if ((($res.ruleId? // null) | type) == "string") and ($idRemap | has($res.ruleId))
+                      then .ruleId = $idRemap[$res.ruleId] else . end
+                    | if ($uriRemap | length) > 0
+                      then walk(
+                        if type == "object" and ((.uriBaseId? // null) | type) == "string"
+                        then .uriBaseId as $ub
+                          | (if ($uriRemap | has($ub))
+                             then .uriBaseId = $uriRemap[$ub]
+                             else . end)
+                        else . end)
+                      else . end)) as $newResults
+                | {
+                    rules: ($state.rules + $newRules),
+                    uriBases: $newBases,
+                    results: ($state.results + $newResults),
+                    ruleIds: (reduce ($newRules | map(.id? // empty) | unique[]) as $rid
+                              ($state.ruleIds; .[$rid] = true))
+                  })) as $final
+            | .[0]
+            | .runs = [($base
+                | .results = $final.results
+                | (if ($final.rules | length) > 0 then .tool.driver.rules = $final.rules else . end)
+                | (if ($final.uriBases | length) > 0 then .originalUriBaseIds = $final.uriBases else . end))]
+          end
+        end
+      ' "${SARIF_FILES[@]}" > "$MERGED"
 
       RESULT_COUNT=$(jq '[.runs[0].results // [] | .[]] | length' "$MERGED")
       echo "Merged SARIF: 1 run, ${RESULT_COUNT} result(s)."
