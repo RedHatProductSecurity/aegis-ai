@@ -154,6 +154,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-40611",
     "CVE-2026-40938",
     "CVE-2026-41843",
+    "CVE-2026-42786",
     "CVE-2026-56128",
     "CVE-2026-75973",
     "CVE-2026-76183",
@@ -180,7 +181,8 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 
 
 # Expected ecosystems for CVEs where ground-truth is known.
-# Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.
+# Allowed values include non-distribution manifest-cube types (AEGIS-537),
+# e.g. hex, otp, plus generic/unknown.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-22815": ["pypi"],
     "CVE-2026-22822": ["golang"],
@@ -218,6 +220,7 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-40611": ["golang"],
     "CVE-2026-40938": ["golang"],
     "CVE-2026-41843": ["maven"],
+    "CVE-2026-42786": ["hex"],
     "CVE-2026-56128": ["generic"],
     "CVE-2026-75973": ["generic"],
     "CVE-2026-76183": ["generic"],
