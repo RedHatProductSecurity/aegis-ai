@@ -70,6 +70,8 @@ def _make_flaw(aegis_meta, **field_overrides):
         "cve_description": "",
         "cwe_id": "",
         "impact": "",
+        "statement": "",
+        "mitigation": "",
         "cvss_scores": [],
         "aegis_meta": aegis_meta,
     }
@@ -367,6 +369,42 @@ class TestExtractFlawKpi:
 
         assert result["cvss3_vector"].suggested == 1
         assert result["cvss3_vector"].suggestion_deviation_sum > 0.0
+
+    def test_statement_tracked(self):
+        aegis_meta = {
+            "processed": True,
+            "statement": [_make_bot_entry("A vulnerability exists in...")],
+        }
+        flaw = _make_flaw(aegis_meta, statement="A vulnerability exists in...")
+        result = extract_flaw_kpi(aegis_meta, flaw)
+
+        assert "statement" in result
+        assert result["statement"].suggested == 1
+        assert result["statement"].suggestion_deviation_sum == 0.0
+
+    def test_mitigation_tracked(self):
+        aegis_meta = {
+            "processed": True,
+            "mitigation": [_make_bot_entry("Disable the affected module.")],
+        }
+        flaw = _make_flaw(aegis_meta, mitigation="Disable the affected module.")
+        result = extract_flaw_kpi(aegis_meta, flaw)
+
+        assert "mitigation" in result
+        assert result["mitigation"].suggested == 1
+        assert result["mitigation"].suggestion_deviation_sum == 0.0
+
+    def test_statement_modified(self):
+        aegis_meta = {
+            "processed": True,
+            "statement": [_make_bot_entry("Bot statement.")],
+        }
+        flaw = _make_flaw(aegis_meta, statement="Analyst-rewritten statement.")
+        result = extract_flaw_kpi(aegis_meta, flaw)
+
+        assert result["statement"].suggested == 1
+        assert result["statement"].suggestions_compared == 1
+        assert result["statement"].suggestion_deviation_sum == 1.0
 
     def test_list_comparison_components(self):
         aegis_meta = {
