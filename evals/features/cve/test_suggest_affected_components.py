@@ -350,7 +350,22 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         self, ctx: EvaluatorContext[str, SuggestAffectedComponentsModel]
     ) -> EvaluationReason:
         expected = cast(list[str], ctx.expected_output or [])
-        suggested = getattr(ctx.output, "components", None) or []
+        components_raw = getattr(ctx.output, "components", None) or []
+
+        # Extract component names from ComponentMatch objects (new format)
+        # or use strings directly (old format for backward compatibility)
+        suggested = []
+        for comp in components_raw:
+            if hasattr(comp, "name"):
+                # ComponentMatch object
+                suggested.append(comp.name)
+            elif isinstance(comp, str):
+                # Legacy string format
+                suggested.append(comp)
+            else:
+                # Fallback: try to get name from dict
+                suggested.append(comp.get("name", str(comp)) if isinstance(comp, dict) else str(comp))
+
         exp_set = _normalized_component_sets(expected)
         got_set = _normalized_component_sets(suggested)
 
