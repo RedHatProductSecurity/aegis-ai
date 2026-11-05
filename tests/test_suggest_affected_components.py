@@ -87,6 +87,20 @@ async def test_general_go_identity_rules_reach_agent_prompt(component_agent):
 
 
 @pytest.mark.asyncio
+async def test_semantic_import_versioning_rule_reaches_agent_prompt(component_agent):
+    agent, run = component_agent
+
+    await cve.SuggestAffectedComponents(agent).exec("CVE-2025-64329")
+
+    run.assert_awaited_once()
+    prompt = run.await_args.args[0]
+    assert "Go modules follow Semantic Import Versioning" in prompt
+    assert "list the module path for every affected major version" in prompt
+    assert "github.com/grpc-ecosystem/grpc-gateway/v2" in prompt
+    assert "go.mongodb.org/mongo-driver/v2" in prompt
+
+
+@pytest.mark.asyncio
 async def test_upstream_registry_identity_does_not_override_osidb(component_agent):
     agent, run = component_agent
 
