@@ -45,6 +45,7 @@ def check_metrics(
 
 
 async def exec_feature(feature: Feature, flaw_data: FlawData) -> Any:
+    """Run a CVE feature against flaw_data and return its typed output."""
     feat_name = feature.__class__.__name__
     cve_id_raw = flaw_data.get("cve_id", "?")
     try:
@@ -112,9 +113,10 @@ def update_field(
     dst: str,
     output: AegisAnswer,
     src: str | None = None,
-    value: str | None = None,
+    value: Any | None = None,
     force_overwrite_of: Any = None,
 ) -> set[str]:
+    """Persist a suggestion onto the flaw when confidence and quality allow."""
     assert (not src) or (not value)
     cve_id = flaw_data.get("cve_id", "")
 
@@ -167,6 +169,7 @@ def update_field(
 async def suggest_components(
     agent: Agent, flaw_data: FlawData, ts: datetime
 ) -> set[str]:
+    """Suggest flaw components and store them on the OSIDB flaw."""
     if flaw_data.get("components"):
         # the "components" field is already initialized, skip this!
         return set()
@@ -184,10 +187,29 @@ async def suggest_components(
     return changed
 
 
+async def suggest_manifest_components(
+    agent: Agent, flaw_data: FlawData, ts: datetime
+) -> set[str]:
+    """Store same-project downstream names on aegis_meta._downstream."""
+    feature = cve.SuggestManifestComponentAndState(agent)
+    output = await exec_feature(feature, flaw_data)
+    # Catalog outages set _catalog_outage. Do not call update_field — it would
+    # still record a skip, but record_aegis_failure marks this as a lookup
+    # failure rather than a low-confidence empty mapping.
+    if getattr(output, "_catalog_outage", False):
+        return record_aegis_failure(flaw_data, ts, "_downstream", output)
+    rows = [
+        row.model_dump() if hasattr(row, "model_dump") else row
+        for row in output.manifest_components
+    ]
+    return update_field(flaw_data, ts, "_downstream", output, value=rows)
+
+
 async def suggest_description(
     agent: Agent, flaw_data: FlawData, ts: datetime
 ) -> set[str]:
     # request the suggestion from Aegis
+    """Suggest a flaw description/title and store it when allowed."""
     feature = cve.SuggestDescriptionText(agent)
     output = await exec_feature(feature, flaw_data)
 
@@ -212,6 +234,7 @@ async def suggest_description(
 
 
 async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
+    """Suggest CWE values and store them on the OSIDB flaw."""
     if flaw_data["cwe_id"]:
         # do not override existing CWE ID
         return set()
@@ -237,6 +260,7 @@ async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[st
 
 
 async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
+    """Suggest impact and CVSS fields and store them when allowed."""
     cve_id = flaw_data.get("cve_id")
 
     # request the suggestion from Aegis
@@ -334,6 +358,7 @@ async def suggest_statement(
 
 DEFAULT_SUGGESTION_LIST = [
     suggest_components,
+    suggest_manifest_components,
     suggest_description,
     suggest_cwe,
     suggest_impact,

@@ -1,7 +1,8 @@
 """Pytest hooks and fixtures for CVE evals.
 
 Covers suggest-impact, suggest-cwe, suggest-description, suggest-statement,
-suggest-affected-components, identify-pii, and cvss-diff. See evals under
+suggest-affected-components, suggest-manifest-component-and-state,
+identify-pii, and cvss-diff. See evals under
 ``evals/features/cve/``; rubrics are aligned with AEGIS-333 human feedback
 (CVSS PR/S/CIA for kernel issues, statement severity rationale, title/description
 concision).
@@ -21,7 +22,10 @@ def pytest_addoption(parser):
         "--sample",
         type=int,
         default=None,
-        help="Suggest-affected-components eval: randomly sample N cases (default: use all).",
+        help=(
+            "Randomly sample N cases for suggest-affected-components and "
+            "suggest-manifest-component-and-state (default: use all)."
+        ),
     )
     parser.addoption(
         "--audit",

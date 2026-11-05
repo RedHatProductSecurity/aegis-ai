@@ -1,0 +1,288 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Abinutils%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "arm-none-eabi-binutils-cs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "avr-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-aarch64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-alpha-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-arc-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-arm-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-avr32-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-bfin-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-bpf-unknown-none",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-c6x-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-cris-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-frv-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-gold",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-gprofng",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-h8300-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-hppa-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-hppa64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-ia64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-loongarch64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-m32r-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-m68k-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-metag-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-microblaze-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-mips64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-mn10300-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-nios2-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-openrisc-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-powerpc64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-powerpc64le-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-ppc64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-ppc64le-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-riscv32-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-riscv64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-s390x-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-score-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-sh-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-sparc64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-tile-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-x86_64-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-xtensa-linux-gnu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils-aarch64",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils-common",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils-ppc64le",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils-s390x",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils-x86_64",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/pprof/internal/binutils",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/pprof/internal/binutils)(commit=c50bf4fe530358fa651598413f786f4367e26268",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-binutils-generic",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw32-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw64-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ucrt64-binutils",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 56
+    }
+}

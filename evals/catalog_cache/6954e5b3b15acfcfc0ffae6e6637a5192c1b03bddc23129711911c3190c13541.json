@@ -1,0 +1,259 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=binutils&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "radare2"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rizin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "radare2"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rizin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "radare2"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rizin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "radare2"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rizin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "radare2"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rizin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "radare2"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.39.50~20221025"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rizin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20260306"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "insight"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20260306"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "insight"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20260306"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "insight"
+            }
+        ]
+    }
+}

@@ -1,0 +1,499 @@
+{
+    "url": "{anitya}/api/project/6506",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "libreoffice"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "libreoffice"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ar"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-af"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-am"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-as"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ast"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-be"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-bg"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-bn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-bn-IN"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-bo"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-br"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-brx"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-bs"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ca"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ca-valencia"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-cs"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-cy"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-da"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-de"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-dgo"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-dz"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-el"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-en-GB"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-en-ZA"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-eo"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-es"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-et"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-eu"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-fa"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-fi"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-fr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ga"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-gd"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-gl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-gu"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-he"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-hi"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-hr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-hu"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-id"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-is"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-it"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ja"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ka"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-kk"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-km"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-kmr-Latn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-kn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ko"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-kok"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ks"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-lb"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-lo"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-lt"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-lv"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-mai"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-mk"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ml"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-mn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-mni"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-mr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-my"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-nb"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ne"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-nl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-nn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-nr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-nso"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-oc"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-om"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-or"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-pa-IN"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-pl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-pt"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-pt-BR"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ro"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-rpm"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ru"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-rw"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sa-IN"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sat"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sd"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sdk"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-si"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sid"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sk"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sq"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sr-Latn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ss"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-st"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sv"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-sw-TZ"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ta"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-te"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-tg"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-th"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-tn"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-tr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ts"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-tt"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ug"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-uk"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-uz"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-ve"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-vi"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-xh"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-zh-CN"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-zh-TW"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "libreoffice-fresh-zu"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "libreoffice-base"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "libreoffice-core"
+            },
+            {
+                "distro": "Flathub",
+                "package_name": "org.libreoffice.LibreOffice"
+            },
+            {
+                "distro": "OpenBSD",
+                "package_name": "libreoffice"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:libreoffice:libreoffice"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "libreoffice"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "libreoffice"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "libreoffice"
+            },
+            {
+                "distro": "Windows",
+                "package_name": "LibreOffice"
+            }
+        ]
+    }
+}

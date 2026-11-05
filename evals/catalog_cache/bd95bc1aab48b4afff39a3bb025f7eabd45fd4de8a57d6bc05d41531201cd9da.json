@@ -1,0 +1,6 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=mingw32-binutils&strict=true&limit=20",
+    "body": {
+        "data": []
+    }
+}

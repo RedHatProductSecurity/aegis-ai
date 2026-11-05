@@ -1,0 +1,183 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=nginx%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "nginx",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "nginx",
+                "type": "rpm",
+                "build_count": 128
+            },
+            {
+                "name": "nginx-120",
+                "type": "oci",
+                "build_count": 8
+            },
+            {
+                "name": "nginx-122",
+                "type": "oci",
+                "build_count": 2
+            },
+            {
+                "name": "nginx-124",
+                "type": "oci",
+                "build_count": 24
+            },
+            {
+                "name": "nginx-126",
+                "type": "oci",
+                "build_count": 10
+            },
+            {
+                "name": "nginx-all-modules",
+                "type": "rpm",
+                "build_count": 34
+            },
+            {
+                "name": "nginx-core",
+                "type": "rpm",
+                "build_count": 104
+            },
+            {
+                "name": "nginx-core-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-filesystem",
+                "type": "rpm",
+                "build_count": 136
+            },
+            {
+                "name": "nginx-mimetypes",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-geoip",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-geoip-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-image-filter",
+                "type": "rpm",
+                "build_count": 34
+            },
+            {
+                "name": "nginx-mod-http-image-filter-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-perl",
+                "type": "rpm",
+                "build_count": 46
+            },
+            {
+                "name": "nginx-mod-http-perl-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-xslt-filter",
+                "type": "rpm",
+                "build_count": 34
+            },
+            {
+                "name": "nginx-mod-http-xslt-filter-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-mail",
+                "type": "rpm",
+                "build_count": 34
+            },
+            {
+                "name": "nginx-mod-mail-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-stream",
+                "type": "rpm",
+                "build_count": 46
+            },
+            {
+                "name": "nginx-mod-stream-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-stream-geoip",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-stream-geoip-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-ssl-pass",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "nginx.conf",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "nginx.logrotate",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "nginx.service",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "nginx.sysusers",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "nginx.tmpfiles",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "nginxmods.attr",
+                "type": "generic",
+                "build_count": 1
+            }
+        ],
+        "total": 35
+    }
+}

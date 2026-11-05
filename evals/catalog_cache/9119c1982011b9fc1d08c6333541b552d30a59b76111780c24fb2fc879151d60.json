@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=FluidSynth&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "fluidsynth",
+                "id": 10437,
+                "backend": "GitHub",
+                "homepage": "http://www.fluidsynth.org/",
+                "ecosystem": "http://www.fluidsynth.org/"
+            }
+        ],
+        "total_items": 1
+    }
+}

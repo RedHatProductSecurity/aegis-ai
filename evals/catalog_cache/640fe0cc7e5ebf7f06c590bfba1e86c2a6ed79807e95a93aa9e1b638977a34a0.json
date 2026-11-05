@@ -1,0 +1,55 @@
+{
+    "url": "{anitya}/api/project/6377",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:flatpak:flatpak"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Debian",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Ubuntu",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Guix",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Void",
+                "package_name": "flatpak"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "flatpak"
+            }
+        ]
+    }
+}

@@ -1,0 +1,7 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Agithub.com%2Fr1ck9-2q%2Fcve_summit%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [],
+        "total": 0
+    }
+}

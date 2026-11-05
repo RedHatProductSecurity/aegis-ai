@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Apostgresql%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=3",
+    "body": {
+        "data": [
+            {
+                "name": "@grafana-plugins/grafana-postgresql-datasource",
+                "type": "npm",
+                "build_count": 8
+            },
+            {
+                "name": "azure-mgmt-postgresqlflexibleservers",
+                "type": "pypi",
+                "build_count": 8
+            },
+            {
+                "name": "collectd-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "collectd-postgresql-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "foreman-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freeradius-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freeradius-postgresql-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "io.quarkiverse.embedded.postgresql/quarkus-embedded-postgresql",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.quarkus/quarkus-devservices-postgresql",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.quarkus/quarkus-flyway-postgresql",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.quarkus/quarkus-flyway-postgresql-deployment",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.quarkus/quarkus-flyway-postgresql-parent",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.quarkus/quarkus-jdbc-postgresql",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.quarkus/quarkus-jdbc-postgresql-deployment",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "io.quarkus/quarkus-jdbc-postgresql-parent",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-postgresql-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "logic-data-index-postgresql-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "logic-jobs-service-postgresql-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "opendbx-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "opendbx-postgresql-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "org.flywaydb/flyway-database-postgresql",
+                "type": "maven",
+                "build_count": 5
+            },
+            {
+                "name": "org.kie.kogito/data-index-service-postgresql",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.kie.kogito/jobs-service-postgresql",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.kie.kogito/jobs-service-postgresql-common",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.kie/kogito-addons-quarkus-data-index-postgresql",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.kie/kogito-data-index-postgresql-image-app",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.kie/kogito-jobs-service-postgresql-image-app",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.postgresql/postgresql",
+                "type": "maven",
+                "build_count": 21
+            },
+            {
+                "name": "org.testcontainers/postgresql",
+                "type": "maven",
+                "build_count": 7
+            },
+            {
+                "name": "org.testcontainers/testcontainers-postgresql",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "pcp-pmda-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "postgresql",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql",
+                "type": "rpm",
+                "build_count": 110
+            },
+            {
+                "name": "postgresql-12",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-13",
+                "type": "oci",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql-15",
+                "type": "oci",
+                "build_count": 10
+            },
+            {
+                "name": "postgresql-16",
+                "type": "oci",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-18",
+                "type": "oci",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql-contrib",
+                "type": "rpm",
+                "build_count": 26
+            },
+            {
+                "name": "postgresql-contrib-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-docs",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-docs-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-evr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-jdbc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-jdbc-javadoc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-libs",
+                "type": "rpm",
+                "build_count": 112
+            },
+            {
+                "name": "postgresql-odbc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-plperl",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-plperl-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-plpython",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-plpython3",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-plpython3-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-pltcl",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql-pltcl-debuginfo",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql-private-devel",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-private-libs",
+                "type": "rpm",
+                "build_count": 106
+            },
+            {
+                "name": "postgresql-private-libs-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-server",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "postgresql-server",
+                "type": "rpm",
+                "build_count": 34
+            },
+            {
+                "name": "postgresql-server-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-server-devel",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-server-devel-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-setup",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "postgresql-static",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-test",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-test-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-test-rpm-macros",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-upgrade",
+                "type": "rpm",
+                "build_count": 22
+            },
+            {
+                "name": "postgresql-upgrade-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-upgrade-devel",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql-upgrade-devel-debuginfo",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "postgresql.pam",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql.tmpfiles.d",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql16",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql16-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-decoderbufs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-decoderbufs-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_repack",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_repack-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgaudit",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql16-pgaudit-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgvector",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgvector-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "postgresql17-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-contrib-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 208
+    }
+}

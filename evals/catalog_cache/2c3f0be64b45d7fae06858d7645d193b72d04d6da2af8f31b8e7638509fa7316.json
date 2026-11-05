@@ -1,0 +1,36 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=netty&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "netty",
+                "id": 2074,
+                "backend": "GitHub",
+                "homepage": "https://github.com/netty/netty",
+                "ecosystem": "https://github.com/netty/netty"
+            },
+            {
+                "name": "netty",
+                "id": 226470,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/netty/0.3",
+                "ecosystem": "pypi"
+            },
+            {
+                "name": "netty",
+                "id": 25366,
+                "backend": "Rubygems",
+                "homepage": "https://rubygems.org/gems/netty/versions/4.1.42.r02",
+                "ecosystem": "rubygems"
+            },
+            {
+                "name": "Netty",
+                "id": 214375,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/Netty/0.1.1",
+                "ecosystem": "pypi"
+            }
+        ],
+        "total_items": 4
+    }
+}

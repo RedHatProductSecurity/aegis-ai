@@ -1,0 +1,1522 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=io.netty%2Fnetty-codec-http&strict=true&include_types=maven&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.108.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "fuse-karaf.fuse-7_13_0-00012-redhat-00001.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.108.Final"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.19.Final-redhat-1"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.66.Final-redhat-00001"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.73.Final-redhat-00001"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.94.Final-redhat-00003"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-fuse-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.112.Final"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "debezium-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.114.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "candlepin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.114.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "candlepin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-spark-operator-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cpu-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cpu-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cuda130-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cuda130-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-rocm64-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-spark-operator-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cpu-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cuda130-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.118.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-rocm64-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.119.Final-redhat-00004"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-full-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.119.Final-redhat-00004"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-incremental-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.119.Final-redhat-00004"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.119.Final-redhat-00004"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-patch.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.121.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "candlepin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.127.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-runtime-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.127.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap.1-runtime-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.127.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-runtime-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.127.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap.1-runtime-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "swatch-contracts"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "swatch-metrics"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "swatch-producer-aws"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "swatch-producer-azure"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "swatch-utilization"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "candlepin"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-jms-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-protonj2-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.130.Final-redhat-00001"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhaf-camel-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.133.Final-redhat-00002"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-datagrid-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.133.Final-redhat-00002"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-datagrid-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "exploit-intelligence/agent-client-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/jetbrains-ide-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/openvsx-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/pluginregistry-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/jetbrains-ide-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-broker-bin.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-7/eap74-els-openjdk11-openshift-rhel8"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-7/eap74-els-openjdk17-openshift-rhel8"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-7/eap74-els-openjdk8-openshift-rhel8"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-runtime-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            },
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.97.Final-redhat-00004"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhaf-camel-for-springboot-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.135.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rh-sso-server-dist.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-aws-ddb-streams-source-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-aws-s3-sink-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-aws-s3-source-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-aws-sns-sink-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-aws-sqs-sink-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-aws-sqs-source-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-log-sink-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-eventing-integrations-timer-source-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-ekb-dispatcher-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift-serverless-1/kn-ekb-receiver-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "keycloak-operator.redhat-00001.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "keycloak-operator.redhat-00001.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.136.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "io.apicurio-apicurio-registry"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "runtimes-inventory/insights-rbi-events"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "runtimes-inventory/insights-rbi-rest"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-broker-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-broker-bin.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-broker-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-jms-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-protonj2-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-datagrid-server.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-datagrid-server.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "keycloak-operator.redhat-00003.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhbk-quarkus-dist.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "keycloak-operator.redhat-00003.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhbk/keycloak-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhbk/keycloak-rhel9-operator"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhbk-quarkus-dist.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.137.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhaf-camel-spring-boot-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhsm-api-proxy/rhsm-system-profile-bridge"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "exploit-intelligence/agent-client-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/jetbrains-ide-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-modelmesh-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-trustyai-service-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-trustyai-service-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-streams-kafka-bin.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "com.redhat.quarkus.platform-quarkus-bom"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "com.redhat.quarkus.platform-quarkus-bom"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhbk/keycloak-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhbk/keycloak-rhel9-operator"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "com.redhat.quarkus.platform-quarkus-camel-bom"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "com.redhat.quarkus.platform-quarkus-cxf-bom"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.138.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "debezium-server.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.1.139.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-trustyai-service-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.15.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/multicluster-redirector-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.15.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/server-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.15.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/multicluster-redirector-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.16.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/openvsx-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.16.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/pluginregistry-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.17.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/server-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.17.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/server-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.18.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/openvsx-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.18.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/pluginregistry-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.18.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/multicluster-redirector-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.18.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-streams-bridge-bin.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.18.Final-redhat-00001"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "amq-streams-cruise-control-bin.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.7.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th-torch-cpu-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "io.netty/netty-codec-http",
+                                "type": "maven",
+                                "version": "4.2.7.Final"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th-torch-cuda-py312-rhel9"
+            }
+        ]
+    }
+}

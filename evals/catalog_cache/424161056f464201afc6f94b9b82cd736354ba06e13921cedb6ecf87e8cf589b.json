@@ -1,0 +1,38 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=prometheus3%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "prometheus3.13",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus3.13-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.13-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.5-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.5-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 6
+    }
+}

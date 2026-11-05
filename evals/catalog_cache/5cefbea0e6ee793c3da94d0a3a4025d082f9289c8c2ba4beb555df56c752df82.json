@@ -1,0 +1,63 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2AOpenEXR%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "OpenEXR",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenEXR-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenEXR-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libopenexr-3-1-30",
+                "type": "deb",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-OpenEXR",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "openexr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "openexr-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "openexr-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "openexr-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "openexr-libs",
+                "type": "rpm",
+                "build_count": 74
+            },
+            {
+                "name": "openexr-libs-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 11
+    }
+}

@@ -1,0 +1,288 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=org.bouncycastle%2Fbcprov-jdk15on&strict=true&include_types=maven&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "resteasy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.47"
+                            },
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.64"
+                            },
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.68.0.redhat-00005"
+                            },
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.69"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-fuse-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.64"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "osd-operators/splunk-heavyforwarder"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.64"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "fuse-extras.fuse-7_13_0-00013-redhat-00001.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.68.0.redhat-00005"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jboss-eap-full-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.69"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jmc"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.69"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jmc"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.bouncycastle/bcprov-jdk15on",
+                                "type": "maven",
+                                "version": "1.69"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jmc"
+            }
+        ]
+    }
+}

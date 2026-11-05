@@ -1,0 +1,105 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=github.com%2Frclone%2Frclone&strict=true&include_types=golang&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.63.1-beta"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhacm2/volsync-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.63.1-beta"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhacm2/volsync-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.71.2-beta"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhacm2/volsync-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.73.1-beta"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhacm2/volsync-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.74.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "cryostat/cryostat-storage-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.74.4-beta"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhacm2/volsync-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/rclone/rclone",
+                                "type": "golang",
+                                "version": "v1.75.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rclone"
+            }
+        ]
+    }
+}

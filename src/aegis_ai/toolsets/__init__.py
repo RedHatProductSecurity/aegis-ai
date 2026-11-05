@@ -210,6 +210,26 @@ if get_settings().use_build_system_tool:
 
 build_system_toolset = CombinedToolset(build_system_toolset_list)
 
+# Downstream catalog tools for per-run injection into
+# SuggestManifestComponentAndState.
+from aegis_ai.toolsets.tools.downstream import (
+    anitya_projects_tool,
+    bomq_build_versions_tool,
+    bomq_components_tool,
+)
+
+downstream_toolset = CombinedToolset(
+    [
+        FunctionToolset(
+            tools=[
+                bomq_components_tool,
+                bomq_build_versions_tool,
+                anitya_projects_tool,
+            ]
+        )
+    ]
+)
+
 
 # Toolset containing generic tooling for CVE
 public_cve_toolset_list: list[AbstractToolset[Any]] = []
@@ -233,4 +253,5 @@ public_toolset = LoggingToolset(public_toolset)
 redhat_cve_toolset = LoggingToolset(redhat_cve_toolset)
 kernel_extra_toolset = LoggingToolset(kernel_extra_toolset)
 build_system_toolset = LoggingToolset(build_system_toolset)
+downstream_toolset = LoggingToolset(downstream_toolset)
 public_cve_toolset = LoggingToolset(public_cve_toolset)

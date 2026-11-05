@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=prometheus&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "prometheus",
+                "id": 20556,
+                "backend": "crates.io",
+                "homepage": "https://crates.io/crates/prometheus",
+                "ecosystem": "crates.io"
+            },
+            {
+                "name": "prometheus",
+                "id": 6527,
+                "backend": "GitHub",
+                "homepage": "https://github.com/prometheus/prometheus",
+                "ecosystem": "https://github.com/prometheus/prometheus"
+            }
+        ],
+        "total_items": 2
+    }
+}

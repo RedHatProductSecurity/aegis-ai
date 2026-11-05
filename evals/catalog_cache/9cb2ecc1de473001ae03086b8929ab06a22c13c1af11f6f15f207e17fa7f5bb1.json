@@ -1,0 +1,87 @@
+{
+    "url": "{anitya}/api/project/9533",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "gdk-pixbuf2"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "Timesys",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:gnome:gdk-pixbuf"
+            },
+            {
+                "distro": "Meson WrapDB",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gdk-pixbuf2"
+            },
+            {
+                "distro": "Debian",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "Ubuntu",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "Homebrew",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "MacPorts",
+                "package_name": "gdk-pixbuf2"
+            },
+            {
+                "distro": "MacPorts",
+                "package_name": "gdk-pixbuf2-devel"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "gdk-pixbuf2-modules-extra"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "mingw-gdk-pixbuf"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:gnome:gdkpixbuf"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "gdk-pixbuf2.0"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "gdk-pixbuf"
+            },
+            {
+                "distro": "PTXdist",
+                "package_name": "gdk-pixbuf"
+            }
+        ]
+    }
+}

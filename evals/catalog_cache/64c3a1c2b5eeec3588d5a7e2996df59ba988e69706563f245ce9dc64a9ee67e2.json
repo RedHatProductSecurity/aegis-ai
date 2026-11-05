@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=hdf5&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "hdf5",
+                "id": 1303,
+                "backend": "GitHub",
+                "homepage": "https://www.hdfgroup.org/",
+                "ecosystem": "https://www.hdfgroup.org/"
+            }
+        ],
+        "total_items": 1
+    }
+}

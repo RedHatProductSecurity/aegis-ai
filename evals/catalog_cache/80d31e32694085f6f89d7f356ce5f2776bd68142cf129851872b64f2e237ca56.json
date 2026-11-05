@@ -1,0 +1,21 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=vim92&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim92",
+                                "type": "generic",
+                                "version": ""
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "vim"
+            }
+        ]
+    }
+}

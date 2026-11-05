@@ -1,0 +1,23 @@
+{
+    "url": "{anitya}/api/project/148939",
+    "body": {
+        "packages": [
+            {
+                "distro": "Ubuntu",
+                "package_name": "tomcat"
+            },
+            {
+                "distro": "PLD-Linux",
+                "package_name": "tomcat"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "tomcat"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "tomcatx"
+            }
+        ]
+    }
+}

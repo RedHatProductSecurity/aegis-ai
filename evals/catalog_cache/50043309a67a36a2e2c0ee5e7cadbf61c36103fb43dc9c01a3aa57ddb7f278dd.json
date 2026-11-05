@@ -1,0 +1,38 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Arclone%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/internxt/rclone-adapter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rclone/Proton-API-Bridge",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rclone/go-proton-api",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rclone/gofakes3",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "rclone",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rclone-browser",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 6
+    }
+}

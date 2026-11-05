@@ -1,0 +1,59 @@
+{
+    "url": "{anitya}/api/project/5492",
+    "body": {
+        "packages": [
+            {
+                "distro": "Alpine",
+                "package_name": "zabbix"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "zabbix-agent"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "zabbix-frontend-php"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "zabbix-proxy"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "zabbix-server"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "zabbix-agent"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "zabbix"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "zabbix"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "zabbix"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "zabbix-agent"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "zabbix-proxy"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:zabbix:zabbix"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "zabbix"
+            }
+        ]
+    }
+}

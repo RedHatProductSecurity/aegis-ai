@@ -468,6 +468,25 @@ def suggest_affected_packages(cve_id, markdown):
 @click.option(
     "--markdown", "-m", is_flag=True, help="Output as markdown instead of JSON."
 )
+def suggest_manifest_component_and_state(cve_id, markdown):
+    """
+    Suggest same-project downstream components and affectedness for a CVE.
+    """
+
+    async def _doit():
+        feature = cve.SuggestManifestComponentAndState(cli_agent)
+        return await feature.exec(cve_id)
+
+    result = asyncio.run(_doit())
+    if result:
+        _print_output(result.output, markdown=markdown)
+
+
+@aegis_cli.command()
+@click.argument("cve_id", type=CVEID)
+@click.option(
+    "--markdown", "-m", is_flag=True, help="Output as markdown instead of JSON."
+)
 def query_affected_components(cve_id, markdown):
     """
     Query OSIDB for affected components (deterministic, no LLM).

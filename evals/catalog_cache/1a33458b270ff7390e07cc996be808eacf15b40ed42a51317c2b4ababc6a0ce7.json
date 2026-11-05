@@ -1,0 +1,67 @@
+{
+    "url": "{anitya}/api/project/230",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "NixOS",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "mkinitcpio-busybox"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Timesys",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:busybox:busybox"
+            },
+            {
+                "distro": "stagex",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "busybox"
+            },
+            {
+                "distro": "PTXdist",
+                "package_name": "busybox"
+            }
+        ]
+    }
+}

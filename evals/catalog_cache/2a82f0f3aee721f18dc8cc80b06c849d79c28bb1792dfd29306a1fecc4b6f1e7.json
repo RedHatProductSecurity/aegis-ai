@@ -1,0 +1,48 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2AOpenImageIO%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "OpenImageIO",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenImageIO-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenImageIO-iv",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenImageIO-plugin-osl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenImageIO-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenImageIO2.5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "OpenImageIO2.5-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-openimageio",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 8
+    }
+}

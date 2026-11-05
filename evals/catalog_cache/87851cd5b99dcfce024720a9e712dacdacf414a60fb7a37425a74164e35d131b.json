@@ -1,0 +1,10 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=python3.11-nginx&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "1.5.7-2.el8ap"
+            }
+        ]
+    }
+}

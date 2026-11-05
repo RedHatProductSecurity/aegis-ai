@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Axmldom%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "@xmldom/xmldom",
+                "type": "npm",
+                "build_count": 8
+            }
+        ],
+        "total": 1
+    }
+}

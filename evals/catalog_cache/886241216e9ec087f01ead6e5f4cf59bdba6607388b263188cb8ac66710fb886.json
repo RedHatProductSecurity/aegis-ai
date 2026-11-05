@@ -1,0 +1,19 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=mingw-OpenEXR&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.2.1-3.el8"
+            },
+            {
+                "build_version": "2.2.1-3.el8"
+            },
+            {
+                "build_version": "2.2.1-3.el8"
+            },
+            {
+                "build_version": "2.2.1-3.el8"
+            }
+        ]
+    }
+}

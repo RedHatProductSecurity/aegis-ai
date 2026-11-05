@@ -1,0 +1,178 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Aflatpak%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "@malept/flatpak-bundler",
+                "type": "npm",
+                "build_count": 5
+            },
+            {
+                "name": "firefox-flatpak",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak",
+                "type": "rpm",
+                "build_count": 229
+            },
+            {
+                "name": "flatpak-build",
+                "type": "oci",
+                "build_count": 2
+            },
+            {
+                "name": "flatpak-builder",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-builder-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-builder-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-builder-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-libs-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-rpm-macros",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-runtime",
+                "type": "oci",
+                "build_count": 3
+            },
+            {
+                "name": "flatpak-runtime-config",
+                "type": "rpm",
+                "build_count": 7
+            },
+            {
+                "name": "flatpak-sdk",
+                "type": "oci",
+                "build_count": 3
+            },
+            {
+                "name": "flatpak-selinux",
+                "type": "rpm",
+                "build_count": 200
+            },
+            {
+                "name": "flatpak-session-helper",
+                "type": "rpm",
+                "build_count": 250
+            },
+            {
+                "name": "flatpak-session-helper-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-spawn",
+                "type": "rpm",
+                "build_count": 10
+            },
+            {
+                "name": "flatpak-spawn-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-tests-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-xdg-utils",
+                "type": "rpm",
+                "build_count": 9
+            },
+            {
+                "name": "flatpak-xdg-utils-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-xdg-utils-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-xdg-utils-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-xdg-utils-tests-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "redhat-flatpak-data",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "redhat-flatpak-preinstall-firefox",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "redhat-flatpak-preinstall-thunderbird",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "redhat-flatpak-repo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "thunderbird-flatpak",
+                "type": "oci",
+                "build_count": 1
+            }
+        ],
+        "total": 34
+    }
+}

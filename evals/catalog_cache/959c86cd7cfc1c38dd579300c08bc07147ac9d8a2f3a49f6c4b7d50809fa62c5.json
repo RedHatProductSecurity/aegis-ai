@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=postgresql%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-credcheck",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-credcheck-selinux",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-ip4r",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-jdbc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-jdbc-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-pgpool-II",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-pgpool-II-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-pgpool-II-extensions",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-plperl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-plpython3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-private-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-private-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-server",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "postgresql-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-server-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-setup",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "postgresql-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-test-rpm-macros",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-upgrade-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-anonymizer",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-decoderbufs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_cron",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_repack",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_tle",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgaudit",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgvector",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-plperl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-plpython3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pltcl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-client",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-gui",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-private-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-private-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-server-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-test-rpm-macros",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-upgrade-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-plperl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-plpython3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-pltcl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-postgis",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-postgis-client",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-postgis-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-postgis-gui",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-postgis-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-postgis-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-private-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-private-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-server-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-test-rpm-macros",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql17-upgrade-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-decoderbufs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-pg_partman",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-pg_partman-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-pg_repack",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-pgaudit",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-pgvector",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql18-postgis",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-decoderbufs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-pg_repack",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-pgaudit",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-pgvector",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-plperl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-plpython3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-pltcl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-postgis",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-postgis-client",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-postgis-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-postgis-gui",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-postgis-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-postgis-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql19-private-devel",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 109
+    }
+}

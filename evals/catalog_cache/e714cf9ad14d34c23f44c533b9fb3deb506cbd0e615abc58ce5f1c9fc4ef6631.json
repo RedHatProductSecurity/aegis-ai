@@ -1,0 +1,25 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=suricata&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "8.0.7-1.el10_4"
+            },
+            {
+                "build_version": "7.0.17-1.el8"
+            },
+            {
+                "build_version": "7.0.17-1.el9"
+            },
+            {
+                "build_version": "7.0.17-1.fc43"
+            },
+            {
+                "build_version": "8.0.8-1.fc44"
+            },
+            {
+                "build_version": "8.0.5-2.fc45"
+            }
+        ]
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Agithub.com%2Fgo-git%2Fgo-git%2Fv5&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/go-git/go-git/v5",
+                "type": "golang",
+                "build_count": 25
+            }
+        ],
+        "total": 1
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "url": "{anitya}/api/project/1303",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "hdf5"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:hdfgroup:hdf5"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "hdf5"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "hdf5"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "hdf5"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "hdf5"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "hdf5"
+            }
+        ]
+    }
+}

@@ -1,0 +1,227 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=tomcat&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "0:10.1.49-17.redhat_00017.1.el8jws"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jws6-tomcat"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "0:11.0.21-9.redhat_00009.1.el10jws"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jws7-tomcat"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "0:9.0.87-14.redhat_00013.1.el8jws"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "jws5-tomcat"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "10.1.conf"
+                            },
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "10.1.service"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "tomcat10"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "11.0.conf"
+                            },
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "11.0.service"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "tomcat11"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "7.0.76"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "tomcat"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.30.redhat-4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.30.redhat-4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat",
+                                "type": "generic",
+                                "version": "9.0.50.redhat-00006"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pki-servlet-engine"
+            }
+        ]
+    }
+}

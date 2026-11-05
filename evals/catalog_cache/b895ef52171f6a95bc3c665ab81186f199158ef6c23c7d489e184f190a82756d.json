@@ -1,0 +1,16 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=zabbix7.0&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "7.0.32-1.el10_4"
+            },
+            {
+                "build_version": "7.0.31-1.el8"
+            },
+            {
+                "build_version": "7.0.32-1.el9"
+            }
+        ]
+    }
+}

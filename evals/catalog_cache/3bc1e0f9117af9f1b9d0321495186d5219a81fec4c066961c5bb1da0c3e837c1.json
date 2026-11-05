@@ -1,0 +1,34 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=postgresql18&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "18.6-1.hum1"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            },
+            {
+                "build_version": "18.6-1.el10_2"
+            }
+        ]
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=flatpak&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "flatpak",
+                "id": 6377,
+                "backend": "GitHub",
+                "homepage": "https://flatpak.org",
+                "ecosystem": "https://flatpak.org"
+            }
+        ],
+        "total_items": 1
+    }
+}

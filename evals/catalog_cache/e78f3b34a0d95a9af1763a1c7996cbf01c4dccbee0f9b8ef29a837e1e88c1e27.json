@@ -1,0 +1,28 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=prometheus&strict=true&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "prometheus",
+                "type": "cargo",
+                "build_count": 9
+            },
+            {
+                "name": "prometheus",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus",
+                "type": "otp",
+                "build_count": 3
+            }
+        ],
+        "total": 4
+    }
+}

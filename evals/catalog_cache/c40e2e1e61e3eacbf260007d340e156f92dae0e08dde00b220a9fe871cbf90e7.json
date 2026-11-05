@@ -1,0 +1,22 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=OpenImageIO&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.1.20.0-1.el8"
+            },
+            {
+                "build_version": "2.4.17.0-2.el9"
+            },
+            {
+                "build_version": "2.5.19.1-1.fc43"
+            },
+            {
+                "build_version": "3.1.19.0-1.fc44"
+            },
+            {
+                "build_version": "3.2.1.1-2.fc46"
+            }
+        ]
+    }
+}

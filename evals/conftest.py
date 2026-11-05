@@ -31,6 +31,18 @@ from evals.utils.cached_tools import (
     osv_dev_cve_tool,
     osv_dev_ghsa_tool,
 )
+from evals.utils.catalog_cache import (
+    cache_misses as catalog_cache_misses,
+)
+from evals.utils.catalog_cache import (
+    catalog_cache_retrieve,
+)
+from evals.utils.catalog_cache import (
+    get_public_miss_files as get_catalog_public_miss_files,
+)
+from evals.utils.catalog_cache import (
+    write_misses_report as write_catalog_misses_report,
+)
 from evals.utils.external_references_cache import (
     cache_misses as extref_cache_misses,
 )
@@ -156,6 +168,16 @@ def _patch_build_system_lookup(_monkeypatch_session):
         build_system_mod,
         "_lookup_binary_rpms_batch",
         build_system_cache_retrieve_batch,
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _patch_catalog_http(_monkeypatch_session):
+    """Route bomq/Anitya HTTP through the checked-in catalog cache during evals."""
+    import aegis_ai.features.cve.downstream as downstream_mod
+
+    _monkeypatch_session.setattr(
+        downstream_mod, "http_get_json", catalog_cache_retrieve
     )
 
 
@@ -323,9 +345,22 @@ def pytest_sessionfinish(session, exitstatus):
             build_system_misses_file,
         )
 
-    # Dump cache-miss file contents as base64 so they can be imported from CI logs
+    catalog_misses_file = write_catalog_misses_report()
+    if catalog_misses_file:
+        logging.warning(
+            "[catalog_cache] %d cache miss(es) written to %s — "
+            "commit the new evals/catalog_cache/*.json files",
+            len(catalog_cache_misses),
+            catalog_misses_file,
+        )
+
+    # Dump cache-miss file contents as base64 so they can be imported from CI logs.
+    # Anitya catalog misses are dumped (field-filtered, public host). Bomq catalog
+    # misses are omitted: CI cannot fill localhost bomq, and some slimmed search
+    # bodies are still too large for a single log line.
     cache_types = {
         "build_system": get_build_system_miss_files,
+        "catalog": get_catalog_public_miss_files,
         "external_references": get_extref_miss_files,
         "ghsa": get_ghsa_miss_files,
         "osidb": get_osidb_miss_files,

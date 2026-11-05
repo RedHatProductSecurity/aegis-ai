@@ -1,0 +1,91 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=vim&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "9.2.1202-1.hum1"
+            },
+            {
+                "build_version": "7.4.629-5.el6_10.4"
+            },
+            {
+                "build_version": "7.4.629-8.el7_9.2"
+            },
+            {
+                "build_version": "8.0.1763-32.el8_10"
+            },
+            {
+                "build_version": "8.0.1763-15.el8_4.2"
+            },
+            {
+                "build_version": "8.0.1763-19.el8_6.6"
+            },
+            {
+                "build_version": "8.0.1763-20.el8_8.2"
+            },
+            {
+                "build_version": "8.0.1763-20.el8_8.2"
+            },
+            {
+                "build_version": "8.0.1763-19.el8_6.6"
+            },
+            {
+                "build_version": "8.2.2637-26.el9_8.21"
+            },
+            {
+                "build_version": "9.1.083-5.el10_0.4"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "8.2.2637-26.el9_8.23"
+            },
+            {
+                "build_version": "8.2.2637-20.el9_2.3"
+            },
+            {
+                "build_version": "8.2.2637-20.el9_4.4"
+            },
+            {
+                "build_version": "8.2.2637-22.el9_6.4"
+            },
+            {
+                "build_version": "8.2.2637-26.el9_8.23"
+            },
+            {
+                "build_version": "8.2.2637-26.el9_8.23"
+            },
+            {
+                "build_version": "9.1.083-5.el10_0.4"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "8.2.2637-20.el9_1"
+            },
+            {
+                "build_version": "8.2.2637-20.el9_2.3"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            },
+            {
+                "build_version": "9.1.083-9.el10_2.22"
+            }
+        ]
+    }
+}

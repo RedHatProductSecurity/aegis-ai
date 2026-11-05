@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=nginx&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "nginx",
+                "id": 5413,
+                "backend": "GitHub",
+                "homepage": "https://nginx.org",
+                "ecosystem": "https://nginx.org"
+            }
+        ],
+        "total_items": 1
+    }
+}

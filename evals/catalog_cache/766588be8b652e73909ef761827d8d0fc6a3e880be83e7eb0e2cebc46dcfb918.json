@@ -1,0 +1,25 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=gcc-toolset-16-binutils&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.46-3.el10"
+            },
+            {
+                "build_version": "2.46-3.el10"
+            },
+            {
+                "build_version": "2.46-2.el9"
+            },
+            {
+                "build_version": "2.46-2.el9"
+            },
+            {
+                "build_version": "2.46-3.el10"
+            },
+            {
+                "build_version": "2.46-3.el10"
+            }
+        ]
+    }
+}

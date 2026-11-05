@@ -1,0 +1,67 @@
+{
+    "url": "{anitya}/api/project/13289",
+    "body": {
+        "packages": [
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:openexr:openexr"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "OpenBSD",
+                "package_name": "OpenEXR"
+            },
+            {
+                "distro": "Debian",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Homebrew",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "mingw-openexr"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "OpenMandriva",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Ubuntu",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "media-libs/openexr"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "openexr"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "openexr"
+            }
+        ]
+    }
+}

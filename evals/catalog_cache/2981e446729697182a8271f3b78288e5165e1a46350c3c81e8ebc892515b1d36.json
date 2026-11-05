@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=github.com%2Fprometheus%2Fprometheus&strict=true&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/prometheus/prometheus",
+                "type": "golang",
+                "build_count": 4
+            }
+        ],
+        "total": 1
+    }
+}
