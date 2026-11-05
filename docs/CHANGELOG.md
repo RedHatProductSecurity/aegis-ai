@@ -5,6 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.10.3] - 2026-11-05
+
+### Changed
+- `osidb-bot` now automatically suggests the `statement` and `mitigation` fields, too [\[AEGIS-548\]](https://redhat.atlassian.net/browse/AEGIS-548)
+- removed `AEGIS_LLM_TEMPERATURE` and `AEGIS_LLM_TOP_P` environment variables to comply with upcoming Gemini API changes [\[AEGIS-526\]](https://redhat.atlassian.net/browse/AEGIS-526)
+
+### Added
+- added support for API gateways (EnMaaS) via `AEGIS_LLM_PROVIDER` and `AEGIS_LLM_API_KEY` environment variables [\[#994\]](https://github.com/RedHatProductSecurity/aegis-ai/pull/994)
+- added the `--use-fixtures` option for `suggest-*` commands in Aegis CLI to use cached eval fixtures when available [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+- `suggest-affected-packages` now reports per-binary affectedness with `BinaryAffectednessEntry` and `build_nvr` in output [\[AEGIS-492\]](https://redhat.atlassian.net/browse/AEGIS-492)
+- `osv_dev_*` tools can now be disabled via `AEGIS_USE_OSV_DEV_TOOL_CONTEXT` [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+- added analyst steering notes to CVE prompt context for internal analysis guidance [\[AEGIS-253\]](https://redhat.atlassian.net/browse/AEGIS-253)
+- evaluation suite now supports per-case OSIDB field masking and tool disabling [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+
+### Fixed
+- fixed `suggest-impact` underestimation on kernel CVEs involving `kfree()`-without-RCU UAF and network-triggered races, which caused a CRITICAL -> MODERATE underestimation on CVE-2026-98432 [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+
+
 ## [0.10.2] - 2026-10-26
 
 ### Changed
