@@ -166,6 +166,15 @@ async def _canned_exec_feature_with_flags(feature, flaw_data):
             tools_used=[],
             _flags=["kpanic"],
         )
+    if name == "SuggestStatementText":
+        return SimpleNamespace(
+            suggested_statement="Test statement.",
+            suggested_mitigation="Test mitigation.",
+            explanation="test",
+            data_quality=0.9,
+            confidence=0.9,
+            tools_used=[],
+        )
     raise ValueError(f"Unknown feature: {name}")
 
 

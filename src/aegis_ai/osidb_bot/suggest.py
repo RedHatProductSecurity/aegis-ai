@@ -306,9 +306,36 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     return changed
 
 
+async def suggest_statement(
+    agent: Agent, flaw_data: FlawData, ts: datetime
+) -> set[str]:
+    # request the suggestion from Aegis
+    feature = cve.SuggestStatementText(agent)
+    output = await exec_feature(feature, flaw_data)
+
+    if output.suggested_statement is None:
+        # no statement suggested, giving up
+        return record_aegis_failure(flaw_data, ts, "statement", output)
+
+    # pick the relevant fields
+    changed = update_field(
+        flaw_data, ts, "statement", output, src="suggested_statement"
+    )
+    changed |= (
+        record_aegis_failure(flaw_data, ts, "mitigation", output)
+        if output.suggested_mitigation is None
+        else update_field(
+            flaw_data, ts, "mitigation", output, src="suggested_mitigation"
+        )
+    )
+
+    return changed
+
+
 DEFAULT_SUGGESTION_LIST = [
     suggest_components,
     suggest_description,
     suggest_cwe,
     suggest_impact,
+    suggest_statement,
 ]

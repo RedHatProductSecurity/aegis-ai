@@ -99,6 +99,13 @@ async def _canned_exec_feature(feature, flaw_data):
             _flags=[],
             **metrics,
         )
+    if name == "SuggestStatementText":
+        return SimpleNamespace(
+            suggested_statement="Canned statement text.",
+            suggested_mitigation="Canned mitigation text.",
+            explanation=explanation,
+            **metrics,
+        )
     raise ValueError(f"Unknown feature: {name}")
 
 
@@ -129,6 +136,8 @@ async def test_flaw_updater_aegis_meta_updated_by_suggestions(mock_exec_feature)
         "cwe_id",
         "impact",
         "_cvss3_vector",
+        "statement",
+        "mitigation",
     }
     for field in expected_field_entries:
         assert field in aegis_meta, f"aegis_meta missing key {field!r}"
@@ -150,6 +159,8 @@ async def test_flaw_updater_aegis_meta_updated_by_suggestions(mock_exec_feature)
     assert "cwe_id" in updater.updated_fields
     assert "impact" in updater.updated_fields
     assert "cvss_scores" in updater.updated_fields
+    assert "statement" in updater.updated_fields
+    assert "mitigation" in updater.updated_fields
 
     # No real OSIDB or feature exec should have been called (exec_feature was mocked)
     mock_exec_feature.assert_called()
@@ -535,6 +546,13 @@ async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
                 explanation=explanation,
                 **metrics,
             )
+        if name == "SuggestStatementText":
+            return SimpleNamespace(
+                suggested_statement="Bad statement.",
+                suggested_mitigation="Bad mitigation.",
+                explanation=explanation,
+                **metrics,
+            )
         raise ValueError(f"Unknown feature: {name}")
 
     mock_exec_feature.side_effect = _low_metrics_exec
@@ -668,6 +686,13 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_all_skipped(
                 impact="LOW",
                 cvss3_score="3.7",
                 cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                explanation=explanation,
+                **metrics,
+            )
+        if name == "SuggestStatementText":
+            return SimpleNamespace(
+                suggested_statement="s",
+                suggested_mitigation="m",
                 explanation=explanation,
                 **metrics,
             )
