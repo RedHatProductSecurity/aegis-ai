@@ -1,0 +1,10 @@
+{
+    "url": "https://github.com/grpc-ecosystem/grpc-gateway/commit/72123cd4f32545f6e1376873f412dcdcbcf29acc",
+    "result": {
+        "status": "blocked",
+        "error_message": "URL not in allowlist: https://github.com/grpc-ecosystem/grpc-gateway/commit/72123cd4f32545f6e1376873f412dcdcbcf29acc",
+        "url": "https://github.com/grpc-ecosystem/grpc-gateway/commit/72123cd4f32545f6e1376873f412dcdcbcf29acc",
+        "content_type": null,
+        "extracted_text": null
+    }
+}
