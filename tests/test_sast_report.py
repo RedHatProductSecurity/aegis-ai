@@ -1035,6 +1035,425 @@ def test_merged_upload_keeps_identical_uri_base_keys(sast: SastScripts):
         )
 
 
+def test_merged_upload_keeps_same_tool_redeclared_rule_id_stable(sast: SastScripts):
+    # GitHub matches Code Scanning alerts by ruleId across analyses, so a
+    # later run from the same tool that re-declares a rule must keep the
+    # id it already owns; rewriting it to "tool-a/rule-0" would make an
+    # upload containing only the original report split or recreate alerts.
+    first = sarif_with_rules(
+        [
+            {
+                "id": "rule-0",
+                "shortDescription": {"text": "first declaration"},
+                "defaultConfiguration": {"level": "note"},
+            }
+        ],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [
+            {
+                "id": "rule-0",
+                "shortDescription": {"text": "second declaration"},
+                "defaultConfiguration": {"level": "note"},
+            }
+        ],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    result = sast.assert_result("SUCCESS")
+    assert result["failures"] == result["warnings"] == 0
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    rules = run["tool"]["driver"]["rules"]
+    # A duplicated rule id makes GitHub reject the upload: exactly one
+    # entry survives, and it is the first declaration.
+    assert [rule["id"] for rule in rules] == ["rule-0"]
+    assert rules[0]["shortDescription"]["text"] == "first declaration"
+    assert [res["ruleId"] for res in run["results"]] == ["rule-0", "rule-0"]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 0]
+
+
+def test_merged_upload_keeps_same_tool_rule_ids_stable_across_repeated_later_runs(
+    sast: SastScripts,
+):
+    # Rule ownership must survive the merge loop: a rule the same tool
+    # declared in an earlier later run is dropped just like one from the
+    # base run, so three runs from one tool still yield one entry per id.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [{"id": "rule-1", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-1", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    third = sarif_with_rules(
+        [
+            {"id": "rule-0", "defaultConfiguration": {"level": "note"}},
+            {"id": "rule-1", "defaultConfiguration": {"level": "note"}},
+        ],
+        [
+            {"ruleId": "rule-0", "ruleIndex": 0, "level": "note"},
+            {"ruleId": "rule-1", "ruleIndex": 1, "level": "note"},
+        ],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second, third]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "rule-1",
+    ]
+    assert [res["ruleId"] for res in run["results"]] == [
+        "rule-0",
+        "rule-1",
+        "rule-0",
+        "rule-1",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 1, 0, 1]
+
+
+def test_merged_upload_appends_new_same_tool_rules_after_redeclared_ones(
+    sast: SastScripts,
+):
+    # A same-tool run declaring a new rule next to a re-declared one
+    # appends only the new rule; ruleIndex references, with or without a
+    # ruleId, resolve to the surviving and the appended entry.
+    first = sarif_with_rules(
+        [
+            {"id": "rule-0", "defaultConfiguration": {"level": "note"}},
+            {"id": "rule-1", "defaultConfiguration": {"level": "note"}},
+        ],
+        [
+            {"ruleId": "rule-0", "ruleIndex": 0, "level": "note"},
+            {"ruleId": "rule-1", "ruleIndex": 1, "level": "note"},
+        ],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [
+            {"id": "rule-0", "defaultConfiguration": {"level": "note"}},
+            {"id": "rule-2", "defaultConfiguration": {"level": "note"}},
+        ],
+        [
+            {"ruleId": "rule-0", "ruleIndex": 0, "level": "note"},
+            {"ruleIndex": 1, "level": "note"},
+        ],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "rule-1",
+        "rule-2",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 1, 0, 2]
+    assert [res.get("ruleId") for res in run["results"]] == [
+        "rule-0",
+        "rule-1",
+        "rule-0",
+        None,
+    ]
+
+
+def test_merged_upload_rewrites_cross_tool_redeclared_rules_but_keeps_same_tool(
+    sast: SastScripts,
+):
+    # Ownership is tracked per tool: within one merge a re-declaration by
+    # the owning tool keeps the id, while a different tool is still
+    # rewritten as "<tool>/<id>" with every reference updated.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    same_tool = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    other_tool = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-b",
+    )
+    sast.case["artifacts"] = [first, same_tool, other_tool]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "tool-b/rule-0",
+    ]
+    assert [res["ruleId"] for res in run["results"]] == [
+        "rule-0",
+        "rule-0",
+        "tool-b/rule-0",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 0, 1]
+
+
+def test_merged_upload_dedupes_same_tool_rule_declared_twice_within_one_run(
+    sast: SastScripts,
+):
+    # A run declaring the same id twice, re-declaring the base rule with
+    # one of them, must not duplicate the merged entry: both declarations
+    # and every ruleIndex pointing at them resolve to the survivor.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [
+            {"id": "rule-0", "defaultConfiguration": {"level": "note"}},
+            {"id": "rule-0", "defaultConfiguration": {"level": "note"}},
+            {"id": "rule-1", "defaultConfiguration": {"level": "note"}},
+        ],
+        [
+            {"ruleId": "rule-0", "ruleIndex": 0, "level": "note"},
+            {"ruleId": "rule-0", "ruleIndex": 1, "level": "note"},
+            {"ruleId": "rule-1", "ruleIndex": 2, "level": "note"},
+        ],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "rule-1",
+    ]
+    assert [res["ruleId"] for res in run["results"]] == [
+        "rule-0",
+        "rule-0",
+        "rule-0",
+        "rule-1",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 0, 0, 1]
+
+
+def test_merged_upload_dedupes_new_rule_id_declared_twice_within_one_run(
+    sast: SastScripts,
+):
+    # The same deduplication covers a brand-new id declared twice by one
+    # run: only the first declaration is appended, and both ruleIndex
+    # references follow it.
+    first = sarif_with_rules(
+        [{"id": "rule-x", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-x", "ruleIndex": 0, "level": "note"}],
+        tool="tool-b",
+    )
+    second = sarif_with_rules(
+        [
+            {"id": "rule-1", "defaultConfiguration": {"level": "note"}},
+            {"id": "rule-1", "defaultConfiguration": {"level": "note"}},
+        ],
+        [{"ruleIndex": 0, "level": "note"}, {"ruleIndex": 1, "level": "note"}],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-x",
+        "rule-1",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 1, 1]
+    assert "ruleId" not in run["results"][1]
+    assert "ruleId" not in run["results"][2]
+
+
+def test_merged_upload_keeps_same_tool_result_only_reference_to_declared_rule(
+    sast: SastScripts,
+):
+    # A result-only ruleId from the same tool that declared the rule must
+    # not be renamed either: the reference already resolves to the rule
+    # the tool owns, and rewriting it would split the rule identity.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [], [{"ruleId": "rule-0", "level": "note"}], tool="tool-a"
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == ["rule-0"]
+    assert [res["ruleId"] for res in run["results"]] == ["rule-0", "rule-0"]
+
+
+def test_merged_upload_appends_rules_without_id_and_remaps_indices(
+    sast: SastScripts,
+):
+    # Rules without an id cannot collide and are appended as-is; results
+    # referencing them only by ruleIndex must still land on the appended
+    # entry.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [
+            {"defaultConfiguration": {"level": "note"}},
+            {"id": "rule-1", "defaultConfiguration": {"level": "note"}},
+        ],
+        [{"ruleIndex": 0, "level": "note"}, {"ruleIndex": 1, "level": "note"}],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    rules = run["tool"]["driver"]["rules"]
+    assert [rule.get("id") for rule in rules] == ["rule-0", None, "rule-1"]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 1, 2]
+
+
+def test_merged_upload_out_of_range_rule_index_keeps_offset_fallback(
+    sast: SastScripts,
+):
+    # ruleIndex values the run never declared (5 with a single rule)
+    # cannot follow a rule entry: they keep the historical offset shift,
+    # and negative values stay untouched, without corrupting the merge.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [{"id": "rule-1", "defaultConfiguration": {"level": "note"}}],
+        [
+            {"ruleId": "rule-1", "ruleIndex": 5, "level": "note"},
+            {"ruleId": "rule-1", "ruleIndex": -1, "level": "note"},
+        ],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "rule-1",
+    ]
+    assert [res["ruleId"] for res in run["results"]] == [
+        "rule-0",
+        "rule-1",
+        "rule-1",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 6, -1]
+
+
+def test_merged_upload_same_tool_redeclaration_keeps_first_rule_and_gate_failure(
+    sast: SastScripts,
+):
+    # When the same tool re-declares a rule with different metadata, the
+    # first declaration survives in the merged upload while the gate
+    # still counts the later file against its own declaration: the level
+    # of the level-less result comes from the re-declared rule, so the
+    # pipeline fails even though the merged rule keeps the first content.
+    first = sarif_with_rules(
+        [
+            {
+                "id": "rule-0",
+                "shortDescription": {"text": "first declaration"},
+                "defaultConfiguration": {"level": "note"},
+            }
+        ],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    second = sarif_with_rules(
+        [
+            {
+                "id": "rule-0",
+                "shortDescription": {"text": "second declaration"},
+                "defaultConfiguration": {"level": "error"},
+            }
+        ],
+        [{"ruleId": "rule-0", "ruleIndex": 0}],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second]
+    assert sast.run().returncode == 1, sast.logs
+    result = sast.assert_result("FAILURE", exit_code=1)
+    assert result["failures"] == 1
+    assert result["warnings"] == 0
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    rules = run["tool"]["driver"]["rules"]
+    assert [rule["id"] for rule in rules] == ["rule-0"]
+    assert rules[0]["shortDescription"]["text"] == "first declaration"
+    assert rules[0]["defaultConfiguration"]["level"] == "note"
+    assert [res["ruleId"] for res in run["results"]] == ["rule-0", "rule-0"]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 0]
+
+
+def test_merged_upload_reuses_previous_replacement_when_same_tool_redeclares(
+    sast: SastScripts,
+):
+    # A tool whose id was renamed after a cross-tool collision keeps
+    # using that replacement when it re-declares the id: the rule is
+    # dropped against the earlier renamed entry instead of gaining a
+    # "#2" suffix, so the tool keeps one stable id per original rule.
+    first = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-b",
+    )
+    second = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    third = sarif_with_rules(
+        [{"id": "rule-0", "defaultConfiguration": {"level": "note"}}],
+        [{"ruleId": "rule-0", "ruleIndex": 0, "level": "note"}],
+        tool="tool-a",
+    )
+    sast.case["artifacts"] = [first, second, third]
+    assert sast.run().returncode == 0, sast.logs
+    sast.assert_result("SUCCESS")
+    merged = sast.uploaded_sarif()
+    run = merged["runs"][0]
+    assert [rule["id"] for rule in run["tool"]["driver"]["rules"]] == [
+        "rule-0",
+        "tool-a/rule-0",
+    ]
+    assert [res["ruleId"] for res in run["results"]] == [
+        "rule-0",
+        "tool-a/rule-0",
+        "tool-a/rule-0",
+    ]
+    assert [res["ruleIndex"] for res in run["results"]] == [0, 1, 1]
+
+
 def test_no_sarif_artifacts_is_a_legitimate_skip_even_without_a_token(
     sast: SastScripts,
 ):

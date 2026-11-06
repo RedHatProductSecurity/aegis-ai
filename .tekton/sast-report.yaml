@@ -281,7 +281,10 @@ spec:
       # appended with ruleIndex values remapped, and rule ids that collide
       # — including undeclared result ruleId values reused by a different
       # scanner — are rewritten as "<tool>/<id>" with every reference
-      # updated, while the same tool reusing its own ids keeps them, and
+      # updated, while the same tool reusing its own ids keeps them. A
+      # rule the same tool declares again keeps its id and is not
+      # duplicated; the ruleIndex values of its results point at the
+      # surviving entry, so rule ids stay stable across uploads. Likewise,
       # originalUriBaseIds keys that collide with a different
       # value are renamed the same way, with the results' uriBaseId
       # references updated to match.
@@ -334,6 +337,8 @@ spec:
                   uriBases: bases_of($base),
                   results: results_of($base),
                   ruleIds: ids_of(field_ids(rules_of($base); "id")),
+                  ruleOwners: (reduce field_ids(rules_of($base); "id")[] as $rid
+                               ({}; .[$rid] = tool_tag($all; 0))),
                   resultOwners: (reduce field_ids(results_of($base); "ruleId")[] as $rid
                                  ({}; .[$rid] = tool_tag($all; 0))),
                   toolRemaps: {}
@@ -349,7 +354,9 @@ spec:
                 # each replacement as it is allocated, so renamed references
                 # can never collide with each other or with ids declared by
                 # the same run. Result-only references stay untouched when
-                # the same tool reuses its own id, and each tool keeps a
+                # the same tool reuses its own id, a rule the same tool
+                # declares again keeps the id it already owns so rule ids
+                # stay stable across uploads, and each tool keeps a
                 # stable mapping from its original ids to replacements.
                 | (reduce $candidates[] as $rid (
                     {
@@ -364,6 +371,8 @@ spec:
                       occupied: (.occupied + {(.toolRemaps[$rid]): true}),
                       toolRemaps: .toolRemaps
                     }
+                    elif (($state.ruleOwners | has($rid)) and $state.ruleOwners[$rid] == $tag)
+                    then .
                     elif ($state.ruleIds | has($rid))
                          or (($state.resultOwners | has($rid))
                              and $state.resultOwners[$rid] != $tag)
@@ -375,11 +384,40 @@ spec:
                         }
                     else . end)) as $idRemapState
                 | ($idRemapState.remap) as $idRemap
-                | ($runRules | map(
-                    . as $rule
+                # Append the rules of the run, renaming colliding ids, but
+                # drop a rule the same tool already declared — a duplicated
+                # rule id makes GitHub reject the upload — and remember
+                # where each rule landed so result ruleIndex values can
+                # follow.
+                | (reduce range(0; ($runRules | length)) as $k (
+                    {
+                      newRules: [],
+                      idxMap: {},
+                      owned: (reduce ($state.rules | to_entries[]) as $e ({};
+                                ($e.value.id? // null) as $rid
+                                | if ($rid | type) == "string"
+                                     and ($state.ruleOwners[$rid] == $tag)
+                                  then .[$rid] = $e.key else . end))
+                    };
+                    ($runRules[$k]) as $rule
                     | (($rule.id? // null)) as $rid
-                    | if ($rid | type) == "string" and ($idRemap | has($rid))
-                      then .id = $idRemap[$rid] else . end)) as $newRules
+                    | (if ($rid | type) == "string"
+                       then (if ($idRemap | has($rid)) then $idRemap[$rid] else $rid end)
+                       else null end) as $newRid
+                    | if ($newRid != null) and (.owned | has($newRid))
+                      then .idxMap[($k | tostring)] = .owned[$newRid]
+                      else {
+                          newRules: (.newRules
+                                     + [($rule
+                                         | if ($newRid != null) then .id = $newRid else . end)]),
+                          idxMap: (.idxMap + {(($k | tostring)): ($offset + (.newRules | length))}),
+                          owned: (if ($newRid != null)
+                                  then (.owned + {($newRid): ($offset + (.newRules | length))})
+                                  else .owned end)
+                        }
+                      end)) as $mergedRules
+                | ($mergedRules.newRules) as $newRules
+                | ($mergedRules.idxMap) as $idxMap
                 | (reduce (bases_of($run) | keys[]) as $k ({};
                     if ($state.uriBases | has($k)) and ($state.uriBases[$k] != bases_of($run)[$k])
                     then . + {($k): unique_key($state.uriBases; "\($tag)/\($k)")}
@@ -391,7 +429,10 @@ spec:
                 | (results_of($run) | map(
                     . as $res
                     | if (($runRules | length) > 0) and ((($res.ruleIndex? // null) | type) == "number") and ($res.ruleIndex >= 0)
-                      then .ruleIndex = ($res.ruleIndex + $offset) else . end
+                      then (if ($idxMap | has($res.ruleIndex | tostring))
+                            then .ruleIndex = $idxMap[$res.ruleIndex | tostring]
+                            else .ruleIndex = ($res.ruleIndex + $offset) end)
+                      else . end
                     | if ((($res.ruleId? // null) | type) == "string") and ($idRemap | has($res.ruleId))
                       then .ruleId = $idRemap[$res.ruleId] else . end
                     | if ($uriRemap | length) > 0
@@ -409,6 +450,8 @@ spec:
                     results: ($state.results + $newResults),
                     ruleIds: (reduce field_ids($newRules; "id")[] as $rid
                               ($state.ruleIds; .[$rid] = true)),
+                    ruleOwners: (reduce field_ids($newRules; "id")[] as $rid
+                                 ($state.ruleOwners; .[$rid] = $tag)),
                     resultOwners: (reduce field_ids($newResults; "ruleId")[] as $rid
                                    ($state.resultOwners; .[$rid] = $tag)),
                     toolRemaps: ($state.toolRemaps
