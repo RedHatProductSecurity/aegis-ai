@@ -37,8 +37,9 @@ def write_cache_entry(url: str, result: ExternalReferenceResult) -> Path:
 async def extref_cache_retrieve(url: str) -> ExternalReferenceResult:
     """Return cached external reference data if available.
 
-    On cache miss, fetch live and store for subsequent runs.
-    Blocked URLs (not in the allowlist) are returned immediately without caching.
+    On cache miss, fetch live and store for subsequent runs.  Blocked URLs
+    (not in the allowlist, or redirected outside it) are returned immediately
+    without caching, so a future allowlist extension can re-fetch them.
     """
     if not validate_url(url):
         return ExternalReferenceResult(
@@ -58,6 +59,9 @@ async def extref_cache_retrieve(url: str) -> ExternalReferenceResult:
 
         except OSError:
             result = await live_fetch_reference(url)
+            if result.status == "blocked":
+                logger.info('not caching blocked external reference for "%s"', url)
+                return result
             write_cache_entry(url, result)
             logger.info('writing external reference cache to "%s"', cache_file)
             cache_misses.append(url)
