@@ -1,0 +1,667 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: sast-report
+spec:
+  description: >-
+    Discover SARIF artifacts attached to the built image by the SAST tasks,
+    pull them, format findings with csgrep, log a human-readable summary,
+    fail the pipeline when error-level findings are present, and upload
+    SARIF results to GitHub Code Scanning. Report upload failures and
+    approaching GitHub token expiration as non-blocking Konflux warnings.
+  params:
+  - name: image-url
+    type: string
+  - name: image-digest
+    type: string
+  - name: git-url
+    type: string
+  - name: git-ref
+    type: string
+  - name: revision
+    type: string
+  results:
+  - name: TEST_OUTPUT
+    description: SAST findings and SARIF upload status in Konflux test result format.
+  volumes:
+  - name: sarif-data
+    emptyDir: {}
+  stepTemplate:
+    volumeMounts:
+    - name: sarif-data
+      mountPath: /var/workdir
+  steps:
+  - name: pull-sarif
+    image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:6df16e808f147926a2ba5f88588350bd8f77e73fde43614e79ddbd6e2b097d2e
+    onError: continue
+    env:
+    - name: IMAGE_URL
+      value: $(params.image-url)
+    - name: IMAGE_DIGEST
+      value: $(params.image-digest)
+    script: |
+      #!/bin/bash
+      set -euo pipefail
+
+      SARIF_DIR="/var/workdir/sarif"
+      mkdir -p "$SARIF_DIR"
+
+      # Report a failure even if discovery or retrieval exits unexpectedly.
+      echo "1" > "$SARIF_DIR/gate_exit"
+      printf 'TOTAL_ERRORS=0\nTOTAL_WARNINGS=0\nTOTAL_NOTES=0\nPULL_FAILURES=1\n' > "$SARIF_DIR/summary.env"
+
+      [ -n "$IMAGE_URL" ] && [ -n "$IMAGE_DIGEST" ] || {
+        echo "ERROR: IMAGE_URL or IMAGE_DIGEST is empty"; exit 1
+      }
+      IMAGE_REF="${IMAGE_URL}@${IMAGE_DIGEST}"
+      echo "=========================================="
+      echo "Discovering SARIF artifacts for ${IMAGE_REF}"
+      echo "=========================================="
+
+      DISCOVER_ERR=$(mktemp)
+      DISCOVER_JSON=$(oras discover --format json "$IMAGE_REF" 2>"$DISCOVER_ERR") || {
+        echo "ERROR: oras discover failed."
+        cat "$DISCOVER_ERR"
+        exit 1
+      }
+      rm -f "$DISCOVER_ERR"
+
+      if ! SARIF_REFS=$(echo "$DISCOVER_JSON" | jq -rs --arg base "$IMAGE_URL" '
+        if length != 1 or (.[0] | type) != "object" then
+          error("Expected one OCI discovery response object")
+        else .[0] end |
+        [(.referrers // .manifests // [])[]
+         | select(.artifactType == "application/sarif+json")
+         | (.reference // ($base + "@" + .digest))]
+        | .[]
+      '); then
+        echo "ERROR: Failed to parse oras discover output."
+        echo "Raw output:"
+        echo "$DISCOVER_JSON"
+        exit 1
+      fi
+
+      if [ -z "$SARIF_REFS" ]; then
+        echo "No SARIF artifacts found attached to the image."
+        echo "SAST tasks may have been skipped or produced no output."
+        echo "0" > "$SARIF_DIR/gate_exit"
+        printf 'TOTAL_ERRORS=0\nTOTAL_WARNINGS=0\nTOTAL_NOTES=0\nPULL_FAILURES=0\n' > "$SARIF_DIR/summary.env"
+        echo "complete" > "$SARIF_DIR/retrieval_complete"
+        exit 0
+      fi
+
+      SARIF_COUNT=$(echo "$SARIF_REFS" | wc -l)
+      echo "Found ${SARIF_COUNT} SARIF artifact(s)."
+
+      TOTAL_ERRORS=0
+      TOTAL_WARNINGS=0
+      TOTAL_NOTES=0
+      PULL_FAILURES=0
+      COLLECTED_FILES=()
+
+      REF_IDX=0
+      while IFS= read -r ref; do
+        [ -n "$ref" ] || continue
+        echo "------------------------------------------"
+        echo "Pulling: ${ref}"
+        REF_IDX=$((REF_IDX + 1))
+        PULL_DIR="$SARIF_DIR/ref_${REF_IDX}"
+        mkdir -p "$PULL_DIR"
+        if ! oras pull -o "$PULL_DIR" "$ref" 2>&1; then
+          echo "ERROR: Failed to pull ${ref}."
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          continue
+        fi
+        # Collect pulled SARIF files into the flat directory all steps read.
+        # Prefix with the ref index and escape each file's relative path
+        # ("_" -> "__", "/" -> "_s") so nested files cannot collide across
+        # tasks or names. Listing, collision, or move failures count as pull
+        # failures, and the pull directory is only removed after a fully
+        # successful collection.
+        collect_list="$(mktemp)"
+        if ! find "$PULL_DIR" -type f -print0 > "$collect_list"; then
+          echo "ERROR: Failed to list files pulled for ${ref}."
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          rm -f "$collect_list"
+          continue
+        fi
+        collect_ok=1
+        while IFS= read -r -d '' f; do
+          rel="${f#"$PULL_DIR"/}"
+          enc="${rel//_/__}"
+          enc="${enc//\//_s}"
+          dest="$SARIF_DIR/${REF_IDX}_${enc}"
+          if [ -e "$dest" ] || ! mv "$f" "$dest"; then
+            echo "ERROR: Failed to collect ${rel} from ${ref}."
+            collect_ok=0
+            break
+          fi
+          COLLECTED_FILES+=("$dest")
+        done < "$collect_list"
+        rm -f "$collect_list"
+        if [ "$collect_ok" -eq 0 ]; then
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          continue
+        fi
+        rm -rf "$PULL_DIR"
+      done <<< "$SARIF_REFS"
+
+      # Tally findings per collected file. A file that cannot be parsed is a
+      # retrieval failure, never a silently skipped one. Results without an
+      # explicit level follow SARIF 2.1.0 section 3.27.10: kind != "fail"
+      # means "none"; otherwise the rule's defaultConfiguration.level
+      # applies (resolved through ruleIndex, then ruleId), and the final
+      # fallback is "warning".
+      for sarif_file in "${COLLECTED_FILES[@]}"; do
+        if ! { read -r ERRORS; read -r WARNINGS; read -r NOTES; } < <(
+          jq -rs '
+            if length != 1 then error("expected exactly one JSON document")
+            else .[0] end
+            | if (.runs | type) != "array" then error("missing runs array")
+            elif ([.runs[] | select((. | type) != "object")] | length) > 0
+            then error("runs contains non-object entries")
+            else . end
+            | [.runs[]
+               | . as $run
+               | (($run.tool?.driver?.rules? // [])
+                  | if type == "array" then . else [] end) as $rules
+               | (($run.results? // [])
+                  | if type == "array" then . else [] end)[]
+               | . as $r
+               | ($r.level? // null) as $explicit
+               | (if $explicit != null then $explicit
+                  elif (($r.kind? // "fail") != "fail") then "none"
+                  else (if (($r.ruleIndex? // null) | type) == "number"
+                          and $r.ruleIndex >= 0
+                          and ($rules | length) > $r.ruleIndex
+                        then $rules[$r.ruleIndex].defaultConfiguration?.level?
+                        else null end)
+                       // (if (($r.ruleId? // null) | type) == "string"
+                          then ([$rules[]
+                                 | select((.id? // null) == $r.ruleId)
+                                 | .defaultConfiguration?.level?] | first)
+                          else null end)
+                       // "warning"
+                  end)]
+            | ([.[] | select(. == "error")] | length),
+              ([.[] | select(. == "warning" or . == null)] | length),
+              ([.[] | select(. == "note" or . == "none")] | length)
+          ' "$sarif_file" 2>/dev/null
+        ); then
+          echo "ERROR: ${sarif_file} is not readable SARIF; counting it as a retrieval failure."
+          PULL_FAILURES=$((PULL_FAILURES + 1))
+          continue
+        fi
+        TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
+        TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
+        TOTAL_NOTES=$((TOTAL_NOTES + NOTES))
+      done
+
+      {
+        echo "TOTAL_ERRORS=${TOTAL_ERRORS}"
+        echo "TOTAL_WARNINGS=${TOTAL_WARNINGS}"
+        echo "TOTAL_NOTES=${TOTAL_NOTES}"
+        echo "PULL_FAILURES=${PULL_FAILURES}"
+      } > "$SARIF_DIR/summary.env"
+
+      GATE_EXIT=0
+      if [ "$PULL_FAILURES" -gt 0 ]; then
+        GATE_EXIT=1
+      elif [ "$TOTAL_ERRORS" -gt 0 ]; then
+        GATE_EXIT=1
+      fi
+      echo "$GATE_EXIT" > "$SARIF_DIR/gate_exit"
+      if [ "$PULL_FAILURES" -eq 0 ]; then
+        echo "complete" > "$SARIF_DIR/retrieval_complete"
+      fi
+  - name: upload-sarif
+    image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:6df16e808f147926a2ba5f88588350bd8f77e73fde43614e79ddbd6e2b097d2e
+    onError: continue
+    env:
+    - name: GIT_URL
+      value: $(params.git-url)
+    - name: GIT_COMMIT_SHA
+      value: $(params.revision)
+    - name: GIT_REF
+      value: $(params.git-ref)
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: aegis-ai-code-scanning-alerts
+          key: token
+          optional: true
+    script: |
+      #!/bin/bash
+      set -euo pipefail
+
+      SARIF_DIR="/var/workdir/sarif"
+      TOKEN_EXPIRY_WARNING_DAYS=14
+      UPLOAD_WARNINGS=0
+      UPLOAD_NOTE=""
+
+      write_upload_status() {
+        jq -cn --argjson warnings "$1" --arg note "$2" \
+          '{warnings: $warnings, note: $note}' > "$SARIF_DIR/upload_status.json"
+      }
+
+      warn_upload() {
+        echo "WARNING: $1"
+        UPLOAD_WARNINGS=$((UPLOAD_WARNINGS + 1))
+        UPLOAD_NOTE="${UPLOAD_NOTE:+${UPLOAD_NOTE} }$1"
+        write_upload_status "$UPLOAD_WARNINGS" "$UPLOAD_NOTE"
+      }
+
+      # Keep unexpected script failures visible while allowing report to run.
+      write_upload_status 1 "SARIF upload did not complete; review the upload-sarif logs."
+
+      echo "=========================================="
+      echo "GitHub Code Scanning SARIF Upload"
+      echo "=========================================="
+
+      if [ ! -f "$SARIF_DIR/retrieval_complete" ]; then
+        warn_upload "SARIF upload skipped: artifact retrieval did not complete; review the pull-sarif logs."
+        exit 0
+      fi
+
+      if [ -z "${GIT_COMMIT_SHA:-}" ] || [ -z "${GIT_REF:-}" ]; then
+        warn_upload "SARIF upload skipped: revision or git-ref is not set."
+        exit 0
+      fi
+
+      # GitHub API requires full ref (refs/heads/*, refs/tags/*, refs/pull/*/head).
+      # PaC's {{target_branch}} expands to a bare name for branches (e.g. "main").
+      if [[ "$GIT_REF" != refs/* ]]; then
+        GIT_REF="refs/heads/$GIT_REF"
+      fi
+
+      # GitHub rejects multiple runs with the same category in one SARIF
+      # file, and uploading separate files causes later (empty) uploads to
+      # mark earlier findings as "fixed". Merge everything into one run
+      # while keeping every result resolvable: rules from later scanners are
+      # appended with ruleIndex values remapped, and rule ids that collide
+      # — including undeclared result ruleId values reused by a different
+      # scanner — are rewritten as "<tool>/<id>" with every reference
+      # updated, while the same tool reusing its own ids keeps them. A
+      # rule the same tool declares again keeps its id and is not
+      # duplicated; the ruleIndex values of its results point at the
+      # surviving entry, so rule ids stay stable across uploads. Likewise,
+      # originalUriBaseIds keys that collide with a different
+      # value are renamed the same way, with the results' uriBaseId
+      # references updated to match.
+      SARIF_FILES=()
+      for sarif_file in "$SARIF_DIR"/*; do
+        [ -f "$sarif_file" ] || continue
+        jq -e '(.runs | type) == "array"' "$sarif_file" >/dev/null 2>&1 || continue
+        SARIF_FILES+=("$sarif_file")
+      done
+
+      if [ "${#SARIF_FILES[@]}" -eq 0 ]; then
+        echo "Skipping: no SARIF files to upload."
+        write_upload_status 0 "SARIF upload skipped: no SARIF files to upload."
+        exit 0
+      fi
+
+      MERGED="$SARIF_DIR/merged.sarif.json"
+      jq -s '
+        def runs_of($doc):
+          (($doc.runs? // []) | if type == "array" then . else [] end);
+        def rules_of($run):
+          (($run.tool?.driver?.rules? // []) | if type == "array" then . else [] end);
+        def bases_of($run):
+          (($run.originalUriBaseIds? // {}) | if type == "object" then . else {} end);
+        def results_of($run):
+          (($run.results? // []) | if type == "array" then . else [] end);
+        def tool_tag($runs; $i):
+          (($runs[$i].tool?.driver?.name? // "run\($i)") | tostring);
+        def field_ids($arr; $field):
+          ($arr | map(.[$field]? // empty) | map(select(type == "string")) | unique);
+        def rule_id_candidates($run):
+          (field_ids(rules_of($run); "id") + field_ids(results_of($run); "ruleId"));
+        def ids_of($ids):
+          reduce ($ids[]?) as $rid ({}; .[$rid] = true);
+        def unique_key($map; $key):
+          if ($map | has($key) | not) then $key
+          else first(range(2; 10000) as $n
+                | "\($key)#\($n)"
+                | select(. as $c | $map | has($c) | not))
+          end;
+
+        if length <= 1 and ([.[] | runs_of(.)[]] | length) <= 1 then .[0]
+        else ([.[] | runs_of(.)[]]) as $all
+        | if ($all | length) == 0 then .[0]
+          else
+            ($all[0]) as $base
+            | (reduce range(1; $all | length) as $i (
+                {
+                  rules: rules_of($base),
+                  uriBases: bases_of($base),
+                  results: results_of($base),
+                  ruleIds: ids_of(field_ids(rules_of($base); "id")),
+                  ruleOwners: (reduce field_ids(rules_of($base); "id")[] as $rid
+                               ({}; .[$rid] = tool_tag($all; 0))),
+                  resultOwners: (reduce field_ids(results_of($base); "ruleId")[] as $rid
+                                 ({}; .[$rid] = tool_tag($all; 0))),
+                  toolRemaps: {}
+                };
+                . as $state
+                | ($all[$i]) as $run
+                | (tool_tag($all; $i)) as $tag
+                | (rules_of($run)) as $runRules
+                | ($state.rules | length) as $offset
+                | (rule_id_candidates($run)) as $candidates
+                # Reserve the merged namespace plus the incoming ids of the
+                # current run when allocating replacement ids, and reserve
+                # each replacement as it is allocated, so renamed references
+                # can never collide with each other or with ids declared by
+                # the same run. Result-only references stay untouched when
+                # the same tool reuses its own id, a rule the same tool
+                # declares again keeps the id it already owns so rule ids
+                # stay stable across uploads, and each tool keeps a
+                # stable mapping from its original ids to replacements.
+                | (reduce $candidates[] as $rid (
+                    {
+                      remap: {},
+                      occupied: ($state.ruleIds
+                                 + ids_of((($state.resultOwners | keys) + $candidates))),
+                      toolRemaps: ($state.toolRemaps[$tag] // {})
+                    };
+                    if .toolRemaps[$rid] != null
+                    then {
+                      remap: (.remap + {($rid): .toolRemaps[$rid]}),
+                      occupied: (.occupied + {(.toolRemaps[$rid]): true}),
+                      toolRemaps: .toolRemaps
+                    }
+                    elif (($state.ruleOwners | has($rid)) and $state.ruleOwners[$rid] == $tag)
+                    then .
+                    elif ($state.ruleIds | has($rid))
+                         or (($state.resultOwners | has($rid))
+                             and $state.resultOwners[$rid] != $tag)
+                    then (unique_key(.occupied; "\($tag)/\($rid)")) as $new
+                      | {
+                          remap: (.remap + {($rid): $new}),
+                          occupied: (.occupied + {($new): true}),
+                          toolRemaps: (.toolRemaps + {($rid): $new})
+                        }
+                    else . end)) as $idRemapState
+                | ($idRemapState.remap) as $idRemap
+                # Append the rules of the run, renaming colliding ids, but
+                # drop a rule the same tool already declared — a duplicated
+                # rule id makes GitHub reject the upload — and remember
+                # where each rule landed so result ruleIndex values can
+                # follow.
+                | (reduce range(0; ($runRules | length)) as $k (
+                    {
+                      newRules: [],
+                      idxMap: {},
+                      owned: (reduce ($state.rules | to_entries[]) as $e ({};
+                                ($e.value.id? // null) as $rid
+                                | if ($rid | type) == "string"
+                                     and ($state.ruleOwners[$rid] == $tag)
+                                  then .[$rid] = $e.key else . end))
+                    };
+                    ($runRules[$k]) as $rule
+                    | (($rule.id? // null)) as $rid
+                    | (if ($rid | type) == "string"
+                       then (if ($idRemap | has($rid)) then $idRemap[$rid] else $rid end)
+                       else null end) as $newRid
+                    | if ($newRid != null) and (.owned | has($newRid))
+                      then .idxMap[($k | tostring)] = .owned[$newRid]
+                      else {
+                          newRules: (.newRules
+                                     + [($rule
+                                         | if ($newRid != null) then .id = $newRid else . end)]),
+                          idxMap: (.idxMap + {(($k | tostring)): ($offset + (.newRules | length))}),
+                          owned: (if ($newRid != null)
+                                  then (.owned + {($newRid): ($offset + (.newRules | length))})
+                                  else .owned end)
+                        }
+                      end)) as $mergedRules
+                | ($mergedRules.newRules) as $newRules
+                | ($mergedRules.idxMap) as $idxMap
+                | (reduce (bases_of($run) | keys[]) as $k ({};
+                    if ($state.uriBases | has($k)) and ($state.uriBases[$k] != bases_of($run)[$k])
+                    then . + {($k): unique_key($state.uriBases; "\($tag)/\($k)")}
+                    else . end)) as $uriRemap
+                | ($state.uriBases + (bases_of($run) | with_entries(
+                    . as $entry
+                    | if ($uriRemap | has($entry.key))
+                      then .key = $uriRemap[$entry.key] else . end))) as $newBases
+                | (results_of($run) | map(
+                    . as $res
+                    | if (($runRules | length) > 0) and ((($res.ruleIndex? // null) | type) == "number") and ($res.ruleIndex >= 0)
+                      then (if ($idxMap | has($res.ruleIndex | tostring))
+                            then .ruleIndex = $idxMap[$res.ruleIndex | tostring]
+                            else .ruleIndex = ($res.ruleIndex + $offset) end)
+                      else . end
+                    | if ((($res.ruleId? // null) | type) == "string") and ($idRemap | has($res.ruleId))
+                      then .ruleId = $idRemap[$res.ruleId] else . end
+                    | if ($uriRemap | length) > 0
+                      then walk(
+                        if type == "object" and ((.uriBaseId? // null) | type) == "string"
+                        then .uriBaseId as $ub
+                          | (if ($uriRemap | has($ub))
+                             then .uriBaseId = $uriRemap[$ub]
+                             else . end)
+                        else . end)
+                      else . end)) as $newResults
+                | {
+                    rules: ($state.rules + $newRules),
+                    uriBases: $newBases,
+                    results: ($state.results + $newResults),
+                    ruleIds: (reduce field_ids($newRules; "id")[] as $rid
+                              ($state.ruleIds; .[$rid] = true)),
+                    ruleOwners: (reduce field_ids($newRules; "id")[] as $rid
+                                 ($state.ruleOwners; .[$rid] = $tag)),
+                    resultOwners: (reduce field_ids($newResults; "ruleId")[] as $rid
+                                   ($state.resultOwners; .[$rid] = $tag)),
+                    toolRemaps: ($state.toolRemaps
+                                 + {($tag): $idRemapState.toolRemaps})
+                  })) as $final
+            | .[0]
+            | .runs = [($base
+                | .results = $final.results
+                | (if ($final.rules | length) > 0 then .tool.driver.rules = $final.rules else . end)
+                | (if ($final.uriBases | length) > 0 then .originalUriBaseIds = $final.uriBases else . end))]
+          end
+        end
+      ' "${SARIF_FILES[@]}" > "$MERGED"
+
+      RESULT_COUNT=$(jq '[.runs[0].results // [] | .[]] | length' "$MERGED")
+      echo "Merged SARIF: 1 run, ${RESULT_COUNT} result(s)."
+
+      if [ -z "${GITHUB_TOKEN:-}" ]; then
+        warn_upload "SARIF upload skipped: the token in secret aegis-ai-code-scanning-alerts is missing."
+        exit 0
+      fi
+      TOKEN="$GITHUB_TOKEN"
+
+      REPO_SLUG=$(echo "$GIT_URL" | sed -n 's|.*github\.com[/:]||p' | sed 's|\.git$||' | sed 's|[?#].*||')
+      if [ -z "$REPO_SLUG" ]; then
+        warn_upload "SARIF upload skipped: could not extract owner/repo from git-url."
+        exit 0
+      fi
+
+      UPLOAD_URL="https://api.github.com/repos/${REPO_SLUG}/code-scanning/sarifs"
+      TMP_PAYLOAD=$(mktemp)
+      TMP_RESP=$(mktemp)
+      TMP_HEADERS=$(mktemp)
+      trap 'rm -f "$TMP_PAYLOAD" "$TMP_RESP" "$TMP_HEADERS"' EXIT
+      # ref determines which Code Scanning "bucket" results appear under
+      gzip -c "$MERGED" | base64 -w0 | \
+        jq -Rs --arg sha "$GIT_COMMIT_SHA" --arg ref "$GIT_REF" \
+          '{commit_sha: $sha, ref: $ref, sarif: .}' > "$TMP_PAYLOAD"
+      set +e
+      HTTP_CODE=$(curl -sS --connect-timeout 10 --max-time 120 \
+        -X POST "$UPLOAD_URL" \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        -H "Content-Type: application/json" \
+        -d @"$TMP_PAYLOAD" \
+        -D "$TMP_HEADERS" \
+        -o "$TMP_RESP" -w '%{http_code}')
+      RC=$?
+      set -e
+      rm -f "$TMP_PAYLOAD"
+      if [ "$RC" -eq 0 ] && [ "$HTTP_CODE" = "202" ]; then
+        echo "SARIF upload: success (HTTP 202)"
+        cat "$TMP_RESP" 2>/dev/null || true
+      else
+        warn_upload "SARIF upload failed (HTTP ${HTTP_CODE}, curl exit ${RC}); review the upload-sarif logs and the token in aegis-ai-code-scanning-alerts."
+        cat "$TMP_RESP" 2>/dev/null || true
+      fi
+
+      TOKEN_EXPIRY=""
+      TOKEN_EXPIRY_REPORTED=false
+      while IFS= read -r HEADER; do
+        if [[ "${HEADER,,}" == github-authentication-token-expiration:* ]]; then
+          TOKEN_EXPIRY_REPORTED=true
+          TOKEN_EXPIRY="${HEADER#*:}"
+          TOKEN_EXPIRY="${TOKEN_EXPIRY//$'\r'/}"
+          TOKEN_EXPIRY="${TOKEN_EXPIRY# }"
+        fi
+      done < "$TMP_HEADERS"
+
+      if [ "$TOKEN_EXPIRY_REPORTED" = true ]; then
+        if [ -n "$TOKEN_EXPIRY" ] && EXPIRY_EPOCH=$(date -u -d "$TOKEN_EXPIRY" +%s 2>/dev/null); then
+          SECONDS_LEFT=$((EXPIRY_EPOCH - $(date -u +%s)))
+          echo "GitHub upload token expires at: ${TOKEN_EXPIRY}"
+          if [ "$SECONDS_LEFT" -le 0 ]; then
+            warn_upload "GitHub upload token expired at ${TOKEN_EXPIRY}; rotate the token in aegis-ai-code-scanning-alerts."
+          elif [ "$SECONDS_LEFT" -le "$((TOKEN_EXPIRY_WARNING_DAYS * 86400))" ]; then
+            DAYS_LEFT=$(((SECONDS_LEFT + 86399) / 86400))
+            warn_upload "GitHub upload token expires in ${DAYS_LEFT} day(s) (${TOKEN_EXPIRY}); rotate the token in aegis-ai-code-scanning-alerts."
+          fi
+        else
+          warn_upload "GitHub token expiration could not be parsed; check the token's expiration date manually."
+        fi
+      else
+        echo "GitHub did not report a token expiration date; expiry monitoring is unavailable for this upload."
+      fi
+
+      write_upload_status "$UPLOAD_WARNINGS" "${UPLOAD_NOTE:-SARIF upload accepted by GitHub.}"
+  - name: report
+    image: quay.io/konflux-ci/konflux-test:v1.5.10@sha256:2f9960d60c0e4aa0c2fba42b147736fab5bd11644577cff60ec4255a392be252
+    script: |
+      #!/bin/bash
+      set -euo pipefail
+
+      SARIF_DIR="/var/workdir/sarif"
+
+      if [ ! -f "$SARIF_DIR/gate_exit" ]; then
+        echo "ERROR: pull-sarif step did not produce gate status."
+        exit 1
+      fi
+
+      echo "=========================================="
+      echo "SAST Report"
+      echo "=========================================="
+
+      HAS_FINDINGS=false
+      for sarif_file in "$SARIF_DIR"/*; do
+        [ -f "$sarif_file" ] || continue
+        [[ "$(basename "$sarif_file")" == merged.sarif.json ]] && continue
+        jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
+
+        FILENAME=$(basename "$sarif_file")
+        TOOL_NAME=$(jq -r '.runs[0].tool.driver.name // "unknown"' "$sarif_file" 2>/dev/null) || TOOL_NAME="unknown"
+        TOTAL_RESULTS=$(jq '[.runs[] | (.results // [])[]] | length' "$sarif_file" 2>/dev/null) || TOTAL_RESULTS=0
+
+        echo ""
+        echo "------------------------------------------"
+        echo "  File: ${FILENAME}"
+        echo "  Tool: ${TOOL_NAME}"
+        echo "  Total findings: ${TOTAL_RESULTS}"
+
+        if [ "$TOTAL_RESULTS" -gt 0 ]; then
+          HAS_FINDINGS=true
+          echo ""
+          csgrep "$sarif_file" 2>/dev/null | sed 's/^/  /' || {
+            echo "  (csgrep formatting failed)"
+          }
+        fi
+      done
+
+      if [ "$HAS_FINDINGS" = false ]; then
+        echo ""
+        echo "No findings to display."
+      fi
+
+      source "$SARIF_DIR/summary.env"
+
+      UPLOAD_WARNINGS=1
+      UPLOAD_NOTE="SARIF upload status is unavailable; review the upload-sarif logs."
+      # Require one status object with a count safe for shell arithmetic.
+      if jq -se '
+        length == 1 and (.[0] |
+          (.warnings | type == "number") and
+          (.warnings >= 0 and .warnings <= 2147483647) and
+          (.warnings == (.warnings | floor)) and (.note | type == "string"))
+      ' "$SARIF_DIR/upload_status.json" >/dev/null 2>&1; then
+        UPLOAD_WARNINGS=$(jq -r '.warnings | floor' "$SARIF_DIR/upload_status.json")
+        UPLOAD_NOTE=$(jq -r '.note' "$SARIF_DIR/upload_status.json")
+      fi
+
+      echo ""
+      echo "=========================================="
+      echo "SAST Summary"
+      echo "=========================================="
+      echo "  Total errors:   ${TOTAL_ERRORS}"
+      echo "  Total warnings: ${TOTAL_WARNINGS}"
+      echo "  Total notes:    ${TOTAL_NOTES}"
+      echo "  Upload warnings: ${UPLOAD_WARNINGS}"
+      echo "=========================================="
+
+      GATE_EXIT=$(cat "$SARIF_DIR/gate_exit")
+      RESULT=SUCCESS
+      SUCCESSES=1
+      FAILURES=$((TOTAL_ERRORS + PULL_FAILURES))
+      WARNINGS=$((TOTAL_WARNINGS + UPLOAD_WARNINGS))
+      RESULT_NOTE="No error-level SAST findings."
+
+      if [ "$PULL_FAILURES" -gt 0 ]; then
+        RESULT=FAILURE
+        SUCCESSES=0
+        RESULT_NOTE="${PULL_FAILURES} SARIF artifact(s) could not be retrieved."
+        echo ""
+        echo "FAILED: ${PULL_FAILURES} SARIF artifact(s) could not be retrieved."
+      elif [ "$TOTAL_ERRORS" -gt 0 ]; then
+        RESULT=FAILURE
+        SUCCESSES=0
+        RESULT_NOTE="${TOTAL_ERRORS} error-level SAST finding(s) detected."
+        echo ""
+        echo "FAILED: ${TOTAL_ERRORS} error-level SAST finding(s) detected."
+        echo "Review the findings above and fix them before merging."
+      elif [ "$GATE_EXIT" -ne 0 ]; then
+        RESULT=FAILURE
+        SUCCESSES=0
+        FAILURES=$((FAILURES + 1))
+        RESULT_NOTE="SARIF retrieval did not complete; review the pull-sarif logs."
+        echo ""
+        echo "FAILED: $RESULT_NOTE"
+      else
+        echo ""
+        echo "PASSED: No error-level SAST findings."
+      fi
+
+      if [ "$WARNINGS" -gt 0 ] && [ "$RESULT" = SUCCESS ]; then
+        RESULT=WARNING
+      fi
+      if [ "$UPLOAD_WARNINGS" -gt 0 ]; then
+        echo "WARNING: $UPLOAD_NOTE"
+      fi
+      RESULT_NOTE="$RESULT_NOTE $UPLOAD_NOTE"
+
+      jq -cn \
+        --arg result "$RESULT" \
+        --arg note "$RESULT_NOTE" \
+        --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        --argjson successes "$SUCCESSES" \
+        --argjson failures "$FAILURES" \
+        --argjson warnings "$WARNINGS" \
+        '{result: $result, note: $note, timestamp: $timestamp,
+          namespace: "sast-report", version: "0.1",
+          successes: $successes, failures: $failures, warnings: $warnings}' \
+        > "$(results.TEST_OUTPUT.path)"
+
+      exit "$GATE_EXIT"
