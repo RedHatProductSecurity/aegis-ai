@@ -1,0 +1,27 @@
+{
+    "url": "{anitya}/api/project/13537",
+    "body": {
+        "packages": [
+            {
+                "distro": "Alpine",
+                "package_name": "gitea"
+            },
+            {
+                "distro": "Arch Linux AUR",
+                "package_name": "gitea"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:gitea:gitea"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "gitea"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "gitea"
+            }
+        ]
+    }
+}

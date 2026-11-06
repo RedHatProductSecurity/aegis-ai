@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Aorg.apache.thrift%2Flibthrift%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "org.apache.thrift/libthrift",
+                "type": "maven",
+                "build_count": 10
+            }
+        ],
+        "total": 1
+    }
+}

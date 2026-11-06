@@ -2,3 +2,5 @@
 features/cve/kernel_eval_results.json
 features/cve/kernel_eval_audit.json
 kernel_cve_context_cache/cache_misses.txt
+catalog_cache/MISSES.txt
+ghsa_cache/MISSES.txt

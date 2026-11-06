@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=pjproject&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "pjproject",
+                "id": 379763,
+                "backend": "GitHub",
+                "homepage": "https://www.pjsip.org/",
+                "ecosystem": "https://www.pjsip.org/"
+            }
+        ],
+        "total_items": 1
+    }
+}

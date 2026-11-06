@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=libreoffice%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=3",
+    "body": {
+        "data": [
+            {
+                "name": "libreoffice",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-TexMaths",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-base",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-calc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-core",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-data",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-af",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-an",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ar",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-as",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-be",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-bg",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-bn_BD",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-bo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-br",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-bs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ca",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ckb",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-cs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-da",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-de",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-el",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-en-AU",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-en-CA",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-en-GB",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-en-US",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-en-ZA",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-eo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-es",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-et",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-fa",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-fr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-gd",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-gl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-gu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-gug",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-he",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-hi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-hr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-hu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-id",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-is",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-it",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-kmr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-kn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ko",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-lo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-lt",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-lv",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-mn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-mr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-nb",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ne",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-nl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-nn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-oc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-or",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-pa",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-pl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-pt",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-pt-BR",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ro",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ru",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sa",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-si",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sk",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sq",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sv",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-sw",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-ta",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-te",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-th",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-tr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-uk",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dict-vi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-dictionaries",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-draw",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-emailmerge",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-filters",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gallery-vrt-network-equipment",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gdb-debug-support",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-glade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-grammalecte",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-graphicfilter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gtk3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gtk4",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ar",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-bg",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-bn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ca",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-cs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-da",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-de",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-dz",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-el",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-en",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-en-GB",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-eo",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 234
+    }
+}

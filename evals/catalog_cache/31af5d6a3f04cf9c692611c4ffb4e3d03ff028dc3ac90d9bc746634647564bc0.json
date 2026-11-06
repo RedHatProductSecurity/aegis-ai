@@ -1,0 +1,217 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=vm2&strict=true&include_types=npm&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.11.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcl-1/rhcl-rhdh-dynamic-plugin-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/automation-portal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/automation-portal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/bootc-automation-portal-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/automation-portal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/bootc-automation-portal-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-lightspeed-backend"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/rhdh-hub-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/rhdh-hub-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-lightspeed"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-orchestrator"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-backend-module-loki"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vm2",
+                                "type": "npm",
+                                "version": "3.12.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-scaffolder-backend-module-orchestrator"
+            }
+        ]
+    }
+}

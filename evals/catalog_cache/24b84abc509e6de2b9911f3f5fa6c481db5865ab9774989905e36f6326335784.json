@@ -1,0 +1,31 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=tomcat-10.1&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "tomcat-10.1",
+                                "type": "generic",
+                                "version": "RUNNING.txt"
+                            },
+                            {
+                                "name": "tomcat-10.1",
+                                "type": "generic",
+                                "version": "run.sh"
+                            },
+                            {
+                                "name": "tomcat-10.1",
+                                "type": "generic",
+                                "version": "setenv.sh"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "tomcat10"
+            }
+        ]
+    }
+}

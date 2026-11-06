@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/project/16745",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "rust-gdk-pixbuf"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "rust-gdk-pixbuf"
+            }
+        ]
+    }
+}

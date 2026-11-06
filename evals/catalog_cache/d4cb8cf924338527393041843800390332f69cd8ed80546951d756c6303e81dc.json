@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/project/379763",
+    "body": {
+        "packages": [
+            {
+                "distro": "Alpine",
+                "package_name": "pjproject"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "pjproject"
+            }
+        ]
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Agithub.com%2Fprometheus%2Fcommon%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/openshift-priv/prometheus/patches/github.com/prometheus/common",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common",
+                "type": "golang",
+                "build_count": 1703
+            },
+            {
+                "name": "github.com/prometheus/common/assets",
+                "type": "golang",
+                "build_count": 43
+            },
+            {
+                "name": "github.com/prometheus/common/sigv4",
+                "type": "golang",
+                "build_count": 42
+            }
+        ],
+        "total": 4
+    }
+}

@@ -1,0 +1,193 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Anginx%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "certbot-nginx",
+                "type": "pypi",
+                "build_count": 2
+            },
+            {
+                "name": "collectd-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mogstored-backend-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "munin-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nextcloud-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-all-modules",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-core",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-filesystem",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mimetypes",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-brotli",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-fancyindex",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-headers-more",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-geoip",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-image-filter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-perl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-http-xslt-filter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-js-challenge",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-mail",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-modsecurity",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-naxsi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-stream",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-stream-geoip",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nginx-mod-vts",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "openqa-single-instance-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pagure-web-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pcp-pmda-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python-certbot-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-certbot-nginx",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "rust-nginx-sys",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-nginx-sys+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-nginx-sys-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "sublime-syntax-Nginx",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "sympa-nginx",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tree-sitter-nginx",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "web-assets-nginx",
+                "type": "rpm",
+                "build_count": 2
+            }
+        ],
+        "total": 37
+    }
+}

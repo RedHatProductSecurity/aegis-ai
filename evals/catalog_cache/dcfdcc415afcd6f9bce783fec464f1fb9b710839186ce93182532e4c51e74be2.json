@@ -1,0 +1,38 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Agitea%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "code.gitea.io/actions-proto-go",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "code.gitea.io/sdk/gitea",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "ghc-gitea-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ghc-gitea-api-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ghc-gitea-api-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ghc-gitea-api-prof",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 6
+    }
+}

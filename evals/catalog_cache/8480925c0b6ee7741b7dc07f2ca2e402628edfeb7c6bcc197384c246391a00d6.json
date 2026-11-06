@@ -1,0 +1,278 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Agithub.com%2Fgo-git%2Fgo-git%2Fv5%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/go-git/go-git/v5",
+                "type": "golang",
+                "build_count": 25
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/config",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/internal/path_util",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/internal/reference",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/internal/revision",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/internal/url",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/cache",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/color",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/filemode",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/commitgraph",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/commitgraph/v2",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/config",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/diff",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/gitattributes",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/gitignore",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/idxfile",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/index",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/objfile",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/packfile",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/format/pktline",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/hash",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/object",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/object/commitgraph",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/protocol/packp",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/protocol/packp/capability",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/protocol/packp/sideband",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/revlist",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/serverinfo",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/storer",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/client",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/file",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/git",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/http",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/internal/common",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/server",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/plumbing/transport/ssh",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/storage",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/storage/filesystem",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/storage/filesystem/dotgit",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/storage/memory",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/storage/transactional",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/binary",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/diff",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/ioutil",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/merkletrie",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/merkletrie/filesystem",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/merkletrie/index",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/merkletrie/internal/frame",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/merkletrie/internal/fsnoder",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/merkletrie/noder",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/sync",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git/v5/utils/trace",
+                "type": "golang",
+                "build_count": 1
+            }
+        ],
+        "total": 54
+    }
+}

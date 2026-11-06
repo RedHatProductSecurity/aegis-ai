@@ -1,0 +1,93 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Avim&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "boxes-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "espeak-ng-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "fakevim",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "gap-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "neovim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "notmuch-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ocaml-sexplib-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "poke-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "protobuf-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "protobuf3-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pynvim",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "python-neovim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-neovim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "supercollider-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "texlive-context-vim",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-vim",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 17
+    }
+}

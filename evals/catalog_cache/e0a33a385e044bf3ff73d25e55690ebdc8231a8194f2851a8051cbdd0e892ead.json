@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=tomcat%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "tomcat",
+                "type": "generic",
+                "build_count": 7
+            },
+            {
+                "name": "tomcat",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-10.1",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-10.1-locate",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-10.1-user-instance",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-11.0",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-11.0-locate",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-11.0-user-instance",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-admin-webapps",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-admin-webapps",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-annotations-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-catalina-ant.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-catalina-ha.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-catalina.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-coyote-ffm.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-coyote-ffm/tomcat-coyote-ffm",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-coyote.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-dbcp.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-docs-webapp",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-docs-webapp",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-el-3.0-api",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-el-3.0-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-el-5.0-api",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-el-5.0-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-el-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-el/tomcat-el",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-embed-core.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-embed-el.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-embed-jasper.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-embed-programmatic.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-embed-websocket.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-cs.jar",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-i18n-cs.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-de.jar",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-i18n-de.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-es.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-fr.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-ja.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-ko.jar",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-ko.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-pt-BR.jar",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-i18n-pt-BR.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-ru.jar",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-i18n-ru.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-zh-CN.jar",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-i18n-zh-CN.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-jakartaee-migration",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-jakartaee-migration-javadoc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-jasper-el.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-jasper.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-jaspic-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-javadoc",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-jdbc.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-jni.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-jsp-2.3-api",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-jsp-2.3-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-jsp-3.1-api",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-jsp-3.1-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-jsp-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-jsp/tomcat-jsp",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-juli.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-lib",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-lib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-selinux",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-servlet-4.0-api",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-servlet-4.0-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-servlet-6.0-api",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "tomcat-servlet-6.0-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-servlet-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-servlet/tomcat-servlet",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-src-zip",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-ssi.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-storeconfig.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-tribes.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-util-scan.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-util.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-vault",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-vault-javadoc",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-vault-src-zip",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-vault-zip",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-vault/tomcat-vault",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-webapps",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat-webapps",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat-websocket-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-websocket-client-api.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-websocket.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat-zip",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "tomcat.pom",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "tomcat/jasper-compiler",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat/jasper-compiler-jdt",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat/jasper-runtime",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10-admin-webapps",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10-common",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10-docs-webapp",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10-el-5.0-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10-jsp-3.1-api",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat10-lib",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 128
+    }
+}

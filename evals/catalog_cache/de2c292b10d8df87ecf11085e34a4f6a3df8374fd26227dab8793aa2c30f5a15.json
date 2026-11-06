@@ -1,0 +1,343 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=%40fastify%2Fhttp-proxy&strict=true&include_types=npm&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.4.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/dashboard-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.4.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/dashboard-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-dashboard-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-model-registry-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-dashboard-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-automl-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-autorag-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-eval-hub-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-gen-ai-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-maas-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-mlflow-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-model-registry-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-core-bff-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-dashboard-operator-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-dashboard-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-agent-ops-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-automl-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-autorag-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-eval-hub-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-gen-ai-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-maas-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-mlflow-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mod-arch-model-registry-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@fastify/http-proxy",
+                                "type": "npm",
+                                "version": "11.6.3"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/dashboard-rhel9"
+            }
+        ]
+    }
+}

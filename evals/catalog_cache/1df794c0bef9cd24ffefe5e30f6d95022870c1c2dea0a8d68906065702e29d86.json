@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=Net-OAuth&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "Net-OAuth",
+                "id": 10352,
+                "backend": "CPAN (perl)",
+                "homepage": "http://search.cpan.org/dist/Net-OAuth/",
+                "ecosystem": "http://search.cpan.org/dist/Net-OAuth/"
+            }
+        ],
+        "total_items": 1
+    }
+}

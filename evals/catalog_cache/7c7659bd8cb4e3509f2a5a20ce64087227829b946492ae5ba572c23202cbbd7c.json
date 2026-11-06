@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=suricata&strict=true&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "suricata",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 1
+    }
+}

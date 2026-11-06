@@ -15,7 +15,12 @@ import pytest
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.data_models import AegisAnswer
 from aegis_ai.osidb_bot.bot import FlawUpdater
-from aegis_ai.osidb_bot.suggest import METRICS_THR, suggest_description, update_field
+from aegis_ai.osidb_bot.suggest import (
+    METRICS_THR,
+    suggest_description,
+    suggest_manifest_components,
+    update_field,
+)
 
 CVE_ID: CVEID = "CVE-2025-0001"
 
@@ -103,6 +108,12 @@ async def _canned_exec_feature(feature, flaw_data):
         return SimpleNamespace(
             suggested_statement="Canned statement text.",
             suggested_mitigation="Canned mitigation text.",
+            explanation=explanation,
+            **metrics,
+        )
+    if name == "SuggestManifestComponentAndState":
+        return SimpleNamespace(
+            manifest_components=[],
             explanation=explanation,
             **metrics,
         )
@@ -509,6 +520,61 @@ async def test_suggest_description_skips_real_title_on_low_metrics(mock_exec_fea
 
 @pytest.mark.asyncio
 @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_suggest_manifest_preserves_rows_on_catalog_outage(mock_exec_feature):
+    """Catalog outages must not overwrite an existing _downstream mapping."""
+    mock_exec_feature.return_value = SimpleNamespace(
+        manifest_components=[],
+        explanation="Product and community catalog lookups failed for nginx.",
+        data_quality=0.9,
+        confidence=0.0,
+        tools_used=["osidb_tool", "bomq_components"],
+        _catalog_outage=True,
+    )
+
+    flaw_data = _minimal_flaw_data()
+    existing = [{"name": "nginx", "build_type": "rpm", "affectedness": "AFFECTED"}]
+    flaw_data["_downstream"] = existing
+    agent = MagicMock()
+
+    changed = await suggest_manifest_components(agent, flaw_data, TS)
+
+    assert changed == {"aegis_meta"}
+    assert flaw_data["_downstream"] == existing
+    entries = flaw_data["aegis_meta"]["_downstream"]
+    assert len(entries) == 1
+    assert entries[0]["type"] == "AI-Bot-Skipped"
+    assert entries[0]["skip_reason"] == "failure"
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_suggest_manifest_empty_low_confidence_is_not_lookup_failure(
+    mock_exec_feature,
+):
+    """Agent/post-filter empties stay confidence skips, not catalog failures."""
+    mock_exec_feature.return_value = SimpleNamespace(
+        manifest_components=[],
+        explanation="Post-filters dropped every candidate.",
+        data_quality=0.9,
+        confidence=LOW_CONFIDENCE,
+        tools_used=["osidb_tool", "bomq_components"],
+        _catalog_outage=False,
+    )
+
+    flaw_data = _minimal_flaw_data()
+    agent = MagicMock()
+
+    changed = await suggest_manifest_components(agent, flaw_data, TS)
+
+    assert changed == {"aegis_meta"}
+    entries = flaw_data["aegis_meta"]["_downstream"]
+    assert len(entries) == 1
+    assert entries[0]["type"] == "AI-Bot-Skipped"
+    assert entries[0]["skip_reason"] == "confidence"
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
 async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
     """FlawUpdater records AI-Bot-Skipped entries when all features have low metrics."""
 
@@ -550,6 +616,12 @@ async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
             return SimpleNamespace(
                 suggested_statement="Bad statement.",
                 suggested_mitigation="Bad mitigation.",
+                explanation=explanation,
+                **metrics,
+            )
+        if name == "SuggestManifestComponentAndState":
+            return SimpleNamespace(
+                manifest_components=[],
                 explanation=explanation,
                 **metrics,
             )
@@ -693,6 +765,12 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_all_skipped(
             return SimpleNamespace(
                 suggested_statement="s",
                 suggested_mitigation="m",
+                explanation=explanation,
+                **metrics,
+            )
+        if name == "SuggestManifestComponentAndState":
+            return SimpleNamespace(
+                manifest_components=[],
                 explanation=explanation,
                 **metrics,
             )

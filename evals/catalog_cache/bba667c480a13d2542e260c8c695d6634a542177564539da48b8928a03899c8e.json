@@ -1,0 +1,63 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=github.com%2Fgo-chi%2Fchi&strict=true&include_types=golang&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/go-chi/chi",
+                                "type": "golang",
+                                "version": "4.1.2+incompatible"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "caddy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/go-chi/chi",
+                                "type": "golang",
+                                "version": "4.1.2+incompatible"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "caddy"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/go-chi/chi",
+                                "type": "golang",
+                                "version": "5.1.0-2.fc41"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "golang-github-chi"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/go-chi/chi",
+                                "type": "golang",
+                                "version": "5.1.0-2.fc41"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "golang-github-chi"
+            }
+        ]
+    }
+}

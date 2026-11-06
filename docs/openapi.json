@@ -232,7 +232,8 @@
           "cvss-diff-explainer",
           "quality-review",
           "suggest-affected-packages",
-          "query-affected-components"
+          "query-affected-components",
+          "suggest-manifest-component-and-state"
         ],
         "title": "CVEFeatureName",
         "type": "string"

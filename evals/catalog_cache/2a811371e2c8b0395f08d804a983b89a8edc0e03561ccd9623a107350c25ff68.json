@@ -1,0 +1,23 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Amoodle%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "moodle",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "texlive-moodle",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "texlive-moodle-doc",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 3
+    }
+}

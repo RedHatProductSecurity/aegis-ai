@@ -1,0 +1,497 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=binutils&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.41-4.el9_6.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-14-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.41-6.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-14-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.41-6.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-14-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.41-6.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-14-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.44-5.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-15-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.44-5.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-15-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.44-5.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-15-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.46-2.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-16-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "2.46-2.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-16-binutils"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20130312"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20180828"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20180828"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20180828"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20180828"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20180828"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20180828"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20200208"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20200208"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20200208"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-14-gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gcc-toolset-15-gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "generic",
+                                "version": "20220501"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdb"
+            }
+        ]
+    }
+}

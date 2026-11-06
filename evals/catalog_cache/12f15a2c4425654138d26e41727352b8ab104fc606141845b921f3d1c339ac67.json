@@ -1,0 +1,28 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=nginx-12%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "nginx-120",
+                "type": "oci",
+                "build_count": 8
+            },
+            {
+                "name": "nginx-122",
+                "type": "oci",
+                "build_count": 2
+            },
+            {
+                "name": "nginx-124",
+                "type": "oci",
+                "build_count": 24
+            },
+            {
+                "name": "nginx-126",
+                "type": "oci",
+                "build_count": 10
+            }
+        ],
+        "total": 4
+    }
+}

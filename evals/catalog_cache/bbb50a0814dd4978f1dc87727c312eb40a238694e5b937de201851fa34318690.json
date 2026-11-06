@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Avim%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "awesome-vim-colorschemes",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "beakerlib-vim-syntax",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "boxes-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "espeak-ng-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "fakevim",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "fluxbox-vim-syntax",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gap-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "geany-plugins-vimode",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "neovim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "neovim-ale",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "neovim-qt",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "notmuch-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ocaml-sexplib-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "perl-Text-VimColor",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "poke-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "protobuf-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "protobuf3-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pynvim",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "python-neovim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python-neovim-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-neovim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "sublime-syntax-VimL",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "supercollider-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "texlive-context-vim",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "texlive-context-vim-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-X11",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-airline",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-ale",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-ansible",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-command-t",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-commentary",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-common",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-ctrlp",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-data",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-default-editor",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-devicons",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-editorconfig",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-enhanced",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-filesystem",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-fugitive",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-fugitive-gitlab",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-fugitive-pagure",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-gitgutter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-go",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-golint",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-gtk-syntax",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-gv",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-halibut",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-javabrowser",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-jedi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-jellybeans",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-latex",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-latex-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-mediawiki",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-merlin",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-minimal",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-nerdtree",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-nerdtree-git-plugin",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-omnicppcomplete",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-pathogen",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-perl-support",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-powerline",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-rhubarb",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-ada",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-ansible",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-asciidoc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-asl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-asm",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-c",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-cabal",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-coq",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-cpp",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-cs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-css",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-cucumber",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-docbk",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-elixir",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-erlang",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-eruby",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-fortran",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-glsl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-go",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-haml",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-haskell",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-help",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-html",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-java",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-json",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-julia",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-less",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-lex",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-llvm",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-lua",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-matlab",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-nasm",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-objc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-objcpp",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-syntastic-ocaml",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 140
+    }
+}

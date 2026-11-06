@@ -1,0 +1,263 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Aprometheus&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "@grafana/prometheus",
+                "type": "npm",
+                "build_count": 4
+            },
+            {
+                "name": "@opentelemetry/exporter-prometheus",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "aioprometheus",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "collectd-write_prometheus",
+                "type": "rpm",
+                "build_count": 217
+            },
+            {
+                "name": "contrib.go.opencensus.io/exporter/prometheus",
+                "type": "golang",
+                "build_count": 60
+            },
+            {
+                "name": "django-prometheus",
+                "type": "pypi",
+                "build_count": 21
+            },
+            {
+                "name": "github.com/IBM/pgxpoolprometheus",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/globocom/echo-prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grafana/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus",
+                "type": "golang",
+                "build_count": 207
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-prometheus",
+                "type": "golang",
+                "build_count": 327
+            },
+            {
+                "name": "github.com/jon-whit/go-grpc-prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/jonathan-innis/aws-sdk-go-prometheus",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/katekeiroz-dev/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/machine424/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus",
+                "type": "golang",
+                "build_count": 33
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/perses/plugins/prometheus",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus/prometheus",
+                "type": "golang",
+                "build_count": 146
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/stolostron/prometheus",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/thanos-io/thanos-prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/zsais/go-gin-prometheus",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "go.opentelemetry.io/contrib/bridges/prometheus",
+                "type": "golang",
+                "build_count": 49
+            },
+            {
+                "name": "go.opentelemetry.io/otel/exporters/metric/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "go.opentelemetry.io/otel/exporters/prometheus",
+                "type": "golang",
+                "build_count": 198
+            },
+            {
+                "name": "gorm.io/plugin/prometheus",
+                "type": "golang",
+                "build_count": 27
+            },
+            {
+                "name": "io.micrometer/micrometer-registry-prometheus",
+                "type": "maven",
+                "build_count": 8
+            },
+            {
+                "name": "io.opentelemetry/opentelemetry-exporter-prometheus",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.quarkus/quarkus-micrometer-registry-prometheus",
+                "type": "maven",
+                "build_count": 19
+            },
+            {
+                "name": "metrics-exporter-prometheus",
+                "type": "cargo",
+                "build_count": 2
+            },
+            {
+                "name": "opentelemetry-exporter-prometheus",
+                "type": "pypi",
+                "build_count": 27
+            },
+            {
+                "name": "org.apache.camel/camel-micrometer-prometheus",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.jenkins-ci.plugins/prometheus",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "ose-prometheus",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus",
+                "type": "cargo",
+                "build_count": 9
+            },
+            {
+                "name": "prometheus",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus",
+                "type": "otp",
+                "build_count": 3
+            },
+            {
+                "name": "py-grpc-prometheus",
+                "type": "pypi",
+                "build_count": 4
+            },
+            {
+                "name": "python-django-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-django-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3.11-django-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3.12-django-prometheus",
+                "type": "rpm",
+                "build_count": 3
+            },
+            {
+                "name": "python38-django-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python39-django-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3x-django-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rabbitmq_federation_prometheus",
+                "type": "otp",
+                "build_count": 3
+            },
+            {
+                "name": "rabbitmq_prometheus",
+                "type": "otp",
+                "build_count": 3
+            },
+            {
+                "name": "rabbitmq_shovel_prometheus",
+                "type": "otp",
+                "build_count": 3
+            },
+            {
+                "name": "yabeda-prometheus",
+                "type": "gem",
+                "build_count": 2
+            }
+        ],
+        "total": 51
+    }
+}

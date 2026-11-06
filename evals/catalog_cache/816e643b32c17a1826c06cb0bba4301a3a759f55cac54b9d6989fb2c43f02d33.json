@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=openexr&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "openexr",
+                "id": 13289,
+                "backend": "GitHub",
+                "homepage": "https://www.openexr.com",
+                "ecosystem": "https://www.openexr.com"
+            },
+            {
+                "name": "OpenEXR",
+                "id": 283246,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/OpenEXR/1.3.9/",
+                "ecosystem": "pypi"
+            }
+        ],
+        "total_items": 2
+    }
+}

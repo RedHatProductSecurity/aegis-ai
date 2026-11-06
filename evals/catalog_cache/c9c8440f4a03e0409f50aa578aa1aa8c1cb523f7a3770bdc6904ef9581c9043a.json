@@ -1,0 +1,43 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Acontour%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "@types/d3-contour",
+                "type": "npm",
+                "build_count": 78
+            },
+            {
+                "name": "contour_plot",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "contourpy",
+                "type": "pypi",
+                "build_count": 43
+            },
+            {
+                "name": "d3-contour",
+                "type": "npm",
+                "build_count": 86
+            },
+            {
+                "name": "github.com/openshift-priv/contour",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/projectcontour/contour",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "ose-contour-rhel8",
+                "type": "oci",
+                "build_count": 1
+            }
+        ],
+        "total": 7
+    }
+}

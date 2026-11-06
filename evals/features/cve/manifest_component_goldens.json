@@ -1,0 +1,280 @@
+{
+  "CVE-2026-96275": {
+    "seed": "flatpak",
+    "required": [{"name": "flatpak", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "forbid": ["firefox-flatpak", "thunderbird-flatpak"]
+  },
+  "CVE-2026-14668": {
+    "seed": "postgresql",
+    "required": [{"name": "postgresql", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-65183": {
+    "seed": "tomcat",
+    "required": [
+      {"name": "tomcat", "build_type": "rpm"},
+      {"name": "jws5-tomcat", "build_type": "rpm"},
+      {"name": "jws6-tomcat", "build_type": "rpm"},
+      {"name": "jws7-tomcat", "build_type": "rpm"}
+    ],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "forbid": ["idm-jss-tomcat", "mod_cluster-tomcat"]
+  },
+  "CVE-2026-18090": {
+    "seed": "gdk-pixbuf",
+    "required": [{"name": "gdk-pixbuf2", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "note": "C library (ICNS). Downstream RPM is the versioned gdk-pixbuf2 package."
+  },
+  "CVE-2026-90439": {
+    "seed": "nginx",
+    "required": [{"name": "nginx", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "forbid": ["python-nginx", "collectd-nginx", "pcp-pmda-nginx"]
+  },
+  "CVE-2026-76014": {
+    "seed": "busybox",
+    "required": [{"name": "busybox", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-90801": {
+    "seed": "binutils",
+    "required": [
+      {"name": "binutils", "build_type": "rpm"},
+      {"name": "mingw-binutils", "build_type": "rpm"}
+    ],
+    "allow_extra_same_project": true,
+    "allow_extra_names": ["avr-binutils", "arm-none-eabi-binutils-cs"],
+    "require_full_path": false,
+    "note": "gcc-toolset-*-binutils and mingw64-binutils may appear as same-project extras. mingw64-binutils has no build-search hit, so it is not required. Anitya lists avr-binutils and arm-none-eabi-binutils-cs under GNU binutils; they are allowed extras even though they fail _is_clear_rebuild."
+  },
+  "CVE-2026-63266": {
+    "seed": "libreoffice",
+    "required": [{"name": "libreoffice", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-55193": {
+    "seed": "FreeRDP",
+    "required": [{"name": "freerdp", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-57224": {
+    "seed": "suricata",
+    "required": [{"name": "suricata", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "note": "Catalog type is rpm. Build search by SRPM name is empty; the rpm is a component of container build osd-operators/suricata."
+  },
+  "CVE-2026-68515": {
+    "seed": "OpenEXR",
+    "required": [
+      {"name": "openexr", "build_type": "rpm", "affectedness": "AFFECTED"},
+      {"name": "mingw-OpenEXR", "build_type": "rpm", "affectedness": "AFFECTED"},
+      {"name": "openexr2", "build_type": "rpm", "affectedness": "AFFECTED"}
+    ],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "forbid": [
+      "OpenEXR-devel",
+      "OpenEXR-libs",
+      "openexr-devel",
+      "openexr-libs",
+      "openexr2-devel",
+      "openexr2-libs",
+      "OpenEXR_CTL",
+      "OpenEXR_Viewers",
+      "OpenSceneGraph-OpenEXR",
+      "rust-image0.24+openexr-devel"
+    ],
+    "note": "Seed OpenEXR / openexr (case rename), mingw rebuild, and Fedora openexr2 version package. GHSA 2.* / 3.0–3.1 / 3.2.0–3.2.10 / 3.3.0–3.3.12 / 3.4.0–3.4.13. Community mingw-openexr may appear as a casefold alias of mingw-OpenEXR; scorer is case-insensitive. No RHCOS companion."
+  },
+  "CVE-2026-73073": {
+    "seed": "vim",
+    "required": [{"name": "vim", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false,
+    "forbid": ["espeak-ng-vim", "protobuf-vim"]
+  },
+  "CVE-2026-19024": {
+    "seed": "hdf5",
+    "required": [{"name": "hdf5", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-61723": {
+    "seed": "FluidSynth",
+    "required": [{"name": "fluidsynth", "build_type": "rpm"}],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "note": "Fedora package fluidsynth is the same Anitya project. A catalog host has the rpm."
+  },
+  "CVE-2026-84975": {
+    "seed": "pjproject",
+    "required": [{"name": "pjproject", "build_type": "rpm"}],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "note": "Exact community catalog name. The Anitya project has no Fedora package."
+  },
+  "CVE-2026-50149": {
+    "seed": "github.com/projectcontour/contour",
+    "required": [{"name": "github.com/projectcontour/contour", "ecosystem": "golang"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-79776": {
+    "seed": "github.com/rclone/rclone",
+    "required": [{"name": "github.com/rclone/rclone", "ecosystem": "golang"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-71556": {
+    "seed": "github.com/go-git/go-git/v5",
+    "required": [{"name": "github.com/go-git/go-git/v5", "ecosystem": "golang"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2025-71405": {
+    "seed": "github.com/go-chi/chi",
+    "required": [{"name": "github.com/go-chi/chi", "ecosystem": "golang"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-96404": {
+    "seed": "code.gitea.io/gitea",
+    "required": [{"name": "code.gitea.io/gitea", "ecosystem": "golang"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-76802": {
+    "seed": "github.com/projectdiscovery/nuclei",
+    "required": [{"name": "nuclei", "build_type": "rpm"}],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "note": "The module path is not a catalog row. The Anitya homepage matches and a host has the nuclei rpm."
+  },
+  "CVE-2026-100658": {
+    "seed": "io.netty/netty-codec-http",
+    "required": [{"name": "io.netty/netty-codec-http", "ecosystem": "maven"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-12816": {
+    "seed": "org.bouncycastle/bcprov-jdk15on",
+    "required": [{"name": "org.bouncycastle/bcprov-jdk15on", "ecosystem": "maven"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-61373": {
+    "seed": "org.apache.thrift/libthrift",
+    "required": [{"name": "org.apache.thrift/libthrift", "ecosystem": "maven"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-83606": {
+    "seed": "@xmldom/xmldom",
+    "required": [{"name": "@xmldom/xmldom", "ecosystem": "npm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true,
+    "note": "Bare xmldom is a different strict package and is rejected as a shortened scoped name."
+  },
+  "CVE-2026-85124": {
+    "seed": "@fastify/http-proxy",
+    "required": [{"name": "@fastify/http-proxy", "ecosystem": "npm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": true
+  },
+  "CVE-2026-66069": {
+    "seed": "rabbitmq-server",
+    "required": [{"name": "rabbitmq-server", "build_type": "rpm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-47683": {
+    "seed": "vm2",
+    "required": [{"name": "vm2", "ecosystem": "npm"}],
+    "allow_extra_same_project": true,
+    "require_full_path": false
+  },
+  "CVE-2026-72887": {
+    "seed": "Net-OAuth",
+    "required": [{"name": "perl-Net-OAuth", "build_type": "rpm"}],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "note": "CPAN project Net-OAuth maps to the Fedora package perl-Net-OAuth."
+  },
+  "CVE-2026-47489": {
+    "seed": "xorg-x11-drv-nvidia",
+    "required": [{"name": "nvidia-driver", "build_type": "rpm"}],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "note": "xorg-x11-drv-nvidia is not a catalog row. nvidia-driver is the seed the catalog confirms."
+  },
+  "CVE-2026-102577": {
+    "seed": "moodle",
+    "required": [{"name": "moodle", "build_type": "rpm"}],
+    "allow_extra_same_project": false,
+    "require_full_path": false
+  },
+  "CVE-2026-1199": {
+    "seed": "zabbix",
+    "required": [
+      {"name": "zabbix", "build_type": "rpm", "affectedness": "NOTAFFECTED"},
+      {"name": "zabbix6.0", "build_type": "rpm", "affectedness": "NOTAFFECTED"},
+      {"name": "zabbix7.0", "build_type": "rpm", "affectedness": "NOTAFFECTED"}
+    ],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "forbid": [
+      "uwsgi-stats-pusher-zabbix",
+      "pcp-export-pcp2zabbix",
+      "pcp-export-zabbix-agent",
+      "pyzabbix",
+      "python-pyzabbix",
+      "python3-pyzabbix"
+    ],
+    "note": "Community-only packaging: seed zabbix plus Fedora/EPEL version packages zabbix6.0 and zabbix7.0. Sampled SRPM versions 6.0.48 / 7.0.31-7.0.32 / 7.4.16 are past ZBX-28076 fixes (6.0.47 / 7.0.28 / 7.4.12). Drop subpackages and other projects (PCP exporters, uWSGI pusher, pyzabbix). No RHCOS companion."
+  },
+  "CVE-2026-50291": {
+    "seed": "OpenImageIO",
+    "required": [
+      {"name": "OpenImageIO", "build_type": "rpm", "affectedness": "AFFECTED"},
+      {"name": "OpenImageIO2.5", "build_type": "rpm", "affectedness": "AFFECTED"}
+    ],
+    "allow_extra_same_project": false,
+    "require_full_path": false,
+    "forbid": [
+      "OpenImageIO-devel",
+      "OpenImageIO-iv",
+      "OpenImageIO-utils",
+      "OpenImageIO-plugin-osl",
+      "OpenImageIO2.5-devel",
+      "python3-openimageio"
+    ],
+    "note": "Community-only packaging. Advisory/OSV range is prior to 3.0.16.0 and 3.1.11.0 (introduced 0 on the 3.0 line). Seed samples include unfixed 2.1/2.4/2.5 → AFFECTED; OpenImageIO2.5 2.5.x is in that range → AFFECTED. Drop subpackages and python3-openimageio."
+  },
+  "CVE-2026-119566": {
+    "seed": "github.com/prometheus/common",
+    "required": [
+      {"name": "github.com/openshift-priv/prometheus", "ecosystem": "golang", "affectedness": "AFFECTED"},
+      {"name": "prometheus", "build_type": "rpm", "affectedness": "AFFECTED"},
+      {"name": "prometheus3.13", "build_type": "rpm", "affectedness": "AFFECTED"},
+      {"name": "prometheus3.5", "build_type": "rpm", "affectedness": "AFFECTED"}
+    ],
+    "allow_extra_same_project": true,
+    "require_full_path": true,
+    "forbid": [
+      "github.com/prometheus/common",
+      "github.com/prometheus/client_golang"
+    ],
+    "note": "Usage case (AEGIS-540): fix is in github.com/prometheus/common/config (remote_write redirects); caller role is Prometheus server only. Keep the openshift-priv Go rebuild and server RPMs (prometheus / prometheus3.13 / prometheus3.5). Drop the parent common module (~1700+ builds of metrics importers) and client_golang. Containers are represented by the openshift-priv rebuild."
+  }
+}

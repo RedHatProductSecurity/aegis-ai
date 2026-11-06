@@ -20,6 +20,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 CACHE_DIRS = {
+    "catalog": Path("evals/catalog_cache"),
     "external_references": Path("evals/external_references_cache"),
     "ghsa": Path("evals/ghsa_cache"),
     "osidb": Path("evals/osidb_cache"),

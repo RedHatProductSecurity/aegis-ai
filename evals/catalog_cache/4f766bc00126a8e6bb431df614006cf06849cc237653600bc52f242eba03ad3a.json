@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/project/6384",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "moodle"
+            },
+            {
+                "distro": "Arch Linux AUR",
+                "package_name": "moodle"
+            }
+        ]
+    }
+}

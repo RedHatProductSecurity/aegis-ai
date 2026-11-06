@@ -1,0 +1,298 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Ago-git%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/AaronO/go-git-http",
+                "type": "golang",
+                "build_count": 10
+            },
+            {
+                "name": "github.com/bluekeyes/go-gitdiff",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/go-git/gcfg",
+                "type": "golang",
+                "build_count": 291
+            },
+            {
+                "name": "github.com/go-git/gcfg/v2",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-billy/v5",
+                "type": "golang",
+                "build_count": 272
+            },
+            {
+                "name": "github.com/go-git/go-billy/v6",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-git/go-git-fixtures/v4",
+                "type": "golang",
+                "build_count": 5
+            },
+            {
+                "name": "github.com/go-git/go-git/v5",
+                "type": "golang",
+                "build_count": 239
+            },
+            {
+                "name": "github.com/go-git/go-git/v6",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "github.com/google/go-github/scrape",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "github.com/google/go-github/v25",
+                "type": "golang",
+                "build_count": 7
+            },
+            {
+                "name": "github.com/google/go-github/v27",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v28",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v31",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v32",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/google/go-github/v33",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/google/go-github/v39",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v41",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v42",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v43",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v45",
+                "type": "golang",
+                "build_count": 14
+            },
+            {
+                "name": "github.com/google/go-github/v48",
+                "type": "golang",
+                "build_count": 17
+            },
+            {
+                "name": "github.com/google/go-github/v49",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/google/go-github/v50",
+                "type": "golang",
+                "build_count": 5
+            },
+            {
+                "name": "github.com/google/go-github/v51",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v52",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v53",
+                "type": "golang",
+                "build_count": 15
+            },
+            {
+                "name": "github.com/google/go-github/v54",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v55",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/google/go-github/v56",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v57",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/google/go-github/v58",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v61",
+                "type": "golang",
+                "build_count": 7
+            },
+            {
+                "name": "github.com/google/go-github/v62",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v63",
+                "type": "golang",
+                "build_count": 8
+            },
+            {
+                "name": "github.com/google/go-github/v64",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/google/go-github/v65",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v66",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v68",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/google/go-github/v69",
+                "type": "golang",
+                "build_count": 7
+            },
+            {
+                "name": "github.com/google/go-github/v70",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/google/go-github/v71",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/google/go-github/v73",
+                "type": "golang",
+                "build_count": 38
+            },
+            {
+                "name": "github.com/google/go-github/v75",
+                "type": "golang",
+                "build_count": 8
+            },
+            {
+                "name": "github.com/google/go-github/v82",
+                "type": "golang",
+                "build_count": 20
+            },
+            {
+                "name": "github.com/google/go-github/v83",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/go-github/v84",
+                "type": "golang",
+                "build_count": 13
+            },
+            {
+                "name": "github.com/google/go-github/v85",
+                "type": "golang",
+                "build_count": 5
+            },
+            {
+                "name": "github.com/google/go-github/v88",
+                "type": "golang",
+                "build_count": 7
+            },
+            {
+                "name": "github.com/google/go-github/v90",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/hairyhenderson/go-git/v5",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/migueleliasweb/go-github-mock",
+                "type": "golang",
+                "build_count": 11
+            },
+            {
+                "name": "github.com/monochromegane/go-gitignore",
+                "type": "golang",
+                "build_count": 440
+            },
+            {
+                "name": "github.com/sabhiram/go-gitignore",
+                "type": "golang",
+                "build_count": 13
+            },
+            {
+                "name": "github.com/tcnksm/go-gitconfig",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/xanzy/go-gitlab",
+                "type": "golang",
+                "build_count": 12
+            },
+            {
+                "name": "gopkg.in/src-d/go-git.v4",
+                "type": "golang",
+                "build_count": 6
+            }
+        ],
+        "total": 58
+    }
+}

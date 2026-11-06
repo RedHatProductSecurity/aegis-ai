@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=gitea&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "gitea",
+                "id": 13537,
+                "backend": "GitHub",
+                "homepage": "https://about.gitea.com/",
+                "ecosystem": "https://about.gitea.com/"
+            }
+        ],
+        "total_items": 1
+    }
+}

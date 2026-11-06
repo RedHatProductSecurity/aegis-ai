@@ -1,0 +1,98 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Ahdf5%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "hdf5",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5",
+                "type": "rpm",
+                "build_count": 183
+            },
+            {
+                "name": "hdf5-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5/hdf5",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5_1.14.4.3+repack",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "java-hdf5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "java-hdf5-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 18
+    }
+}

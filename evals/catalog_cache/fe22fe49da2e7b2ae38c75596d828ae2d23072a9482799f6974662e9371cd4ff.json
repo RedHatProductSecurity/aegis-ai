@@ -1,0 +1,67 @@
+{
+    "url": "{anitya}/api/project/5413",
+    "body": {
+        "packages": [
+            {
+                "distro": "PLD-Linux",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "nginx-mainline"
+            },
+            {
+                "distro": "OpenMandriva",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "Timesys",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:f5:nginx_open_source"
+            },
+            {
+                "distro": "MacPorts",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "Docker",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:nginx:nginx"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:f5:nginx"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "www-servers/nginx"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "nginx"
+            },
+            {
+                "distro": "PTXdist",
+                "package_name": "nginx"
+            }
+        ]
+    }
+}

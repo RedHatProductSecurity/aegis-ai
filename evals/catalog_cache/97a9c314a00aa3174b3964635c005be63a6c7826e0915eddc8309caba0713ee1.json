@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Anetty%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=2",
+    "body": {
+        "data": [
+            {
+                "name": "com.azure/azure-core-http-netty",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.grpc.netty.shaded/grpc-netty-shaded",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.grpc.netty/grpc-netty",
+                "type": "maven",
+                "build_count": 8
+            },
+            {
+                "name": "io.grpc/grpc-netty",
+                "type": "maven",
+                "build_count": 10
+            },
+            {
+                "name": "io.grpc/grpc-netty-shaded",
+                "type": "maven",
+                "build_count": 8
+            },
+            {
+                "name": "io.netty/netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.netty/netty-all",
+                "type": "maven",
+                "build_count": 16
+            },
+            {
+                "name": "io.netty/netty-bom",
+                "type": "maven",
+                "build_count": 19
+            },
+            {
+                "name": "io.netty/netty-buffer",
+                "type": "maven",
+                "build_count": 72
+            },
+            {
+                "name": "io.netty/netty-codec",
+                "type": "maven",
+                "build_count": 68
+            },
+            {
+                "name": "io.netty/netty-codec-base",
+                "type": "maven",
+                "build_count": 9
+            },
+            {
+                "name": "io.netty/netty-codec-classes-quic",
+                "type": "maven",
+                "build_count": 6
+            },
+            {
+                "name": "io.netty/netty-codec-compression",
+                "type": "maven",
+                "build_count": 8
+            },
+            {
+                "name": "io.netty/netty-codec-dns",
+                "type": "maven",
+                "build_count": 60
+            },
+            {
+                "name": "io.netty/netty-codec-haproxy",
+                "type": "maven",
+                "build_count": 48
+            },
+            {
+                "name": "io.netty/netty-codec-http",
+                "type": "maven",
+                "build_count": 70
+            },
+            {
+                "name": "io.netty/netty-codec-http2",
+                "type": "maven",
+                "build_count": 64
+            },
+            {
+                "name": "io.netty/netty-codec-http3",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "io.netty/netty-codec-marshalling",
+                "type": "maven",
+                "build_count": 5
+            },
+            {
+                "name": "io.netty/netty-codec-memcache",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.netty/netty-codec-mqtt",
+                "type": "maven",
+                "build_count": 15
+            },
+            {
+                "name": "io.netty/netty-codec-native-quic",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "io.netty/netty-codec-protobuf",
+                "type": "maven",
+                "build_count": 5
+            },
+            {
+                "name": "io.netty/netty-codec-redis",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.netty/netty-codec-smtp",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.netty/netty-codec-socks",
+                "type": "maven",
+                "build_count": 65
+            },
+            {
+                "name": "io.netty/netty-codec-stomp",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.netty/netty-codec-xml",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.netty/netty-common",
+                "type": "maven",
+                "build_count": 72
+            },
+            {
+                "name": "io.netty/netty-dev-tools",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-handler",
+                "type": "maven",
+                "build_count": 72
+            },
+            {
+                "name": "io.netty/netty-handler-proxy",
+                "type": "maven",
+                "build_count": 65
+            },
+            {
+                "name": "io.netty/netty-handler-ssl-ocsp",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.netty/netty-parent",
+                "type": "maven",
+                "build_count": 22
+            },
+            {
+                "name": "io.netty/netty-resolver",
+                "type": "maven",
+                "build_count": 71
+            },
+            {
+                "name": "io.netty/netty-resolver-dns",
+                "type": "maven",
+                "build_count": 60
+            },
+            {
+                "name": "io.netty/netty-resolver-dns-classes-macos",
+                "type": "maven",
+                "build_count": 16
+            },
+            {
+                "name": "io.netty/netty-resolver-dns-native-macos",
+                "type": "maven",
+                "build_count": 6
+            },
+            {
+                "name": "io.netty/netty-tcnative",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.netty/netty-tcnative-boringssl-static",
+                "type": "maven",
+                "build_count": 14
+            },
+            {
+                "name": "io.netty/netty-tcnative-classes",
+                "type": "maven",
+                "build_count": 56
+            },
+            {
+                "name": "io.netty/netty-tcnative-parent",
+                "type": "maven",
+                "build_count": 18
+            },
+            {
+                "name": "io.netty/netty-testsuite",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-transport",
+                "type": "maven",
+                "build_count": 72
+            },
+            {
+                "name": "io.netty/netty-transport-classes-epoll",
+                "type": "maven",
+                "build_count": 51
+            },
+            {
+                "name": "io.netty/netty-transport-classes-io_uring",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-transport-classes-kqueue",
+                "type": "maven",
+                "build_count": 31
+            },
+            {
+                "name": "io.netty/netty-transport-native-epoll",
+                "type": "maven",
+                "build_count": 41
+            },
+            {
+                "name": "io.netty/netty-transport-native-epoll-aarch",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "io.netty/netty-transport-native-epoll-ppcle",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.netty/netty-transport-native-epoll-s390x",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.netty/netty-transport-native-io_uring",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-transport-native-kqueue",
+                "type": "maven",
+                "build_count": 22
+            },
+            {
+                "name": "io.netty/netty-transport-native-unix-common",
+                "type": "maven",
+                "build_count": 71
+            },
+            {
+                "name": "io.netty/netty-transport-native-unix-common-aarch",
+                "type": "maven",
+                "build_count": 4
+            },
+            {
+                "name": "io.netty/netty-transport-native-unix-common-ppcle",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-transport-native-unix-common-s390x",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-transport-native-unix-common-tests",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.netty/netty-transport-rxtx",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.netty/netty-transport-sctp",
+                "type": "maven",
+                "build_count": 13
+            },
+            {
+                "name": "io.netty/netty-transport-udt",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.projectreactor.netty/reactor-netty-core",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.projectreactor.netty/reactor-netty-http",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.quarkiverse.amazonservices/quarkus-amazon-netty-client-internal",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "io.quarkus/quarkus-netty",
+                "type": "maven",
+                "build_count": 33
+            },
+            {
+                "name": "io.quarkus/quarkus-netty-deployment",
+                "type": "maven",
+                "build_count": 14
+            },
+            {
+                "name": "io.quarkus/quarkus-netty-parent",
+                "type": "maven",
+                "build_count": 11
+            },
+            {
+                "name": "io_grpc_netty_shaded_netty_tcnative_windows_x86_64.dll",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "libio_grpc_netty_shaded_netty_tcnative_linux_aarch_64.so",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "libio_grpc_netty_shaded_netty_tcnative_linux_x86_64.so",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "libio_grpc_netty_shaded_netty_transport_native_epoll_aarch_64.so",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "libio_grpc_netty_shaded_netty_transport_native_epoll_x86_64.so",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "libio_micrometer_shaded_netty_transport_native_epoll_aarch_64.so",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "libio_micrometer_shaded_netty_transport_native_epoll_x86_64.so",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "libnetty_tcnative_linux_aarch_64.so",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "libnetty_tcnative_linux_x86_64.so",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "libnetty_transport_native_epoll_aarch_64.so",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "libnetty_transport_native_epoll_ppcle_64.so",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "libnetty_transport_native_epoll_s390_64.so",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "libnetty_transport_native_epoll_x86_64.so",
+                "type": "generic",
+                "build_count": 21
+            },
+            {
+                "name": "netty-codec-http-4.1.111.Final.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty-handler-4.1.119.Final.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty-nio-client-2.26.30.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty-transport-classes-epoll-4.1.111.Final.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty_tcnative_windows_x86_64.dll",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.arrow/arrow-memory-netty",
+                "type": "maven",
+                "build_count": 11
+            },
+            {
+                "name": "org.apache.arrow/arrow-memory-netty-buffer-patch",
+                "type": "maven",
+                "build_count": 10
+            },
+            {
+                "name": "org.apache.avro/avro-ipc-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel.quarkus/camel-quarkus-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel.quarkus/camel-quarkus-netty-deployment",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel.quarkus/camel-quarkus-netty-http",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel.quarkus/camel-quarkus-netty-http-deployment",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel.springboot/camel-netty-http-starter",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "org.apache.camel.springboot/camel-netty-starter",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "org.apache.camel/camel-netty",
+                "type": "maven",
+                "build_count": 7
+            },
+            {
+                "name": "org.apache.camel/camel-netty-http",
+                "type": "maven",
+                "build_count": 7
+            },
+            {
+                "name": "org.apache.camel/camel-netty-http-starter",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.apache.camel/camel-netty-starter",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.apache.camel/camel-netty4",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.apache.camel/camel-netty4-http",
+                "type": "maven",
+                "build_count": 3
+            }
+        ],
+        "total": 113
+    }
+}

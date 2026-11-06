@@ -1,0 +1,69 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=nginx&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": ".service"
+                            },
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": "1.30.6"
+                            },
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": "logo.png"
+                            },
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": "upgrade"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "nginx"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": "1.15.7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "payload-tracker/payload-tracker-frontend"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": "fpm.conf"
+                            },
+                            {
+                                "name": "nginx",
+                                "type": "generic",
+                                "version": "php.conf"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "php"
+            }
+        ]
+    }
+}

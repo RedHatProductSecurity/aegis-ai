@@ -1,0 +1,23 @@
+{
+    "url": "{anitya}/api/project/106029",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "nuclei"
+            },
+            {
+                "distro": "NixOS",
+                "package_name": "nuclei"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "nuclei"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "nuclei"
+            }
+        ]
+    }
+}

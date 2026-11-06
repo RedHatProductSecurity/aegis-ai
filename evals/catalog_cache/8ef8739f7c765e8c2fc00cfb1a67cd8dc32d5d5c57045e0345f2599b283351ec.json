@@ -1,0 +1,118 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Atomcat&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "idm-jss-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "jss-tomcat/jss-tomcat",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "jws5-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "jws6-mod_cluster-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "jws6-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "jws7-mod_cluster-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "jws7-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mod_cluster-tomcat",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "org.apache.cxf.systests/cxf-systests-rs-sse-tomcat",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.apache.tomcat/tomcat",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.dogtagpki.jss/jss-tomcat",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "org.dogtagpki.pki/pki-tomcat",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "org.dogtagpki/pki-tomcat",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.jboss.mod_cluster/mod_cluster-container-tomcat",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.springframework.boot/spring-boot-starter-tomcat",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.springframework.boot/spring-boot-tomcat",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "pki-tomcat/pki-tomcat",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "puppet-tomcat",
+                "type": "rpm",
+                "build_count": 224
+            },
+            {
+                "name": "redhat-jss-tomcat",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat",
+                "type": "generic",
+                "build_count": 7
+            },
+            {
+                "name": "tomcat",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "tomcat",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 22
+    }
+}

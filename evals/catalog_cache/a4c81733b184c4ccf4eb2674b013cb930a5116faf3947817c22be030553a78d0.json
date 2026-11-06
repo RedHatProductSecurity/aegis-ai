@@ -1,0 +1,59 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=busybox&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "busybox",
+                                "type": "generic",
+                                "version": "1.37.0"
+                            },
+                            {
+                                "name": "busybox",
+                                "type": "generic",
+                                "version": "petitboot.config"
+                            },
+                            {
+                                "name": "busybox",
+                                "type": "generic",
+                                "version": "shared.config"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "busybox"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "busybox",
+                                "type": "generic",
+                                "version": "1.37.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "xjoin/cyndi-operator-index"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "busybox",
+                                "type": "generic",
+                                "version": "1.37.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "osd-operators/advanced-cluster-security-operator-catalog"
+            }
+        ]
+    }
+}
