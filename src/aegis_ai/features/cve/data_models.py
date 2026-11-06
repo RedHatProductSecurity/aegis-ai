@@ -186,7 +186,8 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
     ecosystems: list[str] = Field(
         default_factory=list,
         description="Package ecosystems impacted by this vulnerability. "
-        "Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.",
+        "Allowed values: cargo, composer, conan, cran, gem, generic, golang, "
+        "hex, luarocks, maven, npm, nuget, opam, otp, pub, pypi, swift, unknown.",
     )
 
     explanation: str = Field(
