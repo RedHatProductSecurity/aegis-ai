@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import re
 import time
 from typing import Any
 
 import cvss
+from pydantic_ai.messages import ModelRequest, ModelResponse, ToolReturnPart
 
 import aegis_ai.toolsets.tools.osidb as osidb_tool
 from aegis_ai import get_settings
@@ -34,6 +36,7 @@ from aegis_ai.features.data_models import feature_deps
 from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
+from aegis_ai.toolsets.tools.osv_dev_ghsa import extract_ghsa_ids
 
 logger = logging.getLogger(__name__)
 
@@ -831,8 +834,151 @@ def _has_sufficient_static_context(static_context: Any) -> bool:
     return bool(desc)
 
 
+_GHSA_TOOL_NAME = "osv_dev_ghsa_tool"
+
+# OSV.dev tools whose responses carry affected-package data.
+_ADVISORY_TOOL_NAMES = (_GHSA_TOOL_NAME, "osv_dev_cve_tool")
+
+_GO_MODULE_SUFFIX_RE = re.compile(r"/v\d+$")
+
+
+def _module_root(module_path: str) -> str:
+    """Repository root of a Go module path (major-version suffix stripped)."""
+    return _GO_MODULE_SUFFIX_RE.sub("", module_path)
+
+
+def _advisory_go_module_paths(messages) -> dict[str, set[str]]:
+    """Map repository root -> affected Go module paths from OSV tool returns."""
+    by_root: dict[str, set[str]] = {}
+    for msg in messages:
+        if not isinstance(msg, ModelRequest):
+            continue
+        for part in msg.parts:
+            if not isinstance(part, ToolReturnPart):
+                continue
+            if part.tool_name not in _ADVISORY_TOOL_NAMES:
+                continue
+            entries = part.content if isinstance(part.content, list) else [part.content]
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                for affected in entry.get("affected", []):
+                    pkg = affected.get("package") or {}
+                    name = pkg.get("name")
+                    if name and str(pkg.get("ecosystem", "")).lower() == "go":
+                        by_root.setdefault(_module_root(name), set()).add(name)
+    return by_root
+
+
+def _agent_tool_names(toolset, seen: set[int] | None = None) -> set[str]:
+    """Best-effort synchronous enumeration of function tool names in a toolset graph.
+
+    Walks wrapper toolsets (logging, filtered, prefixed, combined) down to
+    function toolsets, whose tool names are always available synchronously.
+    Toolsets with deferred loading (e.g. MCP servers) contribute no names.
+    """
+    seen = set() if seen is None else seen
+    if id(toolset) in seen:
+        return set()
+    seen.add(id(toolset))
+
+    names: set[str] = set()
+    tools = getattr(toolset, "tools", None)
+    if isinstance(tools, dict):
+        names.update(
+            tool.name for tool in tools.values() if getattr(tool, "name", None)
+        )
+    for attr in ("wrapped", "toolset", "toolsets"):
+        subs = getattr(toolset, attr, None)
+        if subs is None:
+            continue
+        for sub in subs if isinstance(subs, (list, tuple, set)) else [subs]:
+            names |= _agent_tool_names(sub, seen)
+    return names
+
+
 class SuggestAffectedComponents(Feature):
     """Infer affected components from CVE data using all available OSIDB fields."""
+
+    def _check_output(self, result, deps) -> str | None:
+        """Enforce advisory-backed Go module identities (AEGIS-496).
+
+        Two guards, both scoped to runs where the OSV.dev tools are available:
+
+        1. When GHSA references exist in the flaw data, the model must have
+           called ``osv_dev_ghsa_tool`` — without its response the model tends
+           to fall back to bare project names.
+        2. When the advisory responses list two or more affected Go module
+           paths for one repository (e.g. unsuffixed + ``/v2``, or ``/v4`` +
+           ``/v5``), every listed path must appear in ``components``. Each
+           major version is a distinct module identity; omitting one breaks
+           OSIDB version range searches.
+        """
+        if not get_settings().use_osv_dev_tool:
+            return None
+        if _GHSA_TOOL_NAME in (getattr(deps, "disabled_tools", None) or set()):
+            return None
+        if not any(
+            _GHSA_TOOL_NAME in _agent_tool_names(ts) for ts in self.agent.toolsets
+        ):
+            return None
+
+        messages = result.all_messages()
+        components = set(result.output.components or [])
+
+        # Guard 2: advisory-listed module paths must survive into the output.
+        missing: list[str] = []
+        for names in _advisory_go_module_paths(messages).values():
+            if len(names) > 1:
+                missing.extend(sorted(names - components))
+        if missing:
+            logger.warning(
+                "advisory lists affected Go module paths %s missing from the "
+                "suggested components; requesting retry",
+                missing,
+            )
+            return (
+                "The advisory data from osv_dev_ghsa_tool lists these affected Go "
+                f"module paths: {', '.join(missing)}. Every affected module path "
+                "must appear in the components output — Go major versions are "
+                "distinct module identities and omitting any of them breaks "
+                "version range searches. Add the missing module path(s) to the "
+                "components list."
+            )
+
+        # Guard 1: GHSA references exist but the advisory tool was never called.
+        refs: set[str] = set(getattr(deps, "allowed_reference_urls", None) or ())
+        static_ctx = getattr(deps, "static_context", None)
+        if isinstance(static_ctx, dict):
+            for ref in static_ctx.get("references") or []:
+                if isinstance(ref, dict) and ref.get("url"):
+                    refs.add(str(ref["url"]))
+                elif isinstance(ref, str):
+                    refs.add(ref)
+        ghsa_ids = extract_ghsa_ids(sorted(refs))
+        if not ghsa_ids:
+            return None
+
+        for msg in messages:
+            if isinstance(msg, ModelResponse) and any(
+                tc.tool_name == _GHSA_TOOL_NAME for tc in msg.tool_calls or ()
+            ):
+                return None
+
+        logger.warning(
+            "GHSA references %s present but %s was not called; requesting retry",
+            ghsa_ids,
+            _GHSA_TOOL_NAME,
+        )
+        return (
+            f"GHSA advisory references ({', '.join(ghsa_ids)}) are present in the "
+            f"flaw data but the {_GHSA_TOOL_NAME} was never called. Call "
+            f"{_GHSA_TOOL_NAME} with the GHSA reference URLs and use the returned "
+            "affected-package data (Go module paths, ecosystems, PURLs, version "
+            "ranges) to finalize the components. Include every affected Go module "
+            "path the advisory lists, including older major-version paths (/vN) "
+            "and the unsuffixed path."
+        )
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
@@ -849,12 +995,14 @@ class SuggestAffectedComponents(Feature):
                 - Only list components that are *directly vulnerable* — the upstream artifact where the bug exists and the fix is applied. Do not list libraries, runtimes, or standard library modules that the CVE description merely *mentions*, *uses*, or *references* as execution context. Each component you list must be one where an upstream patch or release directly addresses the flaw.
                 - From all available CVE/OSIDB data (title, comment_zero, description, statement, mitigation, comments, references, affects, cvss_scores, cwe_id, impact), identify the affected software component(s).
                 - List component names (package names) in the output 'components' field.
+                - OSIDB component naming is the source of ground truth. Infer the affected components using that naming convention; upstream advisory names and Go module declarations are supporting evidence, not a reason to replace OSIDB names with different identifiers.
                 - Where a Package URL (PURL) is identified use the name part of the PURL, without any namespace or type prefix. Exception: for Maven packages, always include the groupId and use groupId/artifactId format with a forward slash separator (e.g. 'com.mchange/mchange-commons-java' not 'mchange-commons-java', 'org.traccar/traccar' not 'org.traccar:traccar', 'org.apache.sshd/sshd-core' not just 'sshd-core'). Similarly, for PHP Composer packages, always include the vendor and use vendor/package format (e.g. 'phpseclib/phpseclib' not 'phpseclib').
                 - Never prefix component names with ecosystem identifiers: no 'python-', 'nodejs-', or 'rubygem-' prefixes. Use the bare package name (e.g. 'cryptography' not 'python-cryptography', 'dotenv' not 'python-dotenv', 'axios' not 'nodejs-axios', 'rack' not 'rubygem-rack'). Strip the prefix even when the upstream project name includes it (e.g. PyPI package 'python-dotenv' → 'dotenv'). Only strip the exact prefixes listed above — 'node-' is NOT an ecosystem prefix (e.g. npm package 'node-forge' → 'node-forge', not 'forge'). Exception: keep the 'rust-' prefix — it is a Red Hat distro naming convention, not an ecosystem prefix (e.g. 'rust-openssl', 'rust-coreutils').
-                - For Go packages outside stdlib, always use the full module path as the component name. This applies to github.com/ packages (e.g. 'github.com/containerd/containerd' not 'containerd', 'github.com/go-acme/lego' not 'lego') and golang.org/x/ packages (e.g. 'golang.org/x/net/html' not 'net/html', 'golang.org/x/oauth2/jws' not 'oauth2/jws'). Strip Go major-version suffixes (/v2, /v3, /v7, etc.) from the module path (e.g. 'github.com/oauth2-proxy/oauth2-proxy' not 'github.com/oauth2-proxy/oauth2-proxy/v7').
+                - For Go packages outside stdlib, use the full affected module or package paths recorded by OSIDB. Preserve major-version segments when they are part of those component names (e.g. 'github.com/containerd/containerd/v2', 'github.com/go-acme/lego/v4') and affected package specificity (e.g. 'golang.org/x/net/html', 'golang.org/x/oauth2/jws'). OSIDB may instead use an unsuffixed repository path or also record a distribution package name: OAuth2 Proxy is represented by 'oauth2-proxy' and 'github.com/oauth2-proxy/oauth2-proxy', not a forced '/v7' path. Do not add or strip version segments solely to conform to upstream semantic import versioning.
+                - Go modules follow Semantic Import Versioning: the repository path without a suffix is the module path for major versions 0 and 1, and every major version 2 or higher is a distinct module path with /v2, /v3, ... appended. When the affected version range spans multiple major versions, list the module path for every affected major version: a grpc-gateway flaw affecting versions 'up to v2.28.0' spans the v1 and v2 series, so the components are 'github.com/grpc-ecosystem/grpc-gateway' and 'github.com/grpc-ecosystem/grpc-gateway/v2'. Exclude a major version only when the evidence shows it is unaffected: the MongoDB Go Driver Client.BulkWrite flaw affects only 'go.mongodb.org/mongo-driver/v2' because the vulnerable API does not exist in the unsuffixed v1 module.
                 - If the component is from the Python standard library, use 'python' as the component name.
                 - If the vulnerability is *in* the Go standard library itself (i.e., the upstream fix is a patch to the Go source tree, such as a Go release note listing the CVE), keep the full stdlib path (e.g. 'crypto/internal/nistec', 'crypto/x509', 'cmd/go', 'net/http/internal') and return it first in the components array in addition to the component 'golang'. Do NOT add 'golang' or Go stdlib paths when the vulnerability is in a third-party Go module that merely *calls* stdlib functions — only the third-party module itself is vulnerable. For example, a bug in rclone that involves net/http handling does NOT make 'net/http' or 'golang' a vulnerable component.
-                - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', OpenSSL Rust bindings → 'rust-openssl', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet', GLib/GLib2 → 'glib', `XML::Parser` → 'perl-xml-parser'. Exception: for Go packages in the golang ecosystem, the full module path (see above) takes precedence over the Red Hat distro name.
+                - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', OpenSSL Rust bindings → 'rust-openssl', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet', GLib/GLib2 → 'glib', `XML::Parser` → 'perl-xml-parser'. For Go packages, follow the OSIDB module/package naming rule above, including distribution package names when OSIDB records them alongside module paths.
                 - For the Qt framework, use the Red Hat umbrella component names 'qt', 'qt5', or 'qt6' — not individual sub-module packages (e.g. 'qt6-qtbase', 'qt5-qtconnectivity'). If the CVE affects Qt5, use 'qt5'; if Qt6, use 'qt6'; if Qt in general or both, use 'qt' (or include all applicable: 'qt', 'qt5', 'qt6').
                 - Use the source component name, not binary or subpackage names. Examples: Redis → 'redis' not 'redis-server', Apache HTTP Server → 'httpd' not 'httpd-core'.
                 - When the CVE title or GitHub repository name differs from the actual package name in the ecosystem registry (npm, PyPI, crates.io, etc.), always use the registry name (e.g. GitHub repo 'node-tar' is published to npm as 'tar' → use 'tar'; GitHub repo 'forge' is published to npm as 'node-forge' → use 'node-forge'; GitHub repo 'tar-rs' is published to crates.io as 'tar' → use 'tar').
@@ -873,15 +1021,15 @@ class SuggestAffectedComponents(Feature):
                 - When a CVE mentions an umbrella project (e.g. 'Spring Framework', 'Apache Commons'), do not return the umbrella name — use tools to identify the specific affected Maven artifacts or submodules (e.g. 'org.springframework/spring-webmvc' not 'Spring Framework').
                 - If GHSA reference URLs are present in the flaw data, pass them to the osv_dev_ghsa tool to get structured affected-package data (package names, ecosystems, PURLs, version ranges) for component identification.
                 - Use osv_dev_ghsa_tool responses to determine impacted ecosystems — the affected[].package.ecosystem field is the most authoritative ecosystem signal.
-                - When osv_dev_ghsa_tool returns an affected package name, prefer it over names derived from the CVE title or description — the GHSA package name is the canonical registry identifier.
+                - When osv_dev_ghsa_tool returns an affected package name, use it to identify the vulnerable artifact rather than guessing from the CVE title or description. The GHSA package name is a registry identifier; OSIDB remains authoritative for output component naming when the names differ.
                 - Analyze CVE reference URLs to determine ecosystem: advisory URLs often indicate it (GHSA advisories, npmjs.com, pypi.org links, commit URLs pointing to upstream source). A vulnerability in core source code does not automatically mean every language binding is affected.
-                - Cross-check each candidate component: verify that the upstream fix (patch, commit, release) addresses a bug *in that specific component's code*. If the fix is only in one upstream project, other components you are considering are likely mentioned for context, not themselves vulnerable. When osv_dev_ghsa_tool or github tool data identifies a single affected package, that is strong evidence that no other components should be listed.
+                - Cross-check each candidate component: verify that the upstream fix (patch, commit, release) addresses a bug *in that specific component's code*. If the fix is only in one upstream project, other projects you are considering are likely mentioned for context, not themselves vulnerable. A single affected package in osv_dev_ghsa_tool or github tool data is strong evidence against adding unrelated artifacts, but does not exclude multiple OSIDB component names for that same vulnerable software.
                 - Use 'generic' only for software distributed outside any language package registry — typically via tarballs, zip archives, container images, or OS packages. Examples: Apache Tomcat, Apache HTTP Server (httpd), Nginx, PostgreSQL, MariaDB, Samba, BIND. If the component is published to a package registry (npm, PyPI, Maven Central, crates.io, RubyGems, hex.pm, etc.), use that registry's ecosystem even if the component is an application or CLI rather than a library.
                 - 'Written in language X' does NOT imply ecosystem X. The ecosystem should reflect the *distribution channel*, not the implementation language. A Java application distributed as a tarball (e.g. Apache Tomcat) is 'generic', not 'maven'. But a Java library published to Maven Central is 'maven', and a CLI tool installed via `npm install -g` is 'npm'.
                 - When no tool data (OSV.dev, GHSA) provides an explicit ecosystem for software distributed outside a package registry, prefer 'generic' over a language ecosystem inferred only from implementation language.
                 - When a GitHub security advisory or the CNA package URL reports an ecosystem, use that value mapped onto the allowlist (e.g. 'OTP' → 'otp', 'Hex' → 'hex'). Do not replace it with 'hex' merely because the text mentions hex.pm or Mix. If those sources are absent, an OSV/GHSA ecosystem of 'Hex' maps to 'hex', and packages published on or fetched from the Hex registry use 'hex'. A Mix dependency fetched only via git: or path:, with no Hex coordinate and no advisory ecosystem, is not 'hex'. Do not use 'cargo' for Hex packages merely because a Rust crate may share the same name.
                 - Use 'unknown' for the ecosystem only when it genuinely cannot be determined from available data.
-                - For Go packages outside stdlib, always use the full module path (e.g. 'github.com/external-secrets/external-secrets', 'golang.org/x/net/html'). Never shorten to just the repo name. Strip Go major-version suffixes like /v2, /v7 from the path.
+                - For Go packages outside stdlib, preserve each distinct affected component identity used by OSIDB. This can include versioned module paths, unsuffixed paths, affected package subpaths, and distribution package names for the same vulnerable software. Do not collapse distinct OSIDB component names into one repository name or expand a module root into a package subpath merely because a vulnerable function lives there. Use advisory package names, PURLs, and upstream module declarations as supporting evidence; do not invent a version segment from a release version alone or let upstream naming override OSIDB. Include multiple paths or package names only when supported as affected components, rather than generating aliases speculatively.
                 - Output format: components (list of strings), ecosystems (list of strings), explanation (string), confidence (0.00–1.00).
             """,
             context=_build_cve_input(cve_id, static_context, exclude),
