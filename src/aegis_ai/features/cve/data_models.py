@@ -202,6 +202,64 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
         return str(self.components)
 
 
+class ManifestComponentEntry(BaseModel):
+    """One downstream name ACE can search for."""
+
+    name: str = Field(..., description="Downstream component or package name.")
+    build_type: Literal["rpm", "container", "maven", "generic"] | None = Field(
+        default=None,
+        description=(
+            "Build-name search key. Use when the name is an exact bomq build "
+            "(rpm, container, maven build, or generic build). Do not use for "
+            "bundled Maven/npm/golang registry coordinates."
+        ),
+    )
+    ecosystem: (
+        Literal["cargo", "gem", "golang", "maven", "npm", "pypi", "generic"] | None
+    ) = Field(
+        default=None,
+        description=(
+            "Bundled-component search key. Use for registry packages (maven "
+            "GAVs, npm, golang modules, …) that appear as catalog components "
+            "but not as builds of that name. Never rpm; rpm rows use build_type."
+        ),
+    )
+    rhcos: Literal["rpm"] | None = Field(
+        default=None,
+        description="Set to rpm when this name also ships in an RHCOS image.",
+    )
+    affectedness: Literal["AFFECTED", "NOTAFFECTED", "UNKNOWN"] | None = Field(
+        default=None,
+        description=(
+            "AFFECTED or NOTAFFECTED when samples clearly fall in or out of the "
+            "advisory range; UNKNOWN when the range or version sample is missing; "
+            "null for compat/ambiguous packaging that needs manual review."
+        ),
+    )
+    evidence: str | None = Field(
+        default=None,
+        description="Sample of upstream versions used for the affectedness decision.",
+    )
+
+    @model_validator(mode="after")
+    def exactly_one_search_key(self) -> "ManifestComponentEntry":
+        """Require exactly one of build_type, ecosystem, or rhcos on each row."""
+        present = [
+            key
+            for key, value in (
+                ("build_type", self.build_type),
+                ("ecosystem", self.ecosystem),
+                ("rhcos", self.rhcos),
+            )
+            if value is not None
+        ]
+        if len(present) != 1:
+            raise ValueError(
+                "exactly one of build_type, ecosystem, or rhcos is required"
+            )
+        return self
+
+
 class SuggestImpactModel(AegisFeatureModel):
     """
     Represents a model-generated suggestion for the CVSS 3.1 score and related impact

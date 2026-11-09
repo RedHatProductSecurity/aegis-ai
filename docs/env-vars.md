@@ -38,6 +38,8 @@
 | Environment Variable                   | Description                           | Default Value            |
 |----------------------------------------|---------------------------------------|--------------------------|
 | `AEGIS_BOMQ_URL`                       | bomq REST API host                    | `https://localhost:8080` |
+| `AEGIS_BOMQ_COMMUNITY_URL`             | Community bomq REST API. Empty skips that catalog. | `https://localhost:8081` |
+| `AEGIS_ANITYA_URL`                     | release-monitoring.org API            | `https://release-monitoring.org` |
 | `AEGIS_OSIDB_SERVER_URL`               | OSIDB REST API host                   | `https://localhost:8000` |
 | `AEGIS_OSIDB_RETRIEVE_EMBARGOED`       | Enable retrieving embargoed CVEs      | `false`                  |
 | `AEGIS_USE_CWE_TOOL_CONTEXT`           | Enable MITRE CWE tool                 | `true`                   |
