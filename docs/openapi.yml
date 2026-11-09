@@ -178,6 +178,7 @@ components:
       - quality-review
       - suggest-affected-packages
       - query-affected-components
+      - suggest-manifest-component-and-state
       title: CVEFeatureName
       type: string
     CVEMultiAnalysisRequest:
