@@ -29,6 +29,7 @@ class CVEFeatureInput(BaseModel):
     )
 
     def __repr__(self) -> str:
+        """Compact representation showing only non-None CVE input fields."""
         fields = {k: v for k, v in self.__dict__.items() if v is not None}
         pairs = " ".join(f"{k}={v!r}" for k, v in fields.items())
         return f"{self.__class__.__name__}({pairs})"
@@ -163,6 +164,7 @@ class SuggestAffectedPackagesModel(AegisFeatureModel):
     )
 
     def printable_outcome(self) -> str:
+        """Short summary of affected package and binary counts."""
         affected = sum(1 for p in self.affected_packages if p.affected)
         total = len(self.affected_packages)
         binaries = sum(len(p.affected_binaries) for p in self.affected_packages)
@@ -258,6 +260,107 @@ class ManifestComponentEntry(BaseModel):
                 "exactly one of build_type, ecosystem, or rhcos is required"
             )
         return self
+
+
+class ManifestUsageAnalysis(BaseModel):
+    """Which catalog hits actually run the vulnerable code."""
+
+    vulnerable_unit: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Package or submodule the patch changes "
+            "(e.g. github.com/prometheus/common/config), not a parent import."
+        ),
+    )
+    caller_role: Literal["every_importer", "product_feature"] = Field(
+        ...,
+        description=(
+            "every_importer when every caller of the API is in scope "
+            "(OpenSSL, libcurl, html/template); product_feature when only a "
+            "named product feature runs the bug (Prometheus remote_write)."
+        ),
+    )
+    runs_vulnerable_code: list[str] = Field(
+        ...,
+        description=(
+            "Catalog names that run the vulnerable unit: the patched submodule "
+            "and application/server builds that exercise it."
+        ),
+    )
+    importer_only: list[str] = Field(
+        ...,
+        description=(
+            "Catalog names that only link a shared parent module and do not "
+            "run the vulnerable feature."
+        ),
+    )
+
+
+class SuggestManifestComponentAndStateModel(AegisFeatureModel):
+    """Downstream names for the flaw's components, with affectedness when known."""
+
+    cve_id: CVEID = Field(..., description="CVE identifier for the flaw.")
+    manifest_components: list[ManifestComponentEntry] = Field(
+        default_factory=list,
+        description="Same-project downstream names confirmed in a catalog.",
+    )
+    usage: ManifestUsageAnalysis = Field(
+        ...,
+        description=(
+            "Vulnerable-code usage: which catalog hits run the bug versus "
+            "importer-only shared modules."
+        ),
+    )
+    explanation: str = Field(
+        ...,
+        description="Why these downstream names were kept or left out.",
+    )
+    # Set on catalog outages so the bot records a lookup failure, not a
+    # low-confidence empty mapping.
+    _catalog_outage: bool = PrivateAttr(default=False)
+
+    def printable_outcome(self) -> str:
+        return f"{len(self.manifest_components)} downstream name(s)"
+
+
+class DownstreamFeatureContext(BaseModel):
+    """Prefetched catalog context for SuggestManifestComponentAndState."""
+
+    cve_id: CVEID = Field(..., description="CVE identifier for the flaw.")
+    flaw_components: list[str] = Field(
+        default_factory=list,
+        description="Upstream component seeds from the flaw.",
+    )
+    advisory_text: str = Field(
+        default="",
+        description="Joined advisory/CVE text used for version-range hints.",
+    )
+    upstream_data: dict | list | None = Field(
+        default=None,
+        description="OSV-shaped upstream_data from the flaw when present.",
+    )
+    downstream_candidates: dict = Field(
+        default_factory=dict,
+        description="Prefetched bomq/Anitya candidates, versions, and soft labels.",
+    )
+    soft_label_baseline: list[dict] = Field(
+        default_factory=list,
+        description="Deterministic soft-label keepers with affectedness hints.",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"DownstreamFeatureContext(cve_id={self.cve_id!r} "
+            f"seeds={self.flaw_components!r} "
+            f"candidates={len(self.downstream_candidates.get('candidates', []))} "
+            f"baseline={len(self.soft_label_baseline)})"
+        )
+
+    def __str__(self) -> str:
+        # AegisPrompt.to_string() interpolates the context with str(); the
+        # compact __repr__ is for logs only and must not hide the catalog.
+        return self.model_dump_json()
 
 
 class SuggestImpactModel(AegisFeatureModel):

@@ -7,9 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- added `suggest-manifest-component-and-state` to the CLI [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` maps flaw components to same-project downstream names and stores them in `aegis_meta._downstream` [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` requires a vulnerable-code usage step and omits importer-only catalog names with 100+ builds (keeps smaller ones as `NOTAFFECTED`) [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- manifest-component eval locked sample includes `CVE-2026-119566` (Prometheus remote_write usage vs shared `prometheus/common` importers) [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` maps `github.com/openshift-priv/<project>` to `github.com/openshift/<project>` and keeps it as same-project downstream when the repo matches the upstream seed [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+
 ### Changed
+- `suggest-manifest-component-and-state` keeps packaging-prefix clear rebuilds (`mingw-` / `cross-`) only; digit-prefixed product rebuilds (`jbcs-httpd24-*`, `jws5-tomcat`, `gcc-toolset-*-*`) and `sysroot-*-<seed>` subpackages are packaging drops [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
 - `suggest-affected-components` allows additional non-distribution package ecosystems from the component catalog (`composer`, `conan`, `cran`, `hex`, `luarocks`, `nuget`, `opam`, `otp`, `pub`, `swift`) alongside the previous list [\[AEGIS-537\]](https://redhat.atlassian.net/browse/AEGIS-537)
 - `suggest-affected-components` hex ecosystem guidance no longer overrides an ecosystem reported by a GitHub advisory or the CNA package URL [\[AEGIS-537\]](https://redhat.atlassian.net/browse/AEGIS-537)
+- `suggest-manifest-component-and-state` collapses bomq `mingw32-*` / `mingw64-*` catalog names onto `mingw-*` (OSIDB SRPM/collection identity) [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` hard-enforces soft-label `version_package` / `compat` keeps after the agent (restores omitted Hummingbird-style version RPMs such as `prometheus3.13`) [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `CVE-2026-119566` manifest-component golden expects `github.com/openshift-priv/prometheus` plus server RPMs (`prometheus`, `prometheus3.13`, `prometheus3.5`) [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- downstream catalog gather passes `exclude_subcomponents=true`, also catalogs reference-caller module paths and packaging tokens, and keeps build-typed RPMs beside Go module paths [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` samples bomq component versions for ecosystem soft-label keepers, parses bare `through VERSION` advisory ranges, and aligns agent UNKNOWN affectedness from the soft-label baseline [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- bomq HTTP responses used by `suggest-manifest-component-and-state` are field-filtered before use and eval catalog caching [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- Anitya (release-monitoring.org) HTTP responses used by `suggest-manifest-component-and-state` are field-filtered before use and eval catalog caching [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
 
 ## [0.10.3] - 2026-11-05
 
