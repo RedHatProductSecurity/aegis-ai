@@ -22,18 +22,8 @@ class FlawValidationError(RuntimeError):
 
 
 ELIGIBLE_FLAWS = {
-    # only flaws with the DEFAULT workflow in the NEW state
-    "classification": ({"workflow": "DEFAULT", "state": "NEW"},),
-    # only flaws with no affects
-    "affects": ([],),
-    # only flaws with no owner
-    "owner": ("",),
-    # only flaws with empty description
-    "cve_description": ("",),
-    # only flaws with no statement
-    "statement": ("",),
-    # only flaws with no mitigation
-    "mitigation": ("",),
+    # only flaws with the MANUAL workflow in the NEW state
+    "classification": ({"workflow": "MANUAL", "state": "NEW"},),
 }
 
 FLAW_FIELDS = [
@@ -102,13 +92,11 @@ class FlawFinder:
         kwargs: dict[str, Any] = {
             "include_fields": ["cve_id", "updated_dt"],
             "cve_id__isempty": False,  # only flaws with a CVE ID
+            "components": "kernel",  # only kernel CVEs
             "order": ["updated_dt"],
             **{
                 f"workflow_{predicate}_in": list(
-                    dict.fromkeys(
-                        cast(dict[str, str], c)[key]
-                        for c in ELIGIBLE_FLAWS["classification"]
-                    )
+                    dict.fromkeys(c[key] for c in ELIGIBLE_FLAWS["classification"])
                 )
                 for key, predicate in (("workflow", "name"), ("state", "state"))
             },

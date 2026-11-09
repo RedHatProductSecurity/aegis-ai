@@ -11,7 +11,7 @@ import logging
 import textwrap
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, cast
+from typing import Any
 
 import click
 import osidb_bindings
@@ -30,9 +30,7 @@ LABEL_NAME = "manual-triage"
 
 
 ALLOWED_STATES = tuple(
-    dict.fromkeys(
-        cast(dict[str, str], c)["state"] for c in ELIGIBLE_FLAWS["classification"]
-    )
+    dict.fromkeys(c["state"] for c in ELIGIBLE_FLAWS["classification"])
 )
 
 

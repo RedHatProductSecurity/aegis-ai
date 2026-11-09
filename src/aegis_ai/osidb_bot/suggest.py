@@ -187,28 +187,17 @@ async def suggest_components(
 async def suggest_description(
     agent: Agent, flaw_data: FlawData, ts: datetime
 ) -> set[str]:
+    if flaw_data.get("cve_description"):
+        # the "cve_description" field is already initialized, skip this!
+        return set()
+
     # request the suggestion from Aegis
     feature = cve.SuggestDescriptionText(agent)
     output = await exec_feature(feature, flaw_data)
 
-    if not output.suggested_title:
-        # no title suggested, giving up
-        return record_aegis_failure(flaw_data, ts, "title", output)
-
-    # pick the relevant fields
-    changed = update_field(
-        flaw_data,
-        ts,
-        "title",
-        output,
-        src="suggested_title",
-        force_overwrite_of="From CVEorg collector",
-    )
-    changed |= update_field(
+    return update_field(
         flaw_data, ts, "cve_description", output, src="suggested_description"
     )
-
-    return changed
 
 
 async def suggest_cwe(agent: Agent, flaw_data: FlawData, ts: datetime) -> set[str]:
@@ -333,9 +322,6 @@ async def suggest_statement(
 
 
 DEFAULT_SUGGESTION_LIST = [
-    suggest_components,
     suggest_description,
     suggest_cwe,
-    suggest_impact,
-    suggest_statement,
 ]
