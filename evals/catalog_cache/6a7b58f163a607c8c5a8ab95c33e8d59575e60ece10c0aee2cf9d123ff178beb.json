@@ -1,0 +1,23 @@
+{
+    "url": "{anitya}/api/project/10352",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "perl-Net-OAuth"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "dev-perl/Net-OAuth"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "perl-Net-OAuth"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "perl-Net-OAuth"
+            }
+        ]
+    }
+}

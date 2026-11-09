@@ -1,0 +1,35 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=code.gitea.io%2Fgitea&strict=true&include_types=golang&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "code.gitea.io/gitea",
+                                "type": "golang",
+                                "version": "v1.23.7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pipelines-pipelines-as-code-controller-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "code.gitea.io/gitea",
+                                "type": "golang",
+                                "version": "v1.23.7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "pipelines-pipelines-as-code-watcher-rhel9"
+            }
+        ]
+    }
+}

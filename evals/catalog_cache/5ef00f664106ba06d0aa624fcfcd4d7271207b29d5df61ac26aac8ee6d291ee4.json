@@ -1,0 +1,49 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=github.com%2Fprojectcontour%2Fcontour&strict=true&include_types=golang&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/projectcontour/contour",
+                                "type": "golang",
+                                "version": "v1.21.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "edo/external-dns-rhel8"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/projectcontour/contour",
+                                "type": "golang",
+                                "version": "v1.29.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "edo/external-dns-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/projectcontour/contour",
+                                "type": "golang",
+                                "version": "v4.12.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-contour-rhel8"
+            }
+        ]
+    }
+}

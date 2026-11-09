@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=gdk-pixbuf&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "gdk-pixbuf",
+                "id": 16745,
+                "backend": "crates.io",
+                "homepage": "https://crates.io/crates/gdk-pixbuf",
+                "ecosystem": "crates.io"
+            },
+            {
+                "name": "gdk-pixbuf",
+                "id": 9533,
+                "backend": "GitLab",
+                "homepage": "http://www.gtk.org",
+                "ecosystem": "http://www.gtk.org"
+            }
+        ],
+        "total_items": 2
+    }
+}

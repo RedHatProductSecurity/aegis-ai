@@ -1,0 +1,7 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=product-security&page=1&items_per_page=100",
+    "body": {
+        "items": [],
+        "total_items": 0
+    }
+}

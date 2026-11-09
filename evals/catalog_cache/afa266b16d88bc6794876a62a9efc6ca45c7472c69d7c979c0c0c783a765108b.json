@@ -1,0 +1,49 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=openexr&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "openexr",
+                                "type": "generic",
+                                "version": "3.2.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "usd"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "openexr",
+                                "type": "generic",
+                                "version": "3.2.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "usd"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "openexr",
+                                "type": "generic",
+                                "version": "3.2.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "usd"
+            }
+        ]
+    }
+}

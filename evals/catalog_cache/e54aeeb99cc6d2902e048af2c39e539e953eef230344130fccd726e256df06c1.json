@@ -1,0 +1,233 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Agdk-pixbuf%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "gdk-pixbuf",
+                "type": "cargo",
+                "build_count": 4
+            },
+            {
+                "name": "gdk-pixbuf-sys",
+                "type": "cargo",
+                "build_count": 4
+            },
+            {
+                "name": "gdk-pixbuf2",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-modules-extra",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-xlib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-xlib-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-gdk-pixbuf",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw32-gdk-pixbuf",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw64-gdk-pixbuf",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf+v2_40-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf+v2_42-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf+v2_44-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys+v2_40-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys+v2_42-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys+v2_44-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.20",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.20+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.20+v2_40-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.20+v2_42-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.20-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.21",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.21+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.21+v2_40-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.21+v2_42-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.21+v2_44-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf-sys0.21-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.20",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.20+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.20+v2_40-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.20+v2_42-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.20-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.21",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.21+default-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.21+v2_40-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.21+v2_42-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.21+v2_44-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-gdk-pixbuf0.21-devel",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 45
+    }
+}

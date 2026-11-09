@@ -1,0 +1,11 @@
+{
+    "url": "{anitya}/api/project/21843",
+    "body": {
+        "packages": [
+            {
+                "distro": "Buildroot",
+                "package_name": "nvidia-driver"
+            }
+        ]
+    }
+}

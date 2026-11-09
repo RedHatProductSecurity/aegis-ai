@@ -45,6 +45,13 @@ populate-kernel-caches:
 
 prepare-kernel-eval: generate-kernel-eval populate-kernel-caches
 
+# Prefetch bomq/Anitya responses for the suggest-manifest-component eval sample.
+# Requires real AEGIS_BOMQ_URL / AEGIS_BOMQ_COMMUNITY_URL (not localhost).
+# Deterministic bomq coverage for the locked CVE sample. CI fetches public
+# Anitya misses itself; uncached bomq tool URLs are blocked at eval time.
+populate-catalog-cache:
+	uv run python scripts/populate_catalog_cache.py
+
 eval: fetch-deps
 	uv run pytest -vv -s --show-capture=no evals
 

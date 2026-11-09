@@ -1,0 +1,161 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=binutils&strict=true&build_name=rhcos%2A&include_types=rpm&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.30-113.el8_6.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-37.el9_2.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-37.el9_2.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-37.el9_2.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-43.el9_4.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-43.el9_4.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-43.el9_4.2"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-63.el9_6.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-63.el9_6.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-63.el9_6.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "binutils",
+                                "type": "rpm",
+                                "version": "2.35.2-72.el9"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            }
+        ]
+    }
+}

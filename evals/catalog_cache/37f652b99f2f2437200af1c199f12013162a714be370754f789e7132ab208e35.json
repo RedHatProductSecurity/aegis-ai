@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=suricata&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "suricata",
+                "id": 10925,
+                "backend": "GitHub",
+                "homepage": "https://suricata.io/",
+                "ecosystem": "https://suricata.io/"
+            },
+            {
+                "name": "suricata",
+                "id": 81020,
+                "backend": "Rubygems",
+                "homepage": "https://rubygems.org/gems/suricata/versions/0.3.7",
+                "ecosystem": "rubygems"
+            }
+        ],
+        "total_items": 2
+    }
+}

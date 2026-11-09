@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=nvidia-driver&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "nvidia-driver",
+                "id": 21843,
+                "backend": "custom",
+                "homepage": "http://download.nvidia.com/XFree86/Linux-x86",
+                "ecosystem": "http://download.nvidia.com/XFree86/Linux-x86"
+            }
+        ],
+        "total_items": 1
+    }
+}

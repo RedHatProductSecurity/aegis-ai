@@ -1,0 +1,28 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Arabbitmq-server%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "rabbitmq-server",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "rabbitmq-server",
+                "type": "rpm",
+                "build_count": 416
+            },
+            {
+                "name": "rabbitmq-server4.2",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rabbitmq-server4.3",
+                "type": "rpm",
+                "build_count": 2
+            }
+        ],
+        "total": 4
+    }
+}

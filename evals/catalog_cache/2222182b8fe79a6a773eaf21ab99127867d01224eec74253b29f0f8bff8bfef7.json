@@ -1,0 +1,193 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Avm2%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "llvm20",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-cmake-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-filesystem",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-googletest",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm20-toolset",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-cmake-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-filesystem",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-googletest",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm21-toolset",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-cmake-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-doc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-filesystem",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-googletest",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "llvm22-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lvm2",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lvm2-dbusd",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lvm2-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lvm2-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lvm2-lockd",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lvm2-testsuite",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "osbuild-lvm2",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "udisks2-lvm2",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 37
+    }
+}

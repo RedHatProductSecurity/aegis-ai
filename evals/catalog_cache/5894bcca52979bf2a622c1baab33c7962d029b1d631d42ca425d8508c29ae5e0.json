@@ -1,0 +1,25 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=arm-none-eabi-binutils-cs&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.44-2.el10_1"
+            },
+            {
+                "build_version": "2.43-1.el8"
+            },
+            {
+                "build_version": "2.43-1.el9"
+            },
+            {
+                "build_version": "2.45-5.fc43"
+            },
+            {
+                "build_version": "2.45-5.fc44"
+            },
+            {
+                "build_version": "2.47-1.fc46"
+            }
+        ]
+    }
+}

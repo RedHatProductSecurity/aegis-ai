@@ -1,0 +1,6 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=jws5-tomcat&strict=true&limit=20",
+    "body": {
+        "data": []
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=github.com%2Fopenshift-priv%2Fprometheus%2Fpatches%2Fgithub.com%2Fprometheus%2Fcommon&strict=true&include_types=golang&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus/patches/github.com/prometheus/common",
+                                "type": "golang",
+                                "version": "v0.0.0-20260929203517-0e2e5ce6f4f7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus/patches/github.com/prometheus/common",
+                                "type": "golang",
+                                "version": "v0.0.0-20261026001205-1dfdf5df3eed"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus"
+            }
+        ]
+    }
+}

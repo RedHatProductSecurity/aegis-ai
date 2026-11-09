@@ -1,0 +1,107 @@
+{
+    "url": "{anitya}/api/project/5092",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "vim"
+            },
+            {
+                "distro": "PLD-Linux",
+                "package_name": "vim"
+            },
+            {
+                "distro": "FZUG",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "vim-minimal"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "app-editors/vim-core"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "app-editors/vim"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "app-editors/gvim"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "vim-runtime"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Timesys",
+                "package_name": "vim"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Flathub",
+                "package_name": "org.vim.Vim"
+            },
+            {
+                "distro": "OpenBSD",
+                "package_name": "vim"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:vim:vim"
+            },
+            {
+                "distro": "Chromebrew",
+                "package_name": "gvim"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "vim"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "vimdiff"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "xxd"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "vim"
+            },
+            {
+                "distro": "stagex",
+                "package_name": "vim"
+            },
+            {
+                "distro": "PTXdist",
+                "package_name": "vim"
+            }
+        ]
+    }
+}

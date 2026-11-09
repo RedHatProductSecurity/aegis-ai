@@ -1,0 +1,47 @@
+{
+    "url": "{anitya}/api/project/10442",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:freerdp:freerdp"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "freerdp"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "freerdp3"
+            }
+        ]
+    }
+}

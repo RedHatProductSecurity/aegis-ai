@@ -1,0 +1,170 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=postgresql&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "13.11"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "libpq"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "13.20"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "15.19"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/bootc-automation-portal-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "13.20"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "15.19"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/bootc-automation-portal-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "16.11"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "16.11.tar.bz2.sha256"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "17.11"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "17.11.tar.bz2.sha256"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "18.6"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "18.6.tar.bz2.sha256"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "bashprofile"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "postgresql18"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "16.15"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "16.15.tar.bz2.sha256"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "17.11"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "17.11.tar.bz2.sha256"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "bashprofile"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "postgresql17"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "18.4"
+                            },
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "18.4.tar.bz2.sha256"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "libpq"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "postgresql",
+                                "type": "generic",
+                                "version": "42.2.27"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "postgresql-jdbc"
+            }
+        ]
+    }
+}

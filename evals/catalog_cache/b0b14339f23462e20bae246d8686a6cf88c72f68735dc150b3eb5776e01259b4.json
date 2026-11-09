@@ -1,0 +1,16 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=binutils&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.45.1-5.fc43"
+            },
+            {
+                "build_version": "2.46.1-1.fc44"
+            },
+            {
+                "build_version": "2.47.50-21.fc46"
+            }
+        ]
+    }
+}

@@ -1,0 +1,103 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Agdk-pixbuf%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "gdk-pixbuf",
+                "type": "cargo",
+                "build_count": 6
+            },
+            {
+                "name": "gdk-pixbuf",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf-sys",
+                "type": "cargo",
+                "build_count": 6
+            },
+            {
+                "name": "gdk-pixbuf2",
+                "type": "rpm",
+                "build_count": 333
+            },
+            {
+                "name": "gdk-pixbuf2-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-devel",
+                "type": "rpm",
+                "build_count": 4
+            },
+            {
+                "name": "gdk-pixbuf2-devel-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-modules",
+                "type": "rpm",
+                "build_count": 249
+            },
+            {
+                "name": "gdk-pixbuf2-modules-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-tests-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-xlib",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "gdk-pixbuf2-xlib-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-xlib-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gdk-pixbuf2-xlib-devel",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "libgdk-pixbuf-2.0-0",
+                "type": "deb",
+                "build_count": 1
+            },
+            {
+                "name": "libgdk-pixbuf2.0-common",
+                "type": "deb",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-gdk-pixbuf",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 19
+    }
+}

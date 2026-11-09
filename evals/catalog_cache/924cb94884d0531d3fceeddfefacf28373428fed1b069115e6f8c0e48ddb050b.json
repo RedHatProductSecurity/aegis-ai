@@ -1,0 +1,19 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=rabbitmq-server&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "3.6.15-3.el7ost"
+            },
+            {
+                "build_version": "3.8.16-3.el8ost"
+            },
+            {
+                "build_version": "3.9.10-3.el9ost"
+            },
+            {
+                "build_version": "4.2.9-2.el9ost"
+            }
+        ]
+    }
+}

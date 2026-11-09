@@ -1,0 +1,33 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Azabbix%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "pcp-export-pcp2zabbix",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pcp-export-zabbix-agent",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pcp-export-zabbix-agent-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "uwsgi-stats-pusher-zabbix",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "uwsgi-stats-pusher-zabbix-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 5
+    }
+}

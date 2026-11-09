@@ -1,0 +1,33 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=netty%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "netty-codec-http-4.1.111.Final.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty-handler-4.1.119.Final.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty-nio-client-2.26.30.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty-transport-classes-epoll-4.1.111.Final.jar",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "netty_tcnative_windows_x86_64.dll",
+                "type": "generic",
+                "build_count": 1
+            }
+        ],
+        "total": 5
+    }
+}

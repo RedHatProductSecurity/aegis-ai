@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=libreoffice&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "LibreOffice",
+                "id": 6506,
+                "backend": "GitHub",
+                "homepage": "https://www.libreoffice.org/",
+                "ecosystem": "https://www.libreoffice.org/"
+            }
+        ],
+        "total_items": 1
+    }
+}

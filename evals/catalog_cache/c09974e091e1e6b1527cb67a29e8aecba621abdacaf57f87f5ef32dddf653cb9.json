@@ -1,0 +1,540 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=%40xmldom%2Fxmldom&strict=true&include_types=npm&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.10"
+                            },
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.11"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-workbench-codeserver-datascience-cpu-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.10"
+                            },
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.9.8"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-workbench-codeserver-datascience-cpu-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.10"
+                            },
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.11"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-workbench-codeserver-datascience-cpu-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.11"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mlflow-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.11"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-mlflow-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.12"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/code-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "oadp/oadp-vmfr-access-filebrowser-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "podman-desktop-macos-1-1-arm64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "podman-desktop-windows-1-1-amd64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "podman-desktop-linux-1-2-amd64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "podman-desktop-macos-1-2-arm64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "podman-desktop-windows-1-2-amd64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcl-1/rhcl-rhdh-dynamic-plugin-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-lightspeed"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-orchestrator"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/red-hat-developer-hub-backstage-plugin-orchestrator-form-widgets"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/code-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.13"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "devspaces/code-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.15"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "mta/mta-ui-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.15"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/rhdh-hub-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.15"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhdh/rhdh-hub-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.8.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "grafana"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.9.10"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/automation-portal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.9.10"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/automation-portal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "@xmldom/xmldom",
+                                "type": "npm",
+                                "version": "0.9.12"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "ansible-automation-platform/automation-portal"
+            }
+        ]
+    }
+}

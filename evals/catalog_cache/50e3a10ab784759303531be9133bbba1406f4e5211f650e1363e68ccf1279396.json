@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2A%40fastify%2Fhttp-proxy%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "@fastify/http-proxy",
+                "type": "npm",
+                "build_count": 12
+            }
+        ],
+        "total": 1
+    }
+}

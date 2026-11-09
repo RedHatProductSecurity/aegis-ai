@@ -1,0 +1,16 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=postgresql18&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "18.6-1.fc43"
+            },
+            {
+                "build_version": "18.6-1.fc44"
+            },
+            {
+                "build_version": "18.3-12.fc46"
+            }
+        ]
+    }
+}

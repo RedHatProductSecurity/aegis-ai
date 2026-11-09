@@ -1,0 +1,153 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Aflatpak%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "fedora-release-flatpak",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "fedora-release-identity-flatpak",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-builder",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-builder-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-kcm",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-module-tools",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-module-tools",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-module-tools[cli]",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-rpm-macros",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-selinux",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-session-helper",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-spawn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-xdg-utils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "flatpak-xdg-utils-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "koji-flatpak",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "koji-flatpak-builder",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "koji-flatpak-cli",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "koji-flatpak-common",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "koji-flatpak-hub",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libflatpak",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "libflatpak-sys",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "plasma-discover-flatpak",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-flatpak-module-tools",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-flatpak-module-tools+cli",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "rust-ashpd+flatpak-devel",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 29
+    }
+}

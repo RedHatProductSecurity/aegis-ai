@@ -1,0 +1,21 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=gdk-pixbuf&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "generic",
+                                "version": "2.42.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "gdk-pixbuf2"
+            }
+        ]
+    }
+}

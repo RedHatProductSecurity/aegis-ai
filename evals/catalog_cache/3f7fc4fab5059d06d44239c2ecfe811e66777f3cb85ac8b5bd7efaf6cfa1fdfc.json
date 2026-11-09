@@ -1,0 +1,233 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=prometheus%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "prometheus",
+                "type": "cargo",
+                "build_count": 9
+            },
+            {
+                "name": "prometheus",
+                "type": "generic",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus",
+                "type": "otp",
+                "build_count": 3
+            },
+            {
+                "name": "prometheus-3.13.5",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-3.5.5",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-alertmanager-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-api-client",
+                "type": "pypi",
+                "build_count": 4
+            },
+            {
+                "name": "prometheus-async",
+                "type": "pypi",
+                "build_count": 3
+            },
+            {
+                "name": "prometheus-blackbox-exporter",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-blackbox-exporter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-blackbox-exporter-0.29.1",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-blackbox-exporter-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-blackbox-exporter-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-client",
+                "type": "cargo",
+                "build_count": 3
+            },
+            {
+                "name": "prometheus-client",
+                "type": "gem",
+                "build_count": 3
+            },
+            {
+                "name": "prometheus-client",
+                "type": "pypi",
+                "build_count": 143
+            },
+            {
+                "name": "prometheus-client-derive-encode",
+                "type": "cargo",
+                "build_count": 3
+            },
+            {
+                "name": "prometheus-client-mmap",
+                "type": "gem",
+                "build_count": 3
+            },
+            {
+                "name": "prometheus-fastapi-instrumentator",
+                "type": "pypi",
+                "build_count": 35
+            },
+            {
+                "name": "prometheus-flask-exporter",
+                "type": "pypi",
+                "build_count": 6
+            },
+            {
+                "name": "prometheus-io",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus-jmx-exporter",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus-jmx-exporter-openjdk11",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-metric-storage",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-metric-storage-derive",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-npm-cache",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-parse",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-parser",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-pnpm-cache",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-podman-exporter-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-promu",
+                "type": "rpm",
+                "build_count": 5
+            },
+            {
+                "name": "prometheus-query",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-rhel9",
+                "type": "oci",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus-simpleclient-java",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-web-ui.tar.gz",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-webhook-snmp",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-webhook-snmp-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus.hpi",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "prometheus3.13",
+                "type": "rpm",
+                "build_count": 2
+            },
+            {
+                "name": "prometheus3.13-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.13-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.5-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus3.5-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 45
+    }
+}

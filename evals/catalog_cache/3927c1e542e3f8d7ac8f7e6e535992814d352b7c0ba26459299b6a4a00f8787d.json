@@ -1,0 +1,51 @@
+{
+    "url": "{anitya}/api/project/2548",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "OpenImageIO"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "openimageio"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "openimageio"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:openimageio:openimageio"
+            },
+            {
+                "distro": "Gentoo",
+                "package_name": "media-libs/openimageio"
+            },
+            {
+                "distro": "Ubuntu",
+                "package_name": "openimageio"
+            },
+            {
+                "distro": "OpenMandriva",
+                "package_name": "OpenImageIO"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "OpenImageIO"
+            },
+            {
+                "distro": "Debian",
+                "package_name": "openimageio"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "openimageio"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "openimageio"
+            }
+        ]
+    }
+}

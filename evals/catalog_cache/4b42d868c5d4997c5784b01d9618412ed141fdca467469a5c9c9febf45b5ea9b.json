@@ -1,0 +1,23 @@
+{
+    "url": "{anitya}/api/project/6527",
+    "body": {
+        "packages": [
+            {
+                "distro": "Alpine",
+                "package_name": "prometheus"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "golang-github-prometheus"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:prometheus:prometheus"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "prometheus"
+            }
+        ]
+    }
+}

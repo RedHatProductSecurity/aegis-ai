@@ -1,0 +1,18 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=nginx&strict=true&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "nginx",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "nginx",
+                "type": "rpm",
+                "build_count": 128
+            }
+        ],
+        "total": 2
+    }
+}

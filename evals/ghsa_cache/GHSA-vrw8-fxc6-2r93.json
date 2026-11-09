@@ -1,0 +1,75 @@
+{
+    "id": "GHSA-vrw8-fxc6-2r93",
+    "summary": "chi Allows Host Header Injection which Leads to Open Redirect in RedirectSlashes",
+    "details": "### Summary\nThe RedirectSlashes function in middleware/strip.go is vulnerable to host header injection which leads to open redirect.\n\nWe consider this a **lower-severity** open redirect, as it can't be exploited from browsers or email clients (requires manipulation of a Host header).\n\n### Details\nThe RedirectSlashes method uses the Host header to construct the redirectURL at this line https://github.com/go-chi/chi/blob/master/middleware/strip.go#L55\n\nThe Host header can be manipulated by a user to be any arbitrary host. This leads to open redirect when using the RedirectSlashes middleware\n\n### PoC\nCreate a simple server which uses the RedirectSlashes middleware\n```\npackage main\n\nimport (\n\t\"fmt\"\n\t\"net/http\"\n\n\t\"github.com/go-chi/chi/v5\"\n\t\"github.com/go-chi/chi/v5/middleware\" // Import the middleware package\n)\n\nfunc main() {\n\t// Create a new Chi router\n\tr := chi.NewRouter()\n\n\t// Use the built-in RedirectSlashes middleware\n\tr.Use(middleware.RedirectSlashes) // Use middleware.RedirectSlashes\n\n\t// Define a route handler\n\tr.Get(\"/\", func(w http.ResponseWriter, r *http.Request) {\n\t\t// A simple response\n\t\tw.Write([]byte(\"Hello, World!\"))\n\t})\n\n\t// Start the server\n\tfmt.Println(\"Starting server on :8080\")\n\thttp.ListenAndServe(\":8080\", r)\n}\n```\nRun the server `go run main.go`\n\nOnce the server is running, send a request that will trigger the RedirectSlashes function with an arbitrary Host header\n`curl -iL -H \"Host: example.com\" http://localhost:8080/test/`\n\nObserve that the request will be redirected to example.com\n\n```\ncurl -L -H \"Host: example.com\" http://localhost:8080/test/\n\n<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title>\n\n    <meta charset=\"utf-8\" />\n    <meta http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style type=\"text/css\">\n    body {\n        background-color: #f0f0f2;\n        margin: 0;\n        padding: 0;\n        font-family: -apple-system, system-ui, BlinkMacSystemFont, \"Segoe UI\", \"Open Sans\", \"Helvetica Neue\", Helvetica, Arial, sans-serif;\n... snipped ...\n```\nWithout the host header, the response is returned from the test server\n```\ncurl -L http://localhost:8080/test/\n\n404 page not found\n```\n\n### Impact\nAn open redirect vulnerability allows attackers to trick users into visiting malicious sites. This can lead to phishing attacks, credential theft, and malware distribution, as users trust the application\u2019s domain while being redirected to harmful sites.\n\n### Potential mitigation\nIt seems that the purpose of the RedirectSlashes function is to redirect within the same application. In that case r.RequestURI can be used instead of r.Host by default. If there is a use case to redirect to a different host, a flag can be added to use the Host header instead. As this flag will be controlled by the developer they will make the decision of allowing redirects to arbitrary hosts  based on their judgement.",
+    "aliases": [
+        "CVE-2025-71405",
+        "GO-2025-3770"
+    ],
+    "modified": "2026-10-02T23:30:06.689984674Z",
+    "published": "2025-06-20T16:37:47Z",
+    "database_specific": {
+        "github_reviewed_at": "2025-06-20T16:37:47Z",
+        "nvd_published_at": null,
+        "cwe_ids": [
+            "CWE-601"
+        ],
+        "severity": "MODERATE",
+        "github_reviewed": true
+    },
+    "references": [
+        {
+            "type": "WEB",
+            "url": "https://github.com/go-chi/chi/security/advisories/GHSA-vrw8-fxc6-2r93"
+        },
+        {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-71405"
+        },
+        {
+            "type": "WEB",
+            "url": "https://github.com/go-chi/chi/commit/1be7ad938cc9c5b39a9dea01a5c518848928ab65"
+        },
+        {
+            "type": "PACKAGE",
+            "url": "https://github.com/go-chi/chi"
+        },
+        {
+            "type": "WEB",
+            "url": "https://www.vulncheck.com/advisories/go-chi-chi-before-open-redirect-via-redirectslashes"
+        }
+    ],
+    "affected": [
+        {
+            "package": {
+                "name": "github.com/go-chi/chi/v5",
+                "ecosystem": "Go",
+                "purl": "pkg:golang/github.com/go-chi/chi/v5"
+            },
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {
+                            "introduced": "0"
+                        },
+                        {
+                            "fixed": "5.2.2"
+                        }
+                    ]
+                }
+            ],
+            "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2025/06/GHSA-vrw8-fxc6-2r93/GHSA-vrw8-fxc6-2r93.json",
+                "last_known_affected_version_range": "<= 5.2.1"
+            }
+        }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+        {
+            "type": "CVSS_V4",
+            "score": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:A/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N"
+        }
+    ]
+}

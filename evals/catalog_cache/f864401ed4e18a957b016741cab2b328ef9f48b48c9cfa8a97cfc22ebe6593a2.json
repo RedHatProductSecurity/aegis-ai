@@ -1,0 +1,48 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=prometheus%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "prometheus",
+                "type": "cargo",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-client",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-client[twisted]",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-cpp",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-foomuuri-exporter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-io-codemirror-promql",
+                "type": "npm",
+                "build_count": 1
+            },
+            {
+                "name": "prometheus-podman-exporter",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 8
+    }
+}

@@ -1,0 +1,108 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=binutils%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "binutils",
+                "type": "deb",
+                "build_count": 2
+            },
+            {
+                "name": "binutils",
+                "type": "generic",
+                "build_count": 6
+            },
+            {
+                "name": "binutils",
+                "type": "rpm",
+                "build_count": 866
+            },
+            {
+                "name": "binutils-2.19.50.0.1-output",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-common",
+                "type": "deb",
+                "build_count": 2
+            },
+            {
+                "name": "binutils-debuginfo",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "binutils-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-debugsource",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "binutils-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-devel",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "binutils-devel",
+                "type": "rpm",
+                "build_count": 4
+            },
+            {
+                "name": "binutils-gold",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "binutils-gold",
+                "type": "rpm",
+                "build_count": 586
+            },
+            {
+                "name": "binutils-gold-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-gprofng",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "binutils-gprofng",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-gprofng-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-static",
+                "type": "generic",
+                "build_count": 3
+            },
+            {
+                "name": "binutils-with-gold",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "binutils-x86-64-linux-gnu",
+                "type": "deb",
+                "build_count": 2
+            }
+        ],
+        "total": 20
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=FreeRDP&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "freerdp",
+                "id": 10442,
+                "backend": "GitHub",
+                "homepage": "https://www.freerdp.com",
+                "ecosystem": "https://www.freerdp.com"
+            }
+        ],
+        "total_items": 1
+    }
+}

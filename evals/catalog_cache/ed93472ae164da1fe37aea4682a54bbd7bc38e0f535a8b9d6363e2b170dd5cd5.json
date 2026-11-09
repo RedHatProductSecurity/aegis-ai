@@ -1,0 +1,47 @@
+{
+    "url": "{anitya}/api/project/10437",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:fluidsynth:fluidsynth"
+            },
+            {
+                "distro": "Meson WrapDB",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "fluidsynth"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "fluidsynth"
+            }
+        ]
+    }
+}

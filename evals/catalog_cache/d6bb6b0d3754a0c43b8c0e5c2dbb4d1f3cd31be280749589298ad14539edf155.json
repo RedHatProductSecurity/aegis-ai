@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=binutils&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "binutils",
+                "id": 7981,
+                "backend": "GNU project",
+                "homepage": "https://www.gnu.org/software/binutils/",
+                "ecosystem": "https://www.gnu.org/software/binutils/"
+            },
+            {
+                "name": "binutils",
+                "id": 298944,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/binutils/0.1.dev0/",
+                "ecosystem": "pypi"
+            }
+        ],
+        "total_items": 2
+    }
+}

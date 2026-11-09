@@ -1,0 +1,73 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Anetty&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "com.azure/azure-core-http-netty",
+                "type": "maven",
+                "build_count": 3
+            },
+            {
+                "name": "io.grpc.netty/grpc-netty",
+                "type": "maven",
+                "build_count": 8
+            },
+            {
+                "name": "io.grpc/grpc-netty",
+                "type": "maven",
+                "build_count": 10
+            },
+            {
+                "name": "io.netty/netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "io.quarkus/quarkus-netty",
+                "type": "maven",
+                "build_count": 33
+            },
+            {
+                "name": "org.apache.arrow/arrow-memory-netty",
+                "type": "maven",
+                "build_count": 11
+            },
+            {
+                "name": "org.apache.avro/avro-ipc-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel.quarkus/camel-quarkus-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.camel/camel-netty",
+                "type": "maven",
+                "build_count": 7
+            },
+            {
+                "name": "org.apache.cxf.systests/cxf-systests-transport-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.apache.flink/flink-shaded-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "org.jboss.resteasy/resteasy-netty",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "spring-boot-netty/spring-boot-netty",
+                "type": "maven",
+                "build_count": 2
+            }
+        ],
+        "total": 13
+    }
+}

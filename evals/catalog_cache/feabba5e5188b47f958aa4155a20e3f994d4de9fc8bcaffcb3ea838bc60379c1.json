@@ -1,0 +1,22 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=gcc-toolset-14-binutils&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.41-4.el8_10.1"
+            },
+            {
+                "build_version": "2.41-6.el9"
+            },
+            {
+                "build_version": "2.41-4.el9_6.2"
+            },
+            {
+                "build_version": "2.41-6.el9"
+            },
+            {
+                "build_version": "2.41-6.el9"
+            }
+        ]
+    }
+}
