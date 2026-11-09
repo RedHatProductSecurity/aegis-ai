@@ -137,7 +137,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-32935",
     "CVE-2026-33056",
     "CVE-2026-33256",
-    "CVE-2026-33414",
+    "CVE-2026-33414",  # podman: flaky — model intermittently answers 'podman' instead of podman/v4+/v5 (prompt ambiguity, see SuggestAffectedComponents goals)
     "CVE-2026-33416",
     "CVE-2026-33891",
     "CVE-2026-33993",

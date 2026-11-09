@@ -1,11 +1,9 @@
 import asyncio
 import logging
-import re
 import time
 from typing import Any
 
 import cvss
-from pydantic_ai.messages import ModelRequest, ModelResponse, ToolReturnPart
 
 import aegis_ai.toolsets.tools.osidb as osidb_tool
 from aegis_ai import get_settings
@@ -36,7 +34,6 @@ from aegis_ai.features.data_models import feature_deps
 from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
-from aegis_ai.toolsets.tools.osv_dev_ghsa import extract_ghsa_ids
 
 logger = logging.getLogger(__name__)
 
@@ -834,151 +831,8 @@ def _has_sufficient_static_context(static_context: Any) -> bool:
     return bool(desc)
 
 
-_GHSA_TOOL_NAME = "osv_dev_ghsa_tool"
-
-# OSV.dev tools whose responses carry affected-package data.
-_ADVISORY_TOOL_NAMES = (_GHSA_TOOL_NAME, "osv_dev_cve_tool")
-
-_GO_MODULE_SUFFIX_RE = re.compile(r"/v\d+$")
-
-
-def _module_root(module_path: str) -> str:
-    """Repository root of a Go module path (major-version suffix stripped)."""
-    return _GO_MODULE_SUFFIX_RE.sub("", module_path)
-
-
-def _advisory_go_module_paths(messages) -> dict[str, set[str]]:
-    """Map repository root -> affected Go module paths from OSV tool returns."""
-    by_root: dict[str, set[str]] = {}
-    for msg in messages:
-        if not isinstance(msg, ModelRequest):
-            continue
-        for part in msg.parts:
-            if not isinstance(part, ToolReturnPart):
-                continue
-            if part.tool_name not in _ADVISORY_TOOL_NAMES:
-                continue
-            entries = part.content if isinstance(part.content, list) else [part.content]
-            for entry in entries:
-                if not isinstance(entry, dict):
-                    continue
-                for affected in entry.get("affected", []):
-                    pkg = affected.get("package") or {}
-                    name = pkg.get("name")
-                    if name and str(pkg.get("ecosystem", "")).lower() == "go":
-                        by_root.setdefault(_module_root(name), set()).add(name)
-    return by_root
-
-
-def _agent_tool_names(toolset, seen: set[int] | None = None) -> set[str]:
-    """Best-effort synchronous enumeration of function tool names in a toolset graph.
-
-    Walks wrapper toolsets (logging, filtered, prefixed, combined) down to
-    function toolsets, whose tool names are always available synchronously.
-    Toolsets with deferred loading (e.g. MCP servers) contribute no names.
-    """
-    seen = set() if seen is None else seen
-    if id(toolset) in seen:
-        return set()
-    seen.add(id(toolset))
-
-    names: set[str] = set()
-    tools = getattr(toolset, "tools", None)
-    if isinstance(tools, dict):
-        names.update(
-            tool.name for tool in tools.values() if getattr(tool, "name", None)
-        )
-    for attr in ("wrapped", "toolset", "toolsets"):
-        subs = getattr(toolset, attr, None)
-        if subs is None:
-            continue
-        for sub in subs if isinstance(subs, (list, tuple, set)) else [subs]:
-            names |= _agent_tool_names(sub, seen)
-    return names
-
-
 class SuggestAffectedComponents(Feature):
     """Infer affected components from CVE data using all available OSIDB fields."""
-
-    def _check_output(self, result, deps) -> str | None:
-        """Enforce advisory-backed Go module identities (AEGIS-496).
-
-        Two guards, both scoped to runs where the OSV.dev tools are available:
-
-        1. When GHSA references exist in the flaw data, the model must have
-           called ``osv_dev_ghsa_tool`` — without its response the model tends
-           to fall back to bare project names.
-        2. When the advisory responses list two or more affected Go module
-           paths for one repository (e.g. unsuffixed + ``/v2``, or ``/v4`` +
-           ``/v5``), every listed path must appear in ``components``. Each
-           major version is a distinct module identity; omitting one breaks
-           OSIDB version range searches.
-        """
-        if not get_settings().use_osv_dev_tool:
-            return None
-        if _GHSA_TOOL_NAME in (getattr(deps, "disabled_tools", None) or set()):
-            return None
-        if not any(
-            _GHSA_TOOL_NAME in _agent_tool_names(ts) for ts in self.agent.toolsets
-        ):
-            return None
-
-        messages = result.all_messages()
-        components = set(result.output.components or [])
-
-        # Guard 2: advisory-listed module paths must survive into the output.
-        missing: list[str] = []
-        for names in _advisory_go_module_paths(messages).values():
-            if len(names) > 1:
-                missing.extend(sorted(names - components))
-        if missing:
-            logger.warning(
-                "advisory lists affected Go module paths %s missing from the "
-                "suggested components; requesting retry",
-                missing,
-            )
-            return (
-                "The advisory data from osv_dev_ghsa_tool lists these affected Go "
-                f"module paths: {', '.join(missing)}. Every affected module path "
-                "must appear in the components output — Go major versions are "
-                "distinct module identities and omitting any of them breaks "
-                "version range searches. Add the missing module path(s) to the "
-                "components list."
-            )
-
-        # Guard 1: GHSA references exist but the advisory tool was never called.
-        refs: set[str] = set(getattr(deps, "allowed_reference_urls", None) or ())
-        static_ctx = getattr(deps, "static_context", None)
-        if isinstance(static_ctx, dict):
-            for ref in static_ctx.get("references") or []:
-                if isinstance(ref, dict) and ref.get("url"):
-                    refs.add(str(ref["url"]))
-                elif isinstance(ref, str):
-                    refs.add(ref)
-        ghsa_ids = extract_ghsa_ids(sorted(refs))
-        if not ghsa_ids:
-            return None
-
-        for msg in messages:
-            if isinstance(msg, ModelResponse) and any(
-                tc.tool_name == _GHSA_TOOL_NAME for tc in msg.tool_calls or ()
-            ):
-                return None
-
-        logger.warning(
-            "GHSA references %s present but %s was not called; requesting retry",
-            ghsa_ids,
-            _GHSA_TOOL_NAME,
-        )
-        return (
-            f"GHSA advisory references ({', '.join(ghsa_ids)}) are present in the "
-            f"flaw data but the {_GHSA_TOOL_NAME} was never called. Call "
-            f"{_GHSA_TOOL_NAME} with the GHSA reference URLs and use the returned "
-            "affected-package data (Go module paths, ecosystems, PURLs, version "
-            "ranges) to finalize the components. Include every affected Go module "
-            "path the advisory lists, including older major-version paths (/vN) "
-            "and the unsuffixed path."
-        )
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         use_static = _has_sufficient_static_context(static_context)
@@ -991,6 +845,11 @@ class SuggestAffectedComponents(Feature):
         prompt = AegisPrompt(
             user_instruction="From the provided CVE data (title, description, statement, references, affects, comments, etc.), identify the affected software component(s). "
             "Use the OSIDB tool to retrieve flaw data when cve_id is provided; when full context is already provided, the tool returns that data. Leverage all available fields to infer components.",
+            # Prompt ambiguity (AEGIS-496): no rule below says advisory-listed
+            # versioned Go module paths (e.g. podman /v4+/v5, no distro name, no
+            # unsuffixed path) replace the project/distro name, and the OAuth2
+            # Proxy rule (distro name, never forced /vN) pulls the other way —
+            # models intermittently answer 'podman' instead of the listed paths.
             goals="""
                 - Only list components that are *directly vulnerable* — the upstream artifact where the bug exists and the fix is applied. Do not list libraries, runtimes, or standard library modules that the CVE description merely *mentions*, *uses*, or *references* as execution context. Each component you list must be one where an upstream patch or release directly addresses the flaw.
                 - From all available CVE/OSIDB data (title, comment_zero, description, statement, mitigation, comments, references, affects, cvss_scores, cwe_id, impact), identify the affected software component(s).

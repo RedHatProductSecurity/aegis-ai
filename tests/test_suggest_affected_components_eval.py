@@ -124,3 +124,43 @@ def test_exact_evaluator_requires_complete_osidb_identities(
         assert result.reason is not None
         assert "got " in result.reason
         assert "expected " in result.reason
+
+
+class TestEvalExactMatchingScope:
+    """Only the two AEGIS-496 CVEs are exact-matched by the eval suite."""
+
+    def test_go_module_identity_cve_ids_limited_to_aegis_496_pair(self):
+        assert component_evals.GO_MODULE_IDENTITY_CVE_IDS == (
+            "CVE-2026-37236",
+            "CVE-2026-81521",
+        )
+
+    def test_exact_components_metadata_only_for_aegis_496_cves(self, monkeypatch):
+        monkeypatch.setattr(component_evals, "OSIDB_CACHE_DIR", CACHE_DIR)
+        former_members = {"CVE-2025-64329", "CVE-2026-33414"}
+        aegis_496 = set(component_evals.GO_MODULE_IDENTITY_CVE_IDS)
+
+        cases = {
+            case.inputs: case
+            for case in component_evals._build_cases(
+                cve_id_filter=former_members | aegis_496
+            )
+        }
+
+        assert set(cases) == former_members | aegis_496
+        for cve_id in aegis_496:
+            metadata = cases[cve_id].metadata
+            assert metadata is not None
+            assert metadata["require_exact_components"] is True
+            assert any(
+                isinstance(e, component_evals.ExactComponentsEvaluator)
+                for e in cases[cve_id].evaluators
+            )
+        for cve_id in former_members:
+            metadata = cases[cve_id].metadata
+            assert metadata is not None
+            assert "require_exact_components" not in metadata
+            assert not any(
+                isinstance(e, component_evals.ExactComponentsEvaluator)
+                for e in cases[cve_id].evaluators
+            )
