@@ -137,7 +137,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-32935",
     "CVE-2026-33056",
     "CVE-2026-33256",
-    "CVE-2026-33414",  # podman: flaky — model intermittently answers 'podman' instead of podman/v4+/v5 (prompt ambiguity, see SuggestAffectedComponents goals)
+    "CVE-2026-33414",
     "CVE-2026-33416",
     "CVE-2026-33891",
     "CVE-2026-33993",
@@ -180,6 +180,7 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-23950",  # got ['node-tar'], expected ['tar']
     "CVE-2026-25526",  # got ['com.hubspot/jinjava'], expected ['com.hubspot.jinjava/jinjava']
     "CVE-2026-25534",  # got ['io.spinnaker/clouddriver-artifacts', 'io.spinnaker/orca-core'], expected ['io.spinnaker.clouddriver/clouddriver-artifacts', 'io.spinnaker.orca/orca-core']
+    "CVE-2026-33414",  # flaky: got ['podman'], expected ['github.com/containers/podman/v4', 'github.com/containers/podman/v5']
 )
 
 
