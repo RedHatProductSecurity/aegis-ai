@@ -176,8 +176,14 @@ async def suggest_components(
     output = await exec_feature(feature, flaw_data)
 
     # Extract component names from structured ComponentMatch objects for OSIDB
-    # OSIDB expects a list of strings, but we keep the full structured data in aegis_meta
-    component_names = [comp.name for comp in output.components]
+    # OSIDB expects a list of strings in canonical format (namespace/name for Maven/Composer/Go)
+    # We keep the full structured data in aegis_meta
+    from aegis_ai.features.cve.purl_utils import get_canonical_component_name
+
+    component_names = [
+        get_canonical_component_name(comp.name, comp.namespace, comp.ecosystem)
+        for comp in output.components
+    ]
 
     changed = update_field(flaw_data, ts, "components", output, value=component_names)
 

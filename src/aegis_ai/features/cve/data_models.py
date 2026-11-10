@@ -145,12 +145,12 @@ class ComponentMatch(BaseModel):
 
     name: str = Field(
         ...,
-        description="Component name (e.g., 'chromium-browser', 'rclone', 'spring-webmvc')",
+        description="Component name - the final part of the canonical identifier (e.g., 'chromium-browser', 'rclone', 'spring-webmvc', 'html'). For Maven/Composer/Go, this is combined with namespace to form the canonical name sent to OSIDB.",
     )
 
     namespace: str | None = Field(
         default=None,
-        description="Component namespace/group (e.g., 'redhat' for RPMs, 'github.com/rclone' for Go, 'org.springframework' for Maven). Null for generic packages.",
+        description="Component namespace/group (e.g., 'redhat' for RPMs, 'github.com/rclone' for Go, 'org.springframework' for Maven, 'phpseclib' for Composer). For Maven/Composer/Go, the canonical OSIDB component name is 'namespace/name'. Null for PyPI, Cargo, Gem, and generic packages.",
     )
 
     ecosystem: str = Field(

@@ -208,6 +208,44 @@ def _ecosystem_to_purl_type(ecosystem: str) -> str | None:
     return mapping.get(ecosystem.lower())
 
 
+def get_canonical_component_name(
+    name: str, namespace: str | None, ecosystem: str
+) -> str:
+    """
+    Construct the canonical component name for OSIDB.
+
+    For Maven, Composer, and Go, the canonical name includes the namespace.
+    For other ecosystems, returns just the name.
+
+    Args:
+        name: Component name
+        namespace: Component namespace (may be None)
+        ecosystem: Package ecosystem
+
+    Returns:
+        Canonical component name
+
+    Examples:
+        >>> get_canonical_component_name("spring-webmvc", "org.springframework", "maven")
+        'org.springframework/spring-webmvc'
+
+        >>> get_canonical_component_name("phpseclib", "phpseclib", "composer")
+        'phpseclib/phpseclib'
+
+        >>> get_canonical_component_name("rclone", "github.com/rclone", "golang")
+        'github.com/rclone/rclone'
+
+        >>> get_canonical_component_name("cryptography", None, "pypi")
+        'cryptography'
+    """
+    # For ecosystems where namespace is part of the canonical name
+    if namespace and ecosystem in ("maven", "composer", "golang"):
+        return f"{namespace}/{name}"
+
+    # For all other ecosystems, just return the name
+    return name
+
+
 def validate_component_match(component: Any) -> dict[str, Any]:
     """
     Validate and normalize a ComponentMatch object.
