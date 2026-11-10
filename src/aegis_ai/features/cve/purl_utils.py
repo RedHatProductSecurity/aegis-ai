@@ -35,13 +35,24 @@ def validate_purl(purl_str: str | None, component_name: str, ecosystem: str) -> 
     try:
         purl = PackageURL.from_string(purl_str)
 
-        # Validate ecosystem matches
+        # Validate ecosystem matches - reject or correct mismatched PURLs
         expected_type = _ecosystem_to_purl_type(ecosystem)
         if expected_type and purl.type != expected_type:
             logger.warning(
                 f"PURL type mismatch for {component_name}: "
-                f"got {purl.type}, expected {expected_type} for ecosystem {ecosystem}"
+                f"got {purl.type}, expected {expected_type} for ecosystem {ecosystem}. "
+                f"Rebuilding with correct type."
             )
+            # Rebuild PURL with correct type from ecosystem
+            purl = PackageURL(
+                type=expected_type,
+                namespace=purl.namespace,
+                name=purl.name,
+                version=purl.version,
+                qualifiers=purl.qualifiers,
+                subpath=purl.subpath,
+            )
+            logger.info(f"Corrected PURL type: {purl}")
 
         # Check for common issues
         if purl.type == "rpm" and not purl.namespace:
