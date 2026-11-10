@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=gambas3&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "gambas3",
+                "id": 6176,
+                "backend": "GitLab",
+                "homepage": "http://gambas.sourceforge.net/en/main.html",
+                "ecosystem": "http://gambas.sourceforge.net/en/main.html"
+            }
+        ],
+        "total_items": 1
+    }
+}
