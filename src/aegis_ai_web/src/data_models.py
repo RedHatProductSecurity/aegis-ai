@@ -430,8 +430,42 @@ class BotKPIEntry(BaseModel):
     confidence: float | None
 
 
+class BotKPIDelivery(BaseModel):
+    """Stable run membership and delivered population, independent of cache freshness."""
+
+    run_id: str
+    page_id: str
+    continue_token: str | None = Field(
+        default=None,
+        description=(
+            "Opaque continuation token: pass it back as the cursor query "
+            "parameter (with run_id) to fetch the next page. Absent (or "
+            "null) on the final page."
+        ),
+    )
+    received_flaws: int = Field(ge=0)
+    selected_flaws: int = Field(ge=0)
+    complete: bool
+    selection_complete: bool = Field(
+        default=True,
+        description="False while index discovery is pending; selected_flaws is then 0 (unknown), not a frozen empty selection.",
+    )
+    deferred: bool = Field(
+        default=False,
+        description="Budget deferral: zero page entries and unchanged received count; continue the held continue_token with a fresh request budget.",
+    )
+
+
 class BotKPIResponse(BaseModel):
-    """Response model for osidb-bot KPI metrics endpoint."""
+    """Response model for osidb-bot KPI metrics endpoint.
+
+    Every response is a page of a stable delivery run and carries
+    authoritative cumulative aggregates over the delivered population.
+    ``delivery`` counts selected flaws received, including those emitting no
+    detail records. ``entries`` remains page-local. After index discovery
+    completes, membership and accepted observations are stable for the run;
+    they are not an atomic historical OSIDB snapshot.
+    """
 
     total_flaws_processed: int = Field(
         ...,
@@ -439,19 +473,34 @@ class BotKPIResponse(BaseModel):
         description=(
             "Number of bot-processed flaws that contributed to the result: those "
             "with at least one suggestion whose timestamp falls in the selected "
-            "time range, or all bot-processed flaws when no range is given."
+            "time range, or all bot-processed flaws when no range is given. "
+            "Cumulative over the delivered population."
         ),
     )
+    delivery: BotKPIDelivery = Field(
+        ...,
+        description="Delivery run identity, continuation, and received population. Aggregates are cumulative on every page; entries describe only this page.",
+    )
     features: dict[str, BotFeatureKPI] = Field(
-        ..., description="Per-feature KPI metrics keyed by field name"
+        ...,
+        description=(
+            "Per-feature KPI metrics keyed by field name. Cumulative over the "
+            "delivered population."
+        ),
     )
     entries: list[BotKPIEntry] | None = Field(
         default=None,
-        description="Compact suggestion/skip records, only with detail=true",
+        description=(
+            "Compact suggestion/skip records for this page's flaws, "
+            "only with detail=true"
+        ),
     )
     available_components: list[str] | None = Field(
         default=None,
-        description="Sorted unique affected components in the selected bot flaws, only with detail=true",
+        description=(
+            "Sorted unique affected components in the delivered bot flaws, only "
+            "with detail=true; cumulative on every page"
+        ),
     )
 
 

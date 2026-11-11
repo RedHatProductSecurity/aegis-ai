@@ -1,14 +1,20 @@
 """Unit tests for osidb-bot KPI computation logic."""
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
+from osidb_bindings.bindings.python_client import AuthenticatedClient
 
 from aegis_ai.features.cve.impact_mappings import (
     score_components_diff,
     score_cvss3_diff,
     score_impact_diff,
 )
+from aegis_ai.toolsets.tools.osidb.osidb_bearer import BearerOSIDBSession
+from aegis_ai_web.src.data_models import BotKPIDelivery
+from aegis_ai_web.src.endpoints import bot_kpi
 from aegis_ai_web.src.endpoints.bot_kpi import (
     BotKPICacheEntry,
     FeatureStats,
@@ -17,7 +23,9 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     _compute_deviation,
     _extract_flaw_ids,
     _merge_feature_stats,
+    _osidb_session,
     _result_to_response,
+    _retimeout_session,
     _values_equal,
     aggregate_kpi,
     extract_flaw_kpi,
@@ -624,7 +632,16 @@ class TestResultToResponse:
             "impact": [_make_bot_entry("LOW"), _make_bot_entry("MODERATE")],
         }
         flaw = _make_flaw(aegis_meta, impact="MODERATE")
-        response = _result_to_response(aggregate_kpi([flaw]))
+        response = _result_to_response(
+            aggregate_kpi([flaw]),
+            BotKPIDelivery(
+                run_id="r",
+                page_id="p",
+                received_flaws=0,
+                selected_flaws=0,
+                complete=False,
+            ),
+        )
 
         impact = response.features["impact"]
         assert impact.suggested == 1
@@ -638,7 +655,16 @@ class TestResultToResponse:
             "impact": [_make_bot_entry("LOW"), _make_bot_entry("MODERATE")],
         }
         flaw = _make_flaw(aegis_meta, impact="CRITICAL")
-        response = _result_to_response(aggregate_kpi([flaw]))
+        response = _result_to_response(
+            aggregate_kpi([flaw]),
+            BotKPIDelivery(
+                run_id="r",
+                page_id="p",
+                received_flaws=0,
+                selected_flaws=0,
+                complete=False,
+            ),
+        )
 
         impact = response.features["impact"]
         assert impact.kept == 0
@@ -906,3 +932,144 @@ class TestExtractFlawIds:
 
     def test_empty_list(self):
         assert _extract_flaw_ids([]) == []
+
+
+class TestOsidbSession:
+    """Unit tests for ``_osidb_session`` / ``_retimeout_session`` per-call
+    HTTP timeout wiring.
+
+    The doubles mirror the real ``osidb_bindings`` objects closely enough
+    to observe the behavior under test: ``Session`` keeps its generated
+    ``AuthenticatedClient`` in a private name-mangled attribute, and its
+    ``TokenManager`` captures that same client as ``self.client`` at
+    construction (so only the session's client being replaced would leave
+    mid-request token refreshes on the default 300s-timeout client).
+    """
+
+    def test_kerberos_session_and_token_manager_share_timed_client(self, monkeypatch):
+        """The session's flaw queries and the token manager's mid-request
+        token refreshes must go through the same timed client, created by a
+        single ``with_timeout`` call with the request budget."""
+        original_client = AuthenticatedClient(base_url="https://osidb.example.com")
+        session = SimpleNamespace(
+            _Session__client=original_client,
+            token_manager=SimpleNamespace(client=original_client),
+        )
+        new_session = MagicMock(return_value=session)
+        monkeypatch.setattr(bot_kpi.osidb_bindings, "new_session", new_session)
+
+        result = _osidb_session("https://osidb.example.com", None, 42)
+
+        assert result is session
+        new_session.assert_called_once_with(
+            osidb_server_uri="https://osidb.example.com"
+        )
+        timed_client = result._Session__client
+        assert timed_client is not original_client
+        assert timed_client.get_timeout() == 42
+        assert result.token_manager.client is timed_client
+
+    def test_session_without_token_manager_still_gets_timed_client(self, monkeypatch):
+        """A session double carrying no ``token_manager`` (the production
+        code guards with getattr) still gets its client replaced, and no
+        token manager is invented for it."""
+        original_client = AuthenticatedClient(base_url="https://osidb.example.com")
+        session = SimpleNamespace(_Session__client=original_client)
+        monkeypatch.setattr(
+            bot_kpi.osidb_bindings,
+            "new_session",
+            MagicMock(return_value=session),
+        )
+
+        result = _osidb_session("https://osidb.example.com", None, 42)
+
+        assert result is session
+        assert result._Session__client is not original_client
+        assert result._Session__client.get_timeout() == 42
+        assert not hasattr(result, "token_manager")
+
+    def test_session_without_replaceable_client_left_untouched(self, monkeypatch):
+        """A session whose client exposes no ``with_timeout`` is returned
+        unchanged: both the session's client and the token manager's keep
+        the client captured at construction."""
+        original_client = SimpleNamespace()
+        session = SimpleNamespace(
+            _Session__client=original_client,
+            token_manager=SimpleNamespace(client=original_client),
+        )
+        monkeypatch.setattr(
+            bot_kpi.osidb_bindings,
+            "new_session",
+            MagicMock(return_value=session),
+        )
+
+        result = _osidb_session("https://osidb.example.com", None, 42)
+
+        assert result is session
+        assert result._Session__client is original_client
+        assert result.token_manager.client is original_client
+
+    def test_bearer_token_selects_bearer_session_with_timeout(self, monkeypatch):
+        """A request token builds a BearerOSIDBSession whose per-call HTTP
+        timeout is the request budget, bypassing the Kerberos bindings
+        session entirely."""
+        new_session = MagicMock()
+        monkeypatch.setattr(bot_kpi.osidb_bindings, "new_session", new_session)
+
+        session = _osidb_session("https://osidb.example.com", "user-access-token", 42)
+
+        assert isinstance(session, BearerOSIDBSession)
+        assert session.flaws._client.get_timeout() == 42
+        new_session.assert_not_called()
+
+    def test_retimeout_replaces_kerberos_clients_in_place(self):
+        """Re-timing an already-timed Kerberos session swaps in one new client
+        carrying the new timeout, repointing both the session and the token
+        manager at it, so later OSIDB calls are bounded by the time left."""
+        original = AuthenticatedClient(base_url="https://osidb.example.com")
+        first_timed = original.with_timeout(30.0)
+        session = SimpleNamespace(
+            _Session__client=first_timed,
+            token_manager=SimpleNamespace(client=first_timed),
+        )
+
+        _retimeout_session(session, 7)
+
+        timed = session._Session__client
+        assert timed is not first_timed
+        assert timed is not original
+        assert timed.get_timeout() == 7
+        assert session.token_manager.client is timed
+
+    def test_retimeout_bearer_facade_retimes_flaws_client(self):
+        """The bearer facade's flaws operations client is re-timed in place:
+        the client the facade was constructed with is replaced by one
+        carrying the new timeout."""
+        session = BearerOSIDBSession("https://osidb.example.com", "token", timeout=30.0)
+        original = session.flaws._client
+
+        _retimeout_session(session, 7)
+
+        assert session.flaws._client is not original
+        assert session.flaws._client.get_timeout() == 7
+
+    def test_retimeout_bearer_facade_without_replaceable_client_untouched(self):
+        """A bearer facade whose client lacks with_timeout keeps it: the
+        re-timing is skipped rather than failing the request."""
+        original = SimpleNamespace()
+        session = SimpleNamespace(flaws=SimpleNamespace(_client=original))
+
+        _retimeout_session(session, 7)
+
+        assert session.flaws._client is original
+
+    def test_retimeout_session_exposing_neither_client_is_untouched(self):
+        """A session double holding its client somewhere other than the two
+        known slots keeps that client: re-timing touches nothing it does not
+        know how to bound."""
+        original = SimpleNamespace()
+        session = SimpleNamespace(client=original)
+
+        _retimeout_session(session, 7)
+
+        assert session.client is original
