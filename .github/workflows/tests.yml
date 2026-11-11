@@ -20,6 +20,14 @@ jobs:
 
       - name: Install Kerberos development libraries
         run: |
+          # Temporary workaround: DNS resolution for ubuntu.com sometimes
+          # fails on GitHub-hosted runners.  Fall back to hardcoded IPs.
+          for host in security.ubuntu.com:91.189.92.23 azure.archive.ubuntu.com:51.12.153.52; do
+            name="${host%%:*}" ip="${host##*:}"
+            if ! getent hosts "$name" >/dev/null 2>&1; then
+              echo "$ip $name" | sudo tee -a /etc/hosts
+            fi
+          done
           sudo apt-get update
           sudo apt-get install -y libkrb5-dev
 
