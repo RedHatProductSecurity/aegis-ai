@@ -14,13 +14,18 @@ from aegis_ai.osidb_bot.suggest import record_aegis_meta
 from aegis_ai_web.src import main
 from aegis_ai_web.src.endpoints import bot_kpi, kpi
 from aegis_ai_web.src.main import app
+from tests.kpi_helpers import add_list_page
 
 client = TestClient(app)
 
 
 @pytest.fixture
 def dashboard(monkeypatch, tmp_path):
-    monkeypatch.setenv("AEGIS_BOT_KPI_CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(bot_kpi, "_get_cache_path", lambda: tmp_path / "kpi_cache.json")
+    monkeypatch.setattr(
+        "osidb_bindings.token_cache.resolve_kerberos_principal",
+        lambda: "tester@EXAMPLE.COM",
+    )
     records = [
         {"type": "AI-Bot", "value": "LOW", "timestamp": "2026-08-01T00:00:00Z"},
         {
@@ -66,6 +71,7 @@ def dashboard(monkeypatch, tmp_path):
         return [MagicMock(to_dict=MagicMock(return_value=flaw)) for flaw in selected]
 
     session.flaws.retrieve_list_iterator.side_effect = retrieve
+    add_list_page(session)
     monkeypatch.setattr(bot_kpi.osidb_bindings, "new_session", lambda **_: session)
     monkeypatch.setattr(
         kpi.feedback_logger,
@@ -85,19 +91,41 @@ def dashboard(monkeypatch, tmp_path):
     return session, flaws
 
 
+def deliver(**params):
+    """Drive one osidb-bot delivery run to completion: follow run_id and
+    delivery.continue_token until the final page. Returns the final page's
+    body and the entries accumulated across every accepted page, matching
+    the single-shot detail responses this suite historically asserted."""
+    entries = []
+    body = bot_kpi_page(params)
+    for _ in range(100):
+        entries.extend(body.get("entries") or [])
+        token = body["delivery"]["continue_token"]
+        if not token:
+            return body, entries
+        body = bot_kpi_page(
+            params | {"run_id": body["delivery"]["run_id"], "cursor": token}
+        )
+    raise AssertionError("delivery run did not reach a final page")
+
+
+def bot_kpi_page(params):
+    response = client.get("/api/v1/analysis/kpi/osidb-bot", params=params)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 def test_bot_detail_matches_aggregate_and_preserves_unknown_versions(dashboard):
-    response = client.get("/api/v1/analysis/kpi/osidb-bot?detail=true")
-    assert response.status_code == 200
-    body = response.json()
+    body, entries = deliver(detail="true")
     assert body["total_flaws_processed"] == 2
     assert body["features"]["impact"]["suggested"] == 2
     assert body["features"]["impact"]["kept"] == 2
     assert body["features"]["impact"]["skipped"] == 1
-    assert len(body["entries"]) == 4  # history remains available, not extra decisions
-    assert {entry["aegis_version"] for entry in body["entries"]} == {"", "0.9.2"}
+    assert len(entries) == 4  # history remains available, not extra decisions
+    assert {entry["aegis_version"] for entry in entries} == {"", "0.9.2"}
     assert body["available_components"] == ["kernel", "openssl"]
-    legacy = client.get("/api/v1/analysis/kpi/osidb-bot").json()
-    assert set(legacy) == {"total_flaws_processed", "features"}
+    plain = deliver()[0]
+    assert set(plain) == {"total_flaws_processed", "features", "delivery"}
 
 
 def test_bot_kpi_uses_process_credentials_without_delegation(dashboard, monkeypatch):
@@ -145,18 +173,21 @@ async def test_delegated_token_cache_is_destroyed_on_failure(monkeypatch):
 @pytest.mark.parametrize("endpoint", ["cve?feature=all&", "osidb-bot?"])
 def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
     session, _ = dashboard
-    response = client.get(
-        f"/api/v1/analysis/kpi/{endpoint}detail=true&component=kernel"
-        "&aegis_version=0.9.2&recorded_after=2026-09-02T00:00:00Z"
-        "&recorded_before=2026-09-02T00:00:00Z"
-    )
-    assert response.status_code == 200
-    body = response.json()
-    entries = (
-        body["suggest-impact"]["entries"]
-        if endpoint.startswith("cve")
-        else body["entries"]
-    )
+    params = {
+        "detail": "true",
+        "component": "kernel",
+        "aegis_version": "0.9.2",
+        "recorded_after": "2026-09-02T00:00:00Z",
+        "recorded_before": "2026-09-02T00:00:00Z",
+    }
+    if endpoint.startswith("cve"):
+        response = client.get(
+            "/api/v1/analysis/kpi/cve", params={"feature": "all"} | params
+        )
+        assert response.status_code == 200
+        entries = response.json()["suggest-impact"]["entries"]
+    else:
+        _, entries = deliver(**params)
     assert len(entries) == 1
     assert entries[0]["cve_id"] == "CVE-2026-1000"
     assert entries[0]["aegis_version"] == "0.9.2"
@@ -167,13 +198,11 @@ def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
 
 
 def test_unknown_version_filter_recomputes_bot_decisions(dashboard):
-    body = client.get(
-        "/api/v1/analysis/kpi/osidb-bot?detail=true&aegis_version="
-    ).json()
+    body, entries = deliver(detail="true", aegis_version="")
     assert body["features"]["impact"]["kept"] == 1
     assert body["features"]["impact"]["modified"] == 1
     assert body["features"]["impact"]["acceptance_rate"] == 50
-    assert all(entry["aegis_version"] == "" for entry in body["entries"])
+    assert all(entry["aegis_version"] == "" for entry in entries)
 
 
 @pytest.mark.parametrize(
@@ -205,40 +234,6 @@ def test_feedback_keeps_latest_matching_programmatic_record(
     metrics = response.json()["suggest-impact"]
     assert metrics["acceptance_percentage"] == 100
     assert [entry["aegis_version"] for entry in metrics["entries"]] == ["0.9.1"]
-
-
-def test_legacy_cache_is_refreshed_even_with_same_watermark(dashboard):
-    session, flaws = dashboard
-    legacy = bot_kpi.BotKPICacheEntry.model_validate(
-        {
-            "flaws": {
-                flaw["cve_id"]: {
-                    "updated_dt": flaw["updated_dt"],
-                    "bot_processed": True,
-                    "fields": {},
-                }
-                for flaw in flaws
-            }
-        }
-    )
-    with bot_kpi._cache_handler() as handler:
-        handler.write(legacy)
-    body = client.get(
-        "/api/v1/analysis/kpi/osidb-bot?detail=true&component=kernel"
-    ).json()
-    assert len(body["entries"]) == 3
-    # A narrow request rewrites the shared cache but must preserve the old marker
-    # for the unselected flaw so it, too, gets refreshed when later selected.
-    body = client.get(
-        "/api/v1/analysis/kpi/osidb-bot?detail=true&component=openssl"
-    ).json()
-    assert len(body["entries"]) == 1
-    batch_calls = [
-        call
-        for call in session.flaws.retrieve_list_iterator.call_args_list
-        if "cve_id" in call.kwargs
-    ]
-    assert len(batch_calls) == 2
 
 
 @pytest.mark.parametrize("endpoint", ["cve?feature=all&", "osidb-bot?"])

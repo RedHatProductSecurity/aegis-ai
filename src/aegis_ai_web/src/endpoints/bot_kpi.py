@@ -7,6 +7,7 @@ values to measure how often analysts keep, modify, or skip bot suggestions.
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import osidb_bindings
+import requests
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
 
@@ -23,9 +25,13 @@ from aegis_ai.features.cve.impact_mappings import (
     score_cvss3_diff,
     score_impact_diff,
 )
-from aegis_ai.state_file import StateFileHandler
 from aegis_ai.toolsets.tools.osidb.osidb_bearer import BearerOSIDBSession
-from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIEntry, BotKPIResponse
+from aegis_ai_web.src.data_models import (
+    BotFeatureKPI,
+    BotKPIDelivery,
+    BotKPIEntry,
+    BotKPIResponse,
+)
 from aegis_ai_web.src.endpoints.kpi_filters import (
     NO_RECORD_FILTERS,
     KPIRecordFilters,
@@ -33,6 +39,7 @@ from aegis_ai_web.src.endpoints.kpi_filters import (
 from aegis_ai_web.src.endpoints.kpi_filters import (
     timestamp_in_range as _timestamp_in_range,
 )
+from aegis_ai_web.src.endpoints.kpi_retry import KPIFailure, _retimeout_session
 
 logger = logging.getLogger(__name__)
 
@@ -239,13 +246,12 @@ def _score_records(
 ) -> FeatureStats | None:
     """Aggregate one field's suggestion records into a ``FeatureStats``.
 
-    The OSIDB selection query (see :func:`_fetch_flaw_index`) selects flaws by
-    their ``updated_dt``. The request bounds are also applied here so a
-    selected flaw contributes only suggestions recorded in the KPI interval.
-    A field with no records drops out entirely (returns None). Only the latest
-    AI-Bot suggestion is compared against the current value (via its
-    pre-computed deviation), matching the single accept/modify decision an
-    analyst made.
+    The OSIDB selection query selects flaws by their ``updated_dt``. The
+    request bounds are also applied here so a selected flaw contributes only
+    suggestions recorded in the KPI interval. A field with no records drops
+    out entirely (returns None). Only the latest AI-Bot suggestion is compared
+    against the current value (via its pre-computed deviation), matching the
+    single accept/modify decision an analyst made.
     """
     records = [
         record
@@ -409,34 +415,11 @@ def _extract_flaw_ids(flaws: Sequence[dict[str, Any]]) -> list[str]:
     return flaw_ids
 
 
-def _fetch_flaw_index(
-    osidb: Any,
-    *,
+def _index_query(
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
     component: str | None = None,
-) -> dict[str, str]:
-    """Fetch a cheap ``{cve_id: updated_dt}`` index of the selected DONE flaws.
-
-    This is the selection query: it applies the request's filters server-side
-    and returns exactly the flaws the response covers. It pulls only the two
-    fields needed to decide whether each flaw's cached full data is still
-    current (bot-processed status can't be filtered server-side, so every
-    matching DONE flaw is indexed). Full per-flaw data is fetched separately,
-    and only for flaws whose watermark has advanced -- see
-    :func:`_fetch_flaws_batch`.
-
-    The search is always bounded by ``created_dt_gte=OSIDB_BOT_BIRTHDAY`` so it
-    can never scrape unrelated OSIDB history. ``cve_id__isempty=False`` drops
-    flaws without a CVE ID server-side instead of fetching them only to discard
-    them here.
-
-    ``changed_after`` / ``changed_before`` are pushed down as ``updated_dt``
-    bounds and ``component`` as the flaw-level ``components`` filter (the field
-    the KPI scores against). These drive *selection* only: they never invalidate
-    a cache entry, which is refreshed solely when its own ``updated_dt`` advances
-    (see :func:`_fetch_with_cache`).
-    """
+) -> dict[str, Any]:
     kwargs: dict[str, Any] = {
         "include_fields": "cve_id,updated_dt",
         "workflow_state": "DONE",
@@ -450,24 +433,18 @@ def _fetch_flaw_index(
         kwargs["updated_dt_lte"] = changed_before
     if component is not None:
         kwargs["components"] = component
-    logger.info("querying OSIDB flaw index: %s", kwargs)
-
-    index: dict[str, str] = {}
-    for flaw in osidb.flaws.retrieve_list_iterator(**kwargs):
-        flaw_dict = flaw.to_dict()
-        cve_id = flaw_dict.get("cve_id")
-        if not cve_id:
-            continue
-        index[cve_id] = str(flaw_dict.get("updated_dt") or "")
-
-    logger.info("flaw index: %d DONE flaws", len(index))
-    return index
+    return kwargs
 
 
 _BATCH_SIZE = 100
 
+# Default number of selected flaws served (and at most refreshed) per request.
+_DEFAULT_PAGE_SIZE = 400
 
-def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, Any]]:
+
+def _fetch_flaws_batch(
+    osidb: Any, cve_ids: list[str], *, strict: bool = False
+) -> dict[str, dict[str, Any]]:
     """Fetch full KPI-relevant fields for multiple flaws in batched queries.
 
     CVE IDs are chunked to avoid exceeding the HTTP URL length limit.
@@ -484,6 +461,12 @@ def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, An
             flaw_dict = flaw.to_dict()
             cve_id = flaw_dict.get("cve_id")
             if cve_id:
+                if strict and cve_id in result:
+                    raise KPIFailure(
+                        409,
+                        "Conflicting OSIDB detail identities.",
+                        code="kpi_run_invalidated",
+                    )
                 result[cve_id] = flaw_dict
     logger.info("fetched %d/%d flaws", len(result), len(cve_ids))
     return result
@@ -492,18 +475,21 @@ def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, An
 def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheData:
     """Build a cache entry from a fully-fetched flaw.
 
-    A bot-processed flaw stores its compact per-field suggestion records (see
-    :func:`_compact_fields`) -- the pre-computed deviations and per-field
-    suggestion history -- so it can be re-scored from the cache without the bulky
-    raw fields KPI never reads. A non-bot-processed flaw is stored as a skip
-    marker (no fields) so its full data isn't re-fetched until its watermark
-    advances.
+    The flaw's own ``updated_dt`` from the full fetch is the authoritative
+    watermark (the index projection may be missing or malformed); the indexed
+    watermark is only a fallback. A bot-processed flaw stores its compact
+    per-field suggestion records (see :func:`_compact_fields`) -- the
+    pre-computed deviations and per-field suggestion history -- so it can be
+    re-scored from the cache without the bulky raw fields KPI never reads. A
+    non-bot-processed flaw is stored as a skip marker (no fields) so its full
+    data isn't re-fetched until its watermark advances.
     """
+    watermark = str(flaw_data.get("updated_dt") or "") or updated_dt
     if not _is_bot_processed(flaw_data):
-        return FlawCacheData(updated_dt=updated_dt, bot_processed=False, components=[])
+        return FlawCacheData(updated_dt=watermark, bot_processed=False, components=[])
     aegis_meta = flaw_data.get("aegis_meta") or {}
     return FlawCacheData(
-        updated_dt=updated_dt,
+        updated_dt=watermark,
         bot_processed=True,
         components=flaw_data.get("components") or [],
         fields=_compact_fields(aegis_meta, flaw_data),
@@ -511,14 +497,25 @@ def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheDat
 
 
 def _needs_fetch(cached: FlawCacheData | None, updated_dt: str) -> bool:
-    """A flaw needs a full fetch when OSIDB's watermark is newer."""
+    """A flaw needs a full fetch when OSIDB's watermark is newer.
+
+    A watermark that cannot be parsed cannot be ordered against the cache.
+    An unparseable *OSIDB* watermark is treated as current: the cache entry
+    was fetched at full fidelity at exactly this watermark, and re-fetching
+    on every request would livelock pagination (e.g. a tombstone for a flaw
+    that vanished after the index query). An unparseable *cached* watermark
+    against a parseable OSIDB one means the flaw moved past a watermark we
+    cannot compare, so it is re-fetched.
+    """
     if cached is None or cached.components is None:
         return True
     try:
-        cached_dt = datetime.fromisoformat(cached.updated_dt)
         osidb_dt = datetime.fromisoformat(updated_dt)
     except ValueError:
-        # A malformed watermark cannot establish freshness safely.
+        return False
+    try:
+        cached_dt = datetime.fromisoformat(cached.updated_dt)
+    except ValueError:
         return True
     if cached_dt.tzinfo is None:
         cached_dt = cached_dt.replace(tzinfo=UTC)
@@ -611,11 +608,11 @@ class BotKPICacheEntry(BaseModel):
         """Re-score the bot-processed flaws restricted to the selected CVE IDs.
 
         Non-bot-processed skip markers never contribute. Flaw-level date and
-        component scoping are applied server-side by the selection query (see
-        :func:`_fetch_flaw_index`), while suggestion-level date scoping is
-        applied during scoring. The cache may hold flaws from other windows or
-        components, which are simply not scored. ``None`` (used only in tests)
-        scores every cached flaw.
+        component scoping are applied server-side by the selection query,
+        while suggestion-level date scoping is applied during scoring. The
+        cache may hold flaws from other windows or components, which are
+        simply not scored. ``None`` (used only in tests) scores every cached
+        flaw.
         """
         per_flaw: dict[str, dict[str, FeatureStats]] = {}
         entries: list[BotKPIEntry] = []
@@ -693,16 +690,22 @@ def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKP
     )
 
 
-def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
+def _result_to_response(
+    result: BotKPIResult, delivery: BotKPIDelivery
+) -> BotKPIResponse:
+    """Map an internal result and delivery metadata to the API response."""
+    features = {
+        name: _stats_to_response(stats, result.modified_counts.get(name, 0))
+        for name, stats in result.features.items()
+    }
     response = BotKPIResponse(
         total_flaws_processed=result.total_flaws_processed,
-        features={
-            name: _stats_to_response(stats, result.modified_counts.get(name, 0))
-            for name, stats in result.features.items()
-        },
+        features=features,
+        delivery=delivery,
     )
     if result.entries is not None:
         response.entries = result.entries
+    if result.available_components is not None:
         response.available_components = result.available_components
     return response
 
@@ -715,25 +718,6 @@ def _get_cache_path() -> Path:
     if settings.bot_kpi_cache_dir:
         return Path(settings.bot_kpi_cache_dir) / "kpi_cache.json"
     return Path(settings.config_dir) / "osidb_bot_kpi" / "kpi_cache.json"
-
-
-def _cache_handler() -> StateFileHandler[BotKPICacheEntry]:
-    """A blocking, file-locked handler over the KPI cache file itself.
-
-    Locking the cache file directly (no separate ``.lock`` sidecar) means
-    there is only ever one file to reason about. The blocking lock serializes
-    the read-modify-write cycles of concurrent requests so they can't clobber
-    each other's results.
-    """
-    cache_path = _get_cache_path()
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    return StateFileHandler(str(cache_path), BotKPICacheEntry, blocking=True)
-
-
-def _read_cache() -> BotKPICacheEntry | None:
-    """Read the cache under a brief lock; None if absent, empty, or corrupt."""
-    with _cache_handler() as handler:
-        return handler.read()
 
 
 # -- Endpoint handler ----------------------------------------------------------
@@ -768,76 +752,20 @@ def _merge_fetched(
     return merged
 
 
-def _fetch_with_cache(
-    osidb: Any,
-    *,
-    changed_after: datetime | None = None,
-    changed_before: datetime | None = None,
-    component: str | None = None,
-    record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
-    detail: bool = False,
-) -> BotKPIResult:
-    """Select the requested flaws from OSIDB, refresh stale entries, then score.
+def _osidb_session(server_url: str, token: str | None, timeout: float) -> Any:
+    """Create the request's OSIDB session with per-call HTTP timeouts.
 
-    The request's filters drive a single *selection* query and nothing else:
-
-    *Select* -- one cheap ``{cve_id: updated_dt}`` index is fetched with the
-    request's ``changed_after`` / ``changed_before`` (as ``updated_dt`` bounds)
-    and ``component`` pushed down server-side (see :func:`_fetch_flaw_index`).
-    Its CVE IDs are exactly the flaws the response covers.
-
-    *Refresh* -- each selected flaw's full data is fetched only when it is
-    uncached or its own ``updated_dt`` watermark advanced past the cached one
-    (see :func:`_needs_fetch`); an unchanged flaw is served from its cache entry.
-    A cache entry is thus invalidated solely by its own watermark, never by the
-    request's filters. Fetches run outside the cache lock so a slow query can't
-    block other requests; when nothing is stale, the cache is served without a
-    write, and only the refreshed CVE keys are ever overwritten -- a narrow
-    request never evicts another window's or component's flaws.
-
-    The aggregate is recomputed fresh from the cached records for the selected
-    CVE IDs, never cached itself.
+    The retry adapter retimes iterator HTTP calls against the remaining refresh
+    budget. Requests timeouts bound connection/read inactivity, not total
+    elapsed response time. Bindings authenticate eagerly before exposing their
+    client, so initial Kerberos authentication cannot be retimed here. Neither
+    this helper nor the refresh budget guarantees a hard end-to-end deadline.
     """
-    index = _fetch_flaw_index(
-        osidb,
-        changed_after=changed_after,
-        changed_before=changed_before,
-        component=component,
-    )
-
-    cached = _read_cache()
-    cached_flaws = cached.flaws if cached is not None else {}
-
-    stale_ids = [
-        cve_id
-        for cve_id, updated_dt in index.items()
-        if _needs_fetch(cached_flaws.get(cve_id), updated_dt)
-    ]
-    batch = _fetch_flaws_batch(osidb, stale_ids)
-    fetched: dict[str, FlawCacheData] = {}
-    for cve_id, flaw_data in batch.items():
-        fetched[cve_id] = _flaw_cache_data(flaw_data, index.get(cve_id, ""))
-
-    if not fetched:
-        # Every selected flaw was already current, so there is nothing to write;
-        # serve the cache as-is.
-        entry = cached if cached is not None else BotKPICacheEntry(flaws={})
-    else:
-        with _cache_handler() as handler:
-            latest = handler.read()
-            existing = latest.flaws if latest is not None else cached_flaws
-            entry = BotKPICacheEntry(
-                flaws=_merge_fetched(existing, fetched, cached_flaws)
-            )
-            handler.write(entry)
-
-    return entry.to_kpi_result(
-        only_cve_ids=set(index),
-        changed_after=changed_after,
-        changed_before=changed_before,
-        record_filters=record_filters,
-        detail=detail,
-    )
+    if token:
+        return BearerOSIDBSession(server_url, token, timeout=timeout)
+    session = osidb_bindings.new_session(osidb_server_uri=server_url)
+    _retimeout_session(session, timeout)
+    return session
 
 
 def get_osidb_bot_kpi(
@@ -848,38 +776,62 @@ def get_osidb_bot_kpi(
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
     detail: bool = False,
     osidb_token: str | None = None,
+    cursor: str | None = None,
+    limit: int = _DEFAULT_PAGE_SIZE,
+    max_refresh_secs: int | None = None,
+    run_id: str | None = None,
+    authorization_identity: str | None = None,
 ) -> BotKPIResponse:
-    """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
+    """Fetch bot-processed flaws from OSIDB and compute KPI metrics.
+
+    Responses are served through stable delivery runs: follow
+    ``delivery.continue_token`` (passing it back as ``cursor`` together with
+    ``delivery.run_id``) until it is absent, accumulating each page's
+    ``entries``; aggregates are cumulative on every page. HTTP 503 operations
+    receive at most three retries. The refresh budget is shared by calls and
+    retry delays; bindings' eager Kerberos session authentication has no
+    injectable timeout and is excluded from any hard wall-clock guarantee.
+    """
     try:
+        budget = (
+            max_refresh_secs
+            if max_refresh_secs is not None
+            else get_settings().bot_kpi_max_refresh_seconds
+        )
+        deadline = time.monotonic() + budget
+        from .kpi_delivery import get_delivery
 
-        def fetch() -> BotKPIResponse:
-            osidb_server = get_settings().osidb_server_url
-            osidb = (
-                BearerOSIDBSession(osidb_server, osidb_token)
-                if osidb_token
-                else osidb_bindings.new_session(osidb_server_uri=osidb_server)
-            )
-            result = _fetch_with_cache(
-                osidb,
-                changed_after=changed_after,
-                changed_before=changed_before,
-                component=component,
-                record_filters=record_filters,
-                detail=detail,
-            )
-            return _result_to_response(result)
-
-        return fetch()
-    except OSError:
-        # OSError also covers requests.exceptions.RequestException (it subclasses
-        # OSError), so this catches real connectivity failures without masking
-        # programming bugs (AttributeError, TypeError, etc.) as a 503 outage.
+        return get_delivery(
+            osidb_token=osidb_token,
+            run_id=run_id,
+            changed_after=changed_after,
+            changed_before=changed_before,
+            component=component,
+            record_filters=record_filters,
+            detail=detail,
+            cursor=cursor,
+            limit=limit,
+            deadline=deadline,
+            authorization_identity=authorization_identity,
+        )
+    except requests.exceptions.SSLError:
+        logger.debug("Non-transient OSIDB TLS error", exc_info=True)
+        raise HTTPException(
+            502, "Unable to establish a secure OSIDB connection."
+        ) from None
+    except requests.HTTPError:
+        logger.debug("OSIDB returned a non-retryable HTTP error", exc_info=True)
+        raise HTTPException(502, "OSIDB rejected the KPI query.") from None
+    except (requests.ConnectionError, requests.Timeout, ConnectionError):
         logger.error("Failed to connect to OSIDB")
         logger.debug("OSIDB connection error details", exc_info=True)
         raise HTTPException(
             status_code=503,
             detail="Unable to connect to OSIDB.",
         ) from None
+    except requests.RequestException:
+        logger.debug("Non-transient OSIDB request error", exc_info=True)
+        raise HTTPException(502, "Unable to issue the OSIDB query.") from None
     except HTTPException:
         raise
     except Exception:

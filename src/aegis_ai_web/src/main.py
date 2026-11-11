@@ -56,6 +56,7 @@ from .data_models import (
 from .endpoints.bot_kpi import get_osidb_bot_kpi
 from .endpoints.kpi import SortOrder, get_cve_kpi
 from .endpoints.kpi_filters import KPIRecordFilters, utc
+from .endpoints.kpi_retry import KPIFailure
 from .feedback_logger import feedback_logger, programmatic_feedback_logger
 from .semantic_scoring import (
     calculate_semantic_proximity_score,
@@ -837,7 +838,17 @@ async def cve_kpi(
         "how often analysts keep, modify, or skip bot suggestions. "
         "Only flaws in DONE workflow state are included. "
         "Results are cached and incrementally updated on subsequent requests; "
-        "a flaw is automatically re-scored whenever it changes in OSIDB."
+        "a flaw is automatically re-scored whenever it changes in OSIDB. "
+        "Responses are served through stable delivery runs: the first request "
+        "establishes a run and reports zero received flaws; each follow-up "
+        "refreshes one page-sized slice of the OSIDB cache (also bounded by "
+        "the request's refresh budget, max_refresh_secs, defaulting to "
+        "AEGIS_BOT_KPI_MAX_REFRESH_SECS) and returns that slice's detail "
+        "entries plus cumulative aggregates, continuing through "
+        "delivery.continue_token until it is absent. Budget deferrals return "
+        "200 with deferred=true and a held continue_token. Run membership "
+        "freezes after index discovery; values are observed during fetching, "
+        "not an atomic historical OSIDB snapshot."
     ),
     response_model=BotKPIResponse,
     response_model_exclude_unset=True,
@@ -848,6 +859,16 @@ async def cve_kpi(
                 "application/json": {
                     "example": {
                         "total_flaws_processed": 142,
+                        "delivery": {
+                            "run_id": "018f5b2c4d6e8a7f9b0c1d2e3f4a5b6c",
+                            "page_id": "018f5b2c4d6e8a7f9b0c1d2e3f4a5b6c",
+                            "continue_token": None,
+                            "received_flaws": 142,
+                            "selected_flaws": 142,
+                            "complete": True,
+                            "selection_complete": True,
+                            "deferred": False,
+                        },
                         "features": {
                             "impact": {
                                 "suggested": 133,
@@ -865,12 +886,21 @@ async def cve_kpi(
             },
         },
         503: {
-            "description": "OSIDB is unreachable",
+            "description": "OSIDB is unreachable. retry_exhausted=true marks actual upstream transient retry exhaustion; clients must not retry that continuation. Budget exhaustion alone returns a 200 deferral.",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Unable to connect to OSIDB."}
+                    "example": {
+                        "detail": "OSIDB is temporarily unavailable.",
+                        "retry_exhausted": True,
+                    }
                 }
             },
+        },
+        409: {
+            "description": "Delivery run invalidated or continuation/filter mismatch. Top-level code: kpi_run_invalidated. Retain prior partial results and refresh explicitly."
+        },
+        410: {
+            "description": "Delivery run expired. Top-level code: kpi_run_expired. Retain prior partial results and refresh explicitly."
         },
     },
 )
@@ -903,6 +933,36 @@ async def osidb_bot_kpi(
         default=None,
         description="Allowed Aegis versions/builds; repeat for multiple versions, empty string for unknown.",
     ),
+    cursor: str | None = Query(
+        default=None,
+        description=(
+            "Opaque continuation token: pass back delivery.continue_token from "
+            "the previous response together with its run_id. Omit for the "
+            "first page."
+        ),
+    ),
+    run_id: str | None = Query(
+        default=None,
+        description="Delivery run identity returned by the first response. Reuse with its continue_token; omit to start a new run.",
+    ),
+    limit: int = Query(
+        default=400,
+        ge=1,
+        le=1000,
+        description="Maximum number of flaws served (and refreshed) per page.",
+    ),
+    max_refresh_secs: int | None = Query(
+        default=None,
+        ge=1,
+        le=600,
+        description=(
+            "Shared refresh budget for index/detail calls and transient retry delays. "
+            "Spent budgets return 200 deferral without a mandatory detail fetch. "
+            "Not a hard end-to-end deadline: eager Kerberos authentication and file "
+            "lock waits are outside the HTTP timeout control. Defaults to "
+            "AEGIS_BOT_KPI_MAX_REFRESH_SECS (20)."
+        ),
+    ),
 ) -> BotKPIResponse:
     """Get KPI metrics for flaws auto-processed by the osidb-bot."""
     if changed_after and changed_before and utc(changed_after) > utc(changed_before):
@@ -914,15 +974,30 @@ async def osidb_bot_kpi(
         recorded_after, recorded_before, tuple(aegis_version or [])
     )
     osidb_token = await _get_request_osidb_token()
-    return await asyncio.to_thread(
-        get_osidb_bot_kpi,
-        changed_after=changed_after,
-        changed_before=changed_before,
-        component=component or None,
-        detail=detail,
-        record_filters=record_filters,
-        osidb_token=osidb_token,
-    )
+    scope = get_request_scope() or {}
+    identity = scope.get("username") if osidb_token else None
+    if identity == "verified-osidb-user":
+        identity = None
+    try:
+        return await asyncio.to_thread(
+            get_osidb_bot_kpi,
+            changed_after=changed_after,
+            changed_before=changed_before,
+            component=component or None,
+            detail=detail,
+            record_filters=record_filters,
+            osidb_token=osidb_token,
+            cursor=cursor,
+            limit=limit,
+            max_refresh_secs=max_refresh_secs,
+            run_id=run_id,
+            authorization_identity=identity,
+        )
+    except KPIFailure as error:
+        return JSONResponse(  # ty: ignore[invalid-return-type]
+            status_code=error.status_code,
+            content={"detail": error.detail, **error.metadata},
+        )
 
 
 async def _get_request_osidb_token() -> str | None:

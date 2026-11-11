@@ -282,6 +282,22 @@ class AppSettings(BaseSettings):
 
     # osidb-bot KPI cache
     bot_kpi_cache_dir: str = os.getenv("AEGIS_BOT_KPI_CACHE_DIR", "")
+    bot_kpi_index_ttl_seconds: int = Field(
+        default=get_env_int("AEGIS_BOT_KPI_INDEX_TTL_SECS", 300), ge=1, le=3600
+    )
+    bot_kpi_run_ttl_seconds: int = Field(
+        default=get_env_int("AEGIS_BOT_KPI_RUN_TTL_SECS", 1800), ge=60, le=86400
+    )
+    # default time budget for the osidb-bot KPI endpoint's per-request cache
+    # refresh; overridable per request via the max_refresh_secs query
+    # parameter. blank/whitespace-only values fall back to the default
+    # (common in container/orchestrator configs) rather than crashing at
+    # import time. validated against the same inclusive 1-600 range as the
+    # max_refresh_secs query parameter so a bad server default cannot make
+    # every budget-less request fail.
+    bot_kpi_max_refresh_seconds: int = Field(
+        default=get_env_int("AEGIS_BOT_KPI_MAX_REFRESH_SECS", 20), ge=1, le=600
+    )
 
     # bomq. Local stand-ins on separate ports. An empty community URL skips that catalog.
     bomq_url: str = os.getenv("AEGIS_BOMQ_URL", "https://localhost:8080")
