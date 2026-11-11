@@ -139,7 +139,8 @@ async def test_flaw_updater_aegis_meta_updated_by_suggestions(mock_exec_feature)
     assert "aegis_meta" in flaw_data
     assert isinstance(aegis_meta, dict)
 
-    # Each suggestion path that calls update_field() should add an entry per field
+    # Each suggestion path that calls update_field() should add an entry per field.
+    # Mitigation is skipped for kernel CVEs (canned components include "kernel").
     expected_field_entries = {
         "components",
         "title",
@@ -148,7 +149,6 @@ async def test_flaw_updater_aegis_meta_updated_by_suggestions(mock_exec_feature)
         "impact",
         "_cvss3_vector",
         "statement",
-        "mitigation",
     }
     for field in expected_field_entries:
         assert field in aegis_meta, f"aegis_meta missing key {field!r}"
@@ -163,6 +163,8 @@ async def test_flaw_updater_aegis_meta_updated_by_suggestions(mock_exec_feature)
             assert "explanation" in entry
             assert "timestamp" in entry
 
+    assert "mitigation" not in aegis_meta
+
     # cvss_scores is added to updated_fields but metadata is under _cvss3_vector
     assert "components" in updater.updated_fields
     assert "title" in updater.updated_fields
@@ -171,10 +173,35 @@ async def test_flaw_updater_aegis_meta_updated_by_suggestions(mock_exec_feature)
     assert "impact" in updater.updated_fields
     assert "cvss_scores" in updater.updated_fields
     assert "statement" in updater.updated_fields
-    assert "mitigation" in updater.updated_fields
+    assert "mitigation" not in updater.updated_fields
 
     # No real OSIDB or feature exec should have been called (exec_feature was mocked)
     mock_exec_feature.assert_called()
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_flaw_updater_writes_mitigation_for_non_kernel_cve(mock_exec_feature):
+    """Mitigation is written for non-kernel CVEs (only kernel CVEs are skipped)."""
+
+    async def non_kernel_exec(feature, flaw_data):
+        result = await _canned_exec_feature(feature, flaw_data)
+        if hasattr(result, "components"):
+            result.components = ["curl"]
+        return result
+
+    mock_exec_feature.side_effect = non_kernel_exec
+
+    flaw_data = _minimal_flaw_data()
+    session = _mock_session(flaw_data)
+    agent = MagicMock()
+
+    updater = FlawUpdater(session, agent, CVE_ID)
+    await updater.apply_suggestions()
+
+    assert "mitigation" in updater.updated_fields
+    assert flaw_data["mitigation"] == "Canned mitigation text."
+    assert "mitigation" in flaw_data["aegis_meta"]
 
 
 @pytest.mark.asyncio

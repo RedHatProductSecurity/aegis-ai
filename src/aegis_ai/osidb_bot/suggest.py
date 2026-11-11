@@ -7,6 +7,7 @@ from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
 from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
+from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 
 _KERNEL_FLAGS_KEY = "kernel_flags"
@@ -345,13 +346,16 @@ async def suggest_statement(
     changed = update_field(
         flaw_data, ts, "statement", output, src="suggested_statement"
     )
-    changed |= (
-        record_aegis_failure(flaw_data, ts, "mitigation", output)
-        if output.suggested_mitigation is None
-        else update_field(
+
+    if is_kernel_component(flaw_data.get("components")):
+        cve_id = flaw_data.get("cve_id", "?")
+        logger.info(f"{cve_id}: skipping mitigation for kernel CVE")
+    elif output.suggested_mitigation is None:
+        changed |= record_aegis_failure(flaw_data, ts, "mitigation", output)
+    else:
+        changed |= update_field(
             flaw_data, ts, "mitigation", output, src="suggested_mitigation"
         )
-    )
 
     return changed
 
