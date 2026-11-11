@@ -1,0 +1,33 @@
+name: No Internal Merge Commits
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check-linear-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify no merge commits exist in PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # Find any commit in the PR range that has 2 or more parents
+          MERGES=$(git rev-list --merges "$BASE_SHA".."$HEAD_SHA")
+          if [ -n "$MERGES" ]; then
+            echo "::error::Internal merge commits detected in this pull request:"
+            echo "$MERGES"
+            echo "Please rebase your branch onto $BASE_REF instead of merging it."
+            exit 1
+          fi
+          echo "Branch history is clean (no internal merge commits)."
