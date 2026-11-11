@@ -1,8 +1,9 @@
 """
 Suggest affected components evaluation suite.
 
-Uses osidb_cache CVE data. Input: cve_id. The feature uses exclude_osidb_fields=["components"]
-so the model infers from title, description, etc. (no cheating).
+Uses osidb_cache CVE data. Input: cve_id. Expected components come directly from
+the cache; the feature withholds both components and affects from tool data so
+the model infers identities from title, description, references, etc.
 Runnable: pytest evals/features/cve/test_suggest_affected_components.py
 Optional: --sample N or AEGIS_EVALS_SUGGEST_AFFECTED_COMPONENTS_SAMPLE=N
 """
@@ -146,6 +147,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-35339",
     "CVE-2026-35342",
     "CVE-2026-35537",
+    "CVE-2026-37236",
     "CVE-2026-39946",
     "CVE-2026-40175",
     "CVE-2026-40193",
@@ -164,6 +166,7 @@ DEFAULT_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-78383",
     "CVE-2026-78437",
     "CVE-2026-79677",
+    "CVE-2026-81521",
     "CVE-2026-86350",
     "CVE-2026-87022",
     "CVE-2026-88015",
@@ -177,6 +180,7 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
     "CVE-2026-23950",  # got ['node-tar'], expected ['tar']
     "CVE-2026-25526",  # got ['com.hubspot/jinjava'], expected ['com.hubspot.jinjava/jinjava']
     "CVE-2026-25534",  # got ['io.spinnaker/clouddriver-artifacts', 'io.spinnaker/orca-core'], expected ['io.spinnaker.clouddriver/clouddriver-artifacts', 'io.spinnaker.orca/orca-core']
+    "CVE-2026-33414",  # flaky: got ['podman'], expected ['github.com/containers/podman/v4', 'github.com/containers/podman/v5']
 )
 
 
@@ -184,6 +188,10 @@ KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = (
 # Allowed values include non-distribution manifest-cube types (AEGIS-537),
 # e.g. hex, otp, plus generic/unknown.
 EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
+    "CVE-2025-22868": ["golang"],
+    "CVE-2025-47911": ["golang"],
+    "CVE-2025-58190": ["golang"],
+    "CVE-2025-64329": ["golang"],
     "CVE-2026-22815": ["pypi"],
     "CVE-2026-22822": ["golang"],
     "CVE-2026-24128": ["maven"],
@@ -213,6 +221,7 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-34073": ["pypi"],
     "CVE-2026-34444": ["pypi"],
     "CVE-2026-34785": ["gem"],
+    "CVE-2026-37236": ["golang"],
     "CVE-2026-39946": ["golang"],
     "CVE-2026-40175": ["npm"],
     "CVE-2026-40193": ["golang"],
@@ -230,10 +239,25 @@ EXPECTED_ECOSYSTEMS: dict[str, list[str]] = {
     "CVE-2026-78383": ["generic"],
     "CVE-2026-78437": ["generic"],
     "CVE-2026-79677": ["generic"],
+    "CVE-2026-81521": ["golang"],
     "CVE-2026-86350": ["generic"],
     "CVE-2026-87022": ["generic"],
     "CVE-2026-88015": ["golang"],
 }
+
+
+# AEGIS-496: preserve OSIDB component identities, not upstream-only module names.
+# Expectations are read directly from cached OSIDB components, including distro
+# names, unsuffixed/versioned module paths, and affected package paths.
+# Only the two CVEs cited in the ticket are exact-matched: grpc-gateway, which
+# lists both the unsuffixed and /v2 module roots only (no package subpath), and
+# mongo-driver, which lists /v2 only (the unsuffixed v1 module lacks the
+# Client.BulkWrite API). Other Go-identity CVEs are scored by overlap only;
+# this list selects exact evaluation; it does not override components.
+GO_MODULE_IDENTITY_CVE_IDS: tuple[str, ...] = (
+    "CVE-2026-37236",  # AEGIS-496: both grpc-gateway module roots, unsuffixed and /v2
+    "CVE-2026-81521",  # AEGIS-496: mongo-driver/v2; v1 lacks Client.BulkWrite
+)
 
 
 def _description_from_cve(cve: CVE) -> str:
@@ -305,6 +329,8 @@ def _build_cases(
             metadata["known_to_fail_evaluators"] = ["ComponentsOverlapEvaluator"]
         if cve_id in EXPECTED_ECOSYSTEMS:
             metadata["expected_ecosystems"] = EXPECTED_ECOSYSTEMS[cve_id]
+        if cve_id in GO_MODULE_IDENTITY_CVE_IDS:
+            metadata["require_exact_components"] = True
 
         case_evaluators = tuple(
             field_evaluators[f] for f in field_evaluators if f in metadata
@@ -388,6 +414,21 @@ class ComponentsOverlapEvaluator(Evaluator[str, SuggestAffectedComponentsModel])
         return EvaluationReason(value=score, reason=reason)
 
 
+class ExactComponentsEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
+    """Require all OSIDB identities exactly once, regardless of output order."""
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestAffectedComponentsModel]
+    ) -> EvaluationReason:
+        expected = cast(list[str], ctx.expected_output or [])
+        suggested = ctx.output.components
+        matches = set(suggested) == set(expected) and len(suggested) == len(expected)
+        return EvaluationReason(
+            value=matches,
+            reason=None if matches else f"got {suggested}, expected {expected}",
+        )
+
+
 class EcosystemEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
     """Scores ecosystem prediction against expected_ecosystems in metadata."""
 
@@ -415,6 +456,7 @@ class EcosystemEvaluator(Evaluator[str, SuggestAffectedComponentsModel]):
 # evaluators only attached to cases that provide the corresponding expected data
 field_evaluators = {
     "expected_ecosystems": EcosystemEvaluator(),
+    "require_exact_components": ExactComponentsEvaluator(),
 }
 
 
