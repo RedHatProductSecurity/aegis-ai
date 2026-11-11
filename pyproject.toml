@@ -100,6 +100,10 @@ filterwarnings = [
     # Deprecations originating from importlib bootstrap around SWIG types
     "ignore:.*SwigPy(Packed|Object).*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
     "ignore:.*swigvarlink.*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
+    # beartype runtime_checkable check on key_value protocol (Python 3.15+)
+    "ignore:.*AsyncKeyValue.*isn't explicitly decorated with @runtime_checkable.*:DeprecationWarning:beartype",
+    # Invalid escape sequence in google-genai types.py
+    "ignore:\\\\.*is an invalid escape sequence:SyntaxWarning",
 ]
 
 [tool.hatch.build.targets.wheel]
