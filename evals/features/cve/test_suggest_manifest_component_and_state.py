@@ -3,7 +3,9 @@ Suggest manifest component and state evaluation suite.
 
 Goldens are static: one-time bomq catalog plus ``bomq search -k build``
 keep/drop results in ``manifest_component_goldens.json``. The scorer does
-not call bomq.
+not call bomq. Each required row carries ``source_component`` (flaw seed);
+top-level ``ranges`` soft-scores advisory bound tokens (or ``[]`` when the
+text states none).
 
 The feature task reads bomq/Anitya responses from the checked-in
 ``evals/catalog_cache/`` (see ``evals/utils/catalog_cache.py``). Populate
@@ -157,7 +159,7 @@ def _rows_from_output(output: Any) -> list[dict[str, Any]]:
                     "build_type": getattr(item, "build_type", None),
                     "ecosystem": getattr(item, "ecosystem", None),
                     "rhcos": getattr(item, "rhcos", None),
-                    "affectedness": getattr(item, "affectedness", None),
+                    "source_component": getattr(item, "source_component", None),
                 }
             )
     return rows
@@ -215,21 +217,141 @@ def _missing_detail(
 def _row_matches_required(
     row: dict[str, Any],
     expected_key: tuple[str, str] | None,
-    expected_affect: Any,
     expected_rhcos: str,
+    expected_source: str | None = None,
 ) -> bool:
     """True when produced row matches the required search key and checked fields."""
     if expected_key is None or _primary_key(row) != expected_key:
         return False
-    if expected_affect is not None and _norm(row.get("affectedness")) != _norm(
-        expected_affect
-    ):
+    if expected_rhcos and _norm(row.get("rhcos")) != expected_rhcos:
         return False
-    return not expected_rhcos or _norm(row.get("rhcos")) == expected_rhcos
+    return expected_source is None or row.get("source_component") == expected_source
+
+
+def _strip_v(version: Any) -> str:
+    """Strip a leading ``v`` from a version token."""
+    text = str(version or "").strip()
+    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
+        return text[1:]
+    return text
+
+
+def _ranges_from_output(output: Any) -> list[dict[str, Any]]:
+    """Read the sibling ``ranges`` list from a feature output."""
+    raw = getattr(output, "ranges", None)
+    if raw is None and isinstance(output, dict):
+        raw = output.get("ranges")
+    if not isinstance(raw, list):
+        return []
+    return [entry for entry in raw if isinstance(entry, dict)]
+
+
+def _event_field_tokens(entry: dict[str, Any], field: str) -> set[str]:
+    """Version tokens for one event field from a produced ranges entry."""
+    tokens: set[str] = set()
+    for block in entry.get("ranges") or []:
+        if not isinstance(block, dict):
+            continue
+        for event in block.get("events") or []:
+            if not isinstance(event, dict):
+                continue
+            value = event.get(field)
+            if value is not None and str(value).strip():
+                tokens.add(_strip_v(value))
+    return tokens
+
+
+def _versions_tokens(entry: dict[str, Any]) -> set[str]:
+    """Top-level ``versions`` tokens from a produced ranges entry."""
+    tokens: set[str] = set()
+    for value in entry.get("versions") or []:
+        if value is not None and str(value).strip():
+            tokens.add(_strip_v(value))
+    return tokens
+
+
+def score_ranges(
+    golden: dict[str, Any], produced_ranges: list[dict[str, Any]]
+) -> tuple[float, str | None]:
+    """Soft-score sibling ranges when the golden sets a ``ranges`` list.
+
+    Empty golden ``ranges`` requires no produced entries. Otherwise each
+    expected seed must appear, and every listed ``fixed`` / ``last_affected`` /
+    ``introduced`` token must show up on that field in some event. Listed
+    ``versions`` tokens must appear on the produced entry's top-level
+    ``versions`` list. Extra events, versions, or seeds are ignored. Missing
+    ``ranges`` on the golden skips this check entirely.
+    """
+    if "ranges" not in golden:
+        return 1.0, None
+    expected = golden.get("ranges")
+    if not isinstance(expected, list):
+        return 0.0, "golden ranges is not a list"
+    if not expected:
+        if produced_ranges:
+            return (
+                0.0,
+                f"expected no ranges, got {produced_ranges!r}",
+            )
+        return 1.0, None
+
+    by_seed: dict[str, dict[str, Any]] = {}
+    for entry in produced_ranges:
+        seed = entry.get("source_component")
+        if isinstance(seed, str) and seed.strip() and seed not in by_seed:
+            by_seed[seed] = entry
+
+    for req in expected:
+        if not isinstance(req, dict):
+            return 0.0, f"golden ranges entry is not an object: {req!r}"
+        seed = req.get("source_component")
+        if not isinstance(seed, str) or not seed.strip():
+            return 0.0, f"golden ranges entry missing source_component: {req!r}"
+        produced = by_seed.get(seed)
+        if produced is None:
+            return (
+                0.0,
+                f"missing ranges for source_component {seed!r}, got {produced_ranges!r}",
+            )
+        for field in ("fixed", "last_affected", "introduced"):
+            wanted = [
+                _strip_v(token) for token in req.get(field) or [] if str(token).strip()
+            ]
+            if not wanted:
+                continue
+            have = _event_field_tokens(produced, field)
+            missing = [token for token in wanted if token not in have]
+            if missing:
+                return (
+                    0.0,
+                    (
+                        f"source_component {seed!r} missing {field} {missing}, "
+                        f"got {produced!r}"
+                    ),
+                )
+        wanted_versions = [
+            _strip_v(token) for token in req.get("versions") or [] if str(token).strip()
+        ]
+        if wanted_versions:
+            have_versions = _versions_tokens(produced)
+            missing_versions = [
+                token for token in wanted_versions if token not in have_versions
+            ]
+            if missing_versions:
+                return (
+                    0.0,
+                    (
+                        f"source_component {seed!r} missing versions "
+                        f"{missing_versions}, got {produced!r}"
+                    ),
+                )
+    return 1.0, None
 
 
 def score_manifest(
-    golden: dict[str, Any], rows: list[dict[str, Any]]
+    golden: dict[str, Any],
+    rows: list[dict[str, Any]],
+    ranges: list[dict[str, Any]] | None = None,
 ) -> tuple[float, str | None]:
     """Score produced rows against one golden.
 
@@ -240,20 +362,24 @@ def score_manifest(
     name are ignored. Names listed in ``allow_extra_names`` are also ignored
     (Anitya same-upstream packages that are not clear rebuilds). Subpackages
     and lookalike substring hits score 0. Other extras score 0. A required
-    row counts only when its build_type or ecosystem matches exactly.
-    Affectedness is compared only when the golden sets a non-null value.
+    row counts only when its build_type or ecosystem matches exactly, and
+    when ``source_component`` is set on the golden row it must match exactly.
+    Sibling ``ranges`` are soft-scored when the golden sets a ``ranges`` list.
     ``require_full_path`` rejects a produced name that is only the final path
     segment of a required Go, Maven, or scoped-npm name. Agreeing same-name
     duplicates still match; a correct row plus a conflicting same-name
     duplicate scores 0.
     """
+    range_score, range_reason = score_ranges(golden, ranges or [])
+    if range_score < 1.0:
+        return 0.0, range_reason
+
     required = list(golden.get("required") or [])
     allow_extra = bool(golden.get("allow_extra_same_project"))
     require_full = bool(
         golden.get("require_full_path") or golden.get("forbid_short_go")
     )
     forbid = {_norm(name) for name in golden.get("forbid") or []}
-    optional = {_norm(name) for name in golden.get("optional_null_affect") or []}
     allow_names = {_norm(name) for name in golden.get("allow_extra_names") or []}
 
     produced: list[tuple[str, dict[str, Any]]] = []
@@ -273,19 +399,6 @@ def score_manifest(
                 f"rows {_rows_for_names(produced, forbidden_hits)!r}"
             ),
         )
-
-    for name, row in produced:
-        if name not in optional:
-            continue
-        affectedness = row.get("affectedness")
-        if affectedness not in (None, ""):
-            return (
-                0.0,
-                (
-                    f"got {got_names}, {name} expected null affectedness, "
-                    f"got {affectedness!r}, row {row!r}"
-                ),
-            )
 
     req_names = [_norm(row["name"]) for row in required]
     req_set = set(req_names)
@@ -310,13 +423,15 @@ def score_manifest(
     for req in required:
         req_name = _norm(req["name"])
         expected_key = _primary_key(req)
-        expected_affect = req.get("affectedness")
         expected_rhcos = _norm(req.get("rhcos"))
+        expected_source = req.get("source_component")
+        if not isinstance(expected_source, str) or not expected_source.strip():
+            expected_source = None
         same_name = [row for name, row in produced if name == req_name]
         hits = [
             row
             for row in same_name
-            if _row_matches_required(row, expected_key, expected_affect, expected_rhcos)
+            if _row_matches_required(row, expected_key, expected_rhcos, expected_source)
         ]
         conflicts = [
             row
@@ -342,9 +457,7 @@ def score_manifest(
         else:
             missing.append(req)
 
-    extra_names = [
-        name for name in got_names if name not in req_set and name not in optional
-    ]
+    extra_names = [name for name in got_names if name not in req_set]
     if extra_names and not allow_extra:
         return (
             0.0,
@@ -378,7 +491,7 @@ def score_manifest(
     if allow_extra:
         union = len(req_set)
     else:
-        union = len(req_set | (got_set - optional))
+        union = len(req_set | got_set)
     jaccard = len(matched) / union if union else 0.0
     primary_bonus = 0.5 if req_names[0] in matched else 0.0
     score = (jaccard * 0.5) + primary_bonus
@@ -392,14 +505,18 @@ def score_manifest(
 
 
 class ManifestComponentEvaluator(Evaluator[str, Any]):
-    """Required-name overlap, primary search key, and full module paths."""
+    """Required-name overlap, primary search key, source_component, and soft ranges."""
 
     def evaluate(self, ctx: EvaluatorContext[str, Any]) -> EvaluationReason:
         """Score predicted manifest rows against the CVE golden."""
         golden = ctx.expected_output
         if not isinstance(golden, dict):
             return EvaluationReason(value=0.0, reason="golden is not an object")
-        score, reason = score_manifest(golden, _rows_from_output(ctx.output))
+        score, reason = score_manifest(
+            golden,
+            _rows_from_output(ctx.output),
+            ranges=_ranges_from_output(ctx.output),
+        )
         confidence = getattr(ctx.output, "confidence", None)
         if isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
             score = reflect_confidence(ctx, score)
@@ -478,6 +595,55 @@ def manifest_component_cases(request):
     )
 
 
+def _seeded_rows(
+    golden: dict[str, Any], rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Attach the golden seed as source_component when a row omits it."""
+    seed = golden.get("seed")
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        if "source_component" in row or not isinstance(seed, str):
+            out.append(row)
+            continue
+        out.append({**row, "source_component": seed})
+    return out
+
+
+def _satisfying_ranges(golden: dict[str, Any]) -> list[dict[str, Any]]:
+    """Minimal produced ranges that satisfy soft golden bound tokens."""
+    produced: list[dict[str, Any]] = []
+    for req in golden.get("ranges") or []:
+        if not isinstance(req, dict):
+            continue
+        events: list[dict[str, str]] = []
+        for field in ("introduced", "last_affected", "fixed"):
+            for token in req.get(field) or []:
+                text = str(token).strip()
+                if text:
+                    events.append({field: text})
+        versions = [
+            text for token in req.get("versions") or [] if (text := str(token).strip())
+        ]
+        entry: dict[str, Any] = {"source_component": req["source_component"]}
+        if events:
+            entry["ranges"] = [{"type": "ECOSYSTEM", "events": events}]
+        if versions:
+            entry["versions"] = versions
+        produced.append(entry)
+    return produced
+
+
+def _score_golden(
+    golden: dict[str, Any], rows: list[dict[str, Any]]
+) -> tuple[float, str | None]:
+    """Score rows against a locked golden with seed and soft ranges filled."""
+    return score_manifest(
+        golden,
+        _seeded_rows(golden, rows),
+        ranges=_satisfying_ranges(golden),
+    )
+
+
 def test_goldens_match_locked_sample():
     """The golden file matches DEFAULT_CVE_IDS, with one legal search key each."""
     goldens = load_goldens()
@@ -487,26 +653,40 @@ def test_goldens_match_locked_sample():
         assert isinstance(required, list), cve_id
         assert isinstance(golden["allow_extra_same_project"], bool), cve_id
         assert isinstance(golden["require_full_path"], bool), cve_id
+        assert isinstance(golden["ranges"], list), cve_id
+        seed = golden["seed"]
+        assert isinstance(seed, str) and seed.strip(), cve_id
         names = []
         for row in required:
             assert _primary_key(row) is not None, (cve_id, row)
             assert "build_type" in row or "ecosystem" in row
             assert not ("build_type" in row and "ecosystem" in row)
+            assert row.get("source_component") == seed, (cve_id, row)
             names.append(_norm(row["name"]))
         assert len(names) == len(set(names)), cve_id
         if golden["require_full_path"] and required:
             assert any("/" in row["name"] for row in required), cve_id
         for name in golden.get("allow_extra_names") or []:
             assert isinstance(name, str) and name.strip(), cve_id
+        for entry in golden["ranges"]:
+            assert isinstance(entry, dict), cve_id
+            assert (
+                isinstance(entry.get("source_component"), str)
+                and entry["source_component"].strip()
+            ), cve_id
+            assert any(
+                entry.get(field)
+                for field in ("fixed", "last_affected", "introduced", "versions")
+            ), (cve_id, entry)
 
 
 def test_score_exact_match():
     """Score exact match."""
     golden = load_goldens()["CVE-2026-65183"]
-    rows = [
-        {"name": "tomcat", "build_type": "rpm"},
-    ]
-    score, reason = score_manifest(golden, rows)
+    score, reason = _score_golden(
+        golden,
+        [{"name": "tomcat", "build_type": "rpm"}],
+    )
     assert score == 1.0
     assert reason is None
 
@@ -514,7 +694,7 @@ def test_score_exact_match():
 def test_score_tomcat_forbids_digit_prefixed_jws():
     """Digit-prefixed JWS tomcat rebuilds are forbidden by the golden."""
     golden = load_goldens()["CVE-2026-65183"]
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {"name": "tomcat", "build_type": "rpm"},
@@ -529,8 +709,10 @@ def test_score_tomcat_forbids_digit_prefixed_jws():
 def test_score_primary_key_rejects_ecosystem_rpm():
     """Score primary key rejects ecosystem rpm."""
     golden = load_goldens()["CVE-2026-96275"]
-    produced = {"name": "flatpak", "ecosystem": "rpm"}
-    score, reason = score_manifest(golden, [produced])
+    produced = {"name": "flatpak", "ecosystem": "rpm", "source_component": "flatpak"}
+    score, reason = score_manifest(
+        golden, [produced], ranges=_satisfying_ranges(golden)
+    )
     assert score == 0.0
     assert reason is not None
     assert "flatpak" in reason
@@ -540,7 +722,7 @@ def test_score_primary_key_rejects_ecosystem_rpm():
 def test_score_full_path_rejects_final_segment():
     """Score full path rejects final segment."""
     golden = load_goldens()["CVE-2026-79776"]
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {"name": "github.com/rclone/rclone", "ecosystem": "golang"},
@@ -571,12 +753,14 @@ def test_score_hard_empty():
 def test_score_same_project_extra_is_ignored():
     """Packaging-prefix clear rebuilds beyond required names are ignored extras."""
     golden = load_goldens()["CVE-2026-90801"]
-    rows = [
-        {"name": "binutils", "build_type": "rpm"},
-        {"name": "mingw-binutils", "build_type": "rpm"},
-        {"name": "cross-binutils", "build_type": "rpm"},
-    ]
-    score, reason = score_manifest(golden, rows)
+    score, reason = _score_golden(
+        golden,
+        [
+            {"name": "binutils", "build_type": "rpm"},
+            {"name": "mingw-binutils", "build_type": "rpm"},
+            {"name": "cross-binutils", "build_type": "rpm"},
+        ],
+    )
     assert score == 1.0
     assert reason is None
 
@@ -584,7 +768,7 @@ def test_score_same_project_extra_is_ignored():
 def test_score_digit_prefixed_extra_is_wrong_project():
     """Digit-prefixed product rebuilds are not same-project extras."""
     golden = load_goldens()["CVE-2026-90801"]
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {"name": "binutils", "build_type": "rpm"},
@@ -600,13 +784,15 @@ def test_score_digit_prefixed_extra_is_wrong_project():
 def test_score_anitya_allow_extra_names_are_ignored():
     """Anitya same-upstream packages that fail clear_rebuild stay allowed extras."""
     golden = load_goldens()["CVE-2026-90801"]
-    rows = [
-        {"name": "binutils", "build_type": "rpm"},
-        {"name": "mingw-binutils", "build_type": "rpm"},
-        {"name": "avr-binutils", "build_type": "rpm"},
-        {"name": "arm-none-eabi-binutils-cs", "build_type": "rpm"},
-    ]
-    score, reason = score_manifest(golden, rows)
+    score, reason = _score_golden(
+        golden,
+        [
+            {"name": "binutils", "build_type": "rpm"},
+            {"name": "mingw-binutils", "build_type": "rpm"},
+            {"name": "avr-binutils", "build_type": "rpm"},
+            {"name": "arm-none-eabi-binutils-cs", "build_type": "rpm"},
+        ],
+    )
     assert score == 1.0
     assert reason is None
 
@@ -614,7 +800,7 @@ def test_score_anitya_allow_extra_names_are_ignored():
 def test_score_wrong_project_extra_fails():
     """Score wrong project extra fails."""
     golden = load_goldens()["CVE-2026-90439"]
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {"name": "nginx", "build_type": "rpm"},
@@ -629,7 +815,7 @@ def test_score_wrong_project_extra_fails():
 def test_score_subpackage_extra_is_wrong_project():
     """Subpackages must not pass as same-project extras via substring overlap."""
     golden = load_goldens()["CVE-2026-90439"]
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {"name": "nginx", "build_type": "rpm"},
@@ -642,26 +828,12 @@ def test_score_subpackage_extra_is_wrong_project():
     assert "wrong-project" in reason
 
 
-def test_score_affectedness_only_when_golden_sets_it():
-    """Score affectedness only when golden sets it."""
-    golden = {
-        "seed": "nginx",
-        "required": [
-            {"name": "nginx", "build_type": "rpm", "affectedness": "AFFECTED"}
-        ],
-        "allow_extra_same_project": False,
-        "require_full_path": False,
-    }
-    expected = golden["required"][0]
-    produced = {"name": "nginx", "build_type": "rpm", "affectedness": "NOTAFFECTED"}
-    score, reason = score_manifest(golden, [produced])
-    assert score == 0.0
-    assert reason is not None
-    assert repr(expected) in reason
-    assert repr(produced) in reason
-    omitted = load_goldens()["CVE-2026-90439"]
-    score, reason = score_manifest(
-        omitted, [{"name": "nginx", "build_type": "rpm", "affectedness": "NOTAFFECTED"}]
+def test_score_ignores_affectedness_fields():
+    """Scorer grades names, search keys, and source_component; affectedness is ignored."""
+    golden = load_goldens()["CVE-2026-90439"]
+    score, reason = _score_golden(
+        golden,
+        [{"name": "nginx", "build_type": "rpm", "affectedness": "NOTAFFECTED"}],
     )
     assert score == 1.0
     assert reason is None
@@ -670,22 +842,22 @@ def test_score_affectedness_only_when_golden_sets_it():
 def test_score_conflicting_duplicate_fails():
     """A matching row must not be rescued by ignoring a conflicting same-name duplicate."""
     golden = load_goldens()["CVE-2026-1199"]
-    good = {"name": "zabbix", "build_type": "rpm", "affectedness": "NOTAFFECTED"}
-    bad = {"name": "zabbix", "build_type": "rpm", "affectedness": "AFFECTED"}
+    good = {"name": "zabbix", "build_type": "rpm"}
+    bad = {"name": "zabbix", "ecosystem": "generic"}
     rest = [
-        {"name": "zabbix6.0", "build_type": "rpm", "affectedness": "NOTAFFECTED"},
-        {"name": "zabbix7.0", "build_type": "rpm", "affectedness": "NOTAFFECTED"},
+        {"name": "zabbix6.0", "build_type": "rpm"},
+        {"name": "zabbix7.0", "build_type": "rpm"},
     ]
-    score, reason = score_manifest(golden, [good, bad, *rest])
+    score, reason = _score_golden(golden, [good, bad, *rest])
     assert score == 0.0
     assert reason is not None
     assert "conflicting duplicate" in reason
     assert "zabbix" in reason
-    score, reason = score_manifest(golden, [bad, good, *rest])
+    score, reason = _score_golden(golden, [bad, good, *rest])
     assert score == 0.0
     assert reason is not None
     assert "conflicting duplicate" in reason
-    score, reason = score_manifest(golden, [good, good, *rest])
+    score, reason = _score_golden(golden, [good, good, *rest])
     assert score == 1.0
     assert reason is None
 
@@ -712,54 +884,43 @@ def test_score_rhcos_companion_is_not_a_conflict():
 def test_score_prometheus_usage_forbids_parent_module():
     """Score prometheus usage forbids parent module."""
     golden = load_goldens()["CVE-2026-119566"]
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {
                 "name": "github.com/openshift-priv/prometheus",
                 "ecosystem": "golang",
-                "affectedness": "AFFECTED",
             },
-            {"name": "prometheus", "build_type": "rpm", "affectedness": "AFFECTED"},
-            {
-                "name": "prometheus3.13",
-                "build_type": "rpm",
-                "affectedness": "AFFECTED",
-            },
-            {"name": "prometheus3.5", "build_type": "rpm", "affectedness": "AFFECTED"},
+            {"name": "prometheus", "build_type": "rpm"},
+            {"name": "prometheus3.13", "build_type": "rpm"},
+            {"name": "prometheus3.5", "build_type": "rpm"},
             {"name": "github.com/prometheus/common", "ecosystem": "golang"},
         ],
     )
     assert score == 0.0
     assert reason is not None
     assert "github.com/prometheus/common" in reason
-    score, reason = score_manifest(
+    score, reason = _score_golden(
         golden,
         [
             {
                 "name": "github.com/openshift-priv/prometheus",
                 "ecosystem": "golang",
-                "affectedness": "AFFECTED",
             },
-            {"name": "prometheus", "build_type": "rpm", "affectedness": "AFFECTED"},
-            {
-                "name": "prometheus3.13",
-                "build_type": "rpm",
-                "affectedness": "AFFECTED",
-            },
-            {"name": "prometheus3.5", "build_type": "rpm", "affectedness": "AFFECTED"},
+            {"name": "prometheus", "build_type": "rpm"},
+            {"name": "prometheus3.13", "build_type": "rpm"},
+            {"name": "prometheus3.5", "build_type": "rpm"},
         ],
     )
     assert score == 1.0
     assert reason is None
 
 
-def test_score_optional_null_affect():
-    """Score optional null affect."""
+def test_score_same_project_extra_compat_is_allowed():
+    """Same-project compat extras are allowed when allow_extra_same_project is set."""
     golden = {
         "seed": "openssl",
         "required": [{"name": "openssl", "build_type": "rpm"}],
-        "optional_null_affect": ["compat-openssl11"],
         "allow_extra_same_project": True,
         "require_full_path": False,
     }
@@ -767,29 +928,156 @@ def test_score_optional_null_affect():
         golden,
         [
             {"name": "openssl", "build_type": "rpm"},
-            {"name": "compat-openssl11", "build_type": "rpm", "affectedness": None},
+            {"name": "compat-openssl11", "build_type": "rpm"},
         ],
     )
     assert score == 1.0
     assert reason is None
+
+
+def test_score_source_component_mismatch_fails():
+    """Required rows must carry the exact golden source_component seed."""
+    golden = load_goldens()["CVE-2026-90439"]
     score, reason = score_manifest(
         golden,
+        [{"name": "nginx", "build_type": "rpm", "source_component": "wrong"}],
+        ranges=_satisfying_ranges(golden),
+    )
+    assert score < 1.0
+    assert reason is not None
+    assert "nginx" in reason
+
+
+def test_score_soft_ranges_accepts_reordered_events():
+    """Soft ranges match fixed tokens regardless of event order or range type."""
+    golden = load_goldens()["CVE-2026-50291"]
+    rows = _seeded_rows(
+        golden,
         [
-            {"name": "openssl", "build_type": "rpm"},
+            {"name": "OpenImageIO", "build_type": "rpm"},
+            {"name": "OpenImageIO2.5", "build_type": "rpm"},
+        ],
+    )
+    ranges = [
+        {
+            "source_component": "OpenImageIO",
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [
+                        {"fixed": "3.1.11.0"},
+                        {"introduced": "0"},
+                        {"fixed": "3.0.16.0"},
+                    ],
+                }
+            ],
+        }
+    ]
+    score, reason = score_manifest(golden, rows, ranges=ranges)
+    assert score == 1.0
+    assert reason is None
+
+
+def test_score_soft_ranges_missing_fixed_fails():
+    """Soft ranges fail when an expected fixed token is absent."""
+    golden = load_goldens()["CVE-2026-50291"]
+    rows = _seeded_rows(
+        golden,
+        [
+            {"name": "OpenImageIO", "build_type": "rpm"},
+            {"name": "OpenImageIO2.5", "build_type": "rpm"},
+        ],
+    )
+    ranges = [
+        {
+            "source_component": "OpenImageIO",
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [{"introduced": "0"}, {"fixed": "3.0.16.0"}],
+                }
+            ],
+        }
+    ]
+    score, reason = score_manifest(golden, rows, ranges=ranges)
+    assert score == 0.0
+    assert reason is not None
+    assert "3.1.11.0" in reason
+
+
+def test_score_empty_ranges_rejects_invented_entry():
+    """An empty golden ranges list rejects any produced range entry."""
+    golden = load_goldens()["CVE-2026-18090"]
+    score, reason = score_manifest(
+        golden,
+        _seeded_rows(golden, [{"name": "gdk-pixbuf2", "build_type": "rpm"}]),
+        ranges=[
             {
-                "name": "compat-openssl11",
-                "build_type": "rpm",
-                "affectedness": "AFFECTED",
-            },
+                "source_component": "gdk-pixbuf",
+                "ranges": [
+                    {
+                        "type": "ECOSYSTEM",
+                        "events": [{"introduced": "0"}, {"fixed": "1.2.3"}],
+                    }
+                ],
+            }
         ],
     )
     assert score == 0.0
+    assert reason is not None
+    assert "expected no ranges" in reason
+
+
+def test_score_osv_tokens_differ_from_advisory_wording():
+    """OSV SEMVER soft tokens pass even when they differ from advisory shorthand."""
+    golden = {
+        "seed": "postgresql",
+        "required": [
+            {
+                "name": "postgresql",
+                "build_type": "rpm",
+                "source_component": "postgresql",
+            }
+        ],
+        "allow_extra_same_project": True,
+        "require_full_path": False,
+        # Advisory text may say "18.5"; OSV SEMVER uses "18.5.0".
+        "ranges": [
+            {
+                "source_component": "postgresql",
+                "fixed": ["18.5.0", "17.11.0"],
+            }
+        ],
+    }
+    score, reason = score_manifest(
+        golden,
+        [{"name": "postgresql", "build_type": "rpm", "source_component": "postgresql"}],
+        ranges=[
+            {
+                "source_component": "postgresql",
+                "ranges": [
+                    {
+                        "type": "SEMVER",
+                        "events": [
+                            {"introduced": "0"},
+                            {"fixed": "18.5.0"},
+                            {"introduced": "17.0.0"},
+                            {"fixed": "17.11.0"},
+                        ],
+                    }
+                ],
+            }
+        ],
+    )
+    assert score == 1.0
+    assert reason is None
 
 
 def test_cached_flaws_have_seed_fields():
     """Each locked CVE cache entry can seed the feature."""
     missing = []
     thin = []
+    no_upstream = []
     for cve_id in DEFAULT_CVE_IDS:
         cached = read_cache_json(cve_id)
         if not cached:
@@ -800,8 +1088,11 @@ def test_cached_flaws_have_seed_fields():
         )
         if not has_text or "components" not in cached:
             thin.append(cve_id)
+        if "upstream_data" not in cached:
+            no_upstream.append(cve_id)
     assert not missing, f"missing OSIDB cache entries: {missing}"
     assert not thin, f"cache entries missing title, description, or components: {thin}"
+    assert not no_upstream, f"cache entries missing upstream_data key: {no_upstream}"
 
 
 @pytest.mark.asyncio(loop_scope="session")

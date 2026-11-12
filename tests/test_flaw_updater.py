@@ -559,7 +559,7 @@ async def test_suggest_manifest_preserves_rows_on_catalog_outage(mock_exec_featu
     )
 
     flaw_data = _minimal_flaw_data()
-    existing = [{"name": "nginx", "build_type": "rpm", "affectedness": "AFFECTED"}]
+    existing = [{"name": "nginx", "build_type": "rpm", "source_component": "nginx"}]
     flaw_data["_downstream"] = existing
     agent = MagicMock()
 
@@ -598,6 +598,53 @@ async def test_suggest_manifest_empty_low_confidence_is_not_lookup_failure(
     assert len(entries) == 1
     assert entries[0]["type"] == "AI-Bot-Skipped"
     assert entries[0]["skip_reason"] == "confidence"
+
+
+@pytest.mark.asyncio
+@patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
+async def test_suggest_manifest_persists_ranges_sibling(mock_exec_feature):
+    """Accepted catalog rows store ranges beside value, not inside it."""
+    mock_exec_feature.return_value = SimpleNamespace(
+        manifest_components=[
+            {
+                "name": "go.mongodb.org/mongo-driver/v2",
+                "ecosystem": "golang",
+                "source_component": "mongo-driver",
+            }
+        ],
+        explanation="Kept the Go module for mongo-driver.",
+        data_quality=1.0,
+        confidence=1.0,
+        tools_used=["osidb_tool"],
+        ranges=[
+            {
+                "source_component": "mongo-driver",
+                "versions": ["1.2.3", "1.2.4"],
+            }
+        ],
+        _catalog_outage=False,
+    )
+
+    flaw_data = _minimal_flaw_data()
+    changed = await suggest_manifest_components(MagicMock(), flaw_data, TS)
+
+    assert changed == {"_downstream"}
+    entry = flaw_data["aegis_meta"]["_downstream"][-1]
+    assert entry["type"] == "AI-Bot"
+    assert entry["value"] == [
+        {
+            "name": "go.mongodb.org/mongo-driver/v2",
+            "ecosystem": "golang",
+            "source_component": "mongo-driver",
+        }
+    ]
+    assert entry["ranges"] == [
+        {
+            "source_component": "mongo-driver",
+            "versions": ["1.2.3", "1.2.4"],
+        }
+    ]
+    assert "ranges" not in entry["value"][0]
 
 
 @pytest.mark.asyncio

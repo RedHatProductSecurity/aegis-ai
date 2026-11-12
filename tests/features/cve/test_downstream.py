@@ -22,6 +22,7 @@ from aegis_ai.features.cve.downstream import (
     _glob_match,
     align_manifest_search_keys,
     apply_usage_policy,
+    attach_source_components,
     collect_downstream,
     collect_downstream_candidates,
     drop_short_segments_of_kept_modules,
@@ -48,9 +49,7 @@ def _collect(
     components,
     projects=None,
     packages=None,
-    builds=None,
     rhcos=None,
-    component_versions=None,
     community=COMMUNITY,
     anitya=ANITYA,
 ):
@@ -58,9 +57,7 @@ def _collect(
     seen: list[str] = []
     projects = projects or {}
     packages = packages or {}
-    builds = builds or {}
     rhcos = rhcos or {}
-    component_versions = component_versions or {}
 
     def get_json(url: str):
         seen.append(url)
@@ -86,14 +83,11 @@ def _collect(
         if path.startswith("/api/project/"):
             project_id = int(path.rstrip("/").rsplit("/", 1)[-1])
             return {"packages": packages.get(project_id, [])}
-        if path.startswith("/api/v0/search/builds"):
-            requested = query["name"][0].casefold()
-            return {"data": builds.get(requested, [])}
         if path.startswith("/api/v0/search/components"):
             requested = query["name"][0].casefold()
             if query.get("build_name"):
                 return {"data": rhcos.get(requested, [])}
-            return {"data": component_versions.get(requested, [])}
+            return {"data": []}
         raise AssertionError(url)
 
     result = collect_downstream(
@@ -116,8 +110,8 @@ def _by_name(result):
     return {row.name: row for row in result.rows if row.rhcos is None}
 
 
-def test_openssl_keeps_github_project_and_nulls_compat_affectedness():
-    """Openssl keeps github project and nulls compat affectedness."""
+def test_openssl_keeps_github_project_and_compat():
+    """Openssl keeps github project and compat packaging."""
     result, _urls = _collect(
         {
             "components": ["openssl"],
@@ -159,10 +153,6 @@ def test_openssl_keeps_github_project_and_nulls_compat_affectedness():
                 {"distro": "Debian", "package_name": "openssl"},
             ],
         },
-        builds={
-            "openssl": [{"build_version": "3.0.7-1.el9"}],
-            "compat-openssl11": [{"build_version": "3.0.1-21.el7"}],
-        },
     )
     assert _names(result) == ["openssl", "compat-openssl11"]
     assert _by_name(result)["openssl"].build_type == "rpm"
@@ -171,13 +161,13 @@ def test_openssl_keeps_github_project_and_nulls_compat_affectedness():
         "exclude_subcomponents=true" in url and "/api/v0alpha/components" in url
         for url in _urls
     )
-    assert _by_name(result)["openssl"].affectedness == "AFFECTED"
-    assert _by_name(result)["compat-openssl11"].affectedness is None
+    assert _by_name(result)["openssl"].source_component == "openssl"
+    assert _by_name(result)["compat-openssl11"].source_component == "openssl"
     assert len(result.explanation) >= 80
 
 
-def test_libsoup_version_package_uses_upstream_ranges():
-    """Libsoup version package uses upstream ranges."""
+def test_libsoup_version_package_keeps_source_component():
+    """Libsoup version package keeps the flaw seed as source_component."""
     result, _urls = _collect(
         {
             "components": ["libsoup"],
@@ -203,14 +193,10 @@ def test_libsoup_version_package_uses_upstream_ranges():
                 {"distro": "Fedora", "package_name": "mingw-libsoup"},
             ]
         },
-        builds={
-            "libsoup": [{"build_version": "2.74.3-1.el9"}],
-            "libsoup3": [{"build_version": "3.4.4-1.el9"}],
-        },
     )
     assert _names(result) == ["libsoup", "libsoup3"]
-    assert _by_name(result)["libsoup"].affectedness == "NOTAFFECTED"
-    assert _by_name(result)["libsoup3"].affectedness == "AFFECTED"
+    assert _by_name(result)["libsoup"].source_component == "libsoup"
+    assert _by_name(result)["libsoup3"].source_component == "libsoup"
     assert _by_name(result)["libsoup3"].build_type == "rpm"
 
 
@@ -591,7 +577,6 @@ def test_rhcos_hit_adds_a_companion_row():
                 }
             ]
         },
-        builds={"nginx": [{"build_version": "1.26.1-1.el9"}]},
     )
     companions = [row for row in result.rows if row.rhcos == "rpm"]
     assert len(companions) == 1
@@ -602,11 +587,16 @@ def test_rhcos_hit_adds_a_companion_row():
 
 def test_entry_requires_exactly_one_search_key():
     """Entry requires exactly one search key."""
-    ManifestComponentEntry(name="nginx", build_type="rpm")
+    ManifestComponentEntry(name="nginx", build_type="rpm", source_component="nginx")
     with pytest.raises(ValidationError):
-        ManifestComponentEntry(name="nginx", build_type="rpm", ecosystem="generic")
+        ManifestComponentEntry(
+            name="nginx",
+            build_type="rpm",
+            ecosystem="generic",
+            source_component="nginx",
+        )
     with pytest.raises(ValidationError):
-        ManifestComponentEntry(name="nginx")
+        ManifestComponentEntry(name="nginx", source_component="nginx")
 
 
 @pytest.mark.asyncio
@@ -683,8 +673,7 @@ async def test_feature_records_the_osidb_flaw_as_a_tool(monkeypatch):
                     build_type=row.get("build_type"),
                     ecosystem=row.get("ecosystem"),
                     rhcos=row.get("rhcos"),
-                    affectedness=row.get("affectedness"),
-                    evidence=row.get("evidence"),
+                    source_component=row.get("source_component") or row["name"],
                 )
                 for row in baseline
             ],
@@ -769,61 +758,6 @@ def test_prometheus_reference_token_keeps_openshift_priv_and_rpms():
             "prometheus3.5": ["rpm"],
             "github.com/prometheus/client_golang": ["golang"],
         },
-        builds={
-            "prometheus": [{"build_version": "3.14.0-1.fc42"}],
-            "prometheus3.13": [{"build_version": "3.13.5-1.hum1"}],
-            "prometheus3.5": [{"build_version": "3.5.0-1.hum1"}],
-        },
-        component_versions={
-            "github.com/openshift-priv/prometheus": [
-                {
-                    "build_name": "ose-prometheus",
-                    "sources": [
-                        {
-                            "components": [
-                                {
-                                    "name": "github.com/openshift-priv/prometheus",
-                                    "type": "golang",
-                                    "version": "v3.14.0",
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "github.com/prometheus/prometheus": [
-                {
-                    "build_name": "prometheus",
-                    "sources": [
-                        {
-                            "components": [
-                                {
-                                    "name": "github.com/prometheus/prometheus",
-                                    "type": "golang",
-                                    "version": "v3.14.0",
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "github.com/prometheus/common": [
-                {
-                    "build_name": "importer",
-                    "sources": [
-                        {
-                            "components": [
-                                {
-                                    "name": "github.com/prometheus/common",
-                                    "type": "golang",
-                                    "version": "v0.60.0",
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-        },
         anitya="",
     )
     names = _names(result)
@@ -833,20 +767,17 @@ def test_prometheus_reference_token_keeps_openshift_priv_and_rpms():
     assert "prometheus3.13" in names
     assert "prometheus3.5" in names
     assert "github.com/prometheus/client_golang" not in names
-    assert _by_name(result)["github.com/openshift-priv/prometheus"].affectedness == (
-        "AFFECTED"
+    assert (
+        _by_name(result)["github.com/openshift-priv/prometheus"].source_component
+        == "github.com/prometheus/prometheus"
     )
-    assert _by_name(result)["prometheus3.13"].affectedness == "AFFECTED"
+    assert _by_name(result)["prometheus3.13"].source_component == "prometheus"
     assert any("name=prometheus" in url for url in urls)
     assert any("exclude_subcomponents=true" in url for url in urls)
-    assert any(
-        "include_types=golang" in url and "/api/v0/search/components" in url
-        for url in urls
-    )
 
 
-def test_ecosystem_component_versions_outside_range_are_notaffected():
-    """Ecosystem component versions outside range are notaffected."""
+def test_ecosystem_component_versions_still_keep_openshift_priv_row():
+    """Ecosystem soft-label keepers still emit source_component for the seed."""
     result, _urls = _collect(
         {
             "components": ["github.com/prometheus/common"],
@@ -866,76 +797,16 @@ def test_ecosystem_component_versions_outside_range_are_notaffected():
             "github.com/openshift-priv/prometheus": ["golang"],
             "prometheus": ["rpm"],
         },
-        builds={"prometheus": [{"build_version": "3.16.0-1.fc42"}]},
-        component_versions={
-            "github.com/openshift-priv/prometheus": [
-                {
-                    "build_name": "ose-prometheus",
-                    "sources": [
-                        {
-                            "components": [
-                                {
-                                    "name": "github.com/openshift-priv/prometheus",
-                                    "type": "golang",
-                                    "version": "v3.16.0",
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "github.com/prometheus/prometheus": [
-                {
-                    "build_name": "prometheus",
-                    "sources": [
-                        {
-                            "components": [
-                                {
-                                    "name": "github.com/prometheus/prometheus",
-                                    "type": "golang",
-                                    "version": "v3.16.0",
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "github.com/prometheus/common": [
-                {
-                    "build_name": "importer",
-                    "sources": [
-                        {
-                            "components": [
-                                {
-                                    "name": "github.com/prometheus/common",
-                                    "type": "golang",
-                                    "version": "v0.62.0",
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-        },
         anitya="",
     )
     by_name = _by_name(result)
-    assert by_name["github.com/openshift-priv/prometheus"].affectedness == (
-        "NOTAFFECTED"
+    assert (
+        by_name["github.com/openshift-priv/prometheus"].source_component
+        == "github.com/prometheus/prometheus"
     )
     # Reference exact hits are candidates, not soft-label keepers.
     assert "github.com/prometheus/prometheus" not in by_name
     assert "prometheus" not in by_name
-
-
-def test_bare_through_advisory_parses_last_affected():
-    """Bare through advisory parses last affected."""
-    from aegis_ai.features.cve.downstream import _advisory_bounds, _upstream_version
-
-    bounds = _advisory_bounds("Prometheus through 3.15.1 contains a credential leak.")
-    assert any(b.last_affected == "3.15.1" and b.introduced is None for b in bounds)
-    assert _upstream_version("v3.15.1") == "3.15.1"
-    assert _upstream_version("3.15.1-1.el9") == "3.15.1"
 
 
 def test_digit_prefixed_product_rebuilds_are_not_clear_rebuild_keepers():
@@ -1202,11 +1073,19 @@ def test_drop_soft_label_rejects_removes_fluidsynth_plugins():
         ),
     ]
     entries = [
-        ManifestComponentEntry(name="fluidsynth", build_type="rpm"),
         ManifestComponentEntry(
-            name="gstreamer1-plugins-bad-free-fluidsynth", build_type="rpm"
+            name="fluidsynth", build_type="rpm", source_component="fluidsynth"
         ),
-        ManifestComponentEntry(name="vlc-plugin-fluidsynth", build_type="rpm"),
+        ManifestComponentEntry(
+            name="gstreamer1-plugins-bad-free-fluidsynth",
+            build_type="rpm",
+            source_component="gstreamer1-plugins-bad-free-fluidsynth",
+        ),
+        ManifestComponentEntry(
+            name="vlc-plugin-fluidsynth",
+            build_type="rpm",
+            source_component="vlc-plugin-fluidsynth",
+        ),
     ]
     filtered = drop_soft_label_rejects(entries, candidates)
     assert [entry.name for entry in filtered] == ["fluidsynth"]
@@ -1228,18 +1107,26 @@ def test_ensure_soft_label_keeps_restores_prometheus_version_packages():
         ),
     ]
     baseline = [
-        DownstreamRow(name="prometheus", build_type="rpm", affectedness="AFFECTED"),
-        DownstreamRow(name="prometheus3.13", build_type="rpm", affectedness="AFFECTED"),
-        DownstreamRow(name="prometheus3.5", build_type="rpm", affectedness="AFFECTED"),
+        DownstreamRow(
+            name="prometheus", build_type="rpm", source_component="prometheus"
+        ),
+        DownstreamRow(
+            name="prometheus3.13", build_type="rpm", source_component="prometheus"
+        ),
+        DownstreamRow(
+            name="prometheus3.5", build_type="rpm", source_component="prometheus"
+        ),
         DownstreamRow(
             name="github.com/prometheus/common",
             ecosystem="golang",
-            affectedness="NOTAFFECTED",
+            source_component="github.com/prometheus/common",
         ),
     ]
     entries = [
         ManifestComponentEntry(
-            name="prometheus", build_type="rpm", affectedness="AFFECTED"
+            name="prometheus",
+            build_type="rpm",
+            source_component="prometheus",
         ),
     ]
     restored = ensure_soft_label_keeps(entries, baseline, candidates)
@@ -1249,8 +1136,8 @@ def test_ensure_soft_label_keeps_restores_prometheus_version_packages():
         "prometheus3.5",
     ]
     assert restored[1].build_type == "rpm"
-    assert restored[1].affectedness == "AFFECTED"
-    assert restored[2].affectedness == "AFFECTED"
+    assert restored[1].source_component == "prometheus"
+    assert restored[2].source_component == "prometheus"
 
 
 def test_ensure_soft_label_keeps_does_not_duplicate_present_rows():
@@ -1259,35 +1146,43 @@ def test_ensure_soft_label_keeps_does_not_duplicate_present_rows():
         CandidateHit("prometheus3.13", "rpm", "version_package", "prometheus", None, 2),
     ]
     baseline = [
-        DownstreamRow(name="prometheus3.13", build_type="rpm", affectedness="AFFECTED"),
+        DownstreamRow(
+            name="prometheus3.13", build_type="rpm", source_component="prometheus"
+        ),
     ]
     entries = [
         ManifestComponentEntry(
-            name="prometheus3.13", build_type="rpm", affectedness="AFFECTED"
+            name="prometheus3.13",
+            build_type="rpm",
+            source_component="prometheus",
         ),
     ]
     restored = ensure_soft_label_keeps(entries, baseline, candidates)
     assert [entry.name for entry in restored] == ["prometheus3.13"]
 
 
-def test_ensure_soft_label_keeps_restores_compat_with_null_affect():
-    """Ensure soft label keeps restores compat with null affect."""
+def test_ensure_soft_label_keeps_restores_compat():
+    """Ensure soft label keeps restores compat packaging rows."""
     candidates = [
         CandidateHit("openssl", "rpm", "seed", "openssl", None, 10),
         CandidateHit("compat-openssl11", "rpm", "compat", "openssl", None, 3),
     ]
     baseline = [
-        DownstreamRow(name="openssl", build_type="rpm", affectedness="AFFECTED"),
-        DownstreamRow(name="compat-openssl11", build_type="rpm", affectedness=None),
+        DownstreamRow(name="openssl", build_type="rpm", source_component="openssl"),
+        DownstreamRow(
+            name="compat-openssl11", build_type="rpm", source_component="openssl"
+        ),
     ]
     entries = [
         ManifestComponentEntry(
-            name="openssl", build_type="rpm", affectedness="AFFECTED"
+            name="openssl",
+            build_type="rpm",
+            source_component="openssl",
         ),
     ]
     restored = ensure_soft_label_keeps(entries, baseline, candidates)
     assert [entry.name for entry in restored] == ["openssl", "compat-openssl11"]
-    assert restored[1].affectedness is None
+    assert restored[1].source_component == "openssl"
     assert restored[1].build_type == "rpm"
 
 
@@ -1308,13 +1203,17 @@ def test_ensure_soft_label_keeps_does_not_restore_omitted_seed():
         DownstreamRow(
             name="github.com/prometheus/common",
             ecosystem="golang",
-            affectedness="NOTAFFECTED",
+            source_component="github.com/prometheus/common",
         ),
-        DownstreamRow(name="prometheus", build_type="rpm", affectedness="AFFECTED"),
+        DownstreamRow(
+            name="prometheus", build_type="rpm", source_component="prometheus"
+        ),
     ]
     entries = [
         ManifestComponentEntry(
-            name="prometheus", build_type="rpm", affectedness="AFFECTED"
+            name="prometheus",
+            build_type="rpm",
+            source_component="prometheus",
         ),
     ]
     restored = ensure_soft_label_keeps(entries, baseline, candidates)
@@ -1337,8 +1236,14 @@ def test_drop_soft_label_rejects_after_usage_policy_readd():
     rejected = rejected_soft_label_names(candidates)
     allowed = {hit.name.casefold() for hit in candidates} - rejected
     agent_entries = [
-        ManifestComponentEntry(name="fluidsynth", build_type="rpm"),
-        ManifestComponentEntry(name="vlc-plugin-fluidsynth", build_type="rpm"),
+        ManifestComponentEntry(
+            name="fluidsynth", build_type="rpm", source_component="fluidsynth"
+        ),
+        ManifestComponentEntry(
+            name="vlc-plugin-fluidsynth",
+            build_type="rpm",
+            source_component="vlc-plugin-fluidsynth",
+        ),
     ]
     post_filtered = post_filter_manifest_entries(agent_entries, allowed)
     assert [entry.name for entry in post_filtered] == ["fluidsynth"]
@@ -1392,14 +1297,10 @@ def test_version_suffixed_catalog_name_is_kept():
             },
         },
         components={"openssl": ["rpm"], "openssl3": ["rpm"]},
-        builds={
-            "openssl": [{"build_version": "1.1.1k-1.el8"}],
-            "openssl3": [{"build_version": "3.0.7-1.el9"}],
-        },
     )
     assert "openssl3" in _names(result)
-    assert _by_name(result)["openssl"].affectedness == "NOTAFFECTED"
-    assert _by_name(result)["openssl3"].affectedness == "AFFECTED"
+    assert _by_name(result)["openssl"].source_component == "openssl"
+    assert _by_name(result)["openssl3"].source_component == "openssl"
 
 
 def test_dotted_version_packages_are_kept():
@@ -1419,24 +1320,16 @@ def test_dotted_version_packages_are_kept():
             "zabbix-agent": ["rpm"],
             "uwsgi-stats-pusher-zabbix": ["rpm"],
         },
-        builds={
-            "zabbix": [
-                {"build_version": "6.0.48-1.el9"},
-                {"build_version": "7.4.16-1.fc43"},
-            ],
-            "zabbix6.0": [{"build_version": "6.0.48-1.el8"}],
-            "zabbix7.0": [{"build_version": "7.0.32-1.el9"}],
-        },
     )
     names = _names(result)
     assert names == ["zabbix", "zabbix6.0", "zabbix7.0"]
-    assert _by_name(result)["zabbix"].affectedness == "NOTAFFECTED"
-    assert _by_name(result)["zabbix6.0"].affectedness == "NOTAFFECTED"
-    assert _by_name(result)["zabbix7.0"].affectedness == "NOTAFFECTED"
+    assert _by_name(result)["zabbix"].source_component == "zabbix"
+    assert _by_name(result)["zabbix6.0"].source_component == "zabbix"
+    assert _by_name(result)["zabbix7.0"].source_component == "zabbix"
 
 
-def test_openimageio_dotted_version_package_notaffected_outside_introduced():
-    """Openimageio dotted version package notaffected outside introduced."""
+def test_openimageio_dotted_version_package_kept():
+    """Openimageio dotted version package is kept with the OpenImageIO seed."""
     result, _urls = _collect(
         {
             "components": ["OpenImageIO"],
@@ -1450,50 +1343,25 @@ def test_openimageio_dotted_version_package_notaffected_outside_introduced():
             "OpenImageIO-devel": ["rpm"],
             "python3-openimageio": ["rpm"],
         },
-        builds={
-            "openimageio": [
-                {"build_version": "3.1.18.1-1.fc44"},
-                {"build_version": "3.2.1.1-1.fc45"},
-            ],
-            "openimageio2.5": [{"build_version": "2.5.19.1-1.fc43"}],
-        },
     )
     names = _names(result)
     assert "OpenImageIO" in names
     assert "OpenImageIO2.5" in names
     assert "OpenImageIO-devel" not in names
     assert "python3-openimageio" not in names
-    # Soft-label: 2.5 is below introduced 3.0 → NOTAFFECTED.
-    assert _by_name(result)["OpenImageIO"].affectedness == "NOTAFFECTED"
-    assert _by_name(result)["OpenImageIO2.5"].affectedness == "NOTAFFECTED"
+    assert _by_name(result)["OpenImageIO"].source_component == "OpenImageIO"
+    assert _by_name(result)["OpenImageIO2.5"].source_component == "OpenImageIO"
 
 
-def test_advisory_through_without_from_and_mixed_samples_are_affected():
-    """'X through Y' (no leading 'from') must bound; any overlap is AFFECTED."""
-    from aegis_ai.features.cve.downstream import (
-        VersionBound,
-        _advisory_bounds,
-        _decide_affectedness,
-    )
-
-    text = "In versions before 3.2.11, 3.3.0 through 3.3.12, and 3.4.0 through 3.4.13"
-    bounds = _advisory_bounds(text)
-    assert any(b.last_affected == "3.3.12" for b in bounds)
-    assert any(b.last_affected == "3.4.13" for b in bounds)
-    assert any(b.fixed == "3.2.11" for b in bounds)
-    assert (
-        _decide_affectedness(["1.6.1", "3.4.14"], [VersionBound(None, "3.2.11", None)])
-        == "AFFECTED"
-    )
-    assert (
-        _decide_affectedness(["3.4.14", "3.4.15"], [VersionBound(None, "3.2.11", None)])
-        == "NOTAFFECTED"
-    )
-
+def test_openexr_keeps_version_package_and_mingw_rebuild():
+    """OpenEXR keeps case-rename seed, version package, and mingw rebuild."""
     result, _urls = _collect(
         {
             "components": ["OpenEXR"],
-            "comment_zero": text,
+            "comment_zero": (
+                "In versions before 3.2.11, 3.3.0 through 3.3.12, "
+                "and 3.4.0 through 3.4.13"
+            ),
         },
         components={
             "OpenEXR": ["rpm"],
@@ -1502,25 +1370,15 @@ def test_advisory_through_without_from_and_mixed_samples_are_affected():
             "mingw-OpenEXR": ["rpm"],
             "openexr-devel": ["rpm"],
         },
-        builds={
-            "openexr": [
-                {"build_version": "1.7.1-8.el7"},
-                {"build_version": "2.2.0-12.el8"},
-                {"build_version": "3.1.10-8.el10"},
-                {"build_version": "3.4.13-2.fc45"},
-            ],
-            "openexr2": [{"build_version": "2.5.10-1.fc43"}],
-            "mingw-openexr": [{"build_version": "2.2.1-3.el8"}],
-        },
     )
     names = _names(result)
     assert "openexr2" in names
     assert "mingw-OpenEXR" in names
     assert "openexr-devel" not in names
     by_name = {name.casefold(): row for name, row in _by_name(result).items()}
-    assert by_name["openexr"].affectedness == "AFFECTED"
-    assert by_name["openexr2"].affectedness == "AFFECTED"
-    assert by_name["mingw-openexr"].affectedness == "AFFECTED"
+    assert by_name["openexr"].source_component == "OpenEXR"
+    assert by_name["openexr2"].source_component == "OpenEXR"
+    assert by_name["mingw-openexr"].source_component == "OpenEXR"
 
 
 def test_promiscuous_wide_catalog_narrows_to_prefix_suffix_and_compat():
@@ -1553,9 +1411,15 @@ def test_post_filter_rejects_invented_names_and_keeps_rhcos_companion():
     """Post filter rejects invented names and keeps rhcos companion."""
     allowed = {"openssl"}
     entries = [
-        ManifestComponentEntry(name="openssl", build_type="rpm"),
-        ManifestComponentEntry(name="invented-openssl", build_type="rpm"),
-        ManifestComponentEntry(name="openssl", rhcos="rpm"),
+        ManifestComponentEntry(
+            name="openssl", build_type="rpm", source_component="openssl"
+        ),
+        ManifestComponentEntry(
+            name="invented-openssl",
+            build_type="rpm",
+            source_component="invented-openssl",
+        ),
+        ManifestComponentEntry(name="openssl", rhcos="rpm", source_component="openssl"),
     ]
     filtered = post_filter_manifest_entries(entries, allowed)
     assert [entry.name for entry in filtered] == ["openssl", "openssl"]
@@ -1566,8 +1430,12 @@ def test_post_filter_drops_rhcos_without_kept_rpm():
     """Ecosystem-only names must not admit an rhcos companion."""
     allowed = {"prometheus"}
     entries = [
-        ManifestComponentEntry(name="prometheus", ecosystem="golang"),
-        ManifestComponentEntry(name="prometheus", rhcos="rpm"),
+        ManifestComponentEntry(
+            name="prometheus", ecosystem="golang", source_component="prometheus"
+        ),
+        ManifestComponentEntry(
+            name="prometheus", rhcos="rpm", source_component="prometheus"
+        ),
     ]
     filtered = post_filter_manifest_entries(entries, allowed)
     assert [entry.name for entry in filtered] == ["prometheus"]
@@ -1582,8 +1450,14 @@ def test_suppressed_short_path_names_rclone_when_full_path_is_catalog_hit():
     assert short == {"rclone"}
 
     entries = [
-        ManifestComponentEntry(name="github.com/rclone/rclone", ecosystem="golang"),
-        ManifestComponentEntry(name="rclone", ecosystem="golang"),
+        ManifestComponentEntry(
+            name="github.com/rclone/rclone",
+            ecosystem="golang",
+            source_component="github.com/rclone/rclone",
+        ),
+        ManifestComponentEntry(
+            name="rclone", ecosystem="golang", source_component="rclone"
+        ),
     ]
     allowed = candidates - short
     filtered = post_filter_manifest_entries(entries, allowed)
@@ -1597,7 +1471,11 @@ def test_suppressed_short_path_names_keeps_nuclei_when_path_absent():
     short = suppressed_short_path_names(seeds, candidates)
     assert short == set()
 
-    entries = [ManifestComponentEntry(name="nuclei", build_type="rpm")]
+    entries = [
+        ManifestComponentEntry(
+            name="nuclei", build_type="rpm", source_component="nuclei"
+        )
+    ]
     filtered = post_filter_manifest_entries(entries, candidates - short)
     assert [entry.name for entry in filtered] == ["nuclei"]
 
@@ -1608,7 +1486,7 @@ def test_drop_suppressed_short_path_after_usage_policy_confirm():
         ManifestComponentEntry(
             name="github.com/rclone/rclone",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="github.com/rclone/rclone",
         ),
     ]
     candidates = _usage_candidates(
@@ -1651,18 +1529,34 @@ def test_drop_suppressed_short_path_after_usage_policy_confirm():
 def test_align_manifest_search_keys_restores_maven_ecosystem():
     """LLM often emits build_type:maven; soft-label marks bundled GAVs as ecosystem."""
     entries = [
-        ManifestComponentEntry(name="io.netty/netty-codec-http", build_type="maven"),
         ManifestComponentEntry(
-            name="org.bouncycastle/bcprov-jdk15on", build_type="maven"
+            name="io.netty/netty-codec-http",
+            build_type="maven",
+            source_component="io.netty/netty-codec-http",
         ),
-        ManifestComponentEntry(name="nginx", build_type="rpm"),
-        ManifestComponentEntry(name="nginx", rhcos="rpm"),
+        ManifestComponentEntry(
+            name="org.bouncycastle/bcprov-jdk15on",
+            build_type="maven",
+            source_component="org.bouncycastle/bcprov-jdk15on",
+        ),
+        ManifestComponentEntry(
+            name="nginx", build_type="rpm", source_component="nginx"
+        ),
+        ManifestComponentEntry(name="nginx", rhcos="rpm", source_component="nginx"),
     ]
     baseline = [
-        DownstreamRow(name="io.netty/netty-codec-http", ecosystem="maven"),
-        DownstreamRow(name="org.bouncycastle/bcprov-jdk15on", ecosystem="maven"),
-        DownstreamRow(name="nginx", build_type="rpm"),
-        DownstreamRow(name="nginx", rhcos="rpm"),
+        DownstreamRow(
+            name="io.netty/netty-codec-http",
+            ecosystem="maven",
+            source_component="io.netty/netty-codec-http",
+        ),
+        DownstreamRow(
+            name="org.bouncycastle/bcprov-jdk15on",
+            ecosystem="maven",
+            source_component="org.bouncycastle/bcprov-jdk15on",
+        ),
+        DownstreamRow(name="nginx", build_type="rpm", source_component="nginx"),
+        DownstreamRow(name="nginx", rhcos="rpm", source_component="nginx"),
     ]
     aligned = align_manifest_search_keys(entries, baseline)
     assert aligned[0].ecosystem == "maven"
@@ -1676,48 +1570,69 @@ def test_align_manifest_search_keys_restores_maven_ecosystem():
     assert aligned[3].ecosystem is None
 
 
-def test_align_manifest_copies_baseline_affectedness_over_unknown():
-    """Align manifest copies baseline affectedness over unknown."""
+def test_align_manifest_copies_baseline_source_component_when_blank():
+    """Align manifest copies baseline source_component when the agent omitted it."""
     entries = [
         ManifestComponentEntry(
             name="github.com/openshift-priv/prometheus",
             ecosystem="golang",
-            affectedness="UNKNOWN",
+            source_component="github.com/prometheus/common",
         ),
         ManifestComponentEntry(
             name="prometheus",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         ),
     ]
+    # Simulate blank source on first entry after construction.
+    entries[0].source_component = ""
     baseline = [
         DownstreamRow(
             name="github.com/openshift-priv/prometheus",
             ecosystem="golang",
-            affectedness="AFFECTED",
-            evidence="3.14.0",
+            source_component="github.com/prometheus/common",
         ),
         DownstreamRow(
             name="prometheus",
             build_type="rpm",
-            affectedness="AFFECTED",
-            evidence="3.14.0",
+            source_component="prometheus",
         ),
     ]
     aligned = align_manifest_search_keys(entries, baseline)
-    assert aligned[0].affectedness == "AFFECTED"
-    assert aligned[0].evidence == "3.14.0"
-    assert aligned[1].affectedness == "AFFECTED"
+    assert aligned[0].source_component == "github.com/prometheus/common"
+    assert aligned[1].source_component == "prometheus"
 
 
-def test_unknown_affectedness_when_range_is_missing():
-    """Unknown affectedness when range is missing."""
+def test_rows_carry_source_component_without_verdict():
+    """Soft-label rows carry source_component and no affectedness field."""
     result, _urls = _collect(
         {"components": ["nginx"], "title": "nginx"},
         components={"nginx": ["rpm"]},
-        builds={"nginx": [{"build_version": "1.26.1-1.el9"}]},
     )
-    assert _by_name(result)["nginx"].affectedness == "UNKNOWN"
+    row = _by_name(result)["nginx"]
+    assert row.source_component == "nginx"
+    assert not hasattr(row, "affectedness")
+
+
+def test_attach_source_components_fills_from_seed_and_drops_missing():
+    """Attach source_component from CandidateHit.seed; drop rows with no seed."""
+    entries = [
+        ManifestComponentEntry(name="libsoup3", build_type="rpm"),
+        ManifestComponentEntry(name="orphan", build_type="rpm"),
+        ManifestComponentEntry(
+            name="libsoup", build_type="rpm", source_component="libsoup"
+        ),
+    ]
+    candidates = [
+        CandidateHit("libsoup3", "rpm", "version_package", "libsoup", None, 2),
+        CandidateHit("orphan", "rpm", "drop_hint", None, "unrelated_to_seed", 1),
+        CandidateHit("libsoup", "rpm", "seed", "libsoup", None, 10),
+    ]
+    kept = attach_source_components(entries, candidates)
+    assert [(row.name, row.source_component) for row in kept] == [
+        ("libsoup3", "libsoup"),
+        ("libsoup", "libsoup"),
+    ]
 
 
 def _collect_candidates(flaw, *, components, community=COMMUNITY, anitya=ANITYA):
@@ -1775,17 +1690,17 @@ def test_usage_policy_omits_high_build_count_importer():
         ManifestComponentEntry(
             name="github.com/prometheus/common",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="github.com/prometheus/common",
         ),
         ManifestComponentEntry(
             name="github.com/prometheus/common/config",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="github.com/prometheus/common/config",
         ),
         ManifestComponentEntry(
             name="prometheus",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         ),
     ]
     candidates = _usage_candidates(
@@ -1825,13 +1740,13 @@ def test_usage_policy_omits_high_build_count_importer():
     assert "do not run" in explanation.casefold() or "omitted" in explanation.casefold()
 
 
-def test_usage_policy_keeps_small_importer_as_notaffected():
-    """Usage policy keeps small importer as notaffected."""
+def test_usage_policy_keeps_small_importer_without_verdict():
+    """Usage policy keeps small importer without setting affectedness."""
     entries = [
         ManifestComponentEntry(
             name="github.com/prometheus/common/config",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="github.com/prometheus/common/config",
         ),
     ]
     candidates = _usage_candidates(
@@ -1842,7 +1757,13 @@ def test_usage_policy_keeps_small_importer_as_notaffected():
             "github.com/prometheus/common/config",
             12,
         ),
-        ("small-metrics-importer", "golang", "drop_hint", None, 40),
+        (
+            "small-metrics-importer",
+            "golang",
+            "drop_hint",
+            "github.com/prometheus/common/config",
+            40,
+        ),
     )
     kept, explanation = apply_usage_policy(
         entries,
@@ -1855,9 +1776,12 @@ def test_usage_policy_keeps_small_importer_as_notaffected():
     )
     by_name = {row.name: row for row in kept}
     assert "github.com/prometheus/common/config" in by_name
-    assert by_name["small-metrics-importer"].affectedness == "NOTAFFECTED"
     assert by_name["small-metrics-importer"].ecosystem == "golang"
-    assert "NOTAFFECTED" in explanation
+    assert (
+        by_name["small-metrics-importer"].source_component
+        == "github.com/prometheus/common/config"
+    )
+    assert "NOTAFFECTED" not in explanation
     assert "40 builds" in explanation
 
 
@@ -1867,7 +1791,7 @@ def test_usage_policy_confirms_server_build_missing_from_prefetch():
         ManifestComponentEntry(
             name="github.com/prometheus/common/config",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="github.com/prometheus/common/config",
         ),
     ]
     candidates = _usage_candidates(
@@ -1913,22 +1837,22 @@ def test_promote_reference_caller_leaves_rpm_prometheus():
         ManifestComponentEntry(
             name="github.com/openshift-priv/prometheus",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="github.com/openshift-priv/prometheus",
         ),
         ManifestComponentEntry(
             name="prometheus",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         ),
         ManifestComponentEntry(
             name="prometheus3.13",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         ),
         ManifestComponentEntry(
             name="prometheus3.5",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         ),
     ]
     flaw = {
@@ -1972,7 +1896,7 @@ def test_promote_reference_caller_replaces_ecosystem_shorthand():
         ManifestComponentEntry(
             name="rclone",
             ecosystem="golang",
-            affectedness="AFFECTED",
+            source_component="rclone",
         ),
     ]
     flaw = {
@@ -2002,7 +1926,7 @@ def test_promote_reference_caller_keeps_short_name_when_module_is_absent():
         ManifestComponentEntry(
             name="prometheus",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         )
     ]
     flaw = {
@@ -2024,7 +1948,7 @@ def test_promote_reference_caller_ignores_seed_module():
         ManifestComponentEntry(
             name="common",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="common",
         )
     ]
     flaw = {
@@ -2046,14 +1970,22 @@ def test_drop_short_segment_when_full_module_is_kept():
         ManifestComponentEntry(
             name="github.com/rclone/rclone",
             ecosystem="golang",
+            source_component="github.com/rclone/rclone",
         ),
-        ManifestComponentEntry(name="rclone", ecosystem="golang"),
-        ManifestComponentEntry(name="prometheus", build_type="rpm"),
+        ManifestComponentEntry(
+            name="rclone", ecosystem="golang", source_component="rclone"
+        ),
+        ManifestComponentEntry(
+            name="prometheus", build_type="rpm", source_component="prometheus"
+        ),
         ManifestComponentEntry(
             name="github.com/openshift-priv/prometheus",
             ecosystem="golang",
+            source_component="github.com/openshift-priv/prometheus",
         ),
-        ManifestComponentEntry(name="prometheus3.13", build_type="rpm"),
+        ManifestComponentEntry(
+            name="prometheus3.13", build_type="rpm", source_component="prometheus"
+        ),
     ]
     kept = drop_short_segments_of_kept_modules(entries)
     assert [row.name for row in kept] == [
@@ -2070,7 +2002,7 @@ def test_usage_policy_every_importer_keeps_high_build_count_unit():
         ManifestComponentEntry(
             name="openssl",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="openssl",
         ),
     ]
     candidates = _usage_candidates(
@@ -2086,7 +2018,7 @@ def test_usage_policy_every_importer_keeps_high_build_count_unit():
         explanation="OpenSSL API is the vulnerable unit for every importer.",
     )
     assert [row.name for row in kept] == ["openssl"]
-    assert kept[0].affectedness == "AFFECTED"
+    assert kept[0].source_component == "openssl"
     assert explanation == "OpenSSL API is the vulnerable unit for every importer."
 
 
@@ -2117,12 +2049,12 @@ def test_check_output_retries_high_count_name_off_runs_list():
             ManifestComponentEntry(
                 name="github.com/prometheus/common",
                 ecosystem="golang",
-                affectedness="AFFECTED",
+                source_component="github.com/prometheus/common",
             ),
             ManifestComponentEntry(
                 name="github.com/prometheus/common/config",
                 ecosystem="golang",
-                affectedness="AFFECTED",
+                source_component="github.com/prometheus/common/config",
             ),
         ],
         usage=ManifestUsageAnalysis(
@@ -2213,110 +2145,358 @@ def test_downstream_feature_context_str_includes_candidates():
     assert "advisory_text" in prompt.to_string()
 
 
-def test_prerelease_orders_before_final_release():
-    """Prerelease orders before final release."""
-    from aegis_ai.features.cve.downstream import (
-        VersionBound,
-        _decide_affectedness,
-        _version_compare,
-        _version_key,
-    )
+def test_downstream_ranges_pass_through_ecosystem_and_ignore_git():
+    """ECOSYSTEM events are kept; a sibling GIT range is not emitted."""
+    from aegis_ai.features.cve.downstream import build_downstream_ranges
 
-    assert _version_compare(_version_key("1.2.0rc1"), _version_key("1.2.0")) < 0
-    assert _version_compare(_version_key("1.2.0"), _version_key("1.2.0.1")) < 0
-    assert _version_compare(_version_key("1.2.0"), _version_key("1.2.0")) == 0
-    # Prerelease below a final-release last_affected stays AFFECTED.
-    assert (
-        _decide_affectedness(["1.2.0rc1"], [VersionBound(None, None, "1.2.0")])
-        == "AFFECTED"
-    )
-    assert (
-        _decide_affectedness(["1.2.0"], [VersionBound(None, "1.2.0", None)])
-        == "NOTAFFECTED"
-    )
-
-
-def test_leading_v_is_stripped_in_version_compare():
-    """Leading v is stripped in version compare."""
-    from aegis_ai.features.cve.downstream import VersionBound, _decide_affectedness
-
-    assert (
-        _decide_affectedness(["1.2.0"], [VersionBound("v1.0.0", "v2.0.0", None)])
-        == "AFFECTED"
-    )
-
-
-def test_not_affected_through_is_ignored():
-    """Not affected through is ignored."""
-    from aegis_ai.features.cve.downstream import (
-        VersionBound,
-        _advisory_bounds,
-        _decide_affectedness,
-    )
-
-    bounds = _advisory_bounds("nginx is not affected through 3.15.1.")
-    assert bounds == []
-    assert (
-        _decide_affectedness(
-            ["3.14.0"],
-            _advisory_bounds("Prometheus through 3.15.1 contains a credential leak."),
-        )
-        == "AFFECTED"
-    )
-    # Sanity: an explicit bound still works when not negated.
-    assert any(
-        isinstance(bound, VersionBound) and bound.last_affected == "3.15.1"
-        for bound in _advisory_bounds(
-            "Prometheus through 3.15.1 contains a credential leak."
-        )
-    )
-
-
-def test_osv_skips_git_ranges_and_scopes_packages():
-    """Osv skips git ranges and scopes packages."""
-    from aegis_ai.features.cve.downstream import _osv_bounds
-
-    upstream = {
-        "affected": [
-            {
-                "package": {"name": "github.com/foo/bar", "ecosystem": "Go"},
-                "ranges": [
-                    {
-                        "type": "GIT",
-                        "events": [
-                            {"introduced": "abc123"},
-                            {"fixed": "def456"},
-                        ],
-                    },
-                    {
-                        "type": "SEMVER",
-                        "events": [
-                            {"introduced": "1.0.0"},
-                            {"fixed": "1.2.0"},
-                        ],
-                    },
-                ],
-            },
-            {
-                "package": {"name": "other", "ecosystem": "Go"},
-                "ranges": [
-                    {
-                        "type": "SEMVER",
-                        "events": [
-                            {"introduced": "9.0.0"},
-                            {"fixed": "9.9.9"},
-                        ],
-                    },
-                ],
-            },
-        ]
+    flaw = {
+        "components": ["mongo-driver"],
+        "upstream_data": {
+            "affected": [
+                {
+                    "package": {"name": "go.mongodb.org/mongo-driver"},
+                    "ranges": [
+                        {
+                            "type": "GIT",
+                            "events": [
+                                {"introduced": "abc123def"},
+                                {"fixed": "def456abc"},
+                            ],
+                        },
+                        {
+                            "type": "ECOSYSTEM",
+                            "events": [
+                                {"introduced": "0"},
+                                {"fixed": "3.3.0"},
+                            ],
+                        },
+                    ],
+                }
+            ]
+        },
     }
-    assert _osv_bounds(upstream)  # global merge still sees SEMVER
-    scoped = _osv_bounds(upstream, package_name="github.com/foo/bar")
-    assert len(scoped) == 1
-    assert scoped[0].introduced == "1.0.0"
-    assert scoped[0].fixed == "1.2.0"
-    assert _osv_bounds(upstream, package_name="missing") == []
+    assert build_downstream_ranges(flaw) == [
+        {
+            "source_component": "mongo-driver",
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [{"introduced": "0"}, {"fixed": "3.3.0"}],
+                }
+            ],
+        }
+    ]
+
+
+def test_normalize_upstream_purls_semver_skips_advisory_extract():
+    """OSIDB list/upstream_purls SEMVER is used without needing extracts."""
+    from aegis_ai.features.cve.downstream import (
+        build_downstream_ranges,
+        seeds_missing_version_ranges,
+    )
+
+    flaw = {
+        "components": ["postgresql"],
+        "upstream_data": [
+            {
+                "upstream_purls": [
+                    {
+                        "name": "postgresql",
+                        "purl": "pkg:bitnami/postgresql",
+                        "ecosystem": "Bitnami",
+                        "ranges": [
+                            {
+                                "type": "SEMVER",
+                                "events": [
+                                    {"introduced": "0"},
+                                    {"fixed": "18.5.0"},
+                                ],
+                            }
+                        ],
+                        "versions": [],
+                    }
+                ],
+                "source": "OSV",
+            }
+        ],
+    }
+    assert seeds_missing_version_ranges(flaw) == []
+    assert build_downstream_ranges(
+        flaw,
+        {
+            "postgresql": {
+                "decision": "ranges",
+                "ranges": [{"events": [{"fixed": "99.0.0"}]}],
+            }
+        },
+    ) == [
+        {
+            "source_component": "postgresql",
+            "ranges": [
+                {
+                    "type": "SEMVER",
+                    "events": [{"introduced": "0"}, {"fixed": "18.5.0"}],
+                }
+            ],
+        }
+    ]
+
+
+def test_upstream_purls_git_only_falls_through_to_extract():
+    """GIT-only upstream_purls still needs an advisory extract."""
+    from aegis_ai.features.cve.downstream import (
+        build_downstream_ranges,
+        seeds_missing_version_ranges,
+    )
+
+    flaw = {
+        "components": ["vim"],
+        "upstream_data": [
+            {
+                "upstream_purls": [
+                    {
+                        "name": "vim",
+                        "ranges": [
+                            {
+                                "type": "GIT",
+                                "events": [
+                                    {"introduced": "0"},
+                                    {
+                                        "fixed": "2f628d8104958fa7421664f792ca6d4f7a39a10f"
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ],
+    }
+    assert seeds_missing_version_ranges(flaw) == ["vim"]
+    assert build_downstream_ranges(
+        flaw,
+        {
+            "vim": {
+                "decision": "ranges",
+                "ranges": [{"events": [{"fixed": "9.2.0845"}]}],
+            }
+        },
+    ) == [
+        {
+            "source_component": "vim",
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [{"introduced": "0"}, {"fixed": "9.2.0845"}],
+                }
+            ],
+        }
+    ]
+
+
+def test_osv_package_matches_go_major_version_path():
+    """Seed module paths match OSV entries with a /vN major-version suffix."""
+    from aegis_ai.features.cve.downstream import _osv_package_matches
+
+    assert _osv_package_matches("github.com/go-chi/chi/v5", "github.com/go-chi/chi")
+    assert _osv_package_matches("github.com/go-chi/chi", "github.com/go-chi/chi/v5")
+    assert not _osv_package_matches("github.com/go-chi/chi", "github.com/go-chi/cors")
+
+
+def test_downstream_ranges_use_advisory_extract_for_git_only():
+    """GIT-only OSV takes the advisory extract, keyed by the flaw component."""
+    from aegis_ai.features.cve.downstream import build_downstream_ranges
+
+    flaw = {
+        "components": ["mongo-driver"],
+        "comment_zero": "fixed in 3.3.0",
+        "upstream_data": {
+            "affected": [
+                {
+                    "package": {"name": "go.mongodb.org/mongo-driver"},
+                    "ranges": [
+                        {
+                            "type": "GIT",
+                            "events": [{"introduced": "abc123def"}],
+                        }
+                    ],
+                    "versions": ["9.9.9"],
+                }
+            ]
+        },
+    }
+    ranged = build_downstream_ranges(
+        flaw,
+        {
+            "mongo-driver": {
+                "decision": "ranges",
+                "ranges": [{"events": [{"fixed": "3.3.0"}]}],
+            }
+        },
+    )
+    assert ranged == [
+        {
+            "source_component": "mongo-driver",
+            "ranges": [
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [{"introduced": "0"}, {"fixed": "3.3.0"}],
+                }
+            ],
+        }
+    ]
+    listed = build_downstream_ranges(
+        flaw,
+        {
+            "mongo-driver": {
+                "decision": "versions",
+                "versions": ["v1.2.3", "1.2.4"],
+            }
+        },
+    )
+    assert listed == [
+        {
+            "source_component": "mongo-driver",
+            "versions": ["1.2.3", "1.2.4"],
+        }
+    ]
+
+
+def test_downstream_ranges_omit_falls_through_to_osv_versions():
+    """An omit extract uses affected.versions; neither omits the component."""
+    from aegis_ai.features.cve.downstream import build_downstream_ranges
+
+    with_versions = {
+        "components": ["mongo-driver"],
+        "upstream_data": {
+            "affected": [
+                {
+                    "package": {"name": "mongo-driver"},
+                    "ranges": [
+                        {"type": "GIT", "events": [{"introduced": "abc123def"}]}
+                    ],
+                    "versions": ["1.2.3", "1.2.4"],
+                }
+            ]
+        },
+    }
+    assert build_downstream_ranges(
+        with_versions,
+        {"mongo-driver": {"decision": "omit"}},
+    ) == [
+        {"source_component": "mongo-driver", "versions": ["1.2.3", "1.2.4"]},
+    ]
+    assert (
+        build_downstream_ranges(
+            {
+                "components": ["mongo-driver"],
+                "upstream_data": {
+                    "affected": [
+                        {
+                            "package": {"name": "mongo-driver"},
+                            "ranges": [
+                                {
+                                    "type": "GIT",
+                                    "events": [{"introduced": "abc123def"}],
+                                }
+                            ],
+                        }
+                    ]
+                },
+            },
+            {"mongo-driver": {"decision": "omit"}},
+        )
+        == []
+    )
+
+
+def test_downstream_ranges_drop_commit_hashes_from_extract():
+    """Commit-like extract tokens are not stored as versions."""
+    from aegis_ai.features.cve.downstream import normalize_advisory_extract
+
+    assert normalize_advisory_extract(
+        {
+            "decision": "versions",
+            "versions": ["abc123def", "1.2.3"],
+        }
+    ) == {"versions": ["1.2.3"]}
+    assert (
+        normalize_advisory_extract({"decision": "versions", "versions": ["abc123def"]})
+        is None
+    )
+
+
+@pytest.mark.asyncio
+async def test_ranges_for_flaw_asks_agent_only_without_version_range():
+    """SEMVER seeds skip the advisory extract; GIT-only seeds are sent to it."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from aegis_ai.features.cve import SuggestManifestComponentAndState
+
+    feature = SuggestManifestComponentAndState(MagicMock())
+    feature._extract_advisory_versions = AsyncMock(
+        return_value={
+            "other": {
+                "decision": "versions",
+                "versions": ["1.2.3", "1.2.4"],
+            }
+        }
+    )
+    flaw = {
+        "components": ["bar", "other"],
+        "comment_zero": "versions 1.2.3 and 1.2.4 are affected",
+        "upstream_data": {
+            "affected": [
+                {
+                    "package": {"name": "bar"},
+                    "ranges": [
+                        {
+                            "type": "GIT",
+                            "events": [{"introduced": "abc123def"}],
+                        },
+                        {
+                            "type": "SEMVER",
+                            "events": [
+                                {"introduced": "1.0.0"},
+                                {"fixed": "1.2.0"},
+                            ],
+                        },
+                    ],
+                },
+                {
+                    "package": {"name": "other"},
+                    "ranges": [
+                        {
+                            "type": "GIT",
+                            "events": [
+                                {"introduced": "abc123def"},
+                                {"fixed": "def456abc"},
+                            ],
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+    ranges = await feature._ranges_for_flaw(flaw)
+    feature._extract_advisory_versions.assert_awaited_once()
+    await_args = feature._extract_advisory_versions.await_args
+    assert await_args is not None
+    assert await_args.args[1] == ["other"]
+    by_seed = {entry["source_component"]: entry for entry in ranges}
+    assert by_seed["bar"]["ranges"][0]["type"] == "SEMVER"
+    assert "versions" not in by_seed["bar"]
+    assert by_seed["other"]["versions"] == ["1.2.3", "1.2.4"]
+
+
+def test_manifest_schema_hides_ranges_from_catalog_agent():
+    """The catalog agent schema does not ask for the ranges sibling."""
+    from aegis_ai.features.cve.data_models import SuggestManifestComponentAndStateModel
+
+    assert (
+        "ranges"
+        not in SuggestManifestComponentAndStateModel.model_json_schema()["properties"]
+    )
 
 
 def test_error_json_bomq_payload_marks_catalog_unavailable():
@@ -2365,7 +2545,7 @@ def test_usage_policy_restores_confirmed_name_for_every_importer():
         ManifestComponentEntry(
             name="prometheus",
             build_type="rpm",
-            affectedness="AFFECTED",
+            source_component="prometheus",
         ),
     ]
     candidates = _usage_candidates(("prometheus", "rpm", "seed", "prometheus", 40))
@@ -2397,8 +2577,10 @@ def test_usage_policy_restores_confirmed_name_for_every_importer():
 def test_usage_policy_keeps_rpm_when_rhcos_companion_present():
     """Usage policy keeps rpm when rhcos companion present."""
     entries = [
-        ManifestComponentEntry(name="nginx", build_type="rpm", affectedness="AFFECTED"),
-        ManifestComponentEntry(name="nginx", rhcos="rpm", affectedness="AFFECTED"),
+        ManifestComponentEntry(
+            name="nginx", build_type="rpm", source_component="nginx"
+        ),
+        ManifestComponentEntry(name="nginx", rhcos="rpm", source_component="nginx"),
     ]
     candidates = _usage_candidates(("nginx", "rpm", "seed", "nginx", 10))
     kept, _ = apply_usage_policy(
@@ -2415,14 +2597,13 @@ def test_usage_policy_keeps_rpm_when_rhcos_companion_present():
     assert kept[1].rhcos == "rpm"
 
 
-def test_promote_reference_does_not_copy_short_row_verdict():
-    """Promote reference does not copy short row verdict."""
+def test_promote_reference_keeps_short_row_source_component():
+    """Promote reference copies source_component onto the fuller module path."""
     entries = [
         ManifestComponentEntry(
             name="rclone",
             ecosystem="golang",
-            affectedness="AFFECTED",
-            evidence="1.2.0",
+            source_component="rclone",
         ),
     ]
     flaw = {
@@ -2442,8 +2623,8 @@ def test_promote_reference_does_not_copy_short_row_verdict():
         confirm,
     )
     assert [row.name for row in promoted] == ["github.com/rclone/rclone"]
-    assert promoted[0].affectedness == "UNKNOWN"
-    assert promoted[0].evidence is None
+    assert promoted[0].source_component == "rclone"
+    assert not hasattr(promoted[0], "affectedness")
 
 
 @pytest.mark.asyncio
@@ -2555,7 +2736,9 @@ async def test_feature_excludes_affects_from_osidb_deps(monkeypatch):
         output = SuggestManifestComponentAndStateModel(
             cve_id="CVE-2026-90439",
             manifest_components=[
-                ManifestComponentEntry(name="nginx", build_type="rpm")
+                ManifestComponentEntry(
+                    name="nginx", build_type="rpm", source_component="nginx"
+                )
             ],
             usage=ManifestUsageAnalysis(
                 vulnerable_unit="nginx",
@@ -2621,32 +2804,8 @@ def test_filter_bomq_v0alpha_components_keeps_catalog_fields():
     }
 
 
-def test_filter_bomq_search_builds_keeps_version_fields():
-    """Filter bomq search builds keeps version fields."""
-    url = f"{PRIMARY}/api/v0/search/builds?name=curl&strict=true"
-    payload = {
-        "data": [
-            {
-                "stream_name": "rhel-9.4.0",
-                "module": "rhel",
-                "build_name": "curl",
-                "build_version": "8.0.1",
-                "build_nvr": "curl-8.0.1-1.el9",
-                "build_type": "rpm",
-                "purl": "pkg:rpm/curl",
-            },
-            {"version": "7.9.0", "build_nvr": "curl-7.9.0-1"},
-        ],
-        "count": 2,
-    }
-    filtered = filter_bomq_response(url, payload)
-    assert filtered == {
-        "data": [{"build_version": "8.0.1"}, {"version": "7.9.0"}],
-    }
-
-
-def test_filter_bomq_search_components_keeps_nested_version_fields():
-    """Filter bomq search components keeps nested version fields."""
+def test_filter_bomq_search_components_keeps_presence_fields():
+    """Filter bomq search components keeps build_name and nested name/type."""
     url = (
         f"{PRIMARY}/api/v0/search/components"
         "?name=github.com%2Fprometheus%2Fcommon&strict=true&include_types=golang"
@@ -2692,7 +2851,6 @@ def test_filter_bomq_search_components_keeps_nested_version_fields():
                             {
                                 "name": "github.com/prometheus/common",
                                 "type": "golang",
-                                "version": "0.45.0",
                             }
                         ]
                     }
@@ -2832,13 +2990,7 @@ def test_http_get_json_filters_bomq_search_components():
         "data": [
             {
                 "build_name": "pkg",
-                "sources": [
-                    {
-                        "components": [
-                            {"name": "libx", "type": "rpm", "version": "1.2.3"}
-                        ]
-                    }
-                ],
+                "sources": [{"components": [{"name": "libx", "type": "rpm"}]}],
             }
         ]
     }

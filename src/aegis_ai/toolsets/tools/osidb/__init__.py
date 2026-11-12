@@ -90,10 +90,38 @@ class CVE(BaseToolOutput):
         default=[],
         description="list of cvss scores",
     )
+    upstream_data: dict | list | None = Field(
+        default=None,
+        description=(
+            "OSV/collector upstream metadata from OSIDB. Usually a list of "
+            "records with upstream_purls (SEMVER/ECOSYSTEM ranges)."
+        ),
+    )
 
 
 # derived from `CVE.model_fields`, excludes identity and base-class fields
 _CVE_DATA_FIELDS = frozenset(CVE.model_fields) - {"cve_id", "status", "error_message"}
+
+
+def _serialize_upstream_data(raw: Any) -> list[dict[str, Any]] | dict | None:
+    """Turn OSIDB flaw.upstream_data into plain JSON for the CVE model/cache."""
+    if raw is None:
+        return None
+    if isinstance(raw, dict):
+        return raw
+    if not isinstance(raw, list):
+        return None
+    serialized: list[dict[str, Any]] = []
+    for item in raw:
+        if isinstance(item, dict):
+            serialized.append(item)
+            continue
+        to_dict = getattr(item, "to_dict", None)
+        if callable(to_dict):
+            payload = to_dict()
+            if isinstance(payload, dict):
+                serialized.append(payload)
+    return serialized
 
 
 def _has_sufficient_static_context(ctx: dict[str, Any]) -> bool:
@@ -137,6 +165,7 @@ def _cve_from_static_context(cve_id: CVEID, ctx: dict[str, Any]) -> CVE:
         references=ctx.get("references") or [],
         affects=ctx.get("affects") or [],
         cvss_scores=ctx.get("cvss_scores") or [],
+        upstream_data=ctx.get("upstream_data"),
     )
 
 
@@ -268,6 +297,9 @@ async def cve_retrieve(cve_id: CVEID) -> CVE:
             references=references,
             affects=affects,
             cvss_scores=cvss_scores,
+            upstream_data=_serialize_upstream_data(
+                getattr(flaw, "upstream_data", None)
+            ),
         )
     except OSIDBFlawNotFoundError:
         raise

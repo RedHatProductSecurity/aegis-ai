@@ -11,6 +11,8 @@ from aegis_ai.data_models import CVEID
 from aegis_ai.features import DeterministicFeature, DeterministicResult, Feature
 from aegis_ai.features.cve.data_models import (
     CATEGORY_WEIGHTS,
+    AdvisoryVersionContext,
+    AdvisoryVersionExtract,
     AffectedComponentEntry,
     CVEFeatureInput,
     CVSSDiffExplainerModel,
@@ -32,6 +34,8 @@ from aegis_ai.features.cve.downstream import (
     IMPORTER_AFFECT_LIMIT,
     align_manifest_search_keys,
     apply_usage_policy,
+    attach_source_components,
+    build_downstream_ranges,
     collect_downstream_candidates,
     drop_short_segments_of_kept_modules,
     drop_soft_label_rejects,
@@ -42,6 +46,7 @@ from aegis_ai.features.cve.downstream import (
     query_bomq_components,
     rejected_soft_label_names,
     resolve_soft_label_rows,
+    seeds_missing_version_ranges,
     suppressed_short_path_names,
 )
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
@@ -1628,14 +1633,17 @@ _FLAW_BODY_KEYS = (
 
 
 class SuggestManifestComponentAndState(Feature):
-    """Map flaw components to same-project downstream names with affectedness.
+    """Map flaw components to same-project downstream names.
 
     Prefetches wide bomq/Anitya catalog candidates, then asks the agent to
-    refine keep/drop, version range, and affectedness after a required
-    vulnerable-code usage step. Names invent outside the candidate set are
-    post-filtered out. Soft-label packaging drop reasons (plugins, lookalikes,
-    subpackages, …) and version_package / compat keeps are hard-enforced after
-    the agent, not only advisory.
+    refine keep/drop after a required vulnerable-code usage step. Names invent
+    outside the candidate set are post-filtered out. Soft-label packaging drop
+    reasons (plugins, lookalikes, subpackages, …) and version_package / compat
+    keeps are hard-enforced after the agent, not only advisory. Each kept row
+    carries ``source_component`` from the flaw seed. OSV ECOSYSTEM/SEMVER
+    ranges are stored beside the rows. When OSV has no version range, a
+    separate prompt reads the advisory text and returns ranges, a version
+    list, or omit. Row affectedness is left to ACE.
     """
 
     def __init__(self, agent):
@@ -1660,6 +1668,7 @@ class SuggestManifestComponentAndState(Feature):
                 data_quality=_downstream_data_quality(flaw),
                 tools_used=list(dict.fromkeys(pre_invoked_tools)),
                 disclaimer=_DOWNSTREAM_DISCLAIMER,
+                ranges=await self._ranges_for_flaw(flaw),
             )
             logger.info(
                 "SuggestManifestComponentAndState(%s) = %s",
@@ -1670,7 +1679,8 @@ class SuggestManifestComponentAndState(Feature):
 
         # Catalog outage: empty candidates are untrustworthy. Confidence 0 and
         # _catalog_outage keep suggest_manifest_components from overwriting
-        # saved rows or recording a low-confidence skip.
+        # saved rows or recording a low-confidence skip. Skip the advisory
+        # extract; this result is not stored as a catalog entry.
         if gathered.catalog_unavailable:
             output = SuggestManifestComponentAndStateModel(
                 cve_id=cve_id,
@@ -1700,6 +1710,7 @@ class SuggestManifestComponentAndState(Feature):
                 data_quality=_downstream_data_quality(flaw),
                 tools_used=list(dict.fromkeys(pre_invoked_tools)),
                 disclaimer=_DOWNSTREAM_DISCLAIMER,
+                ranges=await self._ranges_for_flaw(flaw),
             )
             logger.info(
                 "SuggestManifestComponentAndState(%s) = %s",
@@ -1710,10 +1721,8 @@ class SuggestManifestComponentAndState(Feature):
 
         baseline = resolve_soft_label_rows(
             gathered.candidates,
-            gathered.versions,
-            gathered.rhcos_versions,
+            gathered.rhcos_names,
             gathered.seeds,
-            flaw=flaw,
         )
         # Affects are produced from this feature's output (via ACE), not inputs.
         # Large affect tables also blow past model context limits (AEGIS-540).
@@ -1725,9 +1734,9 @@ class SuggestManifestComponentAndState(Feature):
         prompt = AegisPrompt(
             user_instruction=(
                 "Map the flaw's upstream component seeds to same-project "
-                "downstream packaging names and suggest affectedness. First "
-                "decide which catalog hits run the vulnerable code. Use the "
-                "prefetched catalog candidates as the primary allowed name set."
+                "downstream packaging names. First decide which catalog hits "
+                "run the vulnerable code. Use the prefetched catalog "
+                "candidates as the primary allowed name set."
             ),
             goals="""\
 - Required usage step before keep/drop: from the flaw text and reference URLs, name the vulnerable unit (the patched package or submodule, not a parent import that only shares a module path) and the caller role (every_importer when every API importer is in scope; product_feature when only a named product feature runs the bug).
@@ -1737,23 +1746,20 @@ class SuggestManifestComponentAndState(Feature):
 - Keep OpenShift Go fork paths: github.com/openshift-priv/<project> is looked up as github.com/openshift/<project> (public fork of the upstream repo with the same name). Treat that packaging as same-project downstream of the upstream seed — not a separate upstream.
 - Keep every catalog-present version-suffixed packaging name for the seed (libsoup3, openssl3, zabbix6.0, OpenImageIO2.5); do not drop them as separate upstreams.
 - Attach exactly one of build_type, ecosystem, or rhcos per row. Keep the soft-label baseline search key for each kept name: build_type for exact build-name matches (rpm/container/maven/generic builds); ecosystem for bundled registry packages (maven GAVs, npm, golang modules, …). Never emit ecosystem: rpm. Never rewrite ecosystem:maven to build_type:maven for a coordinate that only appears as a bundled maven component.
-- Add an rhcos: rpm companion when RHCOS version samples exist for a kept RPM name.
-- Infer the advisory version range from upstream_data when present, otherwise from CVE/advisory text.
-- Suggest affectedness AFFECTED / NOTAFFECTED / UNKNOWN / null (compat blank) from sampled versions: SRPM upstream versions for RPM rows, and nested bomq component versions for ecosystem rows (golang, maven, npm, …). Any overlapping sample is AFFECTED; every sample outside the range is NOTAFFECTED. Importer-only names kept for a small build count should be NOTAFFECTED.
-- Explain keep/drop, usage, and verdicts briefly, including why high-build-count importers were omitted or small importers were kept as NOTAFFECTED.
+- Keep the soft_label_baseline rhcos:rpm companion for each kept RPM name that already has one; do not invent RHCOS rows for names without a baseline companion.
+- Set source_component on every row to the Flaw.components seed that row was mapped from (see candidate soft-label seed / soft_label_baseline). Do not invent a seed absent from flaw_components.
+- Explain keep/drop and usage briefly, including why high-build-count importers were omitted or small importers were kept.
 """,
             rules="""\
 - Never invent a name that is absent from the candidates list (except rhcos companions for an already-kept RPM name, or a server/submodule name confirmed with bomq_components_tool).
-- Soft-label baseline rows are a starting point; refine with tools when identity or range is unclear.
+- Soft-label baseline rows are a starting point; refine with tools when identity is unclear.
 - When a full Go, Maven, or scoped-npm path is kept, do not also emit its bare ecosystem shorthand (e.g. keep github.com/rclone/rclone, not ecosystem rclone). Keep build-typed packaging that shares the final token (prometheus RPM beside github.com/openshift-priv/prometheus).
 - When caller_role is product_feature, do not put a high build_count parent module that only importers link into runs_vulnerable_code; prefer the openshift-priv or upstream application rebuild and the server RPM builds.
 - When caller_role is every_importer, high build_count on the vulnerable unit itself is expected and must stay.
-- compat-<seed><digits> rows stay with blank (null) affectedness for manual review.
 - Drop subpackages (including sysroot-*-<seed>), digit-prefixed product rebuilds, language bindings, engines/plugins, and unrelated lookalikes.
 - Do not treat github.com/openshift-priv/<project> as a different upstream; map it to github.com/openshift/<project> and keep it when <project> matches the seed or a reference caller GitHub repo name.
 - Web search and Anitya are for ambiguous rebuild / soname-glue / rename identity — not for rejecting catalog version-suffixed names.
-- Compare sampled upstream VERSION (epoch/release stripped; Go leading v stripped), never product STREAM names.
-- Use bomq_components_tool, bomq_build_versions_tool, or anitya_projects_tool when the prefetch is insufficient.
+- Use bomq_components_tool or anitya_projects_tool when the prefetch is insufficient.
 - Output SuggestManifestComponentAndStateModel: cve_id, manifest_components, usage, explanation, confidence, data_quality.
 """,
             context=DownstreamFeatureContext(
@@ -1770,8 +1776,7 @@ class SuggestManifestComponentAndState(Feature):
                         "build_type": row.build_type,
                         "ecosystem": row.ecosystem,
                         "rhcos": row.rhcos,
-                        "affectedness": row.affectedness,
-                        "evidence": row.evidence,
+                        "source_component": row.source_component,
                     }
                     for row in baseline
                 ],
@@ -1811,7 +1816,7 @@ class SuggestManifestComponentAndState(Feature):
             explanation=output.explanation or gathered.explanation,
             confirm_name=_confirm_catalog_name,
         )
-        # Align after usage policy so re-added rows pick up baseline verdicts.
+        # Align after usage policy so re-added rows pick up baseline search keys.
         output.manifest_components = align_manifest_search_keys(
             output.manifest_components,
             baseline,
@@ -1843,6 +1848,11 @@ class SuggestManifestComponentAndState(Feature):
             output.manifest_components,
             short_names,
         )
+        output.manifest_components = attach_source_components(
+            output.manifest_components,
+            gathered.candidates,
+        )
+        output.ranges = await self._ranges_for_flaw(flaw)
         output.disclaimer = _DOWNSTREAM_DISCLAIMER
         if not output.explanation:
             output.explanation = gathered.explanation
@@ -1856,6 +1866,92 @@ class SuggestManifestComponentAndState(Feature):
             output.printable_outcome(),
         )
         return result
+
+    async def _ranges_for_flaw(self, flaw: dict[str, Any]) -> list[dict[str, Any]]:
+        """OSV version ranges, else one advisory-text extract per missing seed."""
+        if not isinstance(flaw, dict):
+            return []
+        pending = seeds_missing_version_ranges(flaw)
+        extracts = (
+            await self._extract_advisory_versions(flaw, pending) if pending else {}
+        )
+        return build_downstream_ranges(flaw, extracts)
+
+    async def _extract_advisory_versions(
+        self,
+        flaw: dict[str, Any],
+        seeds: list[str],
+    ) -> dict[str, Any]:
+        """Ask the model for ranges, a version list, or omit. No catalog tools.
+
+        A failure or a blocked prompt returns no extracts. Callers then use
+        OSV ``affected.versions`` when present and otherwise omit the seed.
+        """
+        from aegis_ai.agents import create_aegis_agent
+        from aegis_ai.features import llm_sem
+        from aegis_ai.features.cve.downstream import _advisory_text
+
+        text = _advisory_text(flaw).strip()
+        if not seeds or not text:
+            return {}
+        prompt = AegisPrompt(
+            user_instruction=(
+                "From the advisory text, extract an affected version range or "
+                "an explicit version list for each source component. Omit a "
+                "component when the text states neither."
+            ),
+            goals="""\
+- Return one components entry per source_component, using that exact string.
+- decision=ranges when the text states an interval (introduced, fixed, last affected, before, through, up to, patched in, fixed in, or equivalent wording).
+- decision=versions when the text lists specific affected versions and does not state an interval.
+- decision=omit when the text does not state a range or a version list for that component.
+""",
+            rules="""\
+- Use only versions written in the advisory text. Do not invent versions or use outside knowledge.
+- Do not emit commit hashes, git revisions, or dates.
+- Each event sets at most one of introduced, fixed, or last_affected.
+- When the text gives only a fixed or last-affected bound, set introduced to "0".
+- Copy version strings without a leading v.
+- Prefer ranges when the text states both an interval and a list.
+- decision omit leaves ranges and versions empty.
+- Do not call tools.
+""",
+            context=AdvisoryVersionContext(
+                source_components=list(seeds),
+                advisory_text=text,
+            ),
+            output_schema=AdvisoryVersionExtract.model_json_schema(),
+        )
+        if not await prompt.is_safe():
+            logger.warning(
+                "advisory version extract blocked by safety check for %s",
+                seeds,
+            )
+            return {}
+        extractor = create_aegis_agent(
+            name="AdvisoryVersionExtract",
+            output_type=AdvisoryVersionExtract,
+            toolsets=[],
+        )
+        try:
+            async with llm_sem:
+                result = await extractor.run(prompt.to_string())
+        except Exception:
+            logger.warning(
+                "advisory version extract failed for %s",
+                seeds,
+                exc_info=True,
+            )
+            return {}
+        output = result.output
+        if not isinstance(output, AdvisoryVersionExtract):
+            return {}
+        wanted = set(seeds)
+        return {
+            item.source_component: item
+            for item in output.components
+            if item.source_component in wanted
+        }
 
     def _check_output(self, result, deps: Any) -> str | None:
         """Reject outputs with invalid search keys or product_feature importer misuse."""
@@ -1935,7 +2031,7 @@ def _confirm_catalog_name(name: str):
     ]
 
 
-# Fields required for candidate collection and affectedness hints. Present
+# Fields required for candidate collection and version-range context. Present
 # keys in static_context (including empty lists) stay as the caller sent them.
 _DOWNSTREAM_NEEDED_KEYS = (
     "components",
@@ -1962,8 +2058,8 @@ async def _downstream_flaw(cve_id: CVEID, static_context: Any) -> dict[str, Any]
     """Return flaw body for downstream mapping.
 
     When static context already has the fields needed for candidate collection
-    and affectedness hints, use it as-is. Otherwise retrieve the OSIDB flaw and
-    fill only missing keys so caller-supplied values stay authoritative.
+    and version-range context, use it as-is. Otherwise retrieve the OSIDB flaw
+    and fill only missing keys so caller-supplied values stay authoritative.
 
     Affects are always stripped: they are derived from this feature's output
     and can be large enough to exceed model context limits.
