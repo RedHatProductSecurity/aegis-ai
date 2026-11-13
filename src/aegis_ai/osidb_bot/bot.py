@@ -1,4 +1,5 @@
 import asyncio
+import re
 import textwrap
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -247,6 +248,15 @@ class FlawUpdater:
             except RuntimeError as e:
                 all_ok = False
                 self._warn(str(e))
+
+        # look for placeholders for failed/discarded suggestions
+        for field in list(self.updated_fields):
+            if re.match(r"suggestion (?:failed|discarded): ", field):
+                # warn about a failed/discarded suggestion
+                self._warn(field)
+
+                # remove the placeholder from updated_fields
+                self.updated_fields.remove(field)
 
         if not self.updated_fields:
             # nothing has changed (unexpectedly)
