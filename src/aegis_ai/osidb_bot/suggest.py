@@ -39,9 +39,6 @@ def check_metrics(
         if value <= thr_map["skip_thr"]:
             skip_reason = field
 
-    if skip_reason:
-        logger.warning(f"{cve_id}: {feat_name}: discarding suggestion")
-
     return skip_reason
 
 
@@ -105,7 +102,7 @@ def record_aegis_failure(
         skip_description=f"{dst} suggestion failed",
         explanation=output.explanation,
     )
-    return {"aegis_meta"}
+    return {"aegis_meta", f"suggestion failed: {dst}"}
 
 
 def update_field(
@@ -140,7 +137,7 @@ def update_field(
                 f" is below threshold {METRICS_THR[skip_reason]['skip_thr']}"
             ),
         )
-        return {"aegis_meta"}
+        return {"aegis_meta", f"suggestion discarded: {dst}"}
 
     # get source value
     if value is None:
