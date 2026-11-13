@@ -1,6 +1,6 @@
 """Downstream catalog tools for SuggestManifestComponentAndState.
 
-Wraps bomq component/build lookups and Anitya project queries already used by
+Wraps bomq component lookups and Anitya project queries already used by
 ``aegis_ai.features.cve.downstream``. Injected per-run only.
 """
 
@@ -14,7 +14,6 @@ from pydantic_ai import RunContext, Tool
 
 from aegis_ai.features.cve.downstream import (
     query_anitya_projects,
-    query_bomq_build_versions,
     query_bomq_components,
 )
 from aegis_ai.toolsets.tools import BaseToolInput, BaseToolOutput
@@ -42,26 +41,6 @@ class BomqComponentsOutput(BaseToolOutput):
     components: list[dict] = Field(
         default_factory=list,
         description="Catalog rows with name, type, and build_count.",
-    )
-
-
-class BomqBuildVersionsInput(BaseToolInput):
-    name: str = Field(
-        ...,
-        description="Exact build/package name to sample SRPM upstream versions for.",
-    )
-    community: bool = Field(
-        default=False,
-        description="Query the community bomq host when true; prod when false.",
-    )
-
-
-class BomqBuildVersionsOutput(BaseToolOutput):
-    name: str = Field(..., description="The package name that was queried.")
-    community: bool = Field(..., description="Whether the community host was used.")
-    versions: list[str] = Field(
-        default_factory=list,
-        description="Sampled upstream versions (epoch/release stripped).",
     )
 
 
@@ -98,26 +77,6 @@ async def bomq_components_tool(
         name=input.name,
         community=input.community,
         components=components,
-    )
-
-
-@Tool
-async def bomq_build_versions_tool(
-    ctx: RunContext, input: BomqBuildVersionsInput
-) -> BomqBuildVersionsOutput:
-    """Sample SRPM upstream versions for an exact package name from bomq builds."""
-    logger.info(
-        "bomq_build_versions_tool name=%s community=%s", input.name, input.community
-    )
-    versions = await asyncio.to_thread(
-        query_bomq_build_versions,
-        input.name,
-        community=input.community,
-    )
-    return BomqBuildVersionsOutput(
-        name=input.name,
-        community=input.community,
-        versions=versions,
     )
 
 

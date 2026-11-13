@@ -3,10 +3,11 @@
 Catalog gathering is deterministic: bomq components queries with
 ``exclude_subcomponents`` (seed plus reference-caller module paths and
 packaging tokens, narrowed when promiscuous), Anitya Fedora/EPEL names, then
-build/RHCOS version samples. Soft labels mark likely keepers and drop hints.
-Final keep/drop and affectedness may be refined by an agent;
-``collect_downstream`` applies the soft-label rules deterministically for
-tests and fallbacks.
+RHCOS presence checks for RPM keepers. Soft labels mark likely keepers and
+drop hints. Final keep/drop may be refined by an agent; ``collect_downstream``
+applies the soft-label rules deterministically for tests and fallbacks. Row
+affectedness is not computed here — ACE applies sibling ranges per
+``source_component``.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ _MAX_PAGES = 5
 _PROMISCUOUS_NAME_THRESHOLD = 50
 # Importer-only catalog names at or above this build count are omitted from
 # _downstream (OSIM slows down with thousands of affects). Below the limit they
-# stay as NOTAFFECTED with an explanation.
+# stay with an explanation.
 IMPORTER_AFFECT_LIMIT = 100
 
 _LEGAL_ECOSYSTEMS = ("golang", "maven", "npm", "pypi", "cargo", "gem", "generic")
@@ -75,20 +76,9 @@ _ADVISORY_FIELDS = (
     "statement",
     "title",
 )
-_THROUGH_RE = re.compile(
-    r"\b(?:from\s+)?v?([0-9][0-9A-Za-z.+]*)\s+through\s+v?([0-9][0-9A-Za-z.+]*)",
-    re.IGNORECASE,
-)
-_BARE_THROUGH_RE = re.compile(
-    r"\bthrough\s+v?([0-9][0-9A-Za-z.+]*)\b",
-    re.IGNORECASE,
-)
-_GTE_RE = re.compile(r"(?:>=|≥)\s*v?([0-9][0-9A-Za-z.+]*)")
-_LT_RE = re.compile(
-    r"(?:before|fixed in|patched in|<)\s*v?([0-9][0-9A-Za-z.+]*)",
-    re.IGNORECASE,
-)
-_VERSION_PART_RE = re.compile(r"\d+|[A-Za-z]+")
+# OSV range types ACE can compare as package versions (not commit hashes).
+_VERSION_RANGE_TYPES = frozenset({"ECOSYSTEM", "SEMVER"})
+_COMMIT_HASH_RE = re.compile(r"[0-9a-fA-F]{7,40}")
 _KEEP_LABELS = frozenset(
     {
         "seed",
@@ -125,21 +115,13 @@ class CatalogHit:
     build_count: int | None = None
 
 
-@dataclass(frozen=True)
-class VersionBound:
-    introduced: str | None = None
-    fixed: str | None = None
-    last_affected: str | None = None
-
-
 @dataclass
 class DownstreamRow:
     name: str
     build_type: str | None = None
     ecosystem: str | None = None
     rhcos: str | None = None
-    affectedness: str | None = None
-    evidence: str | None = None
+    source_component: str | None = None
 
 
 @dataclass
@@ -168,8 +150,7 @@ class DownstreamCandidates:
     seeds: list[str] = field(default_factory=list)
     candidates: list[CandidateHit] = field(default_factory=list)
     anitya_names: dict[str, str] = field(default_factory=dict)
-    versions: dict[str, list[str]] = field(default_factory=dict)
-    rhcos_versions: dict[str, list[str]] = field(default_factory=dict)
+    rhcos_names: set[str] = field(default_factory=set)
     tools_used: list[str] = field(default_factory=list)
     advisory_text: str = ""
     promiscuous_hosts: list[str] = field(default_factory=list)
@@ -201,15 +182,14 @@ class DownstreamCandidates:
             "seeds": self.seeds,
             "candidates": [asdict(hit) for hit in self.candidates],
             "anitya_names": self.anitya_names,
-            "versions": self.versions,
-            "rhcos_versions": self.rhcos_versions,
+            "rhcos_names": sorted(self.rhcos_names),
             "promiscuous_hosts": self.promiscuous_hosts,
             "advisory_text": self.advisory_text,
         }
 
 
 def filter_bomq_response(url: str, payload: Any) -> Any:
-    """Keep only bomq fields used by downstream catalog / version sampling.
+    """Keep only bomq fields used by downstream catalog / RHCOS presence.
 
     Mirrors OSV tool-level filtering so eval ``catalog_cache`` stores slim
     bodies. Non-dict payloads, unknown paths, and responses without a ``data``
@@ -238,25 +218,12 @@ def filter_bomq_response(url: str, payload: Any) -> Any:
             filtered["total"] = payload["total"]
         return filtered
 
-    if path.endswith("/api/v0/search/builds"):
-        slim_data = []
-        for item in data:
-            if not isinstance(item, dict):
-                continue
-            row = {}
-            if "build_version" in item:
-                row["build_version"] = item["build_version"]
-            elif "version" in item:
-                row["version"] = item["version"]
-            slim_data.append(row)
-        return {"data": slim_data}
-
     if path.endswith("/api/v0/search/components"):
         slim_data = []
         for item in data:
             if not isinstance(item, dict):
                 continue
-            row = {"sources": []}
+            row: dict[str, Any] = {"sources": []}
             if "build_name" in item:
                 row["build_name"] = item["build_name"]
             for source in item.get("sources") or []:
@@ -267,7 +234,7 @@ def filter_bomq_response(url: str, payload: Any) -> Any:
                     if not isinstance(component, dict):
                         continue
                     slim_component: dict[str, Any] = {}
-                    for key in ("name", "type", "version"):
+                    for key in ("name", "type"):
                         if key in component:
                             slim_component[key] = component[key]
                     components.append(slim_component)
@@ -521,29 +488,12 @@ def collect_downstream_candidates(
         for hit in candidates
         if hit.soft_label in _KEEP_LABELS and hit.type == "rpm"
     ]
-    ecosystem_hits = [
-        hit
-        for hit in candidates
-        if hit.soft_label in _KEEP_LABELS and hit.type in _LEGAL_ECOSYSTEMS
-    ]
-    versions = _rpm_versions_for_names(getter, hosts, rpm_names, tools)
-    for name, sampled in _ecosystem_versions_for_hits(
-        getter, hosts, ecosystem_hits, tools
-    ).items():
-        existing = versions.setdefault(name, [])
-        for version in sampled:
-            if version not in existing:
-                existing.append(version)
-            if len(existing) >= 8:
-                break
-        versions[name] = existing[:8]
-    rhcos_versions = _rhcos_versions_for_names(getter, hosts, rpm_names, tools)
+    rhcos_names = _rhcos_names_for_names(getter, hosts, rpm_names, tools)
     return DownstreamCandidates(
         seeds=seeds,
         candidates=candidates,
         anitya_names=anitya_names,
-        versions=versions,
-        rhcos_versions=rhcos_versions,
+        rhcos_names=rhcos_names,
         tools_used=tools,
         advisory_text=advisory,
         promiscuous_hosts=promiscuous,
@@ -574,10 +524,8 @@ def collect_downstream(
         )
     rows = resolve_soft_label_rows(
         gathered.candidates,
-        gathered.versions,
-        gathered.rhcos_versions,
+        gathered.rhcos_names,
         gathered.seeds,
-        flaw=flaw,
     )
     return DownstreamResult(
         rows=rows,
@@ -610,13 +558,10 @@ def suppressed_short_path_names(
 
 def resolve_soft_label_rows(
     candidates: list[CandidateHit],
-    versions: dict[str, list[str]],
-    rhcos_versions: dict[str, list[str]],
+    rhcos_names: set[str],
     seeds: list[str],
-    *,
-    flaw: dict[str, Any] | None = None,
 ) -> list[DownstreamRow]:
-    """Keep soft-label keepers and attach affectedness / RHCOS companions."""
+    """Keep soft-label keepers and attach RHCOS companions with source_component."""
     planned: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     short_seeds = suppressed_short_path_names(seeds, {hit.name for hit in candidates})
@@ -627,15 +572,19 @@ def resolve_soft_label_rows(
             CatalogHit(hit.name, hit.type, hit.build_count)
         )
 
-    def add(name: str, kind: str, value: str, *, compat: bool) -> None:
+    def add(name: str, kind: str, value: str, *, seed: str) -> None:
         identity = (name.casefold(), kind, value)
         if identity in seen or name.casefold() in short_seeds:
             return
         seen.add(identity)
-        planned.append({"name": name, "kind": kind, "value": value, "compat": compat})
+        planned.append(
+            {"name": name, "kind": kind, "value": value, "source_component": seed}
+        )
 
     for hit in candidates:
         if hit.soft_label not in _KEEP_LABELS:
+            continue
+        if not hit.seed:
             continue
         if hit.name.casefold() in short_seeds:
             continue
@@ -644,14 +593,9 @@ def resolve_soft_label_rows(
         if classified is None:
             continue
         kind, value = classified
-        add(hit.name, kind, value, compat=hit.soft_label == "compat")
+        add(hit.name, kind, value, seed=hit.seed)
 
-    return _rows_with_affectedness(
-        planned,
-        versions,
-        rhcos_versions,
-        flaw=flaw,
-    )
+    return _build_downstream_rows(planned, rhcos_names)
 
 
 def post_filter_manifest_entries(
@@ -789,11 +733,12 @@ def promote_reference_caller_modules(
         hits = confirm_name(path)
         if not hits:
             continue
-        entry = _manifest_entry_from_hits(path, hits, _default_manifest_entry)
+        seed = getattr(short, "source_component", None)
+        entry = _manifest_entry_from_hits(
+            path, hits, _default_manifest_entry, source_component=seed
+        )
         if entry is None:
             continue
-        # Do not copy the short row's verdict: the module path is not
-        # version-sampled by confirm_name, so leave UNKNOWN.
         replacements[segment] = entry
         notes.append(
             f"Replaced bare {getattr(short, 'name', segment)} with {entry.name} "
@@ -916,14 +861,15 @@ def ensure_soft_label_keeps(
         if folded not in hard_keep or folded in present or folded in seen_restore:
             continue
         seen_restore.add(folded)
+        if not row.source_component:
+            continue
         restored.append(
             _default_manifest_entry(
                 name=display.get(folded, row.name),
                 build_type=row.build_type,
                 ecosystem=row.ecosystem,
                 rhcos=None,
-                affectedness=row.affectedness,
-                evidence=row.evidence,
+                source_component=row.source_component,
             )
         )
     if not restored:
@@ -940,8 +886,8 @@ def align_manifest_search_keys(
     ``maven`` and ``generic`` are legal on both fields. Soft-label marks
     bundled registry coordinates as ``ecosystem`` and exact builds as
     ``build_type``. Restore that key for names still present in the baseline
-    so ACE searches the right bomq kind. Also copy sample-based AFFECTED /
-    NOTAFFECTED when the agent left UNKNOWN or blank.
+    so ACE searches the right bomq kind. Also copy ``source_component`` when
+    the agent left it blank.
     """
     by_name: dict[str, DownstreamRow] = {}
     for row in baseline_rows:
@@ -973,17 +919,35 @@ def align_manifest_search_keys(
         elif baseline.build_type:
             entry.ecosystem = None
             entry.build_type = baseline.build_type
-        baseline_affect = getattr(baseline, "affectedness", None)
-        entry_affect = getattr(entry, "affectedness", None)
-        if baseline_affect in {"AFFECTED", "NOTAFFECTED"} and entry_affect in (
-            None,
-            "",
-            "UNKNOWN",
-        ):
-            entry.affectedness = baseline_affect
-            if getattr(entry, "evidence", None) in (None, "") and baseline.evidence:
-                entry.evidence = baseline.evidence
+        if baseline.source_component and not getattr(entry, "source_component", None):
+            entry.source_component = baseline.source_component
     return entries
+
+
+def attach_source_components(
+    entries: list[Any],
+    candidates: list[CandidateHit],
+) -> list[Any]:
+    """Fill ``source_component`` from catalog seeds; drop rows with no seed."""
+    seeds_by_name: dict[str, str] = {}
+    for hit in candidates:
+        if not hit.seed:
+            continue
+        seeds_by_name.setdefault(hit.name.casefold(), hit.seed)
+
+    kept: list[Any] = []
+    for entry in entries:
+        name = getattr(entry, "name", None)
+        if not isinstance(name, str) or not name.strip():
+            continue
+        seed = getattr(entry, "source_component", None)
+        if not isinstance(seed, str) or not seed.strip():
+            seed = seeds_by_name.get(name.casefold())
+        if not isinstance(seed, str) or not seed.strip():
+            continue
+        entry.source_component = seed
+        kept.append(entry)
+    return kept
 
 
 def _catalog_for_seed(
@@ -1593,149 +1557,27 @@ def _is_compat(name: str, seed: str) -> bool:
     )
 
 
-def _rpm_versions_for_names(
+def _rhcos_names_for_names(
     getter: Callable[[str], Any],
     hosts: list[str],
     names: list[str],
     tools: list[str],
-) -> dict[str, list[str]]:
-    """Sample SRPM upstream versions for RPM soft-label keepers."""
+) -> set[str]:
+    """Casefolded RPM names that appear inside RHCOS builds."""
     if not names or not hosts:
-        return {}
-    tools.append("bomq_builds")
-    versions: dict[str, list[str]] = {}
-    for name in names:
-        key = name.casefold()
-        found = list(versions.get(key, []))
-        for host in hosts:
-            for version in _build_versions(getter, host, name):
-                if version not in found:
-                    found.append(version)
-            if len(found) >= 8:
-                break
-        versions[key] = found[:8]
-    return versions
-
-
-def _ecosystem_versions_for_hits(
-    getter: Callable[[str], Any],
-    hosts: list[str],
-    hits: list[CandidateHit],
-    tools: list[str],
-) -> dict[str, list[str]]:
-    """Sample nested component versions for ecosystem soft-label keepers."""
-    if not hits or not hosts:
-        return {}
-    tools.append("bomq_component_versions")
-    versions: dict[str, list[str]] = {}
-    for hit in hits:
-        key = hit.name.casefold()
-        found = list(versions.get(key, []))
-        for host in hosts:
-            for version in _component_versions(getter, host, hit.name, hit.type):
-                if version not in found:
-                    found.append(version)
-                if len(found) >= 8:
-                    break
-            if len(found) >= 8:
-                break
-        versions[key] = found[:8]
-    return versions
-
-
-def _build_versions(getter: Callable[[str], Any], host: str, name: str) -> list[str]:
-    """Fetch and normalize upstream versions from bomq build search."""
-    query = urllib.parse.urlencode({"name": name, "strict": "true", "limit": "20"})
-    payload = getter(f"{host}/api/v0/search/builds?{query}")
-    data = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(data, list):
-        return []
-    versions: list[str] = []
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-        raw = item.get("build_version") or item.get("version")
-        if not isinstance(raw, str) or not raw.strip():
-            continue
-        version = _upstream_version(raw)
-        if version and version not in versions:
-            versions.append(version)
-        if len(versions) >= 8:
-            break
-    return versions
-
-
-def _component_versions(
-    getter: Callable[[str], Any],
-    host: str,
-    name: str,
-    component_type: str,
-) -> list[str]:
-    """Upstream versions from bomq component search for one ecosystem type."""
-    query = urllib.parse.urlencode(
-        {
-            "name": name,
-            "strict": "true",
-            "include_types": component_type,
-            "limit": "20",
-        }
-    )
-    payload = getter(f"{host}/api/v0/search/components?{query}")
-    data = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(data, list):
-        return []
-    versions: list[str] = []
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-        for source in item.get("sources") or []:
-            if not isinstance(source, dict):
-                continue
-            for component in source.get("components") or []:
-                if not isinstance(component, dict):
-                    continue
-                if str(component.get("name") or "").casefold() != name.casefold():
-                    continue
-                if (
-                    str(component.get("type") or "").casefold()
-                    != component_type.casefold()
-                ):
-                    continue
-                raw = component.get("version")
-                if not isinstance(raw, str) or not raw.strip():
-                    continue
-                version = _upstream_version(raw)
-                if version and version not in versions:
-                    versions.append(version)
-                if len(versions) >= 8:
-                    return versions
-    return versions
-
-
-def _rhcos_versions_for_names(
-    getter: Callable[[str], Any],
-    hosts: list[str],
-    names: list[str],
-    tools: list[str],
-) -> dict[str, list[str]]:
-    """Sample RHCOS-embedded RPM versions for soft-label keepers."""
-    if not names or not hosts:
-        return {}
+        return set()
     tools.append("bomq_rhcos")
-    found: dict[str, list[str]] = {}
+    found: set[str] = set()
     for name in names:
         for host in hosts:
-            versions = _rhcos_component_versions(getter, host, name)
-            if versions is not None:
-                found[name.casefold()] = versions
+            if _rhcos_name_present(getter, host, name):
+                found.add(name.casefold())
                 break
     return found
 
 
-def _rhcos_component_versions(
-    getter: Callable[[str], Any], host: str, name: str
-) -> list[str] | None:
-    """Upstream versions for one RPM name inside RHCOS builds, or None if absent."""
+def _rhcos_name_present(getter: Callable[[str], Any], host: str, name: str) -> bool:
+    """True when ``name`` appears as an RPM inside an RHCOS build on ``host``."""
     query = urllib.parse.urlencode(
         {
             "name": name,
@@ -1747,12 +1589,10 @@ def _rhcos_component_versions(
     )
     payload = getter(f"{host}/api/v0/search/components?{query}")
     if not isinstance(payload, dict):
-        return None
+        return False
     data = payload.get("data")
     if not isinstance(data, list):
-        return None
-    versions: list[str] = []
-    hit = False
+        return False
     for item in data:
         if not isinstance(item, dict):
             continue
@@ -1762,109 +1602,301 @@ def _rhcos_component_versions(
             continue
         if "ironic" in folded:
             continue
-        hit = True
         for source in item.get("sources") or []:
             if not isinstance(source, dict):
                 continue
             for component in source.get("components") or []:
                 if not isinstance(component, dict):
                     continue
-                if str(component.get("name") or "").casefold() != name.casefold():
-                    continue
-                raw = component.get("version")
-                if isinstance(raw, str) and raw and raw not in versions:
-                    versions.append(_upstream_version(raw))
-    if not hit:
-        return None
-    return versions
+                if str(component.get("name") or "").casefold() == name.casefold():
+                    return True
+    return False
 
 
-def _rows_with_affectedness(
+def _build_downstream_rows(
     planned: list[dict[str, Any]],
-    versions: dict[str, list[str]],
-    rhcos_versions: dict[str, list[str]],
-    *,
-    flaw: dict[str, Any] | None = None,
-    bounds: list[VersionBound] | None = None,
+    rhcos_names: set[str],
 ) -> list[DownstreamRow]:
-    """Build DownstreamRow list with affectedness and RHCOS companions."""
+    """Build DownstreamRow list with source_component and RHCOS companions."""
     rows: list[DownstreamRow] = []
-    bounds_cache: dict[str, list[VersionBound]] = {}
     for item in planned:
-        affectedness = None
-        evidence = None
-        sample_affectedness = (
-            item["kind"] == "build_type" and item["value"] == "rpm"
-        ) or (item["kind"] == "ecosystem" and item["value"] in _LEGAL_ECOSYSTEMS)
-        if sample_affectedness:
-            sample = versions.get(item["name"].casefold(), [])
-            if item["compat"]:
-                affectedness = None
-            else:
-                if bounds is not None:
-                    row_bounds = bounds
-                elif flaw is not None:
-                    cache_key = item["name"].casefold()
-                    if cache_key not in bounds_cache:
-                        bounds_cache[cache_key] = _ranges_from_flaw(
-                            flaw, package_name=item["name"]
-                        )
-                    row_bounds = bounds_cache[cache_key]
-                else:
-                    row_bounds = []
-                affectedness = _decide_affectedness(sample, row_bounds)
-            evidence = _evidence(sample)
-        row = DownstreamRow(
-            name=item["name"],
-            affectedness=affectedness,
-            evidence=evidence,
-        )
+        seed = item.get("source_component")
+        if not isinstance(seed, str) or not seed.strip():
+            continue
+        row = DownstreamRow(name=item["name"], source_component=seed)
         if item["kind"] == "build_type":
             row.build_type = item["value"]
         else:
             row.ecosystem = item["value"]
         rows.append(row)
-        if item["name"].casefold() in rhcos_versions:
-            sample = rhcos_versions[item["name"].casefold()]
-            if item["compat"]:
-                companion_affectedness = None
-            elif bounds is not None:
-                companion_affectedness = _decide_affectedness(sample, bounds)
-            elif flaw is not None:
-                cache_key = item["name"].casefold()
-                if cache_key not in bounds_cache:
-                    bounds_cache[cache_key] = _ranges_from_flaw(
-                        flaw, package_name=item["name"]
-                    )
-                companion_affectedness = _decide_affectedness(
-                    sample, bounds_cache[cache_key]
-                )
-            else:
-                companion_affectedness = _decide_affectedness(sample, [])
+        if item["name"].casefold() in rhcos_names:
             rows.append(
                 DownstreamRow(
                     name=item["name"],
                     rhcos="rpm",
-                    affectedness=companion_affectedness,
-                    evidence=_evidence(sample),
+                    source_component=seed,
                 )
             )
     return rows
 
 
-def _ranges_from_flaw(
-    flaw: dict[str, Any],
-    *,
-    package_name: str | None = None,
-) -> list[VersionBound]:
-    """Version bounds from OSV upstream_data, else advisory text."""
-    upstream = flaw.get("upstream_data")
+def _normalize_upstream_data(upstream: Any) -> dict[str, Any]:
+    """Normalize OSIDB/OSV ``upstream_data`` to ``{affected: [...]}``.
+
+    Accepts classic OSV dicts with ``affected``, or OSIDB's list of records
+    with ``upstream_purls``. Anything else becomes an empty dict.
+    """
     if isinstance(upstream, dict):
-        bounds = _osv_bounds(upstream, package_name=package_name)
-        if bounds:
-            return bounds
-    text = _advisory_text(flaw)
-    return _advisory_bounds(text)
+        if isinstance(upstream.get("affected"), list):
+            return upstream
+        return {}
+    if not isinstance(upstream, list):
+        return {}
+    affected: list[dict[str, Any]] = []
+    for record in upstream:
+        if not isinstance(record, dict):
+            continue
+        purls = record.get("upstream_purls")
+        if not isinstance(purls, list):
+            continue
+        for entry in purls:
+            if not isinstance(entry, dict):
+                continue
+            package: dict[str, Any] = {}
+            for key in ("name", "purl", "ecosystem"):
+                value = entry.get(key)
+                if isinstance(value, str) and value.strip():
+                    package[key] = value.strip()
+            item: dict[str, Any] = {}
+            if package:
+                item["package"] = package
+            ranges = entry.get("ranges")
+            if isinstance(ranges, list):
+                item["ranges"] = ranges
+            versions = entry.get("versions")
+            if isinstance(versions, list):
+                item["versions"] = versions
+            if item:
+                affected.append(item)
+    return {"affected": affected} if affected else {}
+
+
+def seeds_missing_version_ranges(flaw: dict[str, Any]) -> list[str]:
+    """Flaw components whose OSV data has no ECOSYSTEM or SEMVER range.
+
+    These seeds need an advisory-text extract. GIT ranges do not count.
+    """
+    upstream = _normalize_upstream_data(flaw.get("upstream_data"))
+    return [
+        seed
+        for seed in _seeds(flaw)
+        if not _osv_version_ranges(_matched_affected(upstream, seed))
+    ]
+
+
+def build_downstream_ranges(
+    flaw: dict[str, Any],
+    extracts: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Per-seed OSV ``ranges`` or ``versions`` for ``aegis_meta._downstream``.
+
+    One object per ``Flaw.components`` seed. Prefer ECOSYSTEM/SEMVER events from
+    ``upstream_data.affected`` (including OSIDB ``upstream_purls`` normalized
+    to that shape) and ignore sibling GIT ranges. When OSV is GIT-only or has
+    no version range, use ``extracts`` (the advisory-text agent result for
+    that seed): ``ranges`` or ``versions``, never both. If the extract omits
+    the seed, copy OSV ``affected.versions``. Otherwise omit the seed. Never
+    emits raw GIT events.
+    """
+    seeds = _seeds(flaw)
+    if not seeds:
+        return []
+    upstream = _normalize_upstream_data(flaw.get("upstream_data"))
+    provided = extracts or {}
+    entries: list[dict[str, Any]] = []
+    for seed in seeds:
+        matched = _matched_affected(upstream, seed)
+        osv_ranges = _osv_version_ranges(matched)
+        if osv_ranges:
+            entries.append({"source_component": seed, "ranges": osv_ranges})
+            continue
+        extracted = normalize_advisory_extract(provided.get(seed))
+        if extracted:
+            entries.append({"source_component": seed, **extracted})
+            continue
+        osv_versions = _osv_versions_list(matched)
+        if osv_versions:
+            entries.append({"source_component": seed, "versions": osv_versions})
+    return entries
+
+
+def normalize_advisory_extract(extract: Any) -> dict[str, Any] | None:
+    """Turn one agent extract into ``{ranges: ...}`` or ``{versions: ...}``.
+
+    ``omit``, empty output, and commit hashes become ``None`` so the caller
+    can fall through to OSV ``affected.versions``. A fixed or last-affected
+    bound with no introduced version is stored as ``introduced: "0"``.
+    """
+    payload = _extract_payload(extract)
+    if payload is None:
+        return None
+    decision = str(payload.get("decision") or "").casefold()
+    if decision == "ranges":
+        ranges = _ecosystem_ranges_from_extract(payload.get("ranges"))
+        if ranges:
+            return {"ranges": ranges}
+        return None
+    if decision == "versions":
+        versions = _version_list(payload.get("versions"))
+        if versions:
+            return {"versions": versions}
+    return None
+
+
+def _matched_affected(
+    upstream: dict[str, Any],
+    seed: str,
+) -> list[dict[str, Any]]:
+    """OSV ``affected`` entries for ``seed``, scoped by package name when possible."""
+    affected_list = [
+        affected
+        for affected in (upstream.get("affected") or [])
+        if isinstance(affected, dict)
+    ]
+    if not affected_list:
+        return []
+    named = [
+        affected
+        for affected in affected_list
+        if _osv_package_name(affected) is not None
+    ]
+    matched = [
+        affected
+        for affected in affected_list
+        if _osv_package_matches(_osv_package_name(affected), seed)
+    ]
+    if named and len(named) == len(affected_list) and not matched:
+        return []
+    if matched:
+        return matched
+    return affected_list
+
+
+def _osv_version_ranges(affected_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """ECOSYSTEM/SEMVER range objects from OSV affected entries (GIT skipped)."""
+    ranges: list[dict[str, Any]] = []
+    for affected in affected_list:
+        for version_range in affected.get("ranges") or []:
+            if not isinstance(version_range, dict):
+                continue
+            range_type = str(version_range.get("type") or "").upper()
+            if range_type not in _VERSION_RANGE_TYPES:
+                continue
+            events = version_range.get("events")
+            if not isinstance(events, list) or not events:
+                continue
+            ranges.append({"type": range_type, "events": events})
+    return ranges
+
+
+def _osv_versions_list(affected_list: list[dict[str, Any]]) -> list[str]:
+    """Deduped OSV ``affected.versions`` strings from matched entries."""
+    versions: list[str] = []
+    for affected in affected_list:
+        for version in affected.get("versions") or []:
+            cleaned = _clean_version(version)
+            if cleaned and cleaned not in versions:
+                versions.append(cleaned)
+    return versions
+
+
+def _extract_payload(extract: Any) -> dict[str, Any] | None:
+    """Dict view of an agent extract model or mapping."""
+    if extract is None:
+        return None
+    if hasattr(extract, "model_dump"):
+        payload = extract.model_dump()
+    elif isinstance(extract, dict):
+        payload = extract
+    else:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _ecosystem_ranges_from_extract(raw_ranges: Any) -> list[dict[str, Any]]:
+    """Agent range blocks as ECOSYSTEM events ACE can compare."""
+    if not isinstance(raw_ranges, list):
+        return []
+    ranges: list[dict[str, Any]] = []
+    for block in raw_ranges:
+        block_payload = _extract_payload(block)
+        if block_payload is None and isinstance(block, dict):
+            block_payload = block
+        events = _ecosystem_events(block_payload)
+        if events:
+            ranges.append({"type": "ECOSYSTEM", "events": events})
+    return ranges
+
+
+def _ecosystem_events(block: dict[str, Any] | None) -> list[dict[str, str]]:
+    """Split extract events into one-key OSV events, in order."""
+    if not block:
+        return []
+    raw_events = block.get("events")
+    if not isinstance(raw_events, list):
+        return []
+    events: list[dict[str, str]] = []
+    saw_introduced = False
+    for raw in raw_events:
+        event = _extract_payload(raw)
+        if event is None and isinstance(raw, dict):
+            event = raw
+        if not isinstance(event, dict):
+            continue
+        introduced = _clean_version(event.get("introduced"))
+        fixed = _clean_version(event.get("fixed"))
+        last_affected = _clean_version(event.get("last_affected"))
+        if introduced:
+            events.append({"introduced": introduced})
+            saw_introduced = True
+        for key, value in (("fixed", fixed), ("last_affected", last_affected)):
+            if not value:
+                continue
+            if not saw_introduced:
+                events.append({"introduced": "0"})
+                saw_introduced = True
+            events.append({key: value})
+            saw_introduced = False
+    return events
+
+
+def _version_list(raw_versions: Any) -> list[str]:
+    """Cleaned version strings from an agent ``versions`` list."""
+    if not isinstance(raw_versions, list):
+        return []
+    versions: list[str] = []
+    for version in raw_versions:
+        cleaned = _clean_version(version)
+        if cleaned and cleaned not in versions:
+            versions.append(cleaned)
+    return versions
+
+
+def _clean_version(value: Any) -> str | None:
+    """Strip a leading ``v`` and reject blank values and commit hashes."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
+        text = text[1:]
+    if not text or _is_commit_hash(text):
+        return None
+    return text
+
+
+def _is_commit_hash(value: str) -> bool:
+    """True for hex commit-like tokens, not dotted or numeric versions."""
+    return bool(_COMMIT_HASH_RE.fullmatch(value) and re.search(r"[a-fA-F]", value))
 
 
 def _osv_package_name(affected: dict[str, Any]) -> str | None:
@@ -1887,238 +1919,14 @@ def _osv_package_matches(entry_name: str | None, row_name: str) -> bool:
     """True when an OSV package name refers to the same project as ``row_name``."""
     if not entry_name:
         return True
-    folded = entry_name.casefold()
+    folded = entry_name.casefold().rstrip("/")
     row = row_name.casefold().rstrip("/")
     if folded == row or folded == row.rsplit("/", 1)[-1]:
         return True
+    # Go module major-version paths: seed …/chi matches …/chi/v5.
+    if folded.startswith(row + "/") or row.startswith(folded + "/"):
+        return True
     return bool(row.endswith("/" + folded) or folded.endswith("/" + row))
-
-
-def _osv_bounds(
-    upstream: dict[str, Any],
-    *,
-    package_name: str | None = None,
-) -> list[VersionBound]:
-    """Collect version bounds from OSV ``affected`` entries.
-
-    ``GIT`` ranges are skipped (commit hashes are not versions). When
-    ``package_name`` is set, prefer entries whose package matches that name;
-    unnamed entries stay global. If every entry names a package and none
-    match, return no bounds rather than another package's interval.
-    """
-    affected_list = [
-        affected
-        for affected in (upstream.get("affected") or [])
-        if isinstance(affected, dict)
-    ]
-    if package_name:
-        named = [
-            affected
-            for affected in affected_list
-            if _osv_package_name(affected) is not None
-        ]
-        matched = [
-            affected
-            for affected in affected_list
-            if _osv_package_matches(_osv_package_name(affected), package_name)
-        ]
-        # All entries name a package and none match this row: do not fall
-        # back to another package's interval.
-        if named and len(named) == len(affected_list) and not matched:
-            return []
-        if matched:
-            affected_list = matched
-
-    bounds: list[VersionBound] = []
-    for affected in affected_list:
-        for version_range in affected.get("ranges") or []:
-            if not isinstance(version_range, dict):
-                continue
-            range_type = str(version_range.get("type") or "").upper()
-            if range_type == "GIT":
-                continue
-            introduced: str | None = None
-            for event in version_range.get("events") or []:
-                if not isinstance(event, dict):
-                    continue
-                if "introduced" in event and isinstance(event["introduced"], str):
-                    introduced = event["introduced"]
-                if "fixed" in event and isinstance(event["fixed"], str):
-                    bounds.append(VersionBound(introduced, event["fixed"], None))
-                    introduced = None
-                if "last_affected" in event and isinstance(event["last_affected"], str):
-                    bounds.append(
-                        VersionBound(introduced, None, event["last_affected"])
-                    )
-                    introduced = None
-            if introduced is not None:
-                bounds.append(VersionBound(introduced, None, None))
-        for version in affected.get("versions") or []:
-            if isinstance(version, str) and version:
-                bounds.append(VersionBound(version, None, version))
-    return bounds
-
-
-def _clause_around(text: str, start: int, end: int) -> str:
-    """Sentence / clause containing ``text[start:end]`` for negation checks."""
-    left = max(
-        text.rfind(".", 0, start), text.rfind(";", 0, start), text.rfind("\n", 0, start)
-    )
-    right_candidates = [
-        pos
-        for pos in (text.find(".", end), text.find(";", end), text.find("\n", end))
-        if pos != -1
-    ]
-    right = min(right_candidates) if right_candidates else len(text)
-    return text[left + 1 : right]
-
-
-def _advisory_bounds(text: str) -> list[VersionBound]:
-    """Parse introduced/fixed/last_affected bounds from advisory prose."""
-    bounds: list[VersionBound] = []
-    paired_spans: list[tuple[int, int]] = []
-    for match in _THROUGH_RE.finditer(text):
-        clause = _clause_around(text, match.start(), match.end())
-        if re.search(r"\bnot\s+affected\b", clause, flags=re.IGNORECASE):
-            continue
-        bounds.append(VersionBound(match.group(1), None, match.group(2)))
-        paired_spans.append(match.span())
-    for match in _BARE_THROUGH_RE.finditer(text):
-        if any(start <= match.start() < end for start, end in paired_spans):
-            continue
-        clause = _clause_around(text, match.start(), match.end())
-        if re.search(r"\bnot\s+affected\b", clause, flags=re.IGNORECASE):
-            continue
-        bounds.append(VersionBound(None, None, match.group(1)))
-    for match in _GTE_RE.finditer(text):
-        bounds.append(VersionBound(match.group(1), None, None))
-    for match in _LT_RE.finditer(text):
-        bounds.append(VersionBound(None, match.group(1), None))
-    return bounds
-
-
-def _decide_affectedness(versions: list[str], bounds: list[VersionBound]) -> str | None:
-    """SUSE-style: any overlapping sample is AFFECTED; none overlapping is NOTAFFECTED."""
-    if not versions or not bounds:
-        return "UNKNOWN"
-    if any(
-        any(_version_in_bound(version, bound) for bound in bounds)
-        for version in versions
-    ):
-        return "AFFECTED"
-    return "NOTAFFECTED"
-
-
-def _version_in_bound(version: str, bound: VersionBound) -> bool:
-    """True when ``version`` falls inside one VersionBound interval."""
-    key = _version_key(version)
-    below_introduced = (
-        bool(bound.introduced)
-        and bound.introduced != "0"
-        and _version_compare(key, _version_key(bound.introduced)) < 0
-    )
-    at_or_after_fixed = (
-        bool(bound.fixed) and _version_compare(key, _version_key(bound.fixed)) >= 0
-    )
-    after_last_affected = (
-        bool(bound.last_affected)
-        and _version_compare(key, _version_key(bound.last_affected)) > 0
-    )
-    return not (below_introduced or at_or_after_fixed or after_last_affected)
-
-
-def _strip_leading_v(version: str) -> str:
-    """Drop a leading ``v``/``V`` before a digit in a version string."""
-    text = version.strip()
-    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
-        return text[1:]
-    return text
-
-
-# Kind 0 = numeric token, kind 1 = alphabetic (prerelease) token.
-_VersionPart = tuple[int, int] | tuple[int, str]
-
-
-def _version_key(version: str) -> tuple[_VersionPart, ...]:
-    """Tokenize a version into comparable numeric and alphabetic parts."""
-    parts: list[_VersionPart] = []
-    for match in _VERSION_PART_RE.finditer(_strip_leading_v(version)):
-        token = match.group()
-        if token.isdigit():
-            parts.append((0, int(token)))
-        else:
-            parts.append((1, token.casefold()))
-    return tuple(parts)
-
-
-def _version_part_compare(left: _VersionPart, right: _VersionPart) -> int:
-    """Compare one version token pair; numeric sorts before alphabetic."""
-    left_kind, left_value = left
-    right_kind, right_value = right
-    if left_kind != right_kind:
-        return -1 if left_kind < right_kind else 1
-    if isinstance(left_value, int) and isinstance(right_value, int):
-        if left_value < right_value:
-            return -1
-        if left_value > right_value:
-            return 1
-        return 0
-    left_text = str(left_value)
-    right_text = str(right_value)
-    if left_text < right_text:
-        return -1
-    if left_text > right_text:
-        return 1
-    return 0
-
-
-def _version_compare(
-    left: tuple[_VersionPart, ...],
-    right: tuple[_VersionPart, ...],
-) -> int:
-    """Order versions so prerelease suffixes sort before the final release.
-
-    Shared numeric/alpha prefixes compare normally. A leftover alphabetic
-    suffix (``1.2.0rc1`` vs ``1.2.0``) is older; a leftover numeric suffix
-    (``1.2.0.1`` vs ``1.2.0``) is newer.
-    """
-    n = min(len(left), len(right))
-    for index in range(n):
-        ordered = _version_part_compare(left[index], right[index])
-        if ordered:
-            return ordered
-    if len(left) == len(right):
-        return 0
-    longer = left if len(left) > len(right) else right
-    sign = 1 if len(left) > len(right) else -1
-    # First leftover token: alphabetic => prerelease (older); numeric => newer.
-    kind, _value = longer[n]
-    if kind == 1:
-        return -sign
-    return sign
-
-
-def _upstream_version(build_version: str) -> str:
-    """Strip epoch, leading v, and RPM release from a build version."""
-    text = build_version.strip()
-    if ":" in text:
-        epoch, rest = text.split(":", 1)
-        if epoch.isdigit():
-            text = rest
-    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
-        text = text[1:]
-    if "-" in text:
-        head, tail = text.split("-", 1)
-        if tail[:1].isdigit():
-            return head
-    return text
-
-
-def _evidence(versions: list[str]) -> str | None:
-    """Short slash-joined version sample for affectedness evidence, or None."""
-    if not versions:
-        return None
-    return " / ".join(versions[:4])
 
 
 def _empty_explanation() -> str:
@@ -2266,8 +2074,34 @@ def apply_usage_policy(
             continue
         by_name.setdefault(folded, entry)
 
+    seed_by_name: dict[str, str] = {}
+    for hit in candidates:
+        if hit.seed:
+            seed_by_name.setdefault(hit.name.casefold(), hit.seed)
+
+    def source_for(name: str) -> str | None:
+        folded = name.casefold()
+        direct = seed_by_name.get(folded)
+        if direct:
+            return direct
+        from_entries = [
+            seed
+            for entry in by_name.values()
+            if isinstance((seed := getattr(entry, "source_component", None)), str)
+            and seed.strip()
+        ]
+        unique = list(dict.fromkeys(from_entries))
+        if len(unique) == 1:
+            return unique[0]
+        seeds = list(dict.fromkeys(seed_by_name.values()))
+        if not seeds:
+            return None
+        return _best_seed_for_name(name, seeds, set()) or (
+            seeds[0] if len(seeds) == 1 else None
+        )
+
     omitted: list[str] = []
-    kept_na: list[str] = []
+    kept_importers: list[str] = []
 
     if gate_importers:
         for folded in list(by_name):
@@ -2280,8 +2114,7 @@ def apply_usage_policy(
                     by_name.pop(folded, None)
                     continue
                 entry = by_name[folded]
-                entry.affectedness = "NOTAFFECTED"
-                kept_na.append(
+                kept_importers.append(
                     f"{getattr(entry, 'name', folded)}"
                     f" ({count if count is not None else 'unknown'} builds)"
                 )
@@ -2309,7 +2142,12 @@ def apply_usage_policy(
                 display_names.setdefault(hit.name.casefold(), hit.name)
         if not hits:
             continue
-        entry = _manifest_entry_from_hits(name, hits, factory)
+        entry = _manifest_entry_from_hits(
+            name,
+            hits,
+            factory,
+            source_component=source_for(name),
+        )
         if entry is not None:
             by_name[folded] = entry
 
@@ -2325,12 +2163,16 @@ def apply_usage_policy(
             hits = catalog_by_name.get(folded) or []
             if not hits:
                 continue
-            entry = _manifest_entry_from_hits(name, hits, factory)
+            entry = _manifest_entry_from_hits(
+                name,
+                hits,
+                factory,
+                source_component=source_for(name),
+            )
             if entry is None:
                 continue
-            entry.affectedness = "NOTAFFECTED"
             by_name[folded] = entry
-            kept_na.append(
+            kept_importers.append(
                 f"{getattr(entry, 'name', name)}"
                 f" ({count if count is not None else 'unknown'} builds)"
             )
@@ -2342,10 +2184,10 @@ def apply_usage_policy(
             f"{IMPORTER_AFFECT_LIMIT}+ builds that do not run "
             f"{vulnerable_unit or 'the vulnerable unit'}: {', '.join(omitted)}."
         )
-    if kept_na:
+    if kept_importers:
         note_parts.append(
-            "Kept importer-only names below the affect limit as NOTAFFECTED "
-            f"because they only link a shared module: {', '.join(kept_na)}."
+            "Kept importer-only names below the affect limit "
+            f"because they only link a shared module: {', '.join(kept_importers)}."
         )
     note = " ".join(note_parts)
     if note and note not in explanation:
@@ -2401,37 +2243,25 @@ def _manifest_entry_from_hits(
     name: str,
     hits: list[CatalogHit],
     factory: Callable[..., Any],
+    *,
+    source_component: str | None = None,
 ) -> Any | None:
     """Build a ManifestComponentEntry from catalog hits, or None if unclassifiable."""
+    if not isinstance(source_component, str) or not source_component.strip():
+        return None
     classified = _classify(hits, _is_module_path(name))
     if classified is None:
         return None
     kind, value = classified
     kwargs: dict[str, Any] = {
         "name": name,
-        "affectedness": "UNKNOWN",
-        "evidence": None,
+        "source_component": source_component,
     }
     if kind == "build_type":
         kwargs["build_type"] = value
     else:
         kwargs["ecosystem"] = value
     return factory(**kwargs)
-
-
-def query_bomq_build_versions(
-    name: str,
-    *,
-    community: bool = False,
-    get_json: Callable[[str], Any] | None = None,
-) -> list[str]:
-    """Sample upstream versions from bomq build search."""
-    settings = get_settings()
-    host = (settings.bomq_community_url if community else settings.bomq_url).rstrip("/")
-    if not host:
-        return []
-    getter = get_json or http_get_json
-    return _build_versions(getter, host, name)
 
 
 def query_anitya_projects(

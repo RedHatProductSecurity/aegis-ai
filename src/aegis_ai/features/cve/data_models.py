@@ -1,6 +1,7 @@
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from aegis_ai.data_models import CVEID, CWEID, CVSS3Vector
 from aegis_ai.features.data_models import AegisFeatureModel
@@ -230,17 +231,12 @@ class ManifestComponentEntry(BaseModel):
         default=None,
         description="Set to rpm when this name also ships in an RHCOS image.",
     )
-    affectedness: Literal["AFFECTED", "NOTAFFECTED", "UNKNOWN"] | None = Field(
+    source_component: str | None = Field(
         default=None,
         description=(
-            "AFFECTED or NOTAFFECTED when samples clearly fall in or out of the "
-            "advisory range; UNKNOWN when the range or version sample is missing; "
-            "null for compat/ambiguous packaging that needs manual review."
+            "Flaw.components seed this row was mapped from. Not a search key; "
+            "ACE joins ranges by this value. Rows without a seed are dropped."
         ),
-    )
-    evidence: str | None = Field(
-        default=None,
-        description="Sample of upstream versions used for the affectedness decision.",
     )
 
     @model_validator(mode="after")
@@ -298,7 +294,7 @@ class ManifestUsageAnalysis(BaseModel):
 
 
 class SuggestManifestComponentAndStateModel(AegisFeatureModel):
-    """Downstream names for the flaw's components, with affectedness when known."""
+    """Downstream names for the flaw's components, with source_component seeds."""
 
     cve_id: CVEID = Field(..., description="CVE identifier for the flaw.")
     manifest_components: list[ManifestComponentEntry] = Field(
@@ -316,12 +312,73 @@ class SuggestManifestComponentAndStateModel(AegisFeatureModel):
         ...,
         description="Why these downstream names were kept or left out.",
     )
+    # Filled after the catalog agent from OSV, or from a separate advisory
+    # extract when OSV has no ECOSYSTEM/SEMVER range. Hidden from the catalog
+    # agent's output schema. Sibling of value in aegis_meta._downstream.
+    ranges: SkipJsonSchema[list[dict[str, Any]]] = Field(default_factory=list)
     # Set on catalog outages so the bot records a lookup failure, not a
     # low-confidence empty mapping.
     _catalog_outage: bool = PrivateAttr(default=False)
 
     def printable_outcome(self) -> str:
         return f"{len(self.manifest_components)} downstream name(s)"
+
+
+class AdvisoryRangeEvent(BaseModel):
+    """One bound from advisory text. Set at most one field."""
+
+    introduced: str | None = Field(
+        default=None,
+        description="First affected version, or 0 when only an upper bound is stated.",
+    )
+    fixed: str | None = Field(
+        default=None,
+        description="First version that is not affected.",
+    )
+    last_affected: str | None = Field(
+        default=None,
+        description="Last version that is affected, inclusive.",
+    )
+
+
+class AdvisoryRangeBlock(BaseModel):
+    """One affected interval stated in the advisory text."""
+
+    events: list[AdvisoryRangeEvent] = Field(default_factory=list)
+
+
+class AdvisoryComponentExtract(BaseModel):
+    """Version range or version list for one flaw component, or an omission."""
+
+    source_component: str = Field(
+        ...,
+        description="Flaw component name, copied exactly from the request.",
+    )
+    decision: Literal["ranges", "versions", "omit"] = Field(
+        ...,
+        description=(
+            "ranges when the text states an interval; versions when it lists "
+            "specific affected versions; omit when it states neither."
+        ),
+    )
+    ranges: list[AdvisoryRangeBlock] = Field(default_factory=list)
+    versions: list[str] = Field(
+        default_factory=list,
+        description="Explicit affected versions copied from the text.",
+    )
+
+
+class AdvisoryVersionExtract(BaseModel):
+    """Constrained extract of advisory version ranges or version lists."""
+
+    components: list[AdvisoryComponentExtract] = Field(default_factory=list)
+
+
+class AdvisoryVersionContext(BaseModel):
+    """Advisory text and the flaw components that still need a version extract."""
+
+    source_components: list[str] = Field(default_factory=list)
+    advisory_text: str = ""
 
 
 class DownstreamFeatureContext(BaseModel):
@@ -346,7 +403,7 @@ class DownstreamFeatureContext(BaseModel):
     )
     soft_label_baseline: list[dict] = Field(
         default_factory=list,
-        description="Deterministic soft-label keepers with affectedness hints.",
+        description="Deterministic soft-label keepers with search keys and seeds.",
     )
 
     def __repr__(self) -> str:

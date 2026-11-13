@@ -214,7 +214,6 @@ build_system_toolset = CombinedToolset(build_system_toolset_list)
 # SuggestManifestComponentAndState.
 from aegis_ai.toolsets.tools.downstream import (
     anitya_projects_tool,
-    bomq_build_versions_tool,
     bomq_components_tool,
 )
 
@@ -223,7 +222,6 @@ downstream_toolset = CombinedToolset(
         FunctionToolset(
             tools=[
                 bomq_components_tool,
-                bomq_build_versions_tool,
                 anitya_projects_tool,
             ]
         )
