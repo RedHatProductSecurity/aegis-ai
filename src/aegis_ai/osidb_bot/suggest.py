@@ -175,17 +175,11 @@ async def suggest_components(
     feature = cve.SuggestAffectedComponents(agent)
     output = await exec_feature(feature, flaw_data)
 
-    # Extract component names from structured ComponentMatch objects for OSIDB
-    # OSIDB expects a list of strings in canonical format (namespace/name for Maven/Composer/Go)
-    # We keep the full structured data in aegis_meta
-    from aegis_ai.features.cve.purl_utils import get_canonical_component_name
-
-    component_names = [
-        get_canonical_component_name(comp.name, comp.namespace, comp.ecosystem)
-        for comp in output.components
-    ]
-
-    changed = update_field(flaw_data, ts, "components", output, value=component_names)
+    # The AI provides both:
+    # - output.components: canonical string names for OSIDB (e.g., 'org.springframework/spring-webmvc')
+    # - output.component_matches: structured ComponentMatch objects for ACE (with version ranges)
+    # OSIDB and downstream mapping (PR #993) expect a list of strings
+    changed = update_field(flaw_data, ts, "components", output, value=output.components)
 
     # record suggested ecosystems in aegis_meta if any
     if output.ecosystems:
@@ -194,7 +188,7 @@ async def suggest_components(
     # Save structured component data to aegis_meta for ACE to consume
     # ACE needs namespace, ecosystem, PURL, and VERSION RANGES to filter affects correctly
     # CRITICAL: Only save when suggestion was ACCEPTED (not rejected due to low confidence)
-    if output.components and "components" in changed:
+    if output.component_matches and "components" in changed:
         from aegis_ai.features.cve.purl_utils import validate_purl
 
         aegis_meta = flaw_data.setdefault("aegis_meta", {})
@@ -210,19 +204,19 @@ async def suggest_components(
                 "evidence": comp.evidence,
                 "confidence": comp.confidence,
             }
-            for comp in output.components
+            for comp in output.component_matches
         ]
         changed.add("aegis_meta")
-    elif "components" in changed and not output.components:
+        logger.info(
+            f"{flaw_data.get('cve_id', '?')}: saved {len(output.component_matches)} "
+            f"structured components to aegis_meta"
+        )
+    elif "components" in changed and not output.component_matches:
         # Clear stale structured_components when suggestion is now empty
         aegis_meta = flaw_data.get("aegis_meta", {})
         if "structured_components" in aegis_meta:
             aegis_meta["structured_components"] = []
             changed.add("aegis_meta")
-        logger.info(
-            f"{flaw_data.get('cve_id', '?')}: saved {len(output.components)} "
-            f"structured components to aegis_meta"
-        )
 
     return changed
 

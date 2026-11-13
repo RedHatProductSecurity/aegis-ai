@@ -199,9 +199,14 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
         description="The unique Common Vulnerabilities and Exposures (CVE) identifier for the security flaw.",
     )
 
-    components: list[ComponentMatch] = Field(
+    components: list[str] = Field(
         ...,
-        description="Structured list of affected components with ecosystem, namespace, PURL, and evidence.",
+        description="Suggested affected component names in canonical format (namespace/name for Maven/Composer/Go).",
+    )
+
+    component_matches: list[ComponentMatch] = Field(
+        default_factory=list,
+        description="Structured component data with ecosystem, namespace, PURL, version ranges, and evidence. Used internally for aegis_meta persistence.",
     )
 
     ecosystems: list[str] = Field(
@@ -217,10 +222,9 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
 
     def printable_outcome(self) -> str:
         """Override the logging hook to print the resulting suggestion."""
-        component_names = [c.name for c in self.components]
         if self.ecosystems:
-            return f"{component_names} ecosystems={self.ecosystems}"
-        return str(component_names)
+            return f"{self.components} ecosystems={self.ecosystems}"
+        return str(self.components)
 
 
 class SuggestImpactModel(AegisFeatureModel):

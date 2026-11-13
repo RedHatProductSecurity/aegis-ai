@@ -817,14 +817,23 @@ class SuggestAffectedComponents(Feature):
             goals="""
                 - Only list components that are *directly vulnerable* — the upstream artifact where the bug exists and the fix is applied. Do not list libraries, runtimes, or standard library modules that the CVE description merely *mentions*, *uses*, or *references* as execution context. Each component you list must be one where an upstream patch or release directly addresses the flaw.
                 - From all available CVE/OSIDB data (title, comment_zero, description, statement, mitigation, comments, references, affects, cvss_scores, cwe_id, impact), identify the affected software component(s).
-                - For EACH component, provide structured data in ComponentMatch format:
-                  * name: Component/package name
+                - For EACH component, provide TWO representations:
+                  1. Canonical component name (string) for the 'components' field - used by OSIDB and downstream mapping
+                  2. Structured ComponentMatch object for the 'component_matches' field - used by ACE for version filtering
+                - Canonical component naming (for 'components' field):
+                  * Maven: groupId/artifactId format (e.g., 'org.springframework/spring-webmvc')
+                  * Composer: vendor/package format (e.g., 'phpseclib/phpseclib')
+                  * Go: full module path (e.g., 'github.com/rclone/rclone')
+                  * Other ecosystems: bare package name (e.g., 'cryptography', 'axios')
+                - Structured ComponentMatch (for 'component_matches' field):
+                  * name: Component/package name (final part of identifier)
                   * namespace: Component namespace/group (see namespace rules below)
                   * ecosystem: Package ecosystem (cargo, golang, npm, pypi, maven, gem, generic, unknown)
                   * purl: Properly formatted Package URL with version when available
+                  * first_introduced, last_affected, fixed_in: Version ranges from GHSA/OSV
                   * evidence: Brief evidence for why this component is vulnerable
                   * confidence: Per-component confidence (0.0-1.0)
-                - Component naming rules:
+                - Component naming rules for ComponentMatch objects:
                   * For Maven: Split groupId and artifactId (e.g. name='spring-webmvc', namespace='org.springframework', purl='pkg:maven/org.springframework/spring-webmvc')
                   * For PHP Composer: Split vendor and package (e.g. name='phpseclib', namespace='phpseclib', purl='pkg:composer/phpseclib/phpseclib')
                   * For Go modules: Split module path into name and namespace (e.g. name='rclone', namespace='github.com/rclone', purl='pkg:golang/github.com/rclone/rclone'). Strip Go major-version suffixes (/v2, /v3, /v7, etc.) from the module path.
@@ -910,7 +919,11 @@ class SuggestAffectedComponents(Feature):
                   * npm scoped: {name: "react-core", namespace: "@patternfly", ecosystem: "npm", purl: "pkg:npm/%40patternfly/react-core", first_introduced: "0", last_affected: "4.276.7", fixed_in: "4.276.8", evidence: "npm advisory: fixed in 4.276.8", confidence: 0.90}
                   * PyPI: {name: "cryptography", namespace: null, ecosystem: "pypi", purl: "pkg:pypi/cryptography", first_introduced: "0", last_affected: "40.0.2", fixed_in: "41.0.0", evidence: "GHSA: vulnerable in versions before 41.0.0", confidence: 0.95}
                   * Browser (no version data): {name: "chromium-browser", namespace: null, ecosystem: "generic", purl: "pkg:generic/chromium-browser", first_introduced: null, last_affected: null, fixed_in: null, evidence: "CVE title mentions Chromium Skia - no version constraints available", confidence: 0.75}
-                - Output format: components (list of ComponentMatch objects with name, namespace, ecosystem, purl, evidence, confidence), ecosystems (derived list), explanation (overall rationale).
+                - Output format:
+                  * components: list of canonical component name strings (e.g., ['org.springframework/spring-webmvc', 'github.com/rclone/rclone', 'cryptography'])
+                  * component_matches: list of ComponentMatch objects with name, namespace, ecosystem, purl, version ranges, evidence, confidence
+                  * ecosystems: derived list of ecosystems
+                  * explanation: overall rationale
             """,
             context=_build_cve_input(cve_id, static_context, exclude),
             output_schema=SuggestAffectedComponentsModel.model_json_schema(),
