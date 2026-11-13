@@ -273,16 +273,14 @@ class FlawUpdater:
     async def set_manual_triage(self) -> None:
         """Create the manual-triage workflow label in a separate thread."""
         self._osidb_write_pending = True
-        await asyncio.to_thread(
-            self.create_label, "manual-triage", label_type="workflow"
-        )
+        await asyncio.to_thread(self.create_label, "manual-triage", type="workflow")
         self._osidb_write_pending = False
 
-    def create_label(self, label_name: str, label_type: str = "alias") -> bool:
+    def create_label(self, name: str, **kwargs) -> bool:
         """Create a flaw label with the given name and type, return True on success."""
         assert self.flaw_data
         if self.read_only:
-            msg = f"read-only mode, skipping creation of label '{label_name}'"
+            msg = f"read-only mode, skipping creation of label '{name}'"
             self._warn(msg)
             return False
 
@@ -291,16 +289,16 @@ class FlawUpdater:
             cast(Any, self.osidb.flaws).labels.create(
                 flaw_id=flaw_uuid,
                 form_data={
-                    "name": label_name,
-                    "type": label_type,
+                    "name": name,
                     "state": "NEW",
+                    **kwargs,
                 },
             )
-            self._info(f"created label '{label_name}'")
+            self._info(f"created label '{name}'")
             return True
 
         except Exception as e:
-            msg = f"failed to create label '{label_name}' ({e.__class__.__name__})"
+            msg = f"failed to create label '{name}' ({e.__class__.__name__})"
             self._warn(msg)
             self._log_osidb_response(e)
             logger.debug("%s: %s", self.cve, e)
@@ -319,7 +317,7 @@ class FlawUpdater:
 
         any_update = False
         for label_name in labels:
-            if self.create_label(label_name):
+            if self.create_label(label_name, type="alias"):
                 any_update = True
 
         if not any_update:
