@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=nuclei&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "nuclei",
+                "id": 106029,
+                "backend": "GitHub",
+                "homepage": "https://github.com/projectdiscovery/nuclei",
+                "ecosystem": "https://github.com/projectdiscovery/nuclei"
+            }
+        ],
+        "total_items": 1
+    }
+}

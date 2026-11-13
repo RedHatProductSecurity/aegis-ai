@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=python-nginx&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "python-nginx",
+                "id": 126975,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/python-nginx/1.5.4",
+                "ecosystem": "pypi"
+            }
+        ],
+        "total_items": 1
+    }
+}

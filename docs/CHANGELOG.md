@@ -5,6 +5,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.11.0] - 2026-11-12
+
+### Added
+- added `suggest-manifest-component-and-state` to CLI, Web API, and `osidb-bot` — maps flaw components to same-project downstream packaging names and affectedness hints via bomq and Anitya catalogs [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-affected-components` now supports additional non-distribution package ecosystems (`composer`, `conan`, `cran`, `hex`, `luarocks`, `nuget`, `opam`, `otp`, `pub`, `swift`) [\[AEGIS-537\]](https://redhat.atlassian.net/browse/AEGIS-537)
+
+### Fixed
+- `osidb-bot` skips mitigation suggestions for kernel CVEs to avoid misleading module-disable advice [\[AEGIS-555\]](https://redhat.atlassian.net/browse/AEGIS-555)
+- improved Go component suggestions to use OSIDB naming as ground truth for versioned module paths and distribution names [\[AEGIS-496\]](https://redhat.atlassian.net/browse/AEGIS-496)
+- `suggest-affected-components` hex ecosystem guidance no longer overrides an ecosystem reported by a GitHub advisory or the CNA package URL [\[AEGIS-537\]](https://redhat.atlassian.net/browse/AEGIS-537)
+- hardened SARIF reporting: warn on expiring GitHub upload tokens, avoid partial uploads, keep rule IDs stable across scanner runs, and resolve result severity per SARIF 2.1.0 [\[AEGIS-538\]](https://redhat.atlassian.net/browse/AEGIS-538)
+
+
+## [0.10.3] - 2026-11-05
+
+### Changed
+- `osidb-bot` now automatically suggests the `statement` and `mitigation` fields, too [\[AEGIS-548\]](https://redhat.atlassian.net/browse/AEGIS-548)
+- removed `AEGIS_LLM_TEMPERATURE` and `AEGIS_LLM_TOP_P` environment variables to comply with upcoming Gemini API changes [\[AEGIS-526\]](https://redhat.atlassian.net/browse/AEGIS-526)
+
+### Added
+- added support for API gateways (EnMaaS) via `AEGIS_LLM_PROVIDER` and `AEGIS_LLM_API_KEY` environment variables [\[#994\]](https://github.com/RedHatProductSecurity/aegis-ai/pull/994)
+- added the `--use-fixtures` option for `suggest-*` commands in Aegis CLI to use cached eval fixtures when available [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+- `suggest-affected-packages` now reports per-binary affectedness with `BinaryAffectednessEntry` and `build_nvr` in output [\[AEGIS-492\]](https://redhat.atlassian.net/browse/AEGIS-492)
+- `osv_dev_*` tools can now be disabled via `AEGIS_USE_OSV_DEV_TOOL_CONTEXT` [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+- added analyst steering notes to CVE prompt context for internal analysis guidance [\[AEGIS-253\]](https://redhat.atlassian.net/browse/AEGIS-253)
+- evaluation suite now supports per-case OSIDB field masking and tool disabling [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+
+### Fixed
+- fixed `suggest-impact` underestimation on kernel CVEs involving `kfree()`-without-RCU UAF and network-triggered races, which caused a CRITICAL -> MODERATE underestimation on CVE-2026-98432 [\[AEGIS-545\]](https://redhat.atlassian.net/browse/AEGIS-545)
+
+
+## [0.10.2] - 2026-10-26
+
+### Changed
+- `osidb-bot` now initializes empty `impact` fields from the LLM even when confidence or data quality is below the threshold [\[AEGIS-523\]](https://redhat.atlassian.net/browse/AEGIS-523)
+- `osidb-bot` now overwrites placeholder `From CVEorg collector` titles with LLM-generated descriptions [\[AEGIS-528\]](https://redhat.atlassian.net/browse/AEGIS-528)
+
+### Added
+- offloaded blocking OSIDB calls to threads, which significantly increased the Aegis throughput in case OSIDB takes long time to respond [\[AEGIS-534\]](https://redhat.atlassian.net/browse/AEGIS-534)
+- evaluation suite now supports evaluator-specific score thresholds, with `EcosystemEvaluator` threshold set to 0.8 [\[AEGIS-517\]](https://redhat.atlassian.net/browse/AEGIS-517)
+
+### Fixed
+- improved `suggest-impact` CVSS accuracy for kernel CVEs with rules for USB driver physical attack vectors, KVM guest availability assessment, and process resource theft via file descriptor capabilities [\[AEGIS-529\]](https://redhat.atlassian.net/browse/AEGIS-529)
+- restricted `osidb_flaw_tool` to the CVE being analyzed, preventing unnecessary network requests and significant slowdowns with `gemini-3.8-flash` [\[AEGIS-529\]](https://redhat.atlassian.net/browse/AEGIS-529)
+- bundled CWE definitions as fallback for offline use, with proper cache invalidation and deferred cache directory creation to prevent startup crashes [\[AEGIS-536\]](https://redhat.atlassian.net/browse/AEGIS-536)
+- fixed `osidb-bot` `_ecosystems` change tracking in `suggest_components()` [\[AEGIS-523\]](https://redhat.atlassian.net/browse/AEGIS-523)
+- improved `suggest-affected-components` ecosystem suggestions for standalone server software like Apache Tomcat [\[AEGIS-517\]](https://redhat.atlassian.net/browse/AEGIS-517)
+- improved kernel CVSS evaluation rubric to accept cross-namespace boundary crossings and guest VM privilege mappings [\[AEGIS-529\]](https://redhat.atlassian.net/browse/AEGIS-529)
+
+
 ## [0.10.1] - 2026-10-16
 
 ### Changed

@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Aprometheus%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=3",
+    "body": {
+        "data": [
+            {
+                "name": "@grafana/prometheus",
+                "type": "npm",
+                "build_count": 4
+            },
+            {
+                "name": "@opentelemetry/exporter-prometheus",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "@perses-dev/prometheus-plugin",
+                "type": "npm",
+                "build_count": 12
+            },
+            {
+                "name": "@prometheus-io/app",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "@prometheus-io/codemirror-promql",
+                "type": "npm",
+                "build_count": 21
+            },
+            {
+                "name": "@prometheus-io/lezer-promql",
+                "type": "npm",
+                "build_count": 25
+            },
+            {
+                "name": "@prometheus-io/mantine-ui",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "acm-prometheus-config-reloader-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "acm-prometheus-rhel9",
+                "type": "oci",
+                "build_count": 1
+            },
+            {
+                "name": "aioprometheus",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "buf.build/gen/go/prometheus/prometheus/protocolbuffers/go",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "ceph-prometheus-alerts",
+                "type": "rpm",
+                "build_count": 11
+            },
+            {
+                "name": "collectd-write_prometheus",
+                "type": "rpm",
+                "build_count": 217
+            },
+            {
+                "name": "collectd-write_prometheus-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "com.redhat.amq-broker/artemis-prometheus-metrics-plugin",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "com.redhat.amq-broker/artemis-prometheus-metrics-plugin-servlet",
+                "type": "maven",
+                "build_count": 2
+            },
+            {
+                "name": "com.redhat.amq-broker/artemis-prometheus-metrics-pom",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "com.redhat.swatch.clients.quarkus/prometheus-client",
+                "type": "maven",
+                "build_count": 1
+            },
+            {
+                "name": "contrib.go.opencensus.io/exporter/prometheus",
+                "type": "golang",
+                "build_count": 60
+            },
+            {
+                "name": "django-prometheus",
+                "type": "pypi",
+                "build_count": 21
+            },
+            {
+                "name": "github.com/IBM/pgxpoolprometheus",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/containers/prometheus-podman-exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/coreos/prometheus-operator",
+                "type": "golang",
+                "build_count": 41
+            },
+            {
+                "name": "github.com/globocom/echo-prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grafana/catchpoint-prometheus-exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grafana/grafana-prometheus-datasource/pkg/promlib",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/grafana/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grafana/prometheus-alertmanager",
+                "type": "golang",
+                "build_count": 10
+            },
+            {
+                "name": "github.com/grafana/snowflake-prometheus-exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus",
+                "type": "golang",
+                "build_count": 207
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-prometheus",
+                "type": "golang",
+                "build_count": 327
+            },
+            {
+                "name": "github.com/jon-whit/go-grpc-prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/jonathan-innis/aws-sdk-go-prometheus",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/katekeiroz-dev/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/m3db/prometheus_remote_client_golang",
+                "type": "golang",
+                "build_count": 10
+            },
+            {
+                "name": "github.com/machine424/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/machine424/prometheus-common",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/nginx/nginx-prometheus-exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter",
+                "type": "golang",
+                "build_count": 33
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter",
+                "type": "golang",
+                "build_count": 29
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus",
+                "type": "golang",
+                "build_count": 33
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite",
+                "type": "golang",
+                "build_count": 29
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver",
+                "type": "golang",
+                "build_count": 29
+            },
+            {
+                "name": "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusremotewritereceiver",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/openshift-priv/k8s-prometheus-adapter",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus-alertmanager",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus-operator",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus-operator/pkg/apis/monitoring",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus-operator/pkg/client",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus/compliance",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus/internal/tools",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus/patches/github.com/prometheus/common",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/openshift-priv/prometheus/web/ui/mantine-ui/src/promql/tools",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/openshift/prometheus-operator",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/perses/plugins/prometheus",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus-community/elasticsearch_exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus-community/go-runit",
+                "type": "golang",
+                "build_count": 5
+            },
+            {
+                "name": "github.com/prometheus-community/postgres_exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus-community/pro-bing",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/prometheus-community/prom-label-proxy",
+                "type": "golang",
+                "build_count": 37
+            },
+            {
+                "name": "github.com/prometheus-community/stackdriver_exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus-community/windows_exporter",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus-operator/prometheus-operator",
+                "type": "golang",
+                "build_count": 16
+            },
+            {
+                "name": "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring",
+                "type": "golang",
+                "build_count": 227
+            },
+            {
+                "name": "github.com/prometheus-operator/prometheus-operator/pkg/client",
+                "type": "golang",
+                "build_count": 57
+            },
+            {
+                "name": "github.com/prometheus/alertmanager",
+                "type": "golang",
+                "build_count": 101
+            },
+            {
+                "name": "github.com/prometheus/blackbox_exporter",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/prometheus/client_golang",
+                "type": "golang",
+                "build_count": 1701
+            },
+            {
+                "name": "github.com/prometheus/client_golang/exp",
+                "type": "golang",
+                "build_count": 23
+            },
+            {
+                "name": "github.com/prometheus/client_model",
+                "type": "golang",
+                "build_count": 1701
+            },
+            {
+                "name": "github.com/prometheus/common",
+                "type": "golang",
+                "build_count": 1703
+            },
+            {
+                "name": "github.com/prometheus/common/assets",
+                "type": "golang",
+                "build_count": 43
+            },
+            {
+                "name": "github.com/prometheus/common/sigv4",
+                "type": "golang",
+                "build_count": 42
+            },
+            {
+                "name": "github.com/prometheus/compliance/remotewrite",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/prometheus/consul_exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/exporter-toolkit",
+                "type": "golang",
+                "build_count": 106
+            },
+            {
+                "name": "github.com/prometheus/memcached_exporter",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus/mysqld_exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/node_exporter",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "github.com/prometheus/otlptranslator",
+                "type": "golang",
+                "build_count": 188
+            },
+            {
+                "name": "github.com/prometheus/procfs",
+                "type": "golang",
+                "build_count": 1706
+            },
+            {
+                "name": "github.com/prometheus/prometheus",
+                "type": "golang",
+                "build_count": 146
+            },
+            {
+                "name": "github.com/prometheus/promu",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus/pushgateway",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus/sigv4",
+                "type": "golang",
+                "build_count": 91
+            },
+            {
+                "name": "github.com/prometheus/snmp_exporter",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/statsd_exporter",
+                "type": "golang",
+                "build_count": 62
+            },
+            {
+                "name": "github.com/prometheus/tsdb",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/obo-prometheus-operator",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/obo-prometheus-operator/pkg/apis/monitoring",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/obo-prometheus-operator/pkg/client",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/prometheus/compliance",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/prometheus/internal/tools",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rhobs/konflux-coo/prometheus/web/ui/mantine-ui/src/promql/tools",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/rhobs/obo-prometheus-operator",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "github.com/rhobs/obo-prometheus-operator/pkg/apis/monitoring",
+                "type": "golang",
+                "build_count": 9
+            },
+            {
+                "name": "github.com/rhobs/obo-prometheus-operator/pkg/client",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "github.com/stolostron/obo-prometheus-operator/rhobs-obo-prometheus-operator",
+                "type": "golang",
+                "build_count": 1
+            }
+        ],
+        "total": 257
+    }
+}

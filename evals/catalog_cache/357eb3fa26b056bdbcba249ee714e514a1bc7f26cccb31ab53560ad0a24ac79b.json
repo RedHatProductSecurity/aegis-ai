@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=rclone&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "rclone",
+                "id": 11750,
+                "backend": "GitHub",
+                "homepage": "https://rclone.org",
+                "ecosystem": "https://rclone.org"
+            },
+            {
+                "name": "rclone",
+                "id": 268032,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/rclone/0.4.0/",
+                "ecosystem": "pypi"
+            }
+        ],
+        "total_items": 2
+    }
+}

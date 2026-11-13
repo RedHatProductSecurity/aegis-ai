@@ -1,4 +1,5 @@
 import json
+import time
 from unittest.mock import MagicMock, patch
 
 import koji
@@ -10,6 +11,7 @@ from aegis_ai.toolsets.tools.build_system import (
     _list_binary_rpms,
     _lookup_binary_rpms,
     _lookup_binary_rpms_batch,
+    _remaining,
     _resolve_build_from_stream,
     _resolve_build_id,
 )
@@ -376,7 +378,8 @@ class TestLookupBinaryRPMsBatch:
 
         results = _lookup_binary_rpms_batch("curl", ["rhel-9.6.0.z", "rhel-8.10.0.z"])
 
-        mock_fetch.assert_called_once_with("curl")
+        mock_fetch.assert_called_once()
+        assert mock_fetch.call_args[0] == ("curl",)
         assert len(results) == 2
         assert all(r.status == "success" for r in results)
 
@@ -426,3 +429,84 @@ class TestLookupBinaryRPMsBatch:
         for r in results:
             assert r.error_message is not None
             assert "bomq API error" in r.error_message
+
+
+class TestRemaining:
+    def test_none_deadline_returns_default(self):
+        assert _remaining(None) == 30.0
+
+    def test_future_deadline(self):
+        deadline = time.monotonic() + 10.0
+        result = _remaining(deadline)
+        assert 9.0 < result <= 10.0
+
+    def test_expired_deadline_raises(self):
+        deadline = time.monotonic() - 1.0
+        with pytest.raises(TimeoutError, match="deadline exceeded"):
+            _remaining(deadline)
+
+
+class TestDeadlineEnforcement:
+    @patch("aegis_ai.toolsets.tools.build_system._fetch_bomq_builds")
+    @patch("aegis_ai.toolsets.tools.build_system._create_brew_session")
+    def test_batch_expired_deadline_returns_errors(self, mock_session, mock_fetch):
+        mock_session.return_value = MagicMock()
+        mock_fetch.side_effect = TimeoutError("deadline exceeded")
+
+        results = _lookup_binary_rpms_batch(
+            "curl", ["rhel-9.6.0.z", "rhel-8.10.0.z"], deadline=time.monotonic() - 1
+        )
+
+        assert len(results) == 2
+        assert all(r.status == "error" for r in results)
+        for r in results:
+            assert r.error_message is not None
+            assert "deadline" in r.error_message
+
+    @patch("aegis_ai.toolsets.tools.build_system._resolve_stream")
+    @patch("aegis_ai.toolsets.tools.build_system._fetch_bomq_builds")
+    @patch("aegis_ai.toolsets.tools.build_system._create_brew_session")
+    def test_batch_timeout_mid_iteration(self, mock_session, mock_fetch, mock_resolve):
+        mock_session.return_value = MagicMock()
+        mock_fetch.return_value = [
+            {"build_nvr": "curl-8.6.0-3.el9", "stream_name": "rhel-9.6.0.z"},
+        ]
+        from aegis_ai.toolsets.tools.build_system import ListBinaryRPMsOutput
+
+        mock_resolve.side_effect = [
+            ListBinaryRPMsOutput(
+                package="curl",
+                ps_update_stream="rhel-9.6.0.z",
+                binary_rpms=["curl", "libcurl"],
+                build_nvr="curl-8.6.0-3.el9",
+            ),
+            TimeoutError("deadline exceeded"),
+        ]
+
+        deadline = time.monotonic() + 60
+        results = _lookup_binary_rpms_batch(
+            "curl", ["rhel-9.6.0.z", "rhel-8.10.0.z", "rhel-7.9.z"], deadline=deadline
+        )
+
+        assert len(results) == 3
+        assert results[0].status == "success"
+        assert results[1].status == "error"
+        assert results[1].error_message is not None
+        assert "deadline" in results[1].error_message
+        assert results[2].status == "error"
+        assert results[2].error_message is not None
+        assert "deadline" in results[2].error_message
+
+    @patch("aegis_ai.toolsets.tools.build_system._fetch_bomq_builds")
+    @patch("aegis_ai.toolsets.tools.build_system._create_brew_session")
+    def test_single_timeout_returns_error(self, mock_session, mock_fetch):
+        mock_session.return_value = MagicMock()
+        mock_fetch.side_effect = TimeoutError("deadline exceeded")
+
+        result = _lookup_binary_rpms(
+            "curl", "rhel-9.6.0.z", deadline=time.monotonic() - 1
+        )
+
+        assert result.status == "error"
+        assert result.error_message is not None
+        assert "deadline" in result.error_message

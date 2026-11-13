@@ -1,0 +1,94 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=nginx&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "1.30.6-1.hum1"
+            },
+            {
+                "build_version": "1.24.0-3.module+el8.10.0+24848+0300f002.5"
+            },
+            {
+                "build_version": "1.24.0-7.module+el9.8.0+24846+e7eec568.5"
+            },
+            {
+                "build_version": "1.26.3-9.module+el9.8.0+24845+a897661e.4"
+            },
+            {
+                "build_version": "1.24.0-1.module+el9.4.0+24298+389e3815.5"
+            },
+            {
+                "build_version": "1.24.0-7.module+el9.8.0+24846+e7eec568.5"
+            },
+            {
+                "build_version": "1.26.3-9.module+el9.8.0+24845+a897661e.4"
+            },
+            {
+                "build_version": "1.20.1-14.el9"
+            },
+            {
+                "build_version": "1.26.3-1.el10_0.9"
+            },
+            {
+                "build_version": "1.26.3-6.el10_2.7"
+            },
+            {
+                "build_version": "1.26.3-10.el10"
+            },
+            {
+                "build_version": "1.26.3-10.el10"
+            },
+            {
+                "build_version": "1.20.1-28.el9_8.6"
+            },
+            {
+                "build_version": "1.20.1-14.el9_2.7"
+            },
+            {
+                "build_version": "1.20.1-16.el9_4.7"
+            },
+            {
+                "build_version": "1.20.1-22.el9_6.7"
+            },
+            {
+                "build_version": "1.24.0-4.module+el9.6.0+24297+b3b39a7f.3"
+            },
+            {
+                "build_version": "1.26.3-1.module+el9.6.0+24296+87cb744c.3"
+            },
+            {
+                "build_version": "1.20.1-28.el9_8.6"
+            },
+            {
+                "build_version": "1.24.0-7.module+el9.8.0+24846+e7eec568.5"
+            },
+            {
+                "build_version": "1.26.3-9.module+el9.8.0+24845+a897661e.4"
+            },
+            {
+                "build_version": "1.20.1-28.el9_8.6"
+            },
+            {
+                "build_version": "1.26.3-1.el10_0.9"
+            },
+            {
+                "build_version": "1.26.3-6.el10_2.7"
+            },
+            {
+                "build_version": "1.26.3-10.el10"
+            },
+            {
+                "build_version": "1.26.3-10.el10"
+            },
+            {
+                "build_version": "1.20.1-14.el9_2.6"
+            },
+            {
+                "build_version": "1.26.3-10.el10"
+            },
+            {
+                "build_version": "1.26.3-10.el10"
+            }
+        ]
+    }
+}

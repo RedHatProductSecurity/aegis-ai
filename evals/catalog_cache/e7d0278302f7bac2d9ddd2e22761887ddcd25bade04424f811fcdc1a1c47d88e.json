@@ -1,0 +1,16 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=hdf5&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.2.0-0.1.4.hum1"
+            },
+            {
+                "build_version": "1.14.6-6.el9ai"
+            },
+            {
+                "build_version": "1.8.17-3.el7ost"
+            }
+        ]
+    }
+}

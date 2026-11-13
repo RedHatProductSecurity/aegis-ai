@@ -1,0 +1,6 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=gcc-toolset-11-binutils&strict=true&limit=20",
+    "body": {
+        "data": []
+    }
+}

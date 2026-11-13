@@ -1,0 +1,43 @@
+{
+    "url": "{anitya}/api/project/10925",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "suricata"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "suricata"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "suricata"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:openinfosecfoundation:suricata"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:oisf:suricata"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:suricata-ids:suricata"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "suricata"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "suricata"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "suricata"
+            }
+        ]
+    }
+}

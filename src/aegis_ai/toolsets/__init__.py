@@ -20,8 +20,6 @@ from pydantic_ai.toolsets.wrapper import WrapperToolset
 
 from aegis_ai import get_settings
 from aegis_ai.toolsets.tools.osidb import osidb_component_toolset, osidb_toolset
-from aegis_ai.toolsets.tools.osv_dev_cve import osv_dev_cve_tool
-from aegis_ai.toolsets.tools.osv_dev_ghsa import osv_dev_ghsa_tool
 
 logger = logging.getLogger(__name__)
 
@@ -212,11 +210,37 @@ if get_settings().use_build_system_tool:
 
 build_system_toolset = CombinedToolset(build_system_toolset_list)
 
+# Downstream catalog tools for per-run injection into
+# SuggestManifestComponentAndState.
+from aegis_ai.toolsets.tools.downstream import (
+    anitya_projects_tool,
+    bomq_build_versions_tool,
+    bomq_components_tool,
+)
+
+downstream_toolset = CombinedToolset(
+    [
+        FunctionToolset(
+            tools=[
+                bomq_components_tool,
+                bomq_build_versions_tool,
+                anitya_projects_tool,
+            ]
+        )
+    ]
+)
+
 
 # Toolset containing generic tooling for CVE
-public_cve_toolset_list: list[AbstractToolset[Any]] = [
-    FunctionToolset(tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]),
-]
+public_cve_toolset_list: list[AbstractToolset[Any]] = []
+
+if get_settings().use_osv_dev_tool:
+    from aegis_ai.toolsets.tools.osv_dev_cve import osv_dev_cve_tool
+    from aegis_ai.toolsets.tools.osv_dev_ghsa import osv_dev_ghsa_tool
+
+    public_cve_toolset_list.append(
+        FunctionToolset(tools=[osv_dev_cve_tool, osv_dev_ghsa_tool])
+    )
 
 if get_settings().use_nvd_dev_tool:
     public_cve_toolset_list.append(nvd_mcp_toolset)
@@ -229,4 +253,5 @@ public_toolset = LoggingToolset(public_toolset)
 redhat_cve_toolset = LoggingToolset(redhat_cve_toolset)
 kernel_extra_toolset = LoggingToolset(kernel_extra_toolset)
 build_system_toolset = LoggingToolset(build_system_toolset)
+downstream_toolset = LoggingToolset(downstream_toolset)
 public_cve_toolset = LoggingToolset(public_cve_toolset)

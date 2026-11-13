@@ -1,0 +1,13 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2AFluidSynth%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "libfluidsynth3",
+                "type": "deb",
+                "build_count": 1
+            }
+        ],
+        "total": 1
+    }
+}

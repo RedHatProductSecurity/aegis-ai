@@ -6,8 +6,8 @@
 | `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile               | `public`               |
 | `AEGIS_LLM_HOST`               | Aegis LLM host                                  | `localhost:11434`      |
 | `AEGIS_LLM_MODEL`              | Aegis LLM model                                 | `llama3.2:latest`      |
-| `AEGIS_LLM_TEMPERATURE`        | Aegis LLM default temperature                   | 0.055                  |
-| `AEGIS_LLM_TOP_P`              | Aegis LLM default top_p                         | .8                     |
+| `AEGIS_LLM_PROVIDER`           | Force the API to speak: `openai`, `anthropic` or `google`. Unset means infer it from `AEGIS_LLM_HOST`. Needed for gateways (EnMaaS, LiteLLM, ...) serving a non-OpenAI API | |
+| `AEGIS_LLM_API_KEY`            | Provider-neutral API key. Unset means use the vendor variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`) | |
 | `AEGIS_LLM_MAX_TOKENS`         | Aegis LLM max tokens (0 means model default)    | 0                      |
 | `AEGIS_LLM_INPUT_TOKENS_WARN_THR` | Threshold for LLM input tokens to log a warning | 131072              |
 | `AEGIS_LLM_MAX_JOBS`           | Number of LLM prompts running concurrently      | 4                      |
@@ -38,6 +38,8 @@
 | Environment Variable                   | Description                           | Default Value            |
 |----------------------------------------|---------------------------------------|--------------------------|
 | `AEGIS_BOMQ_URL`                       | bomq REST API host                    | `https://localhost:8080` |
+| `AEGIS_BOMQ_COMMUNITY_URL`             | Community bomq REST API. Empty skips that catalog. | `https://localhost:8081` |
+| `AEGIS_ANITYA_URL`                     | release-monitoring.org API            | `https://release-monitoring.org` |
 | `AEGIS_OSIDB_SERVER_URL`               | OSIDB REST API host                   | `https://localhost:8000` |
 | `AEGIS_OSIDB_RETRIEVE_EMBARGOED`       | Enable retrieving embargoed CVEs      | `false`                  |
 | `AEGIS_USE_CWE_TOOL_CONTEXT`           | Enable MITRE CWE tool                 | `true`                   |
@@ -53,6 +55,7 @@
 | `NVD_API_KEY`                          | NVD API key (for NVD MCP tool)        |                          |
 | `AEGIS_USE_EXT_REFS_TOOL_CONTEXT`      | Enable external references tool (fetches content from CVE reference URLs on an allowlist of trusted domains) | `false` |
 | `AEGIS_USE_BUILD_SYSTEM_TOOL_CONTEXT`  | Enable build system tool (Brew/bomq binary RPM lookup for `SuggestAffectedPackages`) | `false` |
+| `AEGIS_USE_OSV_DEV_TOOL_CONTEXT`         | Enable OSV.dev tools (`osv_dev_cve_tool` and `osv_dev_ghsa_tool`) | `true` |
 | `AEGIS_USE_OSIDB_COMPONENT_TOOL_CONTEXT` | Enable OSIDB component tools (`component_count_tool` and `component_flaw_tool`) | `false` |
 | `AEGIS_USE_TAVILY_TOOL_CONTEXT`        | Enable Tavily web search tool         | `false`                  |
 | `TAVILY_API_KEY`                       | Tavily API key                        |                          |

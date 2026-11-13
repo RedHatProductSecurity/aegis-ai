@@ -1,0 +1,77 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=pjproject&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "pjproject",
+                                "type": "generic",
+                                "version": "2.15.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "asterisk"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "pjproject",
+                                "type": "generic",
+                                "version": "2.15.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "asterisk"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "pjproject",
+                                "type": "generic",
+                                "version": "2.15.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "asterisk"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "pjproject",
+                                "type": "generic",
+                                "version": "2.15.1"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "asterisk"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "pjproject",
+                                "type": "generic",
+                                "version": "2.17"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "asterisk"
+            }
+        ]
+    }
+}

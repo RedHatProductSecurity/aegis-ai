@@ -1,0 +1,7 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=5c199ec824928c5ae5816aaecbc6df03&page=1&items_per_page=100",
+    "body": {
+        "items": [],
+        "total_items": 0
+    }
+}

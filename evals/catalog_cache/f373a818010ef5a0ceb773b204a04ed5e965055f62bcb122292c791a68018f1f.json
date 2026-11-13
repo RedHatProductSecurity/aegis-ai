@@ -1,0 +1,175 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=gdk-pixbuf&strict=true&include_types=cargo&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.18.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "phrog"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.18.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "phrog"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.18.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "phrog"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.21.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "niri"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.21.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "niri"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.21.5"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "niri"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.22.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "flare-im"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.22.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "fractal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.22.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "flare-im"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.22.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "fractal"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.22.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "flare-im"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "gdk-pixbuf",
+                                "type": "cargo",
+                                "version": "0.22.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "fractal"
+            }
+        ]
+    }
+}

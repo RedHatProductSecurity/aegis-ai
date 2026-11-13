@@ -1,0 +1,103 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=gdk-pixbuf2&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "2.24.1-6.el6_7"
+            },
+            {
+                "build_version": "2.36.12-5.el7_9"
+            },
+            {
+                "build_version": "2.36.12-8.el8_10"
+            },
+            {
+                "build_version": "2.36.12-7.el8_4"
+            },
+            {
+                "build_version": "2.36.12-7.el8_6"
+            },
+            {
+                "build_version": "2.36.12-7.el8_8"
+            },
+            {
+                "build_version": "2.36.12-7.el8_8"
+            },
+            {
+                "build_version": "2.36.12-5.el8"
+            },
+            {
+                "build_version": "2.36.12-7.el8_6"
+            },
+            {
+                "build_version": "2.36.12-7.el8_6"
+            },
+            {
+                "build_version": "2.42.6-3.el9"
+            },
+            {
+                "build_version": "2.42.12-4.el10_0.4"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.6-6.el9_8.1"
+            },
+            {
+                "build_version": "2.42.6-4.el9_2.1"
+            },
+            {
+                "build_version": "2.42.6-5.el9_4.1"
+            },
+            {
+                "build_version": "2.42.6-6.el9_6.1"
+            },
+            {
+                "build_version": "2.42.6-6.el9_8.1"
+            },
+            {
+                "build_version": "2.42.6-6.el9_8.1"
+            },
+            {
+                "build_version": "2.42.12-4.el10_0.4"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.6-6.el9_8.1"
+            },
+            {
+                "build_version": "2.42.6-4.el9_2.1"
+            },
+            {
+                "build_version": "2.42.6-6.el9_6.1"
+            },
+            {
+                "build_version": "2.42.6-6.el9_8.1"
+            },
+            {
+                "build_version": "2.42.6-6.el9_8.1"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            },
+            {
+                "build_version": "2.42.12-4.el10_2.5"
+            }
+        ]
+    }
+}

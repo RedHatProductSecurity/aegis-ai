@@ -102,6 +102,54 @@ def _llm_base_url_hostname(host: str) -> str | None:
     return urlparse(raw).hostname
 
 
+# wire protocols Aegis knows how to speak, as accepted by AEGIS_LLM_PROVIDER
+SUPPORTED_LLM_PROVIDERS = ("openai", "anthropic", "google")
+
+ANTHROPIC_API_HOSTNAME = "api.anthropic.com"
+GOOGLE_API_HOSTNAME = "generativelanguage.googleapis.com"
+
+
+def _resolve_llm_provider(provider: str, host: str) -> str:
+    """Return which wire protocol to speak to ``AEGIS_LLM_HOST``.
+
+    An explicit ``AEGIS_LLM_PROVIDER`` always wins. Without it we fall back to
+    recognising the vendors' own hostnames, which is what Aegis has always
+    done. The override exists for gateways (Red Hat's EnMaaS, LiteLLM, vLLM,
+    ...) that re-export a vendor API under a hostname we cannot recognise:
+    sniffing sends those to the OpenAI-compatible branch, which is right for
+    some of their models and wrong for the rest.
+    """
+    explicit = provider.strip().lower()
+    if explicit:
+        if explicit not in SUPPORTED_LLM_PROVIDERS:
+            raise ValueError(
+                f"unsupported AEGIS_LLM_PROVIDER {provider!r}; "
+                f"expected one of {', '.join(SUPPORTED_LLM_PROVIDERS)}"
+            )
+        return explicit
+
+    llm_hostname = _llm_base_url_hostname(host)
+    if llm_hostname == ANTHROPIC_API_HOSTNAME:
+        return "anthropic"
+    elif llm_hostname == GOOGLE_API_HOSTNAME:
+        return "google"
+    else:
+        # Fallback to OpenAI/Local
+        return "openai"
+
+
+def _gateway_base_url(host: str, vendor_hostname: str) -> str | None:
+    """Return the base URL to hand a vendor SDK, or ``None`` for its default.
+
+    Only redirect the SDK when ``AEGIS_LLM_HOST`` names something other than
+    the vendor itself, i.e. a gateway. Returning ``None`` for the vendor's own
+    hostname keeps its SDK defaults (and its own base-URL env var) in play.
+    Without this an explicit ``AEGIS_LLM_PROVIDER`` would send the gateway's
+    token, and the prompt, to the vendor's public endpoint instead.
+    """
+    return None if _llm_base_url_hostname(host) == vendor_hostname else host
+
+
 # Ensure console logs include project-relative path and line number
 class RelativePathFilter(logging.Filter):
     def __init__(self) -> None:
@@ -183,12 +231,16 @@ class AppSettings(BaseSettings):
     # Aegis top level agent
     default_llm_host: str = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
     default_llm_model_name: str = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
+    # Optional; empty means "infer the provider from AEGIS_LLM_HOST", as before.
+    default_llm_provider: str = os.getenv("AEGIS_LLM_PROVIDER", "")
+    # Optional provider-neutral key. When empty each provider falls back to its
+    # own env var (OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY).
+    default_llm_api_key: str = os.getenv("AEGIS_LLM_API_KEY", "")
     default_llm_settings: Any = Field(default_factory=dict)
-    default_llm_temperature: float = get_env_float("AEGIS_LLM_TEMPERATURE", 0.055)
-    default_llm_top_p: float = get_env_float("AEGIS_LLM_TOP_P", 0.8)
     default_llm_max_tokens: int = get_env_int("AEGIS_LLM_MAX_TOKENS", 0)
     default_llm_prompt_timeout: int = get_env_int("AEGIS_LLM_TIMEOUT_SECS", 200)
     llm_max_jobs: int = get_env_int("AEGIS_LLM_MAX_JOBS", 4)
+    google_provider: bool = False
 
     # Aegis safety subagent
     safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
@@ -217,6 +269,7 @@ class AppSettings(BaseSettings):
     use_osidb_component_tool: bool = get_env_flag(
         "AEGIS_USE_OSIDB_COMPONENT_TOOL_CONTEXT", False
     )
+    use_osv_dev_tool: bool = get_env_flag("AEGIS_USE_OSV_DEV_TOOL_CONTEXT", True)
 
     # Enables the kernel-specific XGBoost impact classifier for Linux kernel CVEs.
     # When true, kernel CVEs are routed through the patch-feature pipeline before
@@ -230,8 +283,12 @@ class AppSettings(BaseSettings):
     # osidb-bot KPI cache
     bot_kpi_cache_dir: str = os.getenv("AEGIS_BOT_KPI_CACHE_DIR", "")
 
-    # bomq
+    # bomq. Local stand-ins on separate ports. An empty community URL skips that catalog.
     bomq_url: str = os.getenv("AEGIS_BOMQ_URL", "https://localhost:8080")
+    bomq_community_url: str = os.getenv(
+        "AEGIS_BOMQ_COMMUNITY_URL", "https://localhost:8081"
+    )
+    anitya_url: str = os.getenv("AEGIS_ANITYA_URL", "https://release-monitoring.org")
 
     # OSIDB
     osidb_server_url: str = os.getenv(
@@ -271,24 +328,23 @@ class AppSettings(BaseSettings):
         """
         Populate default_llm_settings immediately after class initialized.
         """
-        host = self.default_llm_host
-        llm_hostname = _llm_base_url_hostname(host)
+        provider = _resolve_llm_provider(
+            self.default_llm_provider, self.default_llm_host
+        )
 
-        self.model_kwargs: dict[str, Any] = {
-            "temperature": self.default_llm_temperature,
-            "top_p": self.default_llm_top_p,
-        }
+        self.model_kwargs: dict[str, Any] = {}
 
         # only override the max_tokens settings when a value is provided in env
         if self.default_llm_max_tokens != 0:
             self.model_kwargs["max_tokens"] = self.default_llm_max_tokens
 
-        if llm_hostname == "api.anthropic.com":
+        if provider == "anthropic":
             from pydantic_ai.models.anthropic import AnthropicModelSettings
 
             self.default_llm_settings = AnthropicModelSettings(**self.model_kwargs)
 
-        elif llm_hostname == "generativelanguage.googleapis.com":
+        elif provider == "google":
+            self.google_provider = True
             # lazy import of modules to speed up Aegis CLI
             from google.genai.types import (
                 HarmBlockThreshold,
@@ -340,29 +396,40 @@ class AppSettings(BaseSettings):
         """
 
         host = self.default_llm_host
-        llm_hostname = _llm_base_url_hostname(host)
+        provider = _resolve_llm_provider(self.default_llm_provider, host)
 
         provider_kwargs: _ProviderKwargs = {
             "http_client": self._get_http_client(),
         }
+        # Leave unset when no provider-neutral key is configured, so each
+        # provider keeps reading its own vendor env var as it always has.
+        api_key = self.default_llm_api_key or None
 
-        if llm_hostname == "api.anthropic.com":
+        if provider == "anthropic":
             from pydantic_ai.models.anthropic import AnthropicModel
             from pydantic_ai.providers.anthropic import AnthropicProvider
 
             return AnthropicModel(
                 model_name=self.default_llm_model_name,
-                provider=AnthropicProvider(**provider_kwargs),
+                provider=AnthropicProvider(
+                    api_key=api_key,
+                    base_url=_gateway_base_url(host, ANTHROPIC_API_HOSTNAME),
+                    **provider_kwargs,
+                ),
             )
 
-        elif llm_hostname == "generativelanguage.googleapis.com":
+        elif provider == "google":
             logger.info(f"model_name: {self.default_llm_model_name}")
             from pydantic_ai.models.google import GoogleModel
             from pydantic_ai.providers.google import GoogleProvider
 
             return GoogleModel(
                 model_name=self.default_llm_model_name,
-                provider=GoogleProvider(**provider_kwargs),
+                provider=GoogleProvider(
+                    api_key=api_key,
+                    base_url=_gateway_base_url(host, GOOGLE_API_HOSTNAME),
+                    **provider_kwargs,
+                ),
             )
 
         else:
@@ -371,7 +438,11 @@ class AppSettings(BaseSettings):
 
             return OpenAIChatModel(
                 model_name=self.default_llm_model_name,
-                provider=OpenAIProvider(base_url=f"{host}/v1/", **provider_kwargs),
+                provider=OpenAIProvider(
+                    base_url=f"{host.rstrip('/')}/v1/",
+                    api_key=api_key,
+                    **provider_kwargs,
+                ),
             )
 
 

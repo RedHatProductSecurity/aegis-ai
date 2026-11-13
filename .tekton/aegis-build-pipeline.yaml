@@ -16,6 +16,10 @@ spec:
     description: Revision of the Source Repository
     name: revision
     type: string
+  - default: main
+    description: Revision supplying the pipeline's extracted Task definitions; PR runs use their source revision.
+    name: pipeline-revision
+    type: string
   - description: Fully Qualified Output Image
     name: output-image
     type: string
@@ -142,7 +146,7 @@ spec:
       - name: name
         value: init
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-init:0.4.3@sha256:5197c2d81b0d0babe7468e8c06a9281fdf0654bba369faca4492233dc88f54e4
+        value: quay.io/konflux-ci/tekton-catalog/task-init:0.4.3@sha256:67bea82c44ab9824b81e60b9626bef36545e5cd5206b1edb8435f9f93526f57a
       - name: kind
         value: task
       resolver: bundles
@@ -265,7 +269,7 @@ spec:
       - name: name
         value: git-clone-oci-ta
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-git-clone-oci-ta:0.2.6@sha256:a3678910c2bf9187a66a96066193cb41046fbb7097160bf2be6a374ed5e49d30
+        value: quay.io/konflux-ci/tekton-catalog/task-git-clone-oci-ta:0.2.6@sha256:c3c1071a99310be07d5706ea3ef7b4311ebccb17b17b839e606180ee396497dc
       - name: kind
         value: task
       resolver: bundles
@@ -291,7 +295,7 @@ spec:
       - name: name
         value: prefetch-dependencies-oci-ta
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-prefetch-dependencies-oci-ta:0.11.0@sha256:7ffdaab6322c4bed64297eb79f767d92609a3e24bd123b14dc73536c038bf5b7
+        value: quay.io/konflux-ci/tekton-catalog/task-prefetch-dependencies-oci-ta:0.11.0@sha256:3839c8468b08b3aab55f4cc92e645ad275012f8ef8235a504aca397121a9e7da
       - name: kind
         value: task
       resolver: bundles
@@ -316,17 +320,17 @@ spec:
       stepTemplate: {volumeMounts: [{name: workdir, mountPath: /var/workdir}]}
       steps:
       - name: use-trusted-artifact
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:680738c67638d6708a852c08025f1d988105795a5f2b940d37c95fb7f86a415a
+        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:d5bdc1fce147691cc30b7aed79a602d132ff884a64b5ffc24cb7c7f074c191e7
         args: [use, $(params.SOURCE_ARTIFACT)=/var/workdir/source]
       - name: git-tags-to-image-labels
-        image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:1be401964f508679566cc0cf959449d6f3258be79fc1cdbab0c6e53dd1fe8940
+        image: registry.fedoraproject.org/fedora-toolbox:latest@sha256:1df1bd9e60e286dcca793a62092cdbbcaa0cb3058b39d1faf9bca01124eb0b2f
         workingDir: /var/workdir/source
         env:
         - name: APPLY_GIT_TAG_LABELS
           value: $(params.APPLY_GIT_TAG_LABELS)
         script: |
           #!/bin/bash -ex
-          git describe --tags
+          git describe --tags ||:
           if [[ "$APPLY_GIT_TAG_LABELS" != "true" ]]; then
             echo "[]" > "$(results.IMAGE_LABELS.path)"
             exit 0
@@ -387,7 +391,7 @@ spec:
       - name: name
         value: buildah-oci-ta
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.14.0@sha256:1cca06769911f4b5a2ce534660674b2267b1a4f4fa17d8c88cb2be4e3e113c57
+        value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.14.1@sha256:c02e7ce2ba4ee2fece1320bdef977d517557f4b909731143d35be30c9788977d
       - name: kind
         value: task
       resolver: bundles
@@ -409,7 +413,7 @@ spec:
       - name: name
         value: build-image-index
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-build-image-index:0.4@sha256:654446d8ec028b20ed6ada8a96486ff16692a25192755aa04a99cea8e0afb7e2
+        value: quay.io/konflux-ci/tekton-catalog/task-build-image-index:0.4@sha256:6c8091183f05f93c022f07eef03f44a411f1e4d43c39057051306ad1e78d5fc2
       - name: kind
         value: task
       resolver: bundles
@@ -430,7 +434,7 @@ spec:
       - name: name
         value: source-build-oci-ta
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-source-build-oci-ta:0.4.0@sha256:7a387194cf725b36acf92fd006ba97f0a9853d01f74273496b99146496b56ef7
+        value: quay.io/konflux-ci/tekton-catalog/task-source-build-oci-ta:0.4.0@sha256:4bf27ae2f9de1da9f63258f8a6c2f31e34e7270d8ab1004e61f1abe0756f6948
       - name: kind
         value: task
       resolver: bundles
@@ -452,7 +456,7 @@ spec:
       - name: name
         value: deprecated-image-check
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-deprecated-image-check:0.5@sha256:81b7cad8d5fd0148b157d622f4064f57d38aa33c142275050c8a4727d1e2144c
+        value: quay.io/konflux-ci/tekton-catalog/task-deprecated-image-check:0.5@sha256:f86e420c8af92a8ed9ca8f82dee3cd14f8ba03cc592583595ea78642513f00c2
       - name: kind
         value: task
       resolver: bundles
@@ -474,7 +478,7 @@ spec:
       - name: name
         value: roxctl-scan
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-roxctl-scan:0.1.1@sha256:2fafbf5439702731ad24a09bed677c371fda1f8a7ecf5ed53f7b7f3c71079980
+        value: quay.io/konflux-ci/tekton-catalog/task-roxctl-scan:0.2@sha256:78e49dd18ed8e438d28cbd27e7d93f98b3dab35dd77df7930810b747c6033d6e
       - name: kind
         value: task
       resolver: bundles
@@ -494,7 +498,7 @@ spec:
       - name: name
         value: ecosystem-cert-preflight-checks
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-ecosystem-cert-preflight-checks:0.2@sha256:cc7d71d9be01e9221d8753a1f1a7caaf0fb93048df69e9a95c359068dc730578
+        value: quay.io/konflux-ci/tekton-catalog/task-ecosystem-cert-preflight-checks:0.2@sha256:0b1783a11d9066cd4a26fb20251785cf7283258ebe7a1f4e9c2247f6d57b7064
       - name: kind
         value: task
       resolver: bundles
@@ -540,7 +544,7 @@ spec:
       - name: name
         value: clamav-scan
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-clamav-scan:0.3.4@sha256:6c7e4e239cb7f81b6e1bbfdfe6bda77c6902dd801afcad05a315c247ec5e7f88
+        value: quay.io/konflux-ci/tekton-catalog/task-clamav-scan:0.3.6@sha256:0428b55c59b3d830b60ea1fcbfcd94b858b158e493fbd1a3dfb79192fff95662
       - name: kind
         value: task
       resolver: bundles
@@ -622,314 +626,17 @@ spec:
       operator: in
       values:
       - "false"
-    taskSpec:
-      description: >-
-        Discover SARIF artifacts attached to the built image by the SAST tasks,
-        pull them, format findings with csgrep, log a human-readable summary,
-        fail the pipeline when error-level findings are present, and upload
-        SARIF results to GitHub Code Scanning.
+    taskRef:
+      resolver: git
       params:
-      - name: image-url
-        type: string
-      - name: image-digest
-        type: string
-      - name: git-url
-        type: string
-      - name: git-ref
-        type: string
+      - name: url
+        value: $(params.git-url)
       - name: revision
-        type: string
-      volumes:
-      - name: sarif-data
-        emptyDir: {}
-      stepTemplate:
-        volumeMounts:
-        - name: sarif-data
-          mountPath: /var/workdir
-      steps:
-      - name: pull-sarif
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:680738c67638d6708a852c08025f1d988105795a5f2b940d37c95fb7f86a415a
-        env:
-        - name: IMAGE_URL
-          value: $(params.image-url)
-        - name: IMAGE_DIGEST
-          value: $(params.image-digest)
-        script: |
-          #!/bin/bash
-          set -euo pipefail
-
-          SARIF_DIR="/var/workdir/sarif"
-          mkdir -p "$SARIF_DIR"
-
-          [ -n "$IMAGE_URL" ] && [ -n "$IMAGE_DIGEST" ] || {
-            echo "ERROR: IMAGE_URL or IMAGE_DIGEST is empty"; exit 1
-          }
-          IMAGE_REF="${IMAGE_URL}@${IMAGE_DIGEST}"
-          echo "=========================================="
-          echo "Discovering SARIF artifacts for ${IMAGE_REF}"
-          echo "=========================================="
-
-          DISCOVER_ERR=$(mktemp)
-          DISCOVER_JSON=$(oras discover --format json "$IMAGE_REF" 2>"$DISCOVER_ERR") || {
-            echo "ERROR: oras discover failed."
-            cat "$DISCOVER_ERR"
-            exit 1
-          }
-          rm -f "$DISCOVER_ERR"
-
-          if ! SARIF_REFS=$(echo "$DISCOVER_JSON" | jq -r --arg base "$IMAGE_URL" '
-            [(.referrers // .manifests // [])[]
-             | select(.artifactType == "application/sarif+json")
-             | (.reference // ($base + "@" + .digest))]
-            | .[]
-          '); then
-            echo "ERROR: Failed to parse oras discover output."
-            echo "Raw output:"
-            echo "$DISCOVER_JSON"
-            exit 1
-          fi
-
-          if [ -z "$SARIF_REFS" ]; then
-            echo "No SARIF artifacts found attached to the image."
-            echo "SAST tasks may have been skipped or produced no output."
-            echo "0" > "$SARIF_DIR/gate_exit"
-            printf 'TOTAL_ERRORS=0\nTOTAL_WARNINGS=0\nTOTAL_NOTES=0\nPULL_FAILURES=0\n' > "$SARIF_DIR/summary.env"
-            exit 0
-          fi
-
-          SARIF_COUNT=$(echo "$SARIF_REFS" | wc -l)
-          echo "Found ${SARIF_COUNT} SARIF artifact(s)."
-
-          TOTAL_ERRORS=0
-          TOTAL_WARNINGS=0
-          TOTAL_NOTES=0
-          PULL_FAILURES=0
-
-          REF_IDX=0
-          while IFS= read -r ref; do
-            [ -n "$ref" ] || continue
-            echo "------------------------------------------"
-            echo "Pulling: ${ref}"
-            REF_IDX=$((REF_IDX + 1))
-            PULL_DIR="$SARIF_DIR/ref_${REF_IDX}"
-            mkdir -p "$PULL_DIR"
-            if ! oras pull -o "$PULL_DIR" "$ref" 2>&1; then
-              echo "ERROR: Failed to pull ${ref}."
-              PULL_FAILURES=$((PULL_FAILURES + 1))
-              continue
-            fi
-            # Move pulled SARIF files up so all steps see a flat directory.
-            # Prefix with ref index to avoid filename collisions across tasks.
-            for f in "$PULL_DIR"/*; do
-              [ -f "$f" ] || continue
-              mv "$f" "$SARIF_DIR/${REF_IDX}_$(basename "$f")"
-            done
-            rmdir "$PULL_DIR" 2>/dev/null || true
-          done <<< "$SARIF_REFS"
-
-          for sarif_file in "$SARIF_DIR"/*; do
-            [ -f "$sarif_file" ] || continue
-            jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
-            ERRORS=$(jq '[.runs[] | (.results // [])[] | select(.level == "error")] | length' "$sarif_file" 2>/dev/null) || ERRORS=0
-            WARNINGS=$(jq '[.runs[] | (.results // [])[] | select(.level == "warning" or .level == null)] | length' "$sarif_file" 2>/dev/null) || WARNINGS=0
-            NOTES=$(jq '[.runs[] | (.results // [])[] | select(.level == "note" or .level == "none")] | length' "$sarif_file" 2>/dev/null) || NOTES=0
-            TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
-            TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
-            TOTAL_NOTES=$((TOTAL_NOTES + NOTES))
-          done
-
-          {
-            echo "TOTAL_ERRORS=${TOTAL_ERRORS}"
-            echo "TOTAL_WARNINGS=${TOTAL_WARNINGS}"
-            echo "TOTAL_NOTES=${TOTAL_NOTES}"
-            echo "PULL_FAILURES=${PULL_FAILURES}"
-          } > "$SARIF_DIR/summary.env"
-
-          GATE_EXIT=0
-          if [ "$PULL_FAILURES" -gt 0 ]; then
-            GATE_EXIT=1
-          elif [ "$TOTAL_ERRORS" -gt 0 ]; then
-            GATE_EXIT=1
-          fi
-          echo "$GATE_EXIT" > "$SARIF_DIR/gate_exit"
-      - name: upload-sarif
-        image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:680738c67638d6708a852c08025f1d988105795a5f2b940d37c95fb7f86a415a
-        env:
-        - name: GIT_URL
-          value: $(params.git-url)
-        - name: GIT_COMMIT_SHA
-          value: $(params.revision)
-        - name: GIT_REF
-          value: $(params.git-ref)
-        - name: GITHUB_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: aegis-ai-code-scanning-alerts
-              key: token
-              optional: true
-        script: |
-          #!/bin/bash
-          set -euo pipefail
-
-          SARIF_DIR="/var/workdir/sarif"
-
-          echo "=========================================="
-          echo "GitHub Code Scanning SARIF Upload"
-          echo "=========================================="
-
-          if [ -z "${GIT_COMMIT_SHA:-}" ] || [ -z "${GIT_REF:-}" ]; then
-            echo "Skipping: revision or git-ref not set."
-            exit 0
-          fi
-
-          # GitHub API requires full ref (refs/heads/*, refs/tags/*, refs/pull/*/head).
-          # PaC's {{target_branch}} expands to a bare name for branches (e.g. "main").
-          if [[ "$GIT_REF" != refs/* ]]; then
-            GIT_REF="refs/heads/$GIT_REF"
-          fi
-
-          # GitHub rejects multiple runs with the same category in one SARIF
-          # file, and uploading separate files causes later (empty) uploads to
-          # mark earlier findings as "fixed". Merge all results into one run.
-          MERGED="$SARIF_DIR/merged.sarif.json"
-          FIRST=true
-          for sarif_file in "$SARIF_DIR"/*; do
-            [ -f "$sarif_file" ] || continue
-            jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
-            if $FIRST; then
-              cp "$sarif_file" "$MERGED"
-              FIRST=false
-            else
-              jq -s '
-                .[0].runs[0].results = (
-                  (.[0].runs[0].results // []) +
-                  [.[1].runs[].results // [] | .[]]
-                ) | .[0]
-              ' "$MERGED" "$sarif_file" > "$MERGED.tmp"
-              mv "$MERGED.tmp" "$MERGED"
-            fi
-          done
-
-          if [ "$FIRST" = true ]; then
-            echo "Skipping: no SARIF files to upload."
-            exit 0
-          fi
-
-          RESULT_COUNT=$(jq '[.runs[0].results // [] | .[]] | length' "$MERGED")
-          echo "Merged SARIF: 1 run, ${RESULT_COUNT} result(s)."
-
-          if [ -z "${GITHUB_TOKEN:-}" ]; then
-            echo "Skipping: GITHUB_TOKEN not set (aegis-ai-code-scanning-alerts secret may be missing)."
-            exit 0
-          fi
-          TOKEN="$GITHUB_TOKEN"
-
-          REPO_SLUG=$(echo "$GIT_URL" | sed -n 's|.*github\.com[/:]||p' | sed 's|\.git$||' | sed 's|[?#].*||')
-          if [ -z "$REPO_SLUG" ]; then
-            echo "Skipping: could not extract owner/repo from git-url."
-            exit 0
-          fi
-
-          UPLOAD_URL="https://api.github.com/repos/${REPO_SLUG}/code-scanning/sarifs"
-          TMP_PAYLOAD=$(mktemp)
-          TMP_RESP=$(mktemp)
-          # ref determines which Code Scanning "bucket" results appear under
-          gzip -c "$MERGED" | base64 -w0 | \
-            jq -Rs --arg sha "$GIT_COMMIT_SHA" --arg ref "$GIT_REF" \
-              '{commit_sha: $sha, ref: $ref, sarif: .}' > "$TMP_PAYLOAD"
-          set +e
-          HTTP_CODE=$(curl -sS --connect-timeout 10 --max-time 120 \
-            -X POST "$UPLOAD_URL" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: application/json" \
-            -d @"$TMP_PAYLOAD" \
-            -o "$TMP_RESP" -w '%{http_code}')
-          RC=$?
-          set -e
-          rm -f "$TMP_PAYLOAD"
-          if [ "$RC" -eq 0 ] && [ "$HTTP_CODE" = "202" ]; then
-            echo "SARIF upload: success (HTTP 202)"
-            cat "$TMP_RESP" 2>/dev/null || true
-          else
-            echo "SARIF upload: failed (HTTP ${HTTP_CODE})"
-            cat "$TMP_RESP" 2>/dev/null || true
-          fi
-          rm -f "$TMP_RESP"
-      - name: report
-        image: quay.io/konflux-ci/konflux-test:v1.5.9@sha256:7faaebc542c61704003fecbab81a9c81c9770b4df8c5bba18459fba3f58e9c51
-        script: |
-          #!/bin/bash
-          set -euo pipefail
-
-          SARIF_DIR="/var/workdir/sarif"
-
-          if [ ! -f "$SARIF_DIR/gate_exit" ]; then
-            echo "ERROR: pull-sarif step did not produce gate status."
-            exit 1
-          fi
-
-          echo "=========================================="
-          echo "SAST Report"
-          echo "=========================================="
-
-          HAS_FINDINGS=false
-          for sarif_file in "$SARIF_DIR"/*; do
-            [ -f "$sarif_file" ] || continue
-            [[ "$(basename "$sarif_file")" == merged.sarif.json ]] && continue
-            jq -e '.runs' "$sarif_file" >/dev/null 2>&1 || continue
-
-            FILENAME=$(basename "$sarif_file")
-            TOOL_NAME=$(jq -r '.runs[0].tool.driver.name // "unknown"' "$sarif_file" 2>/dev/null) || TOOL_NAME="unknown"
-            TOTAL_RESULTS=$(jq '[.runs[] | (.results // [])[]] | length' "$sarif_file" 2>/dev/null) || TOTAL_RESULTS=0
-
-            echo ""
-            echo "------------------------------------------"
-            echo "  File: ${FILENAME}"
-            echo "  Tool: ${TOOL_NAME}"
-            echo "  Total findings: ${TOTAL_RESULTS}"
-
-            if [ "$TOTAL_RESULTS" -gt 0 ]; then
-              HAS_FINDINGS=true
-              echo ""
-              csgrep "$sarif_file" 2>/dev/null | sed 's/^/  /' || {
-                echo "  (csgrep formatting failed)"
-              }
-            fi
-          done
-
-          if [ "$HAS_FINDINGS" = false ]; then
-            echo ""
-            echo "No findings to display."
-          fi
-
-          source "$SARIF_DIR/summary.env"
-
-          echo ""
-          echo "=========================================="
-          echo "SAST Summary"
-          echo "=========================================="
-          echo "  Total errors:   ${TOTAL_ERRORS}"
-          echo "  Total warnings: ${TOTAL_WARNINGS}"
-          echo "  Total notes:    ${TOTAL_NOTES}"
-          echo "=========================================="
-
-          GATE_EXIT=$(cat "$SARIF_DIR/gate_exit")
-
-          if [ "$PULL_FAILURES" -gt 0 ]; then
-            echo ""
-            echo "FAILED: ${PULL_FAILURES} SARIF artifact(s) could not be retrieved."
-          elif [ "$TOTAL_ERRORS" -gt 0 ]; then
-            echo ""
-            echo "FAILED: ${TOTAL_ERRORS} error-level SAST finding(s) detected."
-            echo "Review the findings above and fix them before merging."
-          else
-            echo ""
-            echo "PASSED: No error-level SAST findings."
-          fi
-
-          exit "$GATE_EXIT"
+        value: $(params.pipeline-revision)
+      - name: pathInRepo
+        value: .tekton/sast-report.yaml
+      - name: kind
+        value: task
   - name: apply-tags
     params:
     - name: IMAGE_URL
@@ -948,7 +655,7 @@ spec:
       - name: name
         value: apply-tags
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-apply-tags:0.3.2@sha256:a1d5e6d0912de4e39a19b4aa5587526cb8b20260ac32d00ac5c8c4581e3c2ea1
+        value: quay.io/konflux-ci/tekton-catalog/task-apply-tags:0.3.2@sha256:610662163505af1af243bd7bea57443e1351c68b05405f7cd343dbc4262dec06
       - name: kind
         value: task
       resolver: bundles
@@ -971,7 +678,7 @@ spec:
       - name: name
         value: push-dockerfile-oci-ta
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-push-dockerfile-oci-ta:0.3.1@sha256:4c567d11296850230fe32e76d129834d3bf337a0cae9989b64279b7cfaa4e735
+        value: quay.io/konflux-ci/tekton-catalog/task-push-dockerfile-oci-ta:0.3.1@sha256:d9d5ecdc2f9ea3eeb10606fcaedb7db6e00949bfff213d6412dda16006ccdbde
       - name: kind
         value: task
       resolver: bundles
@@ -988,7 +695,7 @@ spec:
       - name: name
         value: rpms-signature-scan
       - name: bundle
-        value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2.2@sha256:f3d7323f549c3e8af2fc0e0a9ae9bd9314922d65b0f163e4a9331430f7bbdbd3
+        value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2.2@sha256:a09426471bb6300723ccca8f212cd71621db60ce1acf22bc0eef4e3ba17034de
       - name: kind
         value: task
       resolver: bundles

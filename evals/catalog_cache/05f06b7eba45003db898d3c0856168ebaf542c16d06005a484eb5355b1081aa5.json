@@ -1,0 +1,100 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=postgresql&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "8.4.20-8.el6_9"
+            },
+            {
+                "build_version": "9.2.24-9.el7_9.7"
+            },
+            {
+                "build_version": "12.22-12.module+el8.10.0+24952+3d791381"
+            },
+            {
+                "build_version": "15.19-1.module+el8.10.0+24831+9c841e4e"
+            },
+            {
+                "build_version": "16.15-1.module+el8.10.0+24863+d1dc0d60"
+            },
+            {
+                "build_version": "12.22-1.module+el8.4.0+24985+ffa880ed.7"
+            },
+            {
+                "build_version": "12.22-1.module+el8.6.0+25015+eae30833.7"
+            },
+            {
+                "build_version": "12.22-1.module+el8.8.0+25013+234c17ba.7"
+            },
+            {
+                "build_version": "15.19-1.module+el8.8.0+24926+55068be7"
+            },
+            {
+                "build_version": "13.23-9.el9_9"
+            },
+            {
+                "build_version": "15.19-1.module+el9.9.0+24999+2a5f6f73"
+            },
+            {
+                "build_version": "16.15-1.module+el9.9.0+24998+448a67e8"
+            },
+            {
+                "build_version": "18.6-1.module+el9.8.0+24816+5c11f535"
+            },
+            {
+                "build_version": "13.23-9.el9_9"
+            },
+            {
+                "build_version": "15.19-1.module+el9.9.0+24999+2a5f6f73"
+            },
+            {
+                "build_version": "16.15-1.module+el9.9.0+24998+448a67e8"
+            },
+            {
+                "build_version": "18.6-1.module+el9.8.0+24816+5c11f535"
+            },
+            {
+                "build_version": "13.10-1.el9_1"
+            },
+            {
+                "build_version": "13.14-1.el9_3"
+            },
+            {
+                "build_version": "13.23-1.el9_2.5"
+            },
+            {
+                "build_version": "15.19-1.module+el9.2.0+24900+35767d9a"
+            },
+            {
+                "build_version": "13.23-1.el9_4.4"
+            },
+            {
+                "build_version": "15.19-1.module+el9.4.0+24899+b7f8fff2"
+            },
+            {
+                "build_version": "16.15-1.module+el9.4.0+24928+8c59a6c4"
+            },
+            {
+                "build_version": "13.23-1.el9_6.5"
+            },
+            {
+                "build_version": "15.19-1.module+el9.6.0+24906+1a0a7a43"
+            },
+            {
+                "build_version": "16.15-1.module+el9.6.0+24915+52fd15c1"
+            },
+            {
+                "build_version": "13.23-6.el9_8"
+            },
+            {
+                "build_version": "15.19-1.module+el9.8.0+24800+a95bf172"
+            },
+            {
+                "build_version": "16.15-1.module+el9.8.0+24803+9dca000b"
+            },
+            {
+                "build_version": "18.6-1.module+el9.8.0+24816+5c11f535"
+            }
+        ]
+    }
+}

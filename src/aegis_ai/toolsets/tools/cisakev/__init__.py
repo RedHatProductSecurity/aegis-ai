@@ -22,7 +22,6 @@ from aegis_ai.toolsets.tools import (
 logger = logging.getLogger(__name__)
 
 cache_dir = pathlib.Path(f"{get_settings().config_dir}/cisakev")
-cache_dir.mkdir(parents=True, exist_ok=True)
 
 type CVEID = str
 JsonBlob = dict[str, Any]
@@ -133,6 +132,7 @@ class CISAClient:
                 raise  # If no cache and API fails, we must raise the error
 
         try:
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
             with self.cache_path.open("w", encoding="utf-8") as f:
                 json.dump(catalog_data, f)
             logger.info(f"Wrote fresh catalog data to cache: {self.cache_path}")

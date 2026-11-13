@@ -1,0 +1,39 @@
+{
+    "url": "{anitya}/api/project/11750",
+    "body": {
+        "packages": [
+            {
+                "distro": "Arch Linux",
+                "package_name": "rclone"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "rclone"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "rclone"
+            },
+            {
+                "distro": "OpenBSD",
+                "package_name": "rclone"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "rclone"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:rclone:rclone"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "rclone"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "rclone"
+            }
+        ]
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=prometheus-3.5.5&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "prometheus-3.5.5",
+                                "type": "generic",
+                                "version": "vendor"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "prometheus3.5"
+            }
+        ]
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/project/2074",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "netty"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "netty"
+            }
+        ]
+    }
+}

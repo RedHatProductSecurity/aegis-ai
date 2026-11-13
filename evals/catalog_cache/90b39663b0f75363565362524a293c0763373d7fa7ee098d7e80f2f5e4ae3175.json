@@ -1,0 +1,248 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=zabbix%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "zabbix",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-agent",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-dbfiles-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-dbfiles-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-dbfiles-sqlite3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-proxy",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-proxy-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-proxy-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-proxy-sqlite3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-selinux",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-server-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-server-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-web",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-web-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix-web-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-agent",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-dbfiles-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-dbfiles-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-dbfiles-sqlite3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-proxy",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-proxy-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-proxy-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-proxy-sqlite3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-selinux",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-server-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-server-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-web",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-web-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix6.0-web-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-agent",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-dbfiles-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-dbfiles-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-dbfiles-sqlite3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-proxy",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-proxy-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-proxy-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-proxy-sqlite3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-selinux",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-server-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-server-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-web",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-web-mysql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "zabbix7.0-web-pgsql",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 48
+    }
+}

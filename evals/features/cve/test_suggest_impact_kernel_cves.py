@@ -45,6 +45,20 @@ RESULTS_PATH = Path(__file__).resolve().parent / "kernel_eval_results.json"
 
 SEVERITY_RANK = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "NONE": 4}
 
+# per evaluation case exclusion of fields in OSIDB flaw data
+OSIDB_FIELD_MASKS: dict[str, list[str]] = {
+    "CVE-2026-98432": ["cvss_scores", "references"],
+}
+
+# per evaluation case disabling of tools
+DISABLED_TOOLS: dict[str, list[str]] = {
+    "CVE-2026-98432": [
+        "external_references_tool",
+        "osv_dev_cve_tool",
+        "osv_dev_ghsa_tool",
+    ],
+}
+
 # Cases where underestimation failures are expected due to structural gaps
 # that cannot be resolved by prompt or classifier tuning alone.  Each entry
 # maps a CVE ID to a dict with ``known_to_fail_evaluators`` (list of
@@ -59,21 +73,14 @@ SEVERITY_RANK = {"CRITICAL": 0, "IMPORTANT": 1, "MODERATE": 2, "LOW": 3, "NONE":
 # To waive an evaluator for a case, add its CVE ID here.  Review
 # kernel_eval_results.json after each run to confirm before waiving.
 KNOWN_FAILURES: dict[str, dict] = {
-    "CVE-2023-54213": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": "underestimation: predicted LOW, expected MODERATE",
-    },
     "CVE-2025-39809": {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": "sets C:H and I:H for internal kernel stack buffer overflow without plausible user-data impact path",
     },
+    # FIXME: tweak RULES_KERNEL_ADDENDUM to eliminate this failure
     "CVE-2026-46082": {
         "known_to_fail_evaluators": ["UnderestimationEvaluator"],
         "reason": "underestimation: predicted LOW, expected MODERATE",
-    },
-    "CVE-2026-46333": {
-        "known_to_fail_evaluators": ["UnderestimationEvaluator"],
-        "reason": "underestimation: predicted MODERATE, expected IMPORTANT",
     },
 }
 
@@ -223,6 +230,8 @@ def _load_cases() -> list[SuggestImpactCase]:
                 expected_impact=expected_impact or None,
                 expected_cvss3_score=expected_cvss,
                 expected_cvss3_vector=expected_vector,
+                mask_osidb_fields=OSIDB_FIELD_MASKS.get(cve_id),
+                disable_tools=DISABLED_TOOLS.get(cve_id),
                 metadata=metadata,
             )
             cases.append(case)
@@ -238,9 +247,19 @@ evals = common_feature_evals + [
 ]
 
 
+_case_overrides: dict[str, SuggestImpactCase] = {
+    c.inputs: c for c in cases if c._extra_exclude_osidb_fields or c._disabled_tools
+}
+
+
 async def suggest_impact_kernel(cve_id: CVEID) -> SuggestImpactModel:
     feature = SuggestImpact(rh_feature_agent)
-    result = await feature.exec(cve_id)
+    case = _case_overrides.get(str(cve_id))
+    result = await feature.exec(
+        cve_id,
+        extra_exclude_osidb_fields=case._extra_exclude_osidb_fields if case else None,
+        disabled_tools=case._disabled_tools if case else None,
+    )
     return result.output
 
 

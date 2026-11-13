@@ -1,0 +1,10 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=jws5-tomcat&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "9.0.87-14.redhat_00013.1.el8jws"
+            }
+        ]
+    }
+}

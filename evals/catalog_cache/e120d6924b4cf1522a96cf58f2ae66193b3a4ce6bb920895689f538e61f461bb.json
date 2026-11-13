@@ -1,0 +1,6 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=org.bouncycastle%2Fbcprov-jdk15on&strict=true&include_types=maven&limit=20",
+    "body": {
+        "data": []
+    }
+}

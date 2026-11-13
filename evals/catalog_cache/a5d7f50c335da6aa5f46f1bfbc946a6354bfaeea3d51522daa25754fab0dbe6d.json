@@ -1,0 +1,363 @@
+{
+    "url": "{anitya}/api/project/6176",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "gambas3"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-devel"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-args"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-cairo"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-chart"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-clipper"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-complex"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-compress"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-crypt"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-data"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db-form"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db-mysql"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db-odbc"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db-postgresql"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db-sqlite2"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-db-sqlite3"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-dbus"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-desktop"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-desktop-gnome"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-desktop-x11"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-eval-highlight"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-form"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-form-dialog"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-form-editor"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-form-mdi"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-form-stock"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-form-terminal"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-gmp"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-gsl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-gtk"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-gtk-opengl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-gtk3"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-httpd"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-image"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-image-effect"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-image-imlib"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-image-io"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-inotify"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-libxml"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-logging"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-map"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-markdown"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-media"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-media-form"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-memcached"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-net-curl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-mime"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-sdl-sound"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-mysql"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-qt5-opengl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-report"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-web"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-xml"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-xml-html"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-runtime"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-ncurses"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-openal"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-opengl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-sdl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-sdl2-audio"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-signal"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-util"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-util-web"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-net"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-net-smtp"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-opengl-sge"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-pcre"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-qt5-webkit"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-ide"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-net-pop3"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-openssl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-option"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-qt4-ext"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-qt5"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-scanner"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-settings"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-v4l"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-opengl-glsl"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-opengl-glu"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-pdf"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-sdl2"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-web-form"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-xml-rpc"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-xml-xslt"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-qt4"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-gb-vb"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "gambas3-script"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "gambas3"
+            }
+        ]
+    }
+}

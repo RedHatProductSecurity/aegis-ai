@@ -1,0 +1,83 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Ahdf5%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "bioread[hdf5]",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-mpich-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-openmpi-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "hdf5storage",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "java-hdf5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python-hdf5storage",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-bioread+hdf5",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "python3-hdf5storage",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 15
+    }
+}

@@ -1,0 +1,208 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=org.apache.thrift%2Flibthrift&strict=true&include_types=maven&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.12.0"
+                            },
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.13.0.redhat-00004"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "redhat-fuse-maven-repository.zip"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-spark-operator-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cpu-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cpu-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cuda130-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cuda130-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-rocm64-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-spark-operator-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th-torch-cpu-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th-torch-cuda-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cpu-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-cuda130-torch210-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.16.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-th06-rocm64-torch291-py312-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "org.apache.thrift/libthrift",
+                                "type": "maven",
+                                "version": "0.24.0"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhoai/odh-modelmesh-rhel9"
+            }
+        ]
+    }
+}

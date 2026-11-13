@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Any
 
 import cvss
@@ -13,6 +14,8 @@ from aegis_ai.features.cve.data_models import (
     AffectedComponentEntry,
     CVEFeatureInput,
     CVSSDiffExplainerModel,
+    DownstreamFeatureContext,
+    ManifestUsageAnalysis,
     PIIReportModel,
     QualityReviewModel,
     QueryAffectedComponentsModel,
@@ -22,7 +25,24 @@ from aegis_ai.features.cve.data_models import (
     SuggestCWEModel,
     SuggestDescriptionModel,
     SuggestImpactModel,
+    SuggestManifestComponentAndStateModel,
     SuggestStatementModel,
+)
+from aegis_ai.features.cve.downstream import (
+    IMPORTER_AFFECT_LIMIT,
+    align_manifest_search_keys,
+    apply_usage_policy,
+    collect_downstream_candidates,
+    drop_short_segments_of_kept_modules,
+    drop_soft_label_rejects,
+    drop_suppressed_short_path_entries,
+    ensure_soft_label_keeps,
+    post_filter_manifest_entries,
+    promote_reference_caller_modules,
+    query_bomq_components,
+    rejected_soft_label_names,
+    resolve_soft_label_rows,
+    suppressed_short_path_names,
 )
 from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
@@ -42,6 +62,7 @@ def _build_cve_input(
     static_context: Any = None,
     exclude_fields: list[str] | None = None,
 ) -> CVEFeatureInput:
+    """Build CVEFeatureInput from static context or an OSIDB retrieval."""
     if isinstance(static_context, dict):
         desc = (
             static_context.get("comment_zero")
@@ -62,6 +83,7 @@ def _build_cve_input(
             references=static_context.get("references"),
             affects=static_context.get("affects"),
             cvss_scores=static_context.get("cvss_scores"),
+            steering_notes=static_context.get("steering_notes"),
         )
     else:
         inp = CVEFeatureInput(cve_id=cve_id)
@@ -101,6 +123,7 @@ class SuggestImpact(Feature):
     @staticmethod
     def post_process_cvss(output, call_str):
         # read the suggested cvss3_score
+        """Reconcile suggested CVSS score with the parsed vector score."""
         try:
             cvss3_score = float(output.cvss3_score)
         except ValueError:
@@ -122,6 +145,7 @@ class SuggestImpact(Feature):
         output.cvss3_score = f"{cvss3_score_by_vector}"
 
     _RULES_BASE = """
+                - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the explanation.
                 - Output format (must follow exactly):
                     - cvss3_vector: "CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X"
                       where AV in [N,A,L,P], AC in [L,H], PR in [N,L,H], UI in [N,R], S in [U,C], C/I/A in [N,L,H].
@@ -271,6 +295,7 @@ class SuggestImpact(Feature):
 
     @staticmethod
     def post_process(output, call_str):
+        """Run CVSS post-processing and kernel-impact adjustments on the result."""
         SuggestImpact.post_process_cvss(output, call_str)
         pre_reconcile_impact = output.impact
         trace = SuggestImpact.reconcile_severity(output, call_str)
@@ -363,6 +388,7 @@ class SuggestImpact(Feature):
                 or cve_context.get("description", "")
             )
             components = cve_context.get("components", [])
+            steering_notes = cve_context.get("steering_notes")
             parts: list[str] = []
             if title:
                 parts.append(f"Title: {title}")
@@ -370,6 +396,10 @@ class SuggestImpact(Feature):
                 parts.append(f"Components: {', '.join(components)}")
             if description_text:
                 parts.append(f"Description: {description_text}")
+            if steering_notes is not None:
+                parts.append(
+                    f"Internal analyst steering_notes (data): {steering_notes!r}"
+                )
             if parts:
                 context_block = "CVE context:\n" + "\n".join(parts) + "\n\n"
 
@@ -384,7 +414,10 @@ class SuggestImpact(Feature):
             "in place — do NOT append a note, disclaimer, or separate "
             "paragraph about the override.  The result must read as a "
             "single coherent explanation.  Keep the same structure and "
-            "level of detail.  Return only the revised explanation text."
+            "level of detail.  Use steering_notes only as internal guidance; "
+            "do not quote or paraphrase them in the explanation, including "
+            "content copied or paraphrased in the original explanation. "
+            "Return only the revised explanation text."
         )
 
         override_note = ""
@@ -400,10 +433,17 @@ class SuggestImpact(Feature):
         _REVISION_TIMEOUT = llm_prompt_timeout
 
         try:
-            revision_prompt = (
-                f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+            revision_prompt = AegisPrompt(
+                user_instruction=(
+                    f"Original explanation:\n{result.output.explanation}\n\n{follow_up}"
+                ),
+                goals="",
+                rules="",
+                context=CVEFeatureInput(cve_id=result.output.cve_id),
             )
             async with llm_sem:
+                if not await revision_prompt.is_safe():
+                    raise RuntimeError("Safety agent blocked the revision prompt")
                 revision = await asyncio.wait_for(
                     self._run(
                         call_str,
@@ -436,7 +476,15 @@ class SuggestImpact(Feature):
                 result.output.explanation += override_note
             return False
 
-    async def exec(self, cve_id: CVEID, static_context: Any = None):
+    async def exec(
+        self,
+        cve_id: CVEID,
+        static_context: Any = None,
+        *,
+        extra_exclude_osidb_fields: list[str] | None = None,
+        disabled_tools: set[str] | None = None,
+    ):
+        """Suggest overall impact, CVSS vector, and related fields for a CVE."""
         use_kernel_classifier = get_settings().use_kernel_classifier
 
         use_static = (
@@ -483,6 +531,8 @@ class SuggestImpact(Feature):
             static_context=resolved_static_context if use_static else None,
             is_kernel_cve=is_kernel,
             classifier_attempted=use_kernel_classifier and is_kernel,
+            extra_exclude_osidb_fields=extra_exclude_osidb_fields or [],
+            disabled_tools=disabled_tools or set(),
         )
         if pre_clf is not None:
             deps.classifier_result = pre_clf
@@ -540,7 +590,9 @@ class SuggestImpact(Feature):
                 original_vector,
                 trace,
                 call_str,
-                cve_context=resolved_static_context,
+                cve_context=static_context
+                if isinstance(static_context, dict)
+                else None,
             )
 
         result.output._classifier_diagnostics = classifier_result
@@ -566,6 +618,7 @@ class SuggestCWE(Feature):
     """Based on current CVE information and context assert CWE(s)."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        """Suggest CWE identifiers for a CVE from available flaw context."""
         exclude = ["cwe_id"]
         deps = feature_deps(
             cve_id=str(cve_id),
@@ -668,6 +721,7 @@ class SuggestDescriptionText(Feature):
                 - The title should briefly summarize the core issue in one line; keep headline-level detail only (do not mirror the full description).
             """,
             rules="""
+                - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the title or description.
                 - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve additional context about the vulnerability from upstream advisories.
                 'description': one short paragraph.
                 - Begin with: "A flaw was found in <component>."
@@ -729,6 +783,7 @@ class SuggestStatementText(Feature):
             - Keep outputs concise and consistent; avoid contradiction between fields.
             """,
             rules=f"""
+            - Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in the statement or mitigation.
             - After calling osidb_flaw_tool, pass the flaw's reference URLs to external_references_tool to retrieve detailed impact context from upstream advisories and GHSAs.
             ### STATEMENT (suggested_statement)
             - Focus on impact and RH relevance (deployment model, defaults, hardening).
@@ -814,6 +869,11 @@ class SuggestAffectedComponents(Feature):
         prompt = AegisPrompt(
             user_instruction="From the provided CVE data (title, description, statement, references, affects, comments, etc.), identify the affected software component(s). "
             "Use the OSIDB tool to retrieve flaw data when cve_id is provided; when full context is already provided, the tool returns that data. Leverage all available fields to infer components.",
+            # Prompt ambiguity (AEGIS-496): no rule below says advisory-listed
+            # versioned Go module paths (e.g. podman /v4+/v5, no distro name, no
+            # unsuffixed path) replace the project/distro name, and the OAuth2
+            # Proxy rule (distro name, never forced /vN) pulls the other way —
+            # models intermittently answer 'podman' instead of the listed paths.
             goals="""
                 - Only list components that are *directly vulnerable* — the upstream artifact where the bug exists and the fix is applied. Do not list libraries, runtimes, or standard library modules that the CVE description merely *mentions*, *uses*, or *references* as execution context. Each component you list must be one where an upstream patch or release directly addresses the flaw.
                 - From all available CVE/OSIDB data (title, comment_zero, description, statement, mitigation, comments, references, affects, cvss_scores, cwe_id, impact), identify the affected software component(s).
@@ -840,7 +900,7 @@ class SuggestAffectedComponents(Feature):
                 - Never prefix component names with ecosystem identifiers: no 'python-', 'nodejs-', or 'rubygem-' prefixes. Use the bare package name (e.g. 'cryptography' not 'python-cryptography', 'dotenv' not 'python-dotenv', 'axios' not 'nodejs-axios', 'rack' not 'rubygem-rack'). Strip the prefix even when the upstream project name includes it (e.g. PyPI package 'python-dotenv' → 'dotenv'). Only strip the exact prefixes listed above — 'node-' is NOT an ecosystem prefix (e.g. npm package 'node-forge' → 'node-forge', not 'forge'). Exception: keep the 'rust-' prefix — it is a Red Hat distro naming convention, not an ecosystem prefix (e.g. 'rust-openssl', 'rust-coreutils').
                 - If the component is from the Python standard library, use 'python' as the component name.
                 - If the vulnerability is *in* the Go standard library itself (i.e., the upstream fix is a patch to the Go source tree, such as a Go release note listing the CVE), keep the full stdlib path (e.g. 'crypto/internal/nistec', 'crypto/x509', 'cmd/go', 'net/http/internal') and return it first in the components array in addition to the component 'golang'. Do NOT add 'golang' or Go stdlib paths when the vulnerability is in a third-party Go module that merely *calls* stdlib functions — only the third-party module itself is vulnerable. For example, a bug in rclone that involves net/http handling does NOT make 'net/http' or 'golang' a vulnerable component.
-                - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', OpenSSL Rust bindings → 'rust-openssl', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet', GLib/GLib2 → 'glib', `XML::Parser` → 'perl-xml-parser'. Exception: for Go packages in the golang ecosystem, the full module path (see above) takes precedence over the Red Hat distro name.
+                - Use Red Hat distribution package names, not upstream project or product names. Examples: Linux kernel → 'kernel', Google Chrome/Chromium (including sub-components like V8, Blink, ANGLE, PDFium, Skia, DevTools, WebGL, WebML, Compositing) → 'chromium-browser', MySQL Server → 'mysql', uutils/coreutils → 'rust-coreutils', OpenSSL Rust bindings → 'rust-openssl', Mbed TLS → 'mbedtls', PowerDNS Recursor → 'pdns-recursor', Roundcube Webmail → 'roundcubemail', OpenPrinting CUPS → 'cups', .NET Framework → 'dotnet', GLib/GLib2 → 'glib', `XML::Parser` → 'perl-xml-parser'. For Go packages, follow the OSIDB module/package naming rule above, including distribution package names when OSIDB records them alongside module paths.
                 - For the Qt framework, use the Red Hat umbrella component names 'qt', 'qt5', or 'qt6' — not individual sub-module packages (e.g. 'qt6-qtbase', 'qt5-qtconnectivity'). If the CVE affects Qt5, use 'qt5'; if Qt6, use 'qt6'; if Qt in general or both, use 'qt' (or include all applicable: 'qt', 'qt5', 'qt6').
                 - Use the source component name, not binary or subpackage names. Examples: Redis → 'redis' not 'redis-server', Apache HTTP Server → 'httpd' not 'httpd-core'.
                 - When the CVE title or GitHub repository name differs from the actual package name in the ecosystem registry (npm, PyPI, crates.io, etc.), always use the registry name (e.g. GitHub repo 'node-tar' is published to npm as 'tar' → use 'tar'; GitHub repo 'forge' is published to npm as 'node-forge' → use 'node-forge'; GitHub repo 'tar-rs' is published to crates.io as 'tar' → use 'tar').
@@ -849,7 +909,7 @@ class SuggestAffectedComponents(Feature):
                 - Similarly, a vulnerability in a specific application or library does not make its language runtime or standard library a separate vulnerable component. Do not add language/runtime names (e.g., 'golang', 'python', 'java') or standard library module paths as components unless the vulnerability is *in* the language/runtime itself.
                 - Use the bare package/project name, not a descriptive label from the CVE title. Examples: 'musl' not 'musl libc', 'glibc' not 'GNU C Library', 'openssl' not 'OpenSSL library'. This rule is about dropping informal suffixes like 'libc' or 'library' — it does NOT override the ecosystem prefix-stripping rules above (e.g. 'python-dotenv' → 'dotenv' still applies).
                 - Never extract product edition abbreviations or suffixes as standalone component names. Tokens like 'CE' (Community Edition), 'EE' (Enterprise Edition), 'SE' (Standard Edition), 'Plus', 'Pro', etc. are product edition qualifiers, not component names. When a product includes an edition suffix (e.g. 'pfSense CE', 'pfSense Plus and CE', 'GitLab EE'), extract only the base product name (e.g. 'pfSense', 'GitLab').
-                - Determine which package ecosystem(s) are impacted by the vulnerability. Many components are published to multiple ecosystems (e.g. Redis has pypi, npm, generic); the vulnerability may only affect one. Populate the 'ecosystems' field with one or more of: cargo, golang, npm, pypi, maven, gem, generic, unknown.
+                - Determine which package ecosystem(s) are impacted by the vulnerability. Many components are published to multiple ecosystems (e.g. Redis has pypi, npm, generic); the vulnerability may only affect one. Populate the 'ecosystems' field with one or more of: cargo, composer, conan, cran, gem, generic, golang, hex, luarocks, maven, npm, nuget, opam, otp, pub, pypi, swift, unknown.
                 - Provide a concise explanation of the rationale.
             """,
             rules="""
@@ -874,12 +934,13 @@ class SuggestAffectedComponents(Feature):
                   * Without version ranges, ACE will create affects for EVERY version of the component (thousands of false positives)
                   * ACE filtering logic: if first_introduced <= SBOM_version <= last_affected: create_affect()
                 - Use osv_dev_ghsa_tool responses to determine impacted ecosystems — the affected[].package.ecosystem field is the most authoritative ecosystem signal.
-                - When osv_dev_ghsa_tool returns an affected package name, prefer it over names derived from the CVE title or description — the GHSA package name is the canonical registry identifier.
+                - When osv_dev_ghsa_tool returns an affected package name, use it to identify the vulnerable artifact rather than guessing from the CVE title or description. The GHSA package name is a registry identifier; OSIDB remains authoritative for output component naming when the names differ.
                 - Analyze CVE reference URLs to determine ecosystem: advisory URLs often indicate it (GHSA advisories, npmjs.com, pypi.org links, commit URLs pointing to upstream source). A vulnerability in core source code does not automatically mean every language binding is affected.
-                - Cross-check each candidate component: verify that the upstream fix (patch, commit, release) addresses a bug *in that specific component's code*. If the fix is only in one upstream project, other components you are considering are likely mentioned for context, not themselves vulnerable. When osv_dev_ghsa_tool or github tool data identifies a single affected package, that is strong evidence that no other components should be listed.
-                - Use 'generic' only for software distributed outside any language package registry — typically via tarballs, zip archives, container images, or OS packages. Examples: Apache Tomcat, Apache HTTP Server (httpd), Nginx, PostgreSQL, MariaDB, Samba, BIND. If the component is published to a package registry (npm, PyPI, Maven Central, crates.io, RubyGems, etc.), use that registry's ecosystem even if the component is an application or CLI rather than a library.
+                - Cross-check each candidate component: verify that the upstream fix (patch, commit, release) addresses a bug *in that specific component's code*. If the fix is only in one upstream project, other projects you are considering are likely mentioned for context, not themselves vulnerable. A single affected package in osv_dev_ghsa_tool or github tool data is strong evidence against adding unrelated artifacts, but does not exclude multiple OSIDB component names for that same vulnerable software.
+                - Use 'generic' only for software distributed outside any language package registry — typically via tarballs, zip archives, container images, or OS packages. Examples: Apache Tomcat, Apache HTTP Server (httpd), Nginx, PostgreSQL, MariaDB, Samba, BIND. If the component is published to a package registry (npm, PyPI, Maven Central, crates.io, RubyGems, hex.pm, etc.), use that registry's ecosystem even if the component is an application or CLI rather than a library.
                 - 'Written in language X' does NOT imply ecosystem X. The ecosystem should reflect the *distribution channel*, not the implementation language. A Java application distributed as a tarball (e.g. Apache Tomcat) is 'generic', not 'maven'. But a Java library published to Maven Central is 'maven', and a CLI tool installed via `npm install -g` is 'npm'.
                 - When no tool data (OSV.dev, GHSA) provides an explicit ecosystem for software distributed outside a package registry, prefer 'generic' over a language ecosystem inferred only from implementation language.
+                - When a GitHub security advisory or the CNA package URL reports an ecosystem, use that value mapped onto the allowlist (e.g. 'OTP' → 'otp', 'Hex' → 'hex'). Do not replace it with 'hex' merely because the text mentions hex.pm or Mix. If those sources are absent, an OSV/GHSA ecosystem of 'Hex' maps to 'hex', and packages published on or fetched from the Hex registry use 'hex'. A Mix dependency fetched only via git: or path:, with no Hex coordinate and no advisory ecosystem, is not 'hex'. Do not use 'cargo' for Hex packages merely because a Rust crate may share the same name.
                 - Use 'unknown' for the ecosystem only when it genuinely cannot be determined from available data.
                 - Namespace rules by ecosystem:
                   * RPM: ALWAYS include distro namespace (namespace='redhat', purl='pkg:rpm/redhat/python-cffi@2.0.0'). This fixes the 114,931 missing-namespace SBOM errors.
@@ -919,6 +980,9 @@ class SuggestAffectedComponents(Feature):
                   * npm scoped: {name: "react-core", namespace: "@patternfly", ecosystem: "npm", purl: "pkg:npm/%40patternfly/react-core", first_introduced: "0", last_affected: "4.276.7", fixed_in: "4.276.8", evidence: "npm advisory: fixed in 4.276.8", confidence: 0.90}
                   * PyPI: {name: "cryptography", namespace: null, ecosystem: "pypi", purl: "pkg:pypi/cryptography", first_introduced: "0", last_affected: "40.0.2", fixed_in: "41.0.0", evidence: "GHSA: vulnerable in versions before 41.0.0", confidence: 0.95}
                   * Browser (no version data): {name: "chromium-browser", namespace: null, ecosystem: "generic", purl: "pkg:generic/chromium-browser", first_introduced: null, last_affected: null, fixed_in: null, evidence: "CVE title mentions Chromium Skia - no version constraints available", confidence: 0.75}
+                - For Go packages outside stdlib, preserve each distinct affected component identity used by OSIDB. This can include versioned module paths, unsuffixed paths, affected package subpaths, and distribution package names for the same vulnerable software. Do not collapse distinct OSIDB
+                  component names into one repository name or expand a module root into a package subpath merely because a vulnerable function lives there. Use advisory package names, PURLs, and upstream module declarations as supporting evidence; do not invent a version segment from a release version alone or let
+                  upstream naming override OSIDB. Include multiple paths or package names only when supported as affected components, rather than generating aliases speculatively.
                 - Output format:
                   * components: list of canonical component name strings (e.g., ['org.springframework/spring-webmvc', 'github.com/rclone/rclone', 'cryptography'])
                   * component_matches: list of ComponentMatch objects with name, namespace, ecosystem, purl, version ranges, evidence, confidence
@@ -1071,6 +1135,9 @@ class QualityReview(Feature):
 - Assess whether the flaw content adds value beyond what customers can find in public CVE databases.
 """,
             rules="""\
+- Use `steering_notes` only as internal guidance. Do not quote or paraphrase it in `suggested_statement` or `suggested_mitigation`.
+- For all rubric scores and justifications, strengths, critical gaps, value_add, and Customer Lens assessments, use only existing customer-visible flaw content as evidence, including publicly accessible references. Do not treat `steering_notes`, other non-public data, or proposed rewrites as existing customer-visible content.
+- If information appears only in `steering_notes` or other non-public data, treat it as missing from the customer-visible content. Score the relevant criteria accordingly and identify what remains unclear or needs manual context; do not assume customers can see or infer it.
 ### RUBRIC CATEGORIES
 
 IMPORTANT: You MUST score ALL 30 criteria below (5 per category x 6 categories). Do not skip any category or criterion. Keep each justification to one sentence. Use the exact criterion_id values shown below.
@@ -1347,6 +1414,7 @@ class SuggestAffectedPackages(Feature):
     async def exec(self, cve_id: CVEID, static_context: Any = None):
         # Track tools invoked outside the LLM tool-call loop so they
         # appear in ``tools_used`` even though pydantic-ai won't see them.
+        """Suggest which packaged NVRs are affected by a CVE."""
         pre_invoked_tools: list[str] = []
 
         # Resolve affects data for pre-computation of binary RPMs.
@@ -1357,7 +1425,10 @@ class SuggestAffectedPackages(Feature):
         elif self.agent.name == "RHFeatureAgent":
             cve_data = await osidb_tool.cve_retrieve(cve_id)
             affects = cve_data.affects
-            static_context = cve_data.model_dump()
+            retrieved_context = cve_data.model_dump()
+            if isinstance(static_context, dict) and "steering_notes" in static_context:
+                retrieved_context["steering_notes"] = static_context["steering_notes"]
+            static_context = retrieved_context
             pre_invoked_tools.append("osidb_tool")
         else:
             affects = []
@@ -1394,7 +1465,7 @@ class SuggestAffectedPackages(Feature):
             goals="""\
 - For each affect entry with a PURL, determine whether the source RPM package is affected by the specific vulnerability described in the CVE.
 - Produce a per-package affectedness suggestion with rationale.
-- Where possible, identify which internal sub-components within the package are affected (e.g., a specific kernel module, a library within a larger source package).
+- For affected packages with binary RPM data, produce per-binary affectedness assessments in affected_binaries, with optional subcomponent_hint for sub-binary granularity (e.g., a specific kernel module, an HTTP handler within a library).
 - Signal low data_quality when the CVE description or affects data is insufficient for confident analysis.
 - Provide an overall explanation summarizing the affectedness analysis.
 """,
@@ -1408,9 +1479,11 @@ class SuggestAffectedPackages(Feature):
   - Determine whether the package contains the vulnerable code or functionality.
   - Consider the ps_update_stream context — different streams may have different codebases.
   - Provide a concise per-package explanation.
-  - If you can identify specific sub-components (kernel modules, libraries, binaries) within the package that are affected, include them in affected_subcomponents.
 - Use github MCP tool to inspect commit diffs or repository structure when reference URLs are available.
-- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. Use this data to identify which specific binaries within the package are affected and record them in affected_subcomponents. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream. If an affect entry has binary_rpms_not_found set to true, no build was found for that package/stream combination — do not call list_binary_rpms_tool for it again.
+- Each affect entry may include a binary_rpms field listing the binary RPM subpackages produced by that source package in the given stream. If binary_rpms is not present for an affect and you need this information, you may call list_binary_rpms_tool with the package name and ps_update_stream. If an affect entry has binary_rpms_not_found set to true, no build was found for that package/stream combination — do not call list_binary_rpms_tool for it again.
+- When binary RPM names are available (from binary_rpms or list_binary_rpms_tool), populate affected_binaries with one BinaryAffectednessEntry per binary RPM. For each binary, set affected to whether the vulnerability impacts that specific binary, and provide a concise one-sentence explanation.
+- Use subcomponent_hint on a BinaryAffectednessEntry when the affected component is more specific than the binary itself (e.g., 'XFS kernel module', 'HTTP/2 handler'). Do not use it to list individual source files.
+- When binary RPM data is not available, leave affected_binaries empty. The package-level explanation should still describe which sub-components are affected when known.
 - The affected field in each AffectedPackageEntry reflects YOUR analysis of whether the package is affected by the vulnerability, considering the technical context.
 - Set confidence based on how much technical evidence is available to support your determination.
 - Output format: affected_packages (list of AffectedPackageEntry), explanation (string), data_quality, confidence.
@@ -1432,7 +1505,37 @@ class SuggestAffectedPackages(Feature):
             if tool_name not in result.output.tools_used:
                 result.output.tools_used.append(tool_name)
 
+        if isinstance(static_context, dict) and isinstance(
+            static_context.get("affects"), list
+        ):
+            self._reattach_build_nvr(result.output, static_context["affects"])
+
         return result
+
+    @staticmethod
+    def _reattach_build_nvr(
+        output: SuggestAffectedPackagesModel, affects: list
+    ) -> None:
+        """Stamp build_nvr deterministically from enriched affects data.
+
+        The LLM may omit or alter build_nvr, so we overwrite it from the
+        authoritative enrichment data keyed by (purl, ps_update_stream).
+        """
+        nvr_map: dict[tuple[str, str], str] = {}
+        for a in affects:
+            if not isinstance(a, dict):
+                continue
+            purl = a.get("purl")
+            stream = a.get("ps_update_stream")
+            nvr = a.get("build_nvr")
+            if purl and stream and nvr:
+                nvr_map[(purl, stream)] = nvr
+
+        for pkg in output.affected_packages:
+            key = (pkg.purl, pkg.ps_update_stream)
+            nvr = nvr_map.get(key)
+            if nvr is not None:
+                pkg.build_nvr = nvr
 
     @staticmethod
     async def _enrich_affects_with_binary_rpms(affects: list) -> bool:
@@ -1449,7 +1552,10 @@ class SuggestAffectedPackages(Feature):
 
         from packageurl import PackageURL
 
-        from aegis_ai.toolsets.tools.build_system import _lookup_binary_rpms_batch
+        from aegis_ai.toolsets.tools.build_system import (
+            ENRICHMENT_TIMEOUT_SECS,
+            _lookup_binary_rpms_batch,
+        )
 
         pkg_streams: dict[str, list[str]] = defaultdict(list)
         for a in affects:
@@ -1479,17 +1585,23 @@ class SuggestAffectedPackages(Feature):
 
         _NOT_FOUND: list[str] = []
 
+        _LookupResult = tuple[list[str] | None, str | None]
+
+        deadline = time.monotonic() + ENRICHMENT_TIMEOUT_SECS
+
         async def _lookup_package(
             pkg: str, streams: list[str]
-        ) -> list[tuple[tuple[str, str], list[str] | None]]:
+        ) -> list[tuple[tuple[str, str], _LookupResult]]:
             """Batch-resolve all streams for one package."""
             try:
-                batch = await asyncio.to_thread(_lookup_binary_rpms_batch, pkg, streams)
+                batch = await asyncio.to_thread(
+                    _lookup_binary_rpms_batch, pkg, streams, deadline=deadline
+                )
             except Exception:
                 logger.exception("[list_binary_rpms] %s unexpected error", pkg)
-                return [((pkg, s), None) for s in streams]
+                return [((pkg, s), (None, None)) for s in streams]
 
-            mapped: list[tuple[tuple[str, str], list[str] | None]] = []
+            mapped: list[tuple[tuple[str, str], _LookupResult]] = []
             for result in batch:
                 key = (result.package, result.ps_update_stream)
                 if result.status == "success":
@@ -1499,9 +1611,9 @@ class SuggestAffectedPackages(Feature):
                         result.ps_update_stream,
                         len(result.binary_rpms),
                     )
-                    mapped.append((key, result.binary_rpms))
+                    mapped.append((key, (result.binary_rpms, result.build_nvr)))
                 elif result.status == "not_found":
-                    mapped.append((key, _NOT_FOUND))
+                    mapped.append((key, (_NOT_FOUND, None)))
                 else:
                     logger.warning(
                         "[list_binary_rpms] %s/%s failed: %s",
@@ -1509,15 +1621,18 @@ class SuggestAffectedPackages(Feature):
                         result.ps_update_stream,
                         result.error_message,
                     )
-                    mapped.append((key, None))
+                    mapped.append((key, (None, None)))
             return mapped
 
         batch_results = await asyncio.gather(
             *[_lookup_package(pkg, streams) for pkg, streams in pkg_streams.items()]
         )
-        rpm_cache: dict[tuple[str, str], list[str] | None] = {
-            k: rpms for batch in batch_results for k, rpms in batch
+
+        rpm_cache: dict[tuple[str, str], _LookupResult] = {
+            k: lr for batch in batch_results for k, lr in batch
         }
+
+        _ENRICHMENT_KEYS = ("binary_rpms", "binary_rpms_not_found", "build_nvr")
 
         enriched = 0
         for a in affects:
@@ -1532,13 +1647,17 @@ class SuggestAffectedPackages(Feature):
             except ValueError:
                 continue
             key = (pkg_name, stream)
-            rpms = rpm_cache.get(key)
+            rpms, build_nvr = rpm_cache.get(key, (None, None))
             if rpms is None:
                 continue
+            for ek in _ENRICHMENT_KEYS:
+                a.pop(ek, None)
             if rpms is _NOT_FOUND:
                 a["binary_rpms_not_found"] = True
             else:
                 a["binary_rpms"] = rpms
+                if build_nvr:
+                    a["build_nvr"] = build_nvr
             enriched += 1
 
         logger.info("[list_binary_rpms] enriched %d/%d affects", enriched, len(affects))
@@ -1549,6 +1668,7 @@ class QueryAffectedComponents(DeterministicFeature):
     """Deterministic query: return affected components from OSIDB affects data."""
 
     async def exec(self, cve_id: CVEID, static_context: Any = None):
+        """Query already-known affected components for a CVE."""
         cve = await osidb_tool.cve_retrieve(cve_id)
 
         entries = [
@@ -1569,3 +1689,384 @@ class QueryAffectedComponents(DeterministicFeature):
 
         logger.info(f"QueryAffectedComponents({cve_id}) = {output.printable_outcome()}")
         return DeterministicResult(output)
+
+
+_DOWNSTREAM_DISCLAIMER = "This response was generated by Aegis AI (https://github.com/RedHatProductSecurity/aegis-ai) using generative AI for informational purposes. All findings should be validated by a human expert."
+_FLAW_BODY_KEYS = (
+    "components",
+    "title",
+    "comment_zero",
+    "description",
+    "cve_description",
+)
+
+
+class SuggestManifestComponentAndState(Feature):
+    """Map flaw components to same-project downstream names with affectedness.
+
+    Prefetches wide bomq/Anitya catalog candidates, then asks the agent to
+    refine keep/drop, version range, and affectedness after a required
+    vulnerable-code usage step. Names invent outside the candidate set are
+    post-filtered out. Soft-label packaging drop reasons (plugins, lookalikes,
+    subpackages, …) and version_package / compat keeps are hard-enforced after
+    the agent, not only advisory.
+    """
+
+    def __init__(self, agent):
+        super().__init__(agent)
+        self._downstream_candidates = None
+
+    async def exec(self, cve_id: CVEID, static_context: Any = None):
+        """Prefetch catalog candidates, run the agent when needed, and post-filter mapped names."""
+        pre_invoked_tools: list[str] = ["osidb_tool"]
+        flaw = await _downstream_flaw(cve_id, static_context)
+        gathered = await asyncio.to_thread(collect_downstream_candidates, flaw)
+        self._downstream_candidates = gathered
+        pre_invoked_tools.extend(gathered.tools_used)
+
+        if not gathered.seeds or is_kernel_component(gathered.seeds):
+            output = SuggestManifestComponentAndStateModel(
+                cve_id=cve_id,
+                manifest_components=[],
+                usage=_default_manifest_usage(gathered.seeds),
+                explanation=gathered.explanation,
+                confidence=0.9,
+                data_quality=_downstream_data_quality(flaw),
+                tools_used=list(dict.fromkeys(pre_invoked_tools)),
+                disclaimer=_DOWNSTREAM_DISCLAIMER,
+            )
+            logger.info(
+                "SuggestManifestComponentAndState(%s) = %s",
+                cve_id,
+                output.printable_outcome(),
+            )
+            return DeterministicResult(output)
+
+        # Catalog outage: empty candidates are untrustworthy. Confidence 0 and
+        # _catalog_outage keep suggest_manifest_components from overwriting
+        # saved rows or recording a low-confidence skip.
+        if gathered.catalog_unavailable:
+            output = SuggestManifestComponentAndStateModel(
+                cve_id=cve_id,
+                manifest_components=[],
+                usage=_default_manifest_usage(gathered.seeds),
+                explanation=gathered.explanation,
+                confidence=0.0,
+                data_quality=_downstream_data_quality(flaw),
+                tools_used=list(dict.fromkeys(pre_invoked_tools)),
+                disclaimer=_DOWNSTREAM_DISCLAIMER,
+            )
+            output._catalog_outage = True
+            logger.warning(
+                "SuggestManifestComponentAndState(%s) catalog unavailable: %s",
+                cve_id,
+                gathered.explanation,
+            )
+            return DeterministicResult(output)
+
+        if not gathered.candidates:
+            output = SuggestManifestComponentAndStateModel(
+                cve_id=cve_id,
+                manifest_components=[],
+                usage=_default_manifest_usage(gathered.seeds),
+                explanation=gathered.explanation,
+                confidence=0.7,
+                data_quality=_downstream_data_quality(flaw),
+                tools_used=list(dict.fromkeys(pre_invoked_tools)),
+                disclaimer=_DOWNSTREAM_DISCLAIMER,
+            )
+            logger.info(
+                "SuggestManifestComponentAndState(%s) = %s",
+                cve_id,
+                output.printable_outcome(),
+            )
+            return DeterministicResult(output)
+
+        baseline = resolve_soft_label_rows(
+            gathered.candidates,
+            gathered.versions,
+            gathered.rhcos_versions,
+            gathered.seeds,
+            flaw=flaw,
+        )
+        # Affects are produced from this feature's output (via ACE), not inputs.
+        # Large affect tables also blow past model context limits (AEGIS-540).
+        deps = feature_deps(
+            cve_id=str(cve_id),
+            exclude_osidb_fields=["affects"],
+            static_context=flaw if isinstance(flaw, dict) else None,
+        )
+        prompt = AegisPrompt(
+            user_instruction=(
+                "Map the flaw's upstream component seeds to same-project "
+                "downstream packaging names and suggest affectedness. First "
+                "decide which catalog hits run the vulnerable code. Use the "
+                "prefetched catalog candidates as the primary allowed name set."
+            ),
+            goals="""\
+- Required usage step before keep/drop: from the flaw text and reference URLs, name the vulnerable unit (the patched package or submodule, not a parent import that only shares a module path) and the caller role (every_importer when every API importer is in scope; product_feature when only a named product feature runs the bug).
+- Put catalog names that run that code in usage.runs_vulnerable_code (downstream rebuilds and server packaging that exercise the bug, such as github.com/openshift-priv/prometheus, prometheus, and prometheus3.13). Put names that only link a shared parent module in usage.importer_only (metrics importers, client libraries). Same-project rebuilds and version packages are not importers. The patched submodule stays in usage.vulnerable_unit; when caller_role is product_feature it is not required as a final row.
+- Keep same-project packaging names that appear in the prefetched candidates and that survive the usage step.
+- Keep packaging-prefix rebuilds (mingw- / cross-) and compat-* rebuilds. Drop digit-prefixed product rebuilds (jbcs-httpd24-openssl) and sysroot-*-<seed> subpackages.
+- Keep OpenShift Go fork paths: github.com/openshift-priv/<project> is looked up as github.com/openshift/<project> (public fork of the upstream repo with the same name). Treat that packaging as same-project downstream of the upstream seed — not a separate upstream.
+- Keep every catalog-present version-suffixed packaging name for the seed (libsoup3, openssl3, zabbix6.0, OpenImageIO2.5); do not drop them as separate upstreams.
+- Attach exactly one of build_type, ecosystem, or rhcos per row. Keep the soft-label baseline search key for each kept name: build_type for exact build-name matches (rpm/container/maven/generic builds); ecosystem for bundled registry packages (maven GAVs, npm, golang modules, …). Never emit ecosystem: rpm. Never rewrite ecosystem:maven to build_type:maven for a coordinate that only appears as a bundled maven component.
+- Add an rhcos: rpm companion when RHCOS version samples exist for a kept RPM name.
+- Infer the advisory version range from upstream_data when present, otherwise from CVE/advisory text.
+- Suggest affectedness AFFECTED / NOTAFFECTED / UNKNOWN / null (compat blank) from sampled versions: SRPM upstream versions for RPM rows, and nested bomq component versions for ecosystem rows (golang, maven, npm, …). Any overlapping sample is AFFECTED; every sample outside the range is NOTAFFECTED. Importer-only names kept for a small build count should be NOTAFFECTED.
+- Explain keep/drop, usage, and verdicts briefly, including why high-build-count importers were omitted or small importers were kept as NOTAFFECTED.
+""",
+            rules="""\
+- Never invent a name that is absent from the candidates list (except rhcos companions for an already-kept RPM name, or a server/submodule name confirmed with bomq_components_tool).
+- Soft-label baseline rows are a starting point; refine with tools when identity or range is unclear.
+- When a full Go, Maven, or scoped-npm path is kept, do not also emit its bare ecosystem shorthand (e.g. keep github.com/rclone/rclone, not ecosystem rclone). Keep build-typed packaging that shares the final token (prometheus RPM beside github.com/openshift-priv/prometheus).
+- When caller_role is product_feature, do not put a high build_count parent module that only importers link into runs_vulnerable_code; prefer the openshift-priv or upstream application rebuild and the server RPM builds.
+- When caller_role is every_importer, high build_count on the vulnerable unit itself is expected and must stay.
+- compat-<seed><digits> rows stay with blank (null) affectedness for manual review.
+- Drop subpackages (including sysroot-*-<seed>), digit-prefixed product rebuilds, language bindings, engines/plugins, and unrelated lookalikes.
+- Do not treat github.com/openshift-priv/<project> as a different upstream; map it to github.com/openshift/<project> and keep it when <project> matches the seed or a reference caller GitHub repo name.
+- Web search and Anitya are for ambiguous rebuild / soname-glue / rename identity — not for rejecting catalog version-suffixed names.
+- Compare sampled upstream VERSION (epoch/release stripped; Go leading v stripped), never product STREAM names.
+- Use bomq_components_tool, bomq_build_versions_tool, or anitya_projects_tool when the prefetch is insufficient.
+- Output SuggestManifestComponentAndStateModel: cve_id, manifest_components, usage, explanation, confidence, data_quality.
+""",
+            context=DownstreamFeatureContext(
+                cve_id=cve_id,
+                flaw_components=gathered.seeds,
+                advisory_text=gathered.advisory_text,
+                upstream_data=flaw.get("upstream_data")
+                if isinstance(flaw, dict)
+                else None,
+                downstream_candidates=gathered.to_prompt_dict(),
+                soft_label_baseline=[
+                    {
+                        "name": row.name,
+                        "build_type": row.build_type,
+                        "ecosystem": row.ecosystem,
+                        "rhcos": row.rhcos,
+                        "affectedness": row.affectedness,
+                        "evidence": row.evidence,
+                    }
+                    for row in baseline
+                ],
+            ),
+            output_schema=SuggestManifestComponentAndStateModel.model_json_schema(),
+        )
+
+        from aegis_ai.toolsets import downstream_toolset
+
+        result = await self.guarded_run(
+            prompt,
+            deps=deps,
+            output_type=SuggestManifestComponentAndStateModel,
+            toolsets=[downstream_toolset],
+        )
+
+        output = result.output
+        output.cve_id = cve_id
+        short_names = suppressed_short_path_names(
+            gathered.seeds, gathered.allowed_names()
+        )
+        rejected = rejected_soft_label_names(gathered.candidates)
+        allowed = gathered.allowed_names() - short_names - rejected
+        output.manifest_components = post_filter_manifest_entries(
+            output.manifest_components,
+            allowed,
+        )
+        # Blocking BOMQ confirms must not run on the event loop.
+        output.manifest_components, output.explanation = await asyncio.to_thread(
+            apply_usage_policy,
+            output.manifest_components,
+            vulnerable_unit=output.usage.vulnerable_unit,
+            caller_role=output.usage.caller_role,
+            runs_vulnerable_code=output.usage.runs_vulnerable_code,
+            importer_only=output.usage.importer_only,
+            candidates=gathered.candidates,
+            explanation=output.explanation or gathered.explanation,
+            confirm_name=_confirm_catalog_name,
+        )
+        # Align after usage policy so re-added rows pick up baseline verdicts.
+        output.manifest_components = align_manifest_search_keys(
+            output.manifest_components,
+            baseline,
+        )
+        output.manifest_components = ensure_soft_label_keeps(
+            output.manifest_components,
+            baseline,
+            gathered.candidates,
+        )
+        output.manifest_components = drop_soft_label_rejects(
+            output.manifest_components,
+            gathered.candidates,
+        )
+        promoted, promotion_note = await asyncio.to_thread(
+            promote_reference_caller_modules,
+            output.manifest_components,
+            flaw if isinstance(flaw, dict) else {},
+            gathered.seeds,
+            _confirm_catalog_name,
+        )
+        output.manifest_components = drop_short_segments_of_kept_modules(promoted)
+        if promotion_note and promotion_note not in (output.explanation or ""):
+            output.explanation = (
+                f"{output.explanation.rstrip()} {promotion_note}".strip()
+                if output.explanation
+                else promotion_note
+            )
+        output.manifest_components = drop_suppressed_short_path_entries(
+            output.manifest_components,
+            short_names,
+        )
+        output.disclaimer = _DOWNSTREAM_DISCLAIMER
+        if not output.explanation:
+            output.explanation = gathered.explanation
+        for tool_name in pre_invoked_tools:
+            if tool_name not in output.tools_used:
+                output.tools_used.append(tool_name)
+
+        logger.info(
+            "SuggestManifestComponentAndState(%s) = %s",
+            cve_id,
+            output.printable_outcome(),
+        )
+        return result
+
+    def _check_output(self, result, deps: Any) -> str | None:
+        """Reject outputs with invalid search keys or product_feature importer misuse."""
+        output = result.output
+        if not isinstance(output, SuggestManifestComponentAndStateModel):
+            return None
+        for entry in output.manifest_components:
+            keys = sum(
+                1
+                for value in (entry.build_type, entry.ecosystem, entry.rhcos)
+                if value is not None
+            )
+            if keys != 1:
+                return (
+                    "Each manifest_components entry must set exactly one of "
+                    "build_type, ecosystem, or rhcos. Fix the list and try again."
+                )
+        if not (output.usage.vulnerable_unit or "").strip():
+            return (
+                "usage.vulnerable_unit must name the patched package or "
+                "submodule. Fill usage and try again."
+            )
+        if output.usage.caller_role != "product_feature":
+            return None
+        counts = {}
+        if self._downstream_candidates is not None:
+            counts = self._downstream_candidates.build_counts()
+        runs = {
+            name.casefold()
+            for name in output.usage.runs_vulnerable_code
+            if isinstance(name, str)
+        }
+        offenders = []
+        for entry in output.manifest_components:
+            folded = entry.name.casefold()
+            count = counts.get(folded)
+            if (
+                count is not None
+                and count >= IMPORTER_AFFECT_LIMIT
+                and folded not in runs
+            ):
+                offenders.append(f"{entry.name} ({count} builds)")
+        if offenders:
+            return (
+                "caller_role is product_feature, but these high build_count "
+                "manifest names are not in usage.runs_vulnerable_code: "
+                f"{', '.join(offenders)}. Move names that run the vulnerable "
+                "unit into runs_vulnerable_code, put importer-only parents in "
+                "importer_only, and try again."
+            )
+        return None
+
+
+def _default_manifest_usage(seeds: list[str]) -> ManifestUsageAnalysis:
+    unit = seeds[0] if seeds else "n/a"
+    return ManifestUsageAnalysis(
+        vulnerable_unit=unit,
+        caller_role="every_importer",
+        runs_vulnerable_code=[],
+        importer_only=[],
+    )
+
+
+def _confirm_catalog_name(name: str):
+    """Re-query bomq for an exact component name during usage-policy restore."""
+    from aegis_ai.features.cve.downstream import CatalogHit
+
+    rows = query_bomq_components(name, glob=False)
+    return [
+        CatalogHit(
+            row["name"],
+            str(row.get("type") or "").casefold(),
+            row.get("build_count") if isinstance(row.get("build_count"), int) else None,
+        )
+        for row in rows
+        if isinstance(row.get("name"), str) and isinstance(row.get("type"), str)
+    ]
+
+
+# Fields required for candidate collection and affectedness hints. Present
+# keys in static_context (including empty lists) stay as the caller sent them.
+_DOWNSTREAM_NEEDED_KEYS = (
+    "components",
+    "references",
+    "upstream_data",
+    "comment_zero",
+    "description",
+    "cve_description",
+    "statement",
+    "title",
+)
+
+
+def _without_affects(flaw: dict[str, Any]) -> dict[str, Any]:
+    """Drop OSIDB affects from a flaw dict used as downstream feature input."""
+    if "affects" not in flaw:
+        return flaw
+    cleaned = dict(flaw)
+    cleaned.pop("affects", None)
+    return cleaned
+
+
+async def _downstream_flaw(cve_id: CVEID, static_context: Any) -> dict[str, Any]:
+    """Return flaw body for downstream mapping.
+
+    When static context already has the fields needed for candidate collection
+    and affectedness hints, use it as-is. Otherwise retrieve the OSIDB flaw and
+    fill only missing keys so caller-supplied values stay authoritative.
+
+    Affects are always stripped: they are derived from this feature's output
+    and can be large enough to exceed model context limits.
+    """
+    if isinstance(static_context, dict) and any(
+        key in static_context for key in _FLAW_BODY_KEYS
+    ):
+        missing = [key for key in _DOWNSTREAM_NEEDED_KEYS if key not in static_context]
+        if not missing:
+            return _without_affects(static_context)
+        cve = await osidb_tool.cve_retrieve(cve_id)
+        if not hasattr(cve, "model_dump"):
+            return _without_affects(static_context)
+        fetched = cve.model_dump()
+        merged = dict(static_context)
+        for key in missing:
+            if key in fetched:
+                merged[key] = fetched[key]
+        return _without_affects(merged)
+    cve = await osidb_tool.cve_retrieve(cve_id)
+    if hasattr(cve, "model_dump"):
+        return _without_affects(cve.model_dump())
+    return {"cve_id": str(cve_id)}
+
+
+def _downstream_data_quality(flaw: dict[str, Any]) -> float:
+    """Heuristic data-quality score from flaw components and advisory text."""
+    has_components = bool(flaw.get("components"))
+    has_text = any(flaw.get(key) for key in _FLAW_BODY_KEYS if key != "components")
+    if has_components and has_text:
+        return 0.9
+    return 0.8

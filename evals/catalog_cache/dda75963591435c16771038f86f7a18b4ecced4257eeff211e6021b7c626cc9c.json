@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=OpenImageIO&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "OpenImageIO",
+                "id": 2548,
+                "backend": "GitHub",
+                "homepage": "https://openimageio.readthedocs.io",
+                "ecosystem": "https://openimageio.readthedocs.io"
+            }
+        ],
+        "total_items": 1
+    }
+}

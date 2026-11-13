@@ -1,0 +1,16 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=libreoffice&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "25.8.7.3-3.fc43"
+            },
+            {
+                "build_version": "26.2.6.3-1.fc44"
+            },
+            {
+                "build_version": "26.8.2.2-1.fc46"
+            }
+        ]
+    }
+}

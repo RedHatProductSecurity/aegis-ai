@@ -49,6 +49,8 @@ def _make_flaw_dict(
         "cve_description": "",
         "cwe_id": "",
         "impact": "",
+        "statement": "",
+        "mitigation": "",
         "aegis_meta": aegis_meta,
     }
     flaw.update(overrides)

@@ -166,6 +166,23 @@ async def _canned_exec_feature_with_flags(feature, flaw_data):
             tools_used=[],
             _flags=["kpanic"],
         )
+    if name == "SuggestStatementText":
+        return SimpleNamespace(
+            suggested_statement="Test statement.",
+            suggested_mitigation="Test mitigation.",
+            explanation="test",
+            data_quality=0.9,
+            confidence=0.9,
+            tools_used=[],
+        )
+    if name == "SuggestManifestComponentAndState":
+        return SimpleNamespace(
+            manifest_components=[],
+            explanation="No downstream names for a kernel component are suggested here.",
+            data_quality=0.9,
+            confidence=0.9,
+            tools_used=["osidb_tool"],
+        )
     raise ValueError(f"Unknown feature: {name}")
 
 

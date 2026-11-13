@@ -1,0 +1,49 @@
+{
+    "url": "{bomq_community}/api/v0/search/components?name=fluidsynth&strict=true&include_types=generic&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "fluidsynth",
+                                "type": "generic",
+                                "version": "2.3.7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "musescore"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "fluidsynth",
+                                "type": "generic",
+                                "version": "2.3.7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "musescore"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "fluidsynth",
+                                "type": "generic",
+                                "version": "2.3.7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "musescore"
+            }
+        ]
+    }
+}

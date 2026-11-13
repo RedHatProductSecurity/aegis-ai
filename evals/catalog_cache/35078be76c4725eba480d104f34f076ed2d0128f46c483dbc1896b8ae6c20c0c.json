@@ -1,0 +1,22 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=zabbix&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "zabbix",
+                "id": 5492,
+                "backend": "custom",
+                "homepage": "https://www.zabbix.com",
+                "ecosystem": "https://www.zabbix.com"
+            },
+            {
+                "name": "zabbix",
+                "id": 304378,
+                "backend": "PyPI",
+                "homepage": "https://pypi.org/project/zabbix/2.0.2/",
+                "ecosystem": "pypi"
+            }
+        ],
+        "total_items": 2
+    }
+}

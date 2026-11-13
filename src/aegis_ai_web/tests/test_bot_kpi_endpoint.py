@@ -77,6 +77,8 @@ def _make_flaw_dict(aegis_meta, **overrides):
         "cve_description": "",
         "cwe_id": "",
         "impact": "",
+        "statement": "",
+        "mitigation": "",
         "cvss_scores": [],
         "aegis_meta": aegis_meta,
     }

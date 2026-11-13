@@ -1,0 +1,7 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=github.com%2Fwyxstarry%2F5c199ec824928c5ae5816aaecbc6df03&strict=true&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [],
+        "total": 0
+    }
+}

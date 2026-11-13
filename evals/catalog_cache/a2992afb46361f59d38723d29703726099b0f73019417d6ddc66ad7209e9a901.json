@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Alibreoffice%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "libreoffice",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-base",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-base-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-calc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-calc-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-core",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-core-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-data",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-draw",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-emailmerge",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-filters",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gdb-debug-support",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-glade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-glade-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-graphicfilter",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-graphicfilter-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gtk3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-gtk3-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ar",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-bg",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-bn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ca",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-cs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-da",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-de",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-dz",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-el",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-en",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-eo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-es",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-et",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-eu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-fi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-fr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-gl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-gu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-he",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-hi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-hr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-hu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-id",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-it",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ja",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ko",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-lt",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-lv",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-nb",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-nl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-nn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-pl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-pt-BR",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-pt-PT",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ro",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ru",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-si",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-sk",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-sl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-sv",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-ta",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-tr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-uk",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-zh-Hans",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-help-zh-Hant",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-impress",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-impress-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-af",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-ar",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-as",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-bg",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-bn",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-br",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-ca",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-cs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-cy",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-da",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-de",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-dz",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-el",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-en",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-eo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-es",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-et",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-eu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-fa",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-fi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-fr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-fy",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-ga",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-gl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-gu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-he",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-hi",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-hr",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-hu",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-id",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-it",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-ja",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-langpack-kk",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 170
+    }
+}

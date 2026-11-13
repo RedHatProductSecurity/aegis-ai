@@ -1,0 +1,135 @@
+{
+    "url": "{anitya}/api/project/7981",
+    "body": {
+        "packages": [
+            {
+                "distro": "Fedora",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "cross-binutils"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "mingw-binutils"
+            },
+            {
+                "distro": "Alpine",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "aarch64-linux-gnu-binutils"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "arm-none-eabi-binutils"
+            },
+            {
+                "distro": "Arch Linux",
+                "package_name": "avr-binutils"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Cygwin",
+                "package_name": "mingw-binutils"
+            },
+            {
+                "distro": "COPR",
+                "package_name": "cygwin-binutils"
+            },
+            {
+                "distro": "COPR",
+                "package_name": "cygwin-libbfd"
+            },
+            {
+                "distro": "Freedesktop SDK",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "libiberty"
+            },
+            {
+                "distro": "Buildroot",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Timesys",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "CPE NVD NIST",
+                "package_name": "cpe:2.3:a:gnu:binutils"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "avr-binutils"
+            },
+            {
+                "distro": "Fedora",
+                "package_name": "arm-none-eabi-binutils-cs"
+            },
+            {
+                "distro": "stagex",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "mingw-binutils"
+            },
+            {
+                "distro": "LibreELEC",
+                "package_name": "binutils-gold"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "openSUSE",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "binutils"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "avr-binutils"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "cross-binutils"
+            },
+            {
+                "distro": "Mageia",
+                "package_name": "cross-avr-binutils"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "mingw-w64-binutils"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "arm-none-eabi-binutils"
+            },
+            {
+                "distro": "Solus",
+                "package_name": "avr-binutils"
+            }
+        ]
+    }
+}

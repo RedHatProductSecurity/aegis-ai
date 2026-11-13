@@ -82,6 +82,7 @@ allowed-unresolved-imports = ["xgboost.**"]
 ignore_no_config = true
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
 pythonpath = ["."]
 testpaths = "tests"
 python_files = "test_*.py"
@@ -99,6 +100,10 @@ filterwarnings = [
     # Deprecations originating from importlib bootstrap around SWIG types
     "ignore:.*SwigPy(Packed|Object).*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
     "ignore:.*swigvarlink.*no __module__ attribute:DeprecationWarning:importlib\\._bootstrap",
+    # beartype runtime_checkable check on key_value protocol (Python 3.15+)
+    "ignore:.*AsyncKeyValue.*isn't explicitly decorated with @runtime_checkable.*:DeprecationWarning:beartype",
+    # Invalid escape sequence in google-genai types.py
+    "ignore:\\\\.*is an invalid escape sequence:SyntaxWarning",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -120,7 +125,7 @@ dev = [
     "isort>=6.0.1",
     "lxml>=5.4.0",
     "mypy>=1.16.0",
-    "pytest>=8.4.0",
+    "pytest<9.2.0",  # 9.2.0 breaks pytest-sugar 1.1.1
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.2.1",
     "pytest-env>=1.1.5",

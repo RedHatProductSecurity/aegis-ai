@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Aprometheus%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=2",
+    "body": {
+        "data": [
+            {
+                "name": "@prometheus-io/lezer-promql",
+                "type": "npm",
+                "build_count": 1
+            },
+            {
+                "name": "ceph-mgr-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ceph-prometheus-alerts",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "collectd-write_prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "django-prometheus",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/armon/go-metrics/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/aws/aws-sdk-go/service/prometheusservice",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/aws/aws-sdk-go/service/prometheusservice/prometheusserviceiface",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/facebookincubator/contest/pkg/xcontext/metrics/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/facebookincubator/contest/pkg/xcontext/metrics/prometheus)(commit=ceebc35ff06a2921712a838c89dd123805111611",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-kit/kit/metrics/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/trillian/monitoring/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus",
+                "type": "golang",
+                "build_count": 7
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-prometheus",
+                "type": "golang",
+                "build_count": 8
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-prometheus)(commit=9abf3eb82b4a313b1a28f370a7ef8ffe0667c681",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-prometheus/packages/grpcstatus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/grpc-ecosystem/go-grpc-prometheus/packages/grpcstatus)(commit=9abf3eb82b4a313b1a28f370a7ef8ffe0667c681",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/jaegertracing/jaeger-lib/metrics/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/m3db/prometheus_remote_client_golang",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/nbrownus/go-metrics-prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus-community/go-runit",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus-community/go-runit/runit",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus-community/pro-bing",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/alertmanager",
+                "type": "golang",
+                "build_count": 3
+            },
+            {
+                "name": "github.com/prometheus/client_golang",
+                "type": "golang",
+                "build_count": 59
+            },
+            {
+                "name": "github.com/prometheus/client_golang/api",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/api/prometheus/v1",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/exp",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/collectors",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/collectors/version",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/graphite",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/internal",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/promauto",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/promhttp",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/push",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/testutil",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/testutil/promlint",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_golang/prometheus/testutil/promlint/validations",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/client_model",
+                "type": "golang",
+                "build_count": 60
+            },
+            {
+                "name": "github.com/prometheus/client_model/go",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common",
+                "type": "golang",
+                "build_count": 60
+            },
+            {
+                "name": "github.com/prometheus/common/assets",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/prometheus/common/config",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/expfmt",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/helpers/templates",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/model",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/promlog",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/promlog/flag",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/promslog",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/promslog/flag",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/route",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/server",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/common/sigv4",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/prometheus/common/version",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/compliance/remotewrite",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/exporter-toolkit",
+                "type": "golang",
+                "build_count": 5
+            },
+            {
+                "name": "github.com/prometheus/exporter-toolkit/web",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/exporter-toolkit/web/kingpinflag",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/otlptranslator",
+                "type": "golang",
+                "build_count": 7
+            },
+            {
+                "name": "github.com/prometheus/procfs",
+                "type": "golang",
+                "build_count": 59
+            },
+            {
+                "name": "github.com/prometheus/procfs/bcache",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/blockdevice",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/btrfs",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/internal/fs",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/internal/util",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/iscsi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/nfs",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/sysfs",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/procfs/xfs",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/prometheus/prometheus",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/prometheus/sigv4",
+                "type": "golang",
+                "build_count": 4
+            },
+            {
+                "name": "github.com/uber-go/tally/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/uber-go/tally/v4/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/uber/jaeger-lib/metrics/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "go.opentelemetry.io/contrib/bridges/prometheus",
+                "type": "golang",
+                "build_count": 6
+            },
+            {
+                "name": "go.opentelemetry.io/otel-0.20/exporters/metric/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "go.opentelemetry.io/otel/exporters/prometheus",
+                "type": "golang",
+                "build_count": 8
+            },
+            {
+                "name": "golang-github-grpc-ecosystem-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-grpc-ecosystem-prometheus-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-alertmanager",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-client",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-client-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-client-model",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-client-model-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-common",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-common-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-community-runit",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-community-runit-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-exporter-toolkit",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-exporter-toolkit-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-procfs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-procfs-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang-github-prometheus-prom2json",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "golang.org/x/tools/internal/event/export/prometheus",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "k8s.io/component-base/metrics/prometheus/clientgo",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "k8s.io/component-base/metrics/prometheus/clientgo)(tag=kubernetes-1.22.0",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "k8s.io/component-base/metrics/prometheus/clientgo/leaderelection",
+                "type": "golang",
+                "build_count": 1
+            }
+        ],
+        "total": 179
+    }
+}

@@ -59,7 +59,11 @@ LOW_QUALITY_CVE_IDS: dict[str, tuple[float, float]] = {
     "CVE-2026-84327": (0.5, 0.5),
 }
 
-KNOWN_TO_FAIL_CVE_IDS: tuple[str, ...] = ()
+KNOWN_TO_FAIL_CVE_IDS: dict[str, list[str]] = {
+    "CVE-2026-3904": [
+        "BinaryPresenceEvaluator"
+    ],  # TODO: remove this once https://redhat.atlassian.net/browse/AEGIS-533 is resolved
+}
 
 
 def _affects_with_purls(cve: CVE) -> list[dict[str, Any]]:
@@ -119,7 +123,7 @@ def _build_cases(
         ]
         metadata: dict[str, Any] = {"cve_id": cve_id}
         if cve_id in KNOWN_TO_FAIL_CVE_IDS:
-            metadata["known_to_fail_evaluators"] = ["PackageOverlapEvaluator"]
+            metadata["known_to_fail_evaluators"] = KNOWN_TO_FAIL_CVE_IDS[cve_id]
 
         case = SuggestAffectedPackagesCase(
             name=f"suggest-affected-packages-{cve_id}",
@@ -226,6 +230,31 @@ class PackageOverlapEvaluator(Evaluator[str, SuggestAffectedPackagesModel]):
         return EvaluationReason(value=score, reason=reason)
 
 
+class BinaryPresenceEvaluator(Evaluator[str, SuggestAffectedPackagesModel]):
+    """Checks that affected packages have non-empty affected_binaries.
+
+    Scores the fraction of affected packages that have at least one
+    BinaryAffectednessEntry populated.  Packages marked not-affected are
+    excluded (they may legitimately have an empty list).
+    """
+
+    def evaluate(
+        self, ctx: EvaluatorContext[str, SuggestAffectedPackagesModel]
+    ) -> EvaluationReason:
+        suggested = getattr(ctx.output, "affected_packages", None) or []
+        affected_pkgs = [p for p in suggested if p.affected]
+        if not affected_pkgs:
+            return EvaluationReason(value=1.0, reason="no affected packages")
+        with_binaries = sum(1 for p in affected_pkgs if p.affected_binaries)
+        score = with_binaries / len(affected_pkgs)
+        reason = (
+            None
+            if score == 1.0
+            else f"{with_binaries}/{len(affected_pkgs)} affected packages have affected_binaries"
+        )
+        return EvaluationReason(value=score, reason=reason)
+
+
 class LowQualityCase(Case[str, Any, Any]):
     """Evaluation case for CVEs with insufficient affects data."""
 
@@ -238,6 +267,7 @@ async def suggest_affected_packages(cve_id: CVEID) -> SuggestAffectedPackagesMod
 
 
 evals = [
+    BinaryPresenceEvaluator(),
     ToolsUsedEvaluator(),
     PackageOverlapEvaluator(),
 ]

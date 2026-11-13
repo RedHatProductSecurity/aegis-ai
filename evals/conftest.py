@@ -5,19 +5,12 @@ import os
 import pytest
 
 logger = logging.getLogger(__name__)
-from pydantic_ai.tools import RunContext, Tool
 from pydantic_ai.toolsets import CombinedToolset, FunctionToolset
+from pydantic_ai.toolsets.filtered import FilteredToolset
 
 import aegis_ai.toolsets as ts
-from aegis_ai import config_logging
+from aegis_ai import config_logging, get_settings
 from aegis_ai.features.data_models import feature_deps
-from aegis_ai.toolsets.tools.osidb import CVE, OSIDBToolInput, cve_exclude_fields
-from aegis_ai.toolsets.tools.osv_common import filter_osv_response
-from aegis_ai.toolsets.tools.osv_dev_cve import OSVToolInput as OSVCVEToolInput
-from aegis_ai.toolsets.tools.osv_dev_ghsa import (
-    GHSAToolInput,
-    extract_ghsa_ids,
-)
 from evals.features.common import eval_metrics, eval_summary
 from evals.utils.build_system_cache import (
     build_system_cache_retrieve,
@@ -31,6 +24,24 @@ from evals.utils.build_system_cache import (
 )
 from evals.utils.build_system_cache import (
     write_misses_report as write_build_system_misses_report,
+)
+from evals.utils.cached_tools import (
+    is_tool_disabled,
+    osidb_tool,
+    osv_dev_cve_tool,
+    osv_dev_ghsa_tool,
+)
+from evals.utils.catalog_cache import (
+    cache_misses as catalog_cache_misses,
+)
+from evals.utils.catalog_cache import (
+    catalog_cache_retrieve,
+)
+from evals.utils.catalog_cache import (
+    get_public_miss_files as get_catalog_public_miss_files,
+)
+from evals.utils.catalog_cache import (
+    write_misses_report as write_catalog_misses_report,
 )
 from evals.utils.external_references_cache import (
     cache_misses as extref_cache_misses,
@@ -49,9 +60,6 @@ from evals.utils.ghsa_cache import (
 )
 from evals.utils.ghsa_cache import (
     get_miss_files as get_ghsa_miss_files,
-)
-from evals.utils.ghsa_cache import (
-    ghsa_cache_retrieve,
 )
 from evals.utils.ghsa_cache import (
     write_misses_report as write_ghsa_misses_report,
@@ -80,71 +88,6 @@ from evals.utils.osidb_cache import (
 from evals.utils.osidb_cache import (
     write_misses_report as write_osidb_misses_report,
 )
-
-
-@Tool
-async def osidb_tool(ctx: RunContext[feature_deps], input: OSIDBToolInput) -> CVE:
-    """wrapper around aegis.tools.osidb that caches OSIDB responses"""
-    deps = ctx.deps
-    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
-        logger.info(
-            f"osidb_tool: rejecting lookup for {input.cve_id} (expected {deps.cve_id})"
-        )
-        return CVE(
-            cve_id=input.cve_id,
-            title=f"Flaw {input.cve_id} lookup rejected (unrelated to {deps.cve_id})",
-            description="",
-        )
-    try:
-        cve = await osidb_cache_retrieve(input.cve_id)
-    except Exception:
-        logger.info(f"OSIDB cache miss for {input.cve_id}, returning empty CVE")
-        return CVE(
-            cve_id=input.cve_id,
-            title=f"Flaw {input.cve_id} was not found in OSIDB cache",
-            description="",
-        )
-    if ctx.deps.allowed_reference_urls is None and cve.references:
-        ctx.deps.allowed_reference_urls = {
-            ref["url"]
-            for ref in cve.references
-            if isinstance(ref, dict) and ref.get("url")
-        }
-
-    return cve_exclude_fields(
-        cve,
-        ctx.deps.exclude_osidb_fields,
-        strip_component_prefix_for_osidb_cache=True,
-    )
-
-
-@Tool
-async def osv_dev_ghsa_tool(ctx: RunContext[feature_deps], input: GHSAToolInput):
-    """wrapper around osv_dev_ghsa that caches OSV.dev responses"""
-    ghsa_ids = extract_ghsa_ids(input.references)
-    if not ghsa_ids:
-        return []
-    results = []
-    for ghsa_id in ghsa_ids:
-        raw = await ghsa_cache_retrieve(ghsa_id)
-        filtered = filter_osv_response(raw)
-        if filtered:
-            results.append(filtered)
-    return results
-
-
-@Tool
-async def osv_dev_cve_tool(ctx: RunContext[feature_deps], input: OSVCVEToolInput):
-    """wrapper around osv_dev_cve that caches OSV.dev responses"""
-    deps = ctx.deps
-    if deps.cve_id is not None and str(input.cve_id) != deps.cve_id:
-        logger.info(
-            f"osv_dev_cve_tool: rejecting lookup for {input.cve_id} "
-            f"(expected {deps.cve_id})"
-        )
-        return {}
-    raw = await ghsa_cache_retrieve(str(input.cve_id))
-    return filter_osv_response(raw)
 
 
 # pytest's built-in monkeypatch fixture is function-scoped, so session-scoped
@@ -228,6 +171,16 @@ def _patch_build_system_lookup(_monkeypatch_session):
     )
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _patch_catalog_http(_monkeypatch_session):
+    """Route bomq/Anitya HTTP through the checked-in catalog cache during evals."""
+    import aegis_ai.features.cve.downstream as downstream_mod
+
+    _monkeypatch_session.setattr(
+        downstream_mod, "http_get_json", catalog_cache_retrieve
+    )
+
+
 # enable logging to see progress
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging_for_session():
@@ -255,6 +208,10 @@ def setup_logging_for_session():
 
 # Cache OSIDB responses (maintained in git) so evals are invariant to
 # future OSIDB data changes.
+def _tool_filter(ctx, td) -> bool:
+    return not is_tool_disabled(ctx, td.name)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def override_osidb_toolset():
     cached = FunctionToolset[feature_deps](tools=[osidb_tool])
@@ -264,16 +221,32 @@ def override_osidb_toolset():
         # Drop the optional osidb_component_toolset so component tools
         # cannot bypass the cached fixture and hit live OSIDB.
         wrapped.toolsets[1:] = []  # type:ignore
+    ts.redhat_cve_toolset.wrapped = FilteredToolset(
+        ts.redhat_cve_toolset.wrapped, filter_func=_tool_filter
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
 def override_public_cve_toolset():
-    cached: FunctionToolset[feature_deps] = FunctionToolset(
-        tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]
-    )
     wrapped = ts.public_cve_toolset.wrapped
-    if isinstance(wrapped, CombinedToolset):
-        wrapped.toolsets[0] = cached  # type:ignore
+    if isinstance(wrapped, CombinedToolset) and get_settings().use_osv_dev_tool:
+        cached: FunctionToolset[feature_deps] = FunctionToolset(
+            tools=[osv_dev_cve_tool, osv_dev_ghsa_tool]
+        )
+        for i, t in enumerate(wrapped.toolsets):
+            if isinstance(t, FunctionToolset):
+                wrapped.toolsets[i] = cached  # type:ignore
+                break
+    ts.public_cve_toolset.wrapped = FilteredToolset(
+        ts.public_cve_toolset.wrapped, filter_func=_tool_filter
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def filter_public_toolset():
+    ts.public_toolset.wrapped = FilteredToolset(
+        ts.public_toolset.wrapped, filter_func=_tool_filter
+    )
 
 
 # Optionally exit successfully if ${AEGIS_EVALS_MIN_PASSED} tests have succeeded
@@ -372,9 +345,22 @@ def pytest_sessionfinish(session, exitstatus):
             build_system_misses_file,
         )
 
-    # Dump cache-miss file contents as base64 so they can be imported from CI logs
+    catalog_misses_file = write_catalog_misses_report()
+    if catalog_misses_file:
+        logging.warning(
+            "[catalog_cache] %d cache miss(es) written to %s — "
+            "commit the new evals/catalog_cache/*.json files",
+            len(catalog_cache_misses),
+            catalog_misses_file,
+        )
+
+    # Dump cache-miss file contents as base64 so they can be imported from CI logs.
+    # Anitya catalog misses are dumped (field-filtered, public host). Bomq catalog
+    # misses are omitted: CI cannot fill localhost bomq, and some slimmed search
+    # bodies are still too large for a single log line.
     cache_types = {
         "build_system": get_build_system_miss_files,
+        "catalog": get_catalog_public_miss_files,
         "external_references": get_extref_miss_files,
         "ghsa": get_ghsa_miss_files,
         "osidb": get_osidb_miss_files,

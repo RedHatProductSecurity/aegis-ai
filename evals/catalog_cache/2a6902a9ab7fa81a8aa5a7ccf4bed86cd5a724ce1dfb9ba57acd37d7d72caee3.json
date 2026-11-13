@@ -1,0 +1,78 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Abinutils&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "binutils",
+                "type": "deb",
+                "build_count": 2
+            },
+            {
+                "name": "binutils",
+                "type": "generic",
+                "build_count": 6
+            },
+            {
+                "name": "binutils",
+                "type": "rpm",
+                "build_count": 866
+            },
+            {
+                "name": "gcc-toolset-11-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gcc-toolset-12-binutils",
+                "type": "rpm",
+                "build_count": 5
+            },
+            {
+                "name": "gcc-toolset-13-binutils",
+                "type": "rpm",
+                "build_count": 7
+            },
+            {
+                "name": "gcc-toolset-14-binutils",
+                "type": "rpm",
+                "build_count": 18
+            },
+            {
+                "name": "gcc-toolset-15-binutils",
+                "type": "rpm",
+                "build_count": 21
+            },
+            {
+                "name": "gcc-toolset-16-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libbinutils",
+                "type": "deb",
+                "build_count": 2
+            },
+            {
+                "name": "mingw-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw32-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw64-binutils",
+                "type": "rpm",
+                "build_count": 4
+            },
+            {
+                "name": "ucrt64-binutils",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 14
+    }
+}

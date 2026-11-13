@@ -1,0 +1,6 @@
+{
+    "url": "{bomq_community}/api/v0/search/builds?name=rabbitmq-server4.3&strict=true&limit=20",
+    "body": {
+        "data": []
+    }
+}

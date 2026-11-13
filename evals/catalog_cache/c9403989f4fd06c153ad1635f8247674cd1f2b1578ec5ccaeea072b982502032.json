@@ -1,0 +1,43 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2AFreeRDP%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "freerdp",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freerdp-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freerdp-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freerdp-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freerdp2",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freerdp2-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freerdp2-libs",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 7
+    }
+}

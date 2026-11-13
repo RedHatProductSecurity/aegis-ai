@@ -36,11 +36,12 @@ CWE_URLS = [
 CWE_XML_URL = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
 
 CACHE_DIR = Path(get_settings().config_dir) / "mitre_cwe"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 CWE_DEFS_FILE = CACHE_DIR / "cwe_full_defs.json"
 CWE_TFIDF_MATRIX_FILE = CACHE_DIR / "cwe_tfidf.npy"
 CWE_VOCAB_FILE = CACHE_DIR / "cwe_vocab.json"
 CWE_INDEX_MAP_FILE = CACHE_DIR / "cwe_index_map.json"
+
+BUNDLED_DEFS_FILE = Path(__file__).resolve().parent / "data" / "cwe_full_defs.json"
 
 # Cosine similarity threshold for TF-IDF retrieval
 SIMILARITY_THRESHOLD = 0.12
@@ -71,6 +72,21 @@ KEYWORD_BOOSTS: list[tuple[re.Pattern[str], str, float]] = [
     (re.compile(r"\b(signature|sig|mac|hmac|checksum|integrity (check|value))\b.*\b(not|missing|skipped|no)\b.*\b(verify|validation|check)\b"), "CWE-354", 0.3),
 ]
 # fmt: on
+
+
+def _invalidate_index_cache() -> None:
+    for f in (CWE_TFIDF_MATRIX_FILE, CWE_VOCAB_FILE, CWE_INDEX_MAP_FILE):
+        f.unlink(missing_ok=True)
+
+
+def _load_bundled_definitions() -> dict[str, dict]:
+    if not BUNDLED_DEFS_FILE.exists():
+        logger.error(f"Bundled CWE definitions not found at '{BUNDLED_DEFS_FILE}'.")
+        return {}
+    with open(BUNDLED_DEFS_FILE, encoding="utf-8") as f:
+        data = json.load(f)
+    logger.info(f"Loaded {len(data)} bundled CWE definitions.")
+    return data
 
 
 class CWEManager:
@@ -160,6 +176,13 @@ class CWEManager:
                     logger.error(f"Failed to retrieve CWEs from {url}: {e}")
 
             usage_map = await self._fetch_mapping_usage(client)
+            if not usage_map:
+                bundled = _load_bundled_definitions()
+                usage_map = {
+                    cwe_id: entry["mapping_usage"]
+                    for cwe_id, entry in bundled.items()
+                    if entry.get("mapping_usage")
+                }
             for cwe_id, details in defs.items():
                 usage = usage_map.get(cwe_id)
                 details["mapping_usage"] = usage
@@ -250,29 +273,48 @@ class CWEManager:
                 return
 
             self._debug = logger.isEnabledFor(logging.DEBUG)
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            rebuild_index = False
 
-            if CWE_DEFS_FILE.exists():
+            if CWE_DEFS_FILE.exists() and CWE_DEFS_FILE.stat().st_size > 0:
                 logger.info(f"Loading CWE definitions from '{CWE_DEFS_FILE}'.")
                 self._definitions = await read_json_async(CWE_DEFS_FILE)
-                sample = next(iter(self._definitions.values()), {})
-                if "mapping_usage" not in sample:
-                    logger.info("CWE cache missing mapping_usage; regenerating.")
-                    self._definitions = await self._fetch_and_parse_cwe_data()
-                    await write_json_async(CWE_DEFS_FILE, self._definitions)
-                    for f in (
-                        CWE_TFIDF_MATRIX_FILE,
-                        CWE_VOCAB_FILE,
-                        CWE_INDEX_MAP_FILE,
-                    ):
-                        f.unlink(missing_ok=True)
-            else:
-                logger.info("No CWE definitions file found. Fetching from MITRE.")
+
+                if not self._definitions:
+                    logger.warning("Cached CWE definitions file is empty.")
+                    self._definitions = None
+                else:
+                    sample = next(iter(self._definitions.values()), {})
+                    if "mapping_usage" not in sample:
+                        logger.info("CWE cache missing mapping_usage; regenerating.")
+                        fetched = await self._fetch_and_parse_cwe_data()
+                        if not fetched:
+                            fetched = _load_bundled_definitions()
+                        if fetched:
+                            self._definitions = fetched
+                            _invalidate_index_cache()
+                            await write_json_async(CWE_DEFS_FILE, self._definitions)
+                        rebuild_index = True
+
+            if not self._definitions:
+                logger.info("No valid CWE definitions in cache. Fetching from MITRE.")
                 self._definitions = await self._fetch_and_parse_cwe_data()
-                logger.info(f"Writing CWE definitions to '{CWE_DEFS_FILE}'.")
-                await write_json_async(CWE_DEFS_FILE, self._definitions)
+
+                if not self._definitions:
+                    logger.warning(
+                        "MITRE fetch failed. Falling back to bundled CWE definitions."
+                    )
+                    self._definitions = _load_bundled_definitions()
+
+                if self._definitions:
+                    _invalidate_index_cache()
+                    logger.info(f"Writing CWE definitions to '{CWE_DEFS_FILE}'.")
+                    await write_json_async(CWE_DEFS_FILE, self._definitions)
+                rebuild_index = True
 
             if (
-                CWE_TFIDF_MATRIX_FILE.exists()
+                not rebuild_index
+                and CWE_TFIDF_MATRIX_FILE.exists()
                 and CWE_VOCAB_FILE.exists()
                 and CWE_INDEX_MAP_FILE.exists()
             ):

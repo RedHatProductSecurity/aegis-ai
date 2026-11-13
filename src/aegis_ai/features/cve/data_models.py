@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from aegis_ai.data_models import CVEID, CWEID, CVSS3Vector
 from aegis_ai.features.data_models import AegisFeatureModel
 
+STEERING_NOTES_MAX_LENGTH = 5000
+
 
 class CVEFeatureInput(BaseModel):
     cve_id: CVEID = Field(..., description="CVE ID input")
@@ -20,8 +22,14 @@ class CVEFeatureInput(BaseModel):
     references: list | None = Field(None, description="List of references")
     affects: list | None = Field(None, description="List of affects")
     cvss_scores: list | None = Field(None, description="List of CVSS scores")
+    steering_notes: str | None = Field(
+        None,
+        max_length=STEERING_NOTES_MAX_LENGTH,
+        description="Internal analyst notes providing additional flaw context",
+    )
 
     def __repr__(self) -> str:
+        """Compact representation showing only non-None CVE input fields."""
         fields = {k: v for k, v in self.__dict__.items() if v is not None}
         pairs = " ".join(f"{k}={v!r}" for k, v in fields.items())
         return f"{self.__class__.__name__}({pairs})"
@@ -77,6 +85,31 @@ class QueryAffectedComponentsModel(BaseModel):
         return f"{len(self.affected_components)} affected component(s)"
 
 
+class BinaryAffectednessEntry(BaseModel):
+    """Per-binary affectedness within a source RPM package."""
+
+    binary_rpm: str = Field(
+        ...,
+        description="Binary RPM name (e.g., 'libcurl').",
+    )
+
+    affected: bool = Field(
+        ...,
+        description="Whether this binary is affected by the vulnerability.",
+    )
+
+    explanation: str = Field(
+        ...,
+        description="Rationale for the determination.",
+    )
+
+    subcomponent_hint: str | None = Field(
+        default=None,
+        description="Optional free-text hint about which internal component within "
+        "the binary is affected (e.g., 'XFS kernel module', 'HTTP/2 handler').",
+    )
+
+
 class AffectedPackageEntry(BaseModel):
     """A single package-level affectedness suggestion with rationale."""
 
@@ -100,10 +133,15 @@ class AffectedPackageEntry(BaseModel):
         description="Per-package rationale for the affectedness determination.",
     )
 
-    affected_subcomponents: str | None = Field(
+    affected_binaries: list[BinaryAffectednessEntry] = Field(
+        default_factory=list,
+        description="Per-binary affectedness assessments for the binary RPMs "
+        "produced by this source package.",
+    )
+
+    build_nvr: str | None = Field(
         default=None,
-        description="Optional free-text hint about which internal components within "
-        "the package are affected (e.g., 'XFS kernel module', 'libcurl HTTP/2 handler').",
+        description="The NVR (name-version-release) of the resolved Brew build.",
     )
 
 
@@ -126,9 +164,12 @@ class SuggestAffectedPackagesModel(AegisFeatureModel):
     )
 
     def printable_outcome(self) -> str:
+        """Short summary of affected package and binary counts."""
         affected = sum(1 for p in self.affected_packages if p.affected)
         total = len(self.affected_packages)
-        return f"{affected}/{total} package(s) affected"
+        binaries = sum(len(p.affected_binaries) for p in self.affected_packages)
+        suffix = f", {binaries} binaries assessed" if binaries else ""
+        return f"{affected}/{total} package(s) affected{suffix}"
 
 
 class ComponentMatch(BaseModel):
@@ -212,7 +253,8 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
     ecosystems: list[str] = Field(
         default_factory=list,
         description="Package ecosystems impacted by this vulnerability (derived from components). "
-        "Allowed values: cargo, golang, npm, pypi, maven, gem, generic, unknown.",
+        "Allowed values: cargo, composer, conan, cran, gem, generic, golang, ",
+        "hex, luarocks, maven, npm, nuget, opam, otp, pub, pypi, swift, unknown.",
     )
 
     explanation: str = Field(
@@ -225,6 +267,165 @@ class SuggestAffectedComponentsModel(AegisFeatureModel):
         if self.ecosystems:
             return f"{self.components} ecosystems={self.ecosystems}"
         return str(self.components)
+
+
+class ManifestComponentEntry(BaseModel):
+    """One downstream name ACE can search for."""
+
+    name: str = Field(..., description="Downstream component or package name.")
+    build_type: Literal["rpm", "container", "maven", "generic"] | None = Field(
+        default=None,
+        description=(
+            "Build-name search key. Use when the name is an exact bomq build "
+            "(rpm, container, maven build, or generic build). Do not use for "
+            "bundled Maven/npm/golang registry coordinates."
+        ),
+    )
+    ecosystem: (
+        Literal["cargo", "gem", "golang", "maven", "npm", "pypi", "generic"] | None
+    ) = Field(
+        default=None,
+        description=(
+            "Bundled-component search key. Use for registry packages (maven "
+            "GAVs, npm, golang modules, …) that appear as catalog components "
+            "but not as builds of that name. Never rpm; rpm rows use build_type."
+        ),
+    )
+    rhcos: Literal["rpm"] | None = Field(
+        default=None,
+        description="Set to rpm when this name also ships in an RHCOS image.",
+    )
+    affectedness: Literal["AFFECTED", "NOTAFFECTED", "UNKNOWN"] | None = Field(
+        default=None,
+        description=(
+            "AFFECTED or NOTAFFECTED when samples clearly fall in or out of the "
+            "advisory range; UNKNOWN when the range or version sample is missing; "
+            "null for compat/ambiguous packaging that needs manual review."
+        ),
+    )
+    evidence: str | None = Field(
+        default=None,
+        description="Sample of upstream versions used for the affectedness decision.",
+    )
+
+    @model_validator(mode="after")
+    def exactly_one_search_key(self) -> "ManifestComponentEntry":
+        """Require exactly one of build_type, ecosystem, or rhcos on each row."""
+        present = [
+            key
+            for key, value in (
+                ("build_type", self.build_type),
+                ("ecosystem", self.ecosystem),
+                ("rhcos", self.rhcos),
+            )
+            if value is not None
+        ]
+        if len(present) != 1:
+            raise ValueError(
+                "exactly one of build_type, ecosystem, or rhcos is required"
+            )
+        return self
+
+
+class ManifestUsageAnalysis(BaseModel):
+    """Which catalog hits actually run the vulnerable code."""
+
+    vulnerable_unit: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Package or submodule the patch changes "
+            "(e.g. github.com/prometheus/common/config), not a parent import."
+        ),
+    )
+    caller_role: Literal["every_importer", "product_feature"] = Field(
+        ...,
+        description=(
+            "every_importer when every caller of the API is in scope "
+            "(OpenSSL, libcurl, html/template); product_feature when only a "
+            "named product feature runs the bug (Prometheus remote_write)."
+        ),
+    )
+    runs_vulnerable_code: list[str] = Field(
+        ...,
+        description=(
+            "Catalog names that run the vulnerable unit: the patched submodule "
+            "and application/server builds that exercise it."
+        ),
+    )
+    importer_only: list[str] = Field(
+        ...,
+        description=(
+            "Catalog names that only link a shared parent module and do not "
+            "run the vulnerable feature."
+        ),
+    )
+
+
+class SuggestManifestComponentAndStateModel(AegisFeatureModel):
+    """Downstream names for the flaw's components, with affectedness when known."""
+
+    cve_id: CVEID = Field(..., description="CVE identifier for the flaw.")
+    manifest_components: list[ManifestComponentEntry] = Field(
+        default_factory=list,
+        description="Same-project downstream names confirmed in a catalog.",
+    )
+    usage: ManifestUsageAnalysis = Field(
+        ...,
+        description=(
+            "Vulnerable-code usage: which catalog hits run the bug versus "
+            "importer-only shared modules."
+        ),
+    )
+    explanation: str = Field(
+        ...,
+        description="Why these downstream names were kept or left out.",
+    )
+    # Set on catalog outages so the bot records a lookup failure, not a
+    # low-confidence empty mapping.
+    _catalog_outage: bool = PrivateAttr(default=False)
+
+    def printable_outcome(self) -> str:
+        return f"{len(self.manifest_components)} downstream name(s)"
+
+
+class DownstreamFeatureContext(BaseModel):
+    """Prefetched catalog context for SuggestManifestComponentAndState."""
+
+    cve_id: CVEID = Field(..., description="CVE identifier for the flaw.")
+    flaw_components: list[str] = Field(
+        default_factory=list,
+        description="Upstream component seeds from the flaw.",
+    )
+    advisory_text: str = Field(
+        default="",
+        description="Joined advisory/CVE text used for version-range hints.",
+    )
+    upstream_data: dict | list | None = Field(
+        default=None,
+        description="OSV-shaped upstream_data from the flaw when present.",
+    )
+    downstream_candidates: dict = Field(
+        default_factory=dict,
+        description="Prefetched bomq/Anitya candidates, versions, and soft labels.",
+    )
+    soft_label_baseline: list[dict] = Field(
+        default_factory=list,
+        description="Deterministic soft-label keepers with affectedness hints.",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"DownstreamFeatureContext(cve_id={self.cve_id!r} "
+            f"seeds={self.flaw_components!r} "
+            f"candidates={len(self.downstream_candidates.get('candidates', []))} "
+            f"baseline={len(self.soft_label_baseline)})"
+        )
+
+    def __str__(self) -> str:
+        # AegisPrompt.to_string() interpolates the context with str(); the
+        # compact __repr__ is for logs only and must not hide the catalog.
+        return self.model_dump_json()
 
 
 class SuggestImpactModel(AegisFeatureModel):

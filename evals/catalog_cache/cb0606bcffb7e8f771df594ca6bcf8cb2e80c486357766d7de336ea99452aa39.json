@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=moodle&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "moodle",
+                "id": 6384,
+                "backend": "GitHub",
+                "homepage": "https://moodledev.io/general/releases",
+                "ecosystem": "https://moodledev.io/general/releases"
+            }
+        ],
+        "total_items": 1
+    }
+}

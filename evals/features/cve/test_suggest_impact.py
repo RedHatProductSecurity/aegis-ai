@@ -89,8 +89,9 @@ kernel_scope_judge = create_llm_judge(
         "in a way consistent with the vector: use PR:H when admin-class capabilities "
         "(e.g. CAP_SYS_ADMIN, CAP_NET_ADMIN) are required to trigger the bug; use S:U "
         "unless the described effect crosses a security boundary (e.g. container escape to host, "
-        "guest-to-host breakout via KVM/hypervisor, or userspace corruption of kernel-managed "
-        "hypervisor state such as shadow page tables or EPT/NPT entries); "
+        "guest-to-host breakout via KVM/hypervisor, userspace corruption of kernel-managed "
+        "hypervisor state such as shadow page tables or EPT/NPT entries, or cross-namespace "
+        "boundary crossing where a user in one network namespace manipulates resources in another); "
         "do not set C:H/I:H for purely internal kernel state issues without a plausible "
         "user-data impact path. However, kernel structures that carry or mediate user data "
         "(network/Bluetooth channel state, socket buffers, filesystem inodes, memory mappings) "
@@ -116,7 +117,11 @@ kernel_scope_judge = create_llm_judge(
         "program loading via unprivileged BPF, device events during normal use, "
         "worker/interrupt-context races), that is also consistent — accept it. "
         "Fail only when the explanation describes exclusively admin-only trigger paths with "
-        "no plausible unprivileged alternative and the vector still uses PR:L."
+        "no plausible unprivileged alternative and the vector still uses PR:L. "
+        "Exception for guest VMs: privileges inside a guest virtual machine (e.g. guest root, "
+        "guest admin performing IOMMU/DMA/device operations) are PR:L from the CVSS perspective "
+        "because the attacker is scoped to the guest, not the host — accept PR:L even when the "
+        "explanation mentions 'administrative' operations inside the guest."
     ),
 )
 
@@ -129,6 +134,8 @@ class SuggestImpactCase(Case):
         expected_cvss3_score=None,
         expected_cvss3_vector=None,
         data_quality=None,
+        mask_osidb_fields: list[str] | None = None,
+        disable_tools: list[str] | None = None,
         **kwargs,
     ):
         """evaluation case for suggest-impact, cve_id is the input, expected_* is the expected output"""
@@ -171,6 +178,9 @@ class SuggestImpactCase(Case):
         if is_kernel_component(components):
             evaluators.append(kernel_scope_judge)
 
+        self._extra_exclude_osidb_fields = mask_osidb_fields or []
+        self._disabled_tools = set(disable_tools) if disable_tools else set()
+
         super().__init__(
             name=f"suggest-impact-for-{cve_id}",
             inputs=cve_id,
@@ -207,13 +217,6 @@ class CVSSValidator(Evaluator[str, SuggestImpactModel]):
 
         # no problem detected
         return EvaluationReason(True)
-
-
-async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
-    """use rh_feature_agent to suggest Impact for the given CVE"""
-    feature = SuggestImpact(rh_feature_agent)
-    result = await feature.exec(cve_id)
-    return result.output
 
 
 # test cases
@@ -604,6 +607,23 @@ cases = [
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
     ),
 ]
+
+_case_overrides: dict[str, SuggestImpactCase] = {
+    c.inputs: c for c in cases if c._extra_exclude_osidb_fields or c._disabled_tools
+}
+
+
+async def suggest_impact(cve_id: CVEID) -> SuggestImpactModel:
+    """use rh_feature_agent to suggest Impact for the given CVE"""
+    feature = SuggestImpact(rh_feature_agent)
+    case = _case_overrides.get(str(cve_id))
+    result = await feature.exec(
+        cve_id,
+        extra_exclude_osidb_fields=case._extra_exclude_osidb_fields if case else None,
+        disabled_tools=case._disabled_tools if case else None,
+    )
+    return result.output
+
 
 # evaluators
 evals = common_feature_evals + [

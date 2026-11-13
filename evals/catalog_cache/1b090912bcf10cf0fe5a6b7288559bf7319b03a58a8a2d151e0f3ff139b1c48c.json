@@ -1,0 +1,193 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=%2Avim%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "@patternfly/react-icons-vimeo-icon.js-dynamic",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "@patternfly/react-icons-vimeo-square-icon.js-dynamic",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "@patternfly/react-icons-vimeo-v-icon.js-dynamic",
+                "type": "npm",
+                "build_count": 2
+            },
+            {
+                "name": "@vimeo/player",
+                "type": "npm",
+                "build_count": 5
+            },
+            {
+                "name": "beakerlib-vim-syntax",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "espeak-ng-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gvim16.png",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "gvim32.png",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "gvim48.png",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "gvim64.png",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "macros.vim",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "neovim/libvterm",
+                "type": "github",
+                "build_count": 1
+            },
+            {
+                "name": "nftables-vim",
+                "type": "apk",
+                "build_count": 1
+            },
+            {
+                "name": "ninja.vim",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "protobuf-vim",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim",
+                "type": "apk",
+                "build_count": 1
+            },
+            {
+                "name": "vim",
+                "type": "rpm",
+                "build_count": 22
+            },
+            {
+                "name": "vim-X11",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-X11-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-common",
+                "type": "apk",
+                "build_count": 1
+            },
+            {
+                "name": "vim-common",
+                "type": "rpm",
+                "build_count": 32
+            },
+            {
+                "name": "vim-common-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-data",
+                "type": "rpm",
+                "build_count": 68
+            },
+            {
+                "name": "vim-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-debugsource",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-default",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "vim-default-editor",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-enhanced",
+                "type": "rpm",
+                "build_count": 28
+            },
+            {
+                "name": "vim-enhanced-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim-filesystem",
+                "type": "rpm",
+                "build_count": 343
+            },
+            {
+                "name": "vim-minimal",
+                "type": "rpm",
+                "build_count": 1570
+            },
+            {
+                "name": "vim-minimal-debuginfo",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "vim.fish",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "vim.sh",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "vim92",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "vimeo-video-element",
+                "type": "npm",
+                "build_count": 5
+            },
+            {
+                "name": "vimrc",
+                "type": "generic",
+                "build_count": 1
+            }
+        ],
+        "total": 37
+    }
+}

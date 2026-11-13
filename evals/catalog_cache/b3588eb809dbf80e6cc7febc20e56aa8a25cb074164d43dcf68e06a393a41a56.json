@@ -1,0 +1,203 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=github.com%2Fopenshift-priv%2Fprometheus&strict=true&include_types=golang&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20260921085709-d44ec0d4b249"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift5/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20260921113128-a8d83d42d426"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20260929203517-0e2e5ce6f4f7"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261001032401-83fbdaa8eb35"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261013035254-4ea40ae82a4e"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261023151721-388353ab01c4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261024194054-e4fccb785165"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261024212602-11dd9f8cf310"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261024230834-f325a7f98b90"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261026001205-1dfdf5df3eed"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261027145423-e67c309d6c11"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261027154734-abe787bae405"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261027235546-e11e3bf3a549"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift5/ose-prometheus-rhel9"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "github.com/openshift-priv/prometheus",
+                                "type": "golang",
+                                "version": "v0.0.0-20261028022853-2a1a14fb34db"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "openshift4/ose-prometheus-rhel9"
+            }
+        ]
+    }
+}

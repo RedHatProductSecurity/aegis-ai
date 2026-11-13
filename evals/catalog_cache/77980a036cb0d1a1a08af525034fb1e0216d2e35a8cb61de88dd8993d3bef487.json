@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=tomcat&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "tomcat",
+                "id": 148939,
+                "backend": "GitHub",
+                "homepage": "https://tomcat.apache.org/whichversion.html",
+                "ecosystem": "https://tomcat.apache.org/whichversion.html"
+            }
+        ],
+        "total_items": 1
+    }
+}

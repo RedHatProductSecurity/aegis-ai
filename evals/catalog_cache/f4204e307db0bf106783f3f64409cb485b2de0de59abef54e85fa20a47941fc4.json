@@ -1,0 +1,161 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=vim&strict=true&build_name=rhcos%2A&include_types=rpm&limit=20",
+    "body": {
+        "data": [
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.0.1763-19.el8_6.6"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-20.el9_2.3"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-20.el9_2.3"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-20.el9_2.3"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-20.el9_4.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-20.el9_4.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-20.el9_4.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-22.el9_6.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-22.el9_6.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-22.el9_6.4"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            },
+            {
+                "sources": [
+                    {
+                        "components": [
+                            {
+                                "name": "vim",
+                                "type": "rpm",
+                                "version": "8.2.2637-26.el9_8.23"
+                            }
+                        ]
+                    }
+                ],
+                "build_name": "rhcos-x86_64"
+            }
+        ]
+    }
+}

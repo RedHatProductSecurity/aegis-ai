@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-86350",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-86350",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Inconsistent interpretation of HTTP/2 requests ('HTTP Request/Response smuggling') vulnerability in Apache Tomcat caused by a\u00a0regression in fix for CVE-2026-41293 can trigger request header mix-up.\\n\\n\\n\\nThis issue affects Apache Tomcat: from 11.0.22 through 11.0.25, from 10.1.55 through 10.1.59, from 9.0.118 through 9.0.121.\\n\\n\\n\\nUsers are recommended to upgrade to version 11.0.26, 10.1.60 or 9.0.122, which fix the issue.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"other\": {\n        \"type\": \"Textual description of severity\",\n        \"content\": {\n          \"text\": \"important\"\n        }\n      },\n      \"scenarios\": [\n        {\n          \"lang\": \"en\",\n          \"value\": \"GENERAL\"\n        }\n      ]\n    }\n  ],\n  \"affected\": [\n    {\n      \"vendor\": \"Apache Software Foundation\",\n      \"product\": \"Apache Tomcat\",\n      \"versions\": [\n        {\n          \"status\": \"affected\",\n          \"version\": \"11.0.22\",\n          \"lessThanOrEqual\": \"11.0.25\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"status\": \"affected\",\n          \"version\": \"10.1.55\",\n          \"lessThanOrEqual\": \"10.1.59\",\n          \"versionType\": \"semver\"\n        },\n        {\n          \"status\": \"affected\",\n          \"version\": \"9.0.118\",\n          \"lessThanOrEqual\": \"9.0.121\",\n          \"versionType\": \"semver\"\n        }\n      ],\n      \"defaultStatus\": \"unaffected\"\n    }\n  ]\n}"
+    }
+}

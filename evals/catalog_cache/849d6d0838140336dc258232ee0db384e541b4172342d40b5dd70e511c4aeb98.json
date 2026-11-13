@@ -1,0 +1,6 @@
+{
+    "url": "{bomq_primary}/api/v0/search/components?name=mingw32-openexr&strict=true&build_name=rhcos%2A&include_types=rpm&limit=20",
+    "body": {
+        "data": []
+    }
+}

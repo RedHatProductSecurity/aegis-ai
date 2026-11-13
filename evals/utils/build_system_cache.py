@@ -104,7 +104,7 @@ def _try_read_cache(package: str, ps_update_stream: str) -> ListBinaryRPMsOutput
 
 
 def build_system_cache_retrieve_batch(
-    package: str, streams: list[str]
+    package: str, streams: list[str], *, deadline: float | None = None
 ) -> list[ListBinaryRPMsOutput]:
     """Batch cache lookup: read hits from disk, resolve misses in one batch.
 

@@ -1,0 +1,19 @@
+{
+    "url": "{bomq_primary}/api/v0/search/builds?name=nvidia-driver&strict=true&limit=20",
+    "body": {
+        "data": [
+            {
+                "build_version": "615.71.10-1.el10"
+            },
+            {
+                "build_version": "615.71.10-1.el10"
+            },
+            {
+                "build_version": "615.71.10-1.el9"
+            },
+            {
+                "build_version": "615.71.10-1.el9"
+            }
+        ]
+    }
+}

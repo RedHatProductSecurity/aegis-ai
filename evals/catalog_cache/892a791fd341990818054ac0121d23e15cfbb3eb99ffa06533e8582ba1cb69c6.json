@@ -1,0 +1,508 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Apostgresql%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=2",
+    "body": {
+        "data": [
+            {
+                "name": "EekBoek-db-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "Io-language-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ansible-collection-community-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ara[postgresql]",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "asterisk-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "azure-mgmt-postgresqlflexibleservers",
+                "type": "pypi",
+                "build_count": 1
+            },
+            {
+                "name": "collectd-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "freeradius-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gambas3-gb-db-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "gambas3-gb-db2-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/latest/postgresql/mgmt/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/latest/postgresql/mgmt/postgresql/postgresqlapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/latest/postgresql/mgmt/postgresqlflexibleservers",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/latest/postgresql/mgmt/postgresqlflexibleservers/postgresqlflexibleserversapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/postgresql/mgmt/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/postgresql/mgmt/postgresql/postgresqlapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/postgresql/mgmt/postgresqlflexibleservers",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/postgresql/mgmt/postgresqlflexibleservers/postgresqlflexibleserversapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/postgresql/mgmt/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/postgresql/mgmt/postgresql/postgresqlapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/postgresql/mgmt/postgresqlflexibleservers",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/postgresql/mgmt/postgresqlflexibleservers/postgresqlflexibleserversapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/postgresql/mgmt/2017-12-01/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/postgresql/mgmt/2017-12-01/postgresql/postgresqlapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/postgresql/mgmt/2020-01-01/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/postgresql/mgmt/2020-01-01/postgresql/postgresqlapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/postgresql/mgmt/2021-06-01/postgresqlflexibleservers",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/postgresql/mgmt/2021-06-01/postgresqlflexibleservers/postgresqlflexibleserversapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/preview/postgresql/mgmt/2017-12-01-preview/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/preview/postgresql/mgmt/2017-12-01-preview/postgresql/postgresqlapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/preview/postgresql/mgmt/2020-02-14-preview/postgresqlflexibleservers",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/preview/postgresql/mgmt/2020-02-14-preview/postgresqlflexibleservers/postgresqlflexibleserversapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/preview/postgresql/mgmt/2020-11-05-preview/postgresqlflexibleservers",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/Azure/azure-sdk-for-go/services/preview/postgresql/mgmt/2020-11-05-preview/postgresqlflexibleservers/postgresqlflexibleserversapi",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/postgresql/v1",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/postgresql/v1)(commit=ac23439608838d7d2b957c24747be8f5e1925840",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/postgresql/v1/config",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/yandex-cloud/go-genproto/yandex/cloud/mdb/postgresql/v1/config)(commit=ac23439608838d7d2b957c24747be8f5e1925840",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/yandex-cloud/go-sdk/gen/mdb/postgresql",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/yandex-cloud/go-sdk/gen/mdb/postgresql)(commit=2a8cf9425a6fb81d643a240e7adf3ab574fec042",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "kdb-driver-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "libreoffice-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "lua-sql-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw32-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw32-postgresql-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw64-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw64-postgresql-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "nextcloud-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ocaml-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ocaml-postgresql-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "opendbx-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "opensips-db_postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pcp-pmda-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "pdns-backend-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "perl-DBIx-QuickDB-Driver-PostgreSQL",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "perl-RDF-Trine-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "perl-Test-PostgreSQL",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "perl-Test-PostgreSQL-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "poco-postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-credcheck",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-credcheck-selinux",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-ip4r",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-jdbc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-jdbc-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-odbc-tests",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-pgpool-II",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-pgpool-II-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-pgpool-II-extensions",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-plperl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-plpython3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-private-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-private-libs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-server",
+                "type": "generic",
+                "build_count": 5
+            },
+            {
+                "name": "postgresql-server",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-server-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-setup",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "postgresql-static",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-test",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-test-rpm-macros",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-upgrade",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql-upgrade-devel",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-anonymizer",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-contrib",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-decoderbufs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-docs",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_cron",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_repack",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pg_tle",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgaudit",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pgvector",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-plperl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-plpython3",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-pltcl",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "postgresql16-postgis",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 195
+    }
+}

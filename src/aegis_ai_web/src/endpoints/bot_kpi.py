@@ -39,7 +39,15 @@ logger = logging.getLogger(__name__)
 # Flaw fields that the bot writes suggestions for and that we can compare
 # against current values.  Underscore-prefixed keys (_ecosystems, _cvss3_vector)
 # are metadata-only and have no direct flaw-field counterpart.
-BOT_KPI_FIELDS = ("components", "title", "cve_description", "cwe_id", "impact")
+BOT_KPI_FIELDS = (
+    "components",
+    "title",
+    "cve_description",
+    "cwe_id",
+    "impact",
+    "statement",
+    "mitigation",
+)
 
 _META_ONLY_FIELDS = ("_cvss3_vector",)
 _ALL_KPI_FIELDS = BOT_KPI_FIELDS + _META_ONLY_FIELDS

@@ -1,0 +1,53 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Abinutils&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "avr-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "binutils",
+                "type": "generic",
+                "build_count": 4
+            },
+            {
+                "name": "binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "cross-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/google/pprof/internal/binutils",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "mingw-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw32-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "mingw64-binutils",
+                "type": "rpm",
+                "build_count": 1
+            },
+            {
+                "name": "ucrt64-binutils",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 9
+    }
+}

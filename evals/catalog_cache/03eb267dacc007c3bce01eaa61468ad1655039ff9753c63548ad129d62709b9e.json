@@ -1,0 +1,15 @@
+{
+    "url": "{anitya}/api/v2/projects/?name=busybox&page=1&items_per_page=100",
+    "body": {
+        "items": [
+            {
+                "name": "busybox",
+                "id": 230,
+                "backend": "custom",
+                "homepage": "https://www.busybox.net",
+                "ecosystem": "https://www.busybox.net"
+            }
+        ],
+        "total_items": 1
+    }
+}
