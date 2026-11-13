@@ -195,6 +195,7 @@ class FlawUpdater:
         self.on_failure = on_failure
         self.updated_fields = set()
         self._osidb_write_pending = False
+        self._fail_reason = ""
 
         try:
             # read flaw data
@@ -212,6 +213,7 @@ class FlawUpdater:
         logger.info(f"{self.cve}: {msg}")
 
     def _warn(self, msg: str) -> None:
+        self._fail_reason += f"- {msg}\n"
         logger.warning(f"{self.cve}: {msg}")
 
     def _log_osidb_response(self, e: Exception) -> None:
@@ -273,7 +275,12 @@ class FlawUpdater:
     async def set_manual_triage(self) -> None:
         """Create the manual-triage workflow label in a separate thread."""
         self._osidb_write_pending = True
-        await asyncio.to_thread(self.create_label, "manual-triage", type="workflow")
+        await asyncio.to_thread(
+            self.create_label,
+            name="manual-triage",
+            type="workflow",
+            reason=self._fail_reason or "osidb-bot internal error",
+        )
         self._osidb_write_pending = False
 
     def create_label(self, name: str, **kwargs) -> bool:
