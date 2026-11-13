@@ -270,6 +270,14 @@ class FlawUpdater:
             if isinstance(entry, dict)  # guard against malformed OSIDB data
         )
 
+    async def set_manual_triage(self) -> None:
+        """Create the manual-triage workflow label in a separate thread."""
+        self._osidb_write_pending = True
+        await asyncio.to_thread(
+            self.create_label, "manual-triage", label_type="workflow"
+        )
+        self._osidb_write_pending = False
+
     def create_label(self, label_name: str, label_type: str = "alias") -> bool:
         """Create a flaw label with the given name and type, return True on success."""
         assert self.flaw_data
@@ -410,11 +418,7 @@ class FlawUpdater:
             self._info(f"updated {self.updated_fields}")
 
         if not all_ok:
-            self._osidb_write_pending = True
-            await asyncio.to_thread(
-                self.create_label, "manual-triage", label_type="workflow"
-            )
-            self._osidb_write_pending = False
+            await self.set_manual_triage()
 
         return processed
 
@@ -521,13 +525,7 @@ class Bot(StateProxy):
                 and flaw_updater
             ):
                 # the last retry attempt failed, create the manual-triage label
-                flaw_updater._osidb_write_pending = True
-                await asyncio.to_thread(
-                    flaw_updater.create_label,
-                    "manual-triage",
-                    label_type="workflow",
-                )
-                flaw_updater._osidb_write_pending = False
+                await flaw_updater.set_manual_triage()
 
             if not handled_failure:
                 # propagate all but RuntimeError exceptions
