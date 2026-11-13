@@ -64,9 +64,10 @@ eval-in-parallel: fetch-deps
 	uv run pytest -vv -n auto evals
 
 test:
-	uv run pytest tests
+	uv run pytest -n auto tests
 
 test-web:
+	# FIXME: with `-n auto` this fails occasionally: `FAILED src/aegis_ai_web/tests/test_kpi_dashboard.py::test_legacy_cache_is_refreshed_even_with_same_watermark - AssertionError: assert 1 == 2`
 	uv run pytest src/aegis_ai_web/tests
 
 ############################################################################
