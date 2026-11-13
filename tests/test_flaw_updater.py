@@ -8,7 +8,7 @@ Tests run in offline mode: Session (osidb_bindings.session) and CVE features
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -751,6 +751,19 @@ MANUAL_TRIAGE_LABEL = {
 }
 
 
+def _assert_manual_triage_label(session, flaw_data):
+    """Assert that the manual-triage label was created with a non-empty reason."""
+    session.flaws.labels.create.assert_called_once_with(
+        flaw_id=flaw_data["uuid"],
+        form_data=ANY,
+    )
+    form_data = session.flaws.labels.create.call_args.kwargs["form_data"]
+    assert form_data["name"] == "manual-triage"
+    assert form_data["type"] == "workflow"
+    assert form_data["state"] == "NEW"
+    assert form_data["reason"]
+
+
 @pytest.mark.asyncio
 @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
 async def test_flaw_updater_do_creates_manual_triage_label_on_all_skipped(
@@ -812,10 +825,7 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_all_skipped(
     updater = FlawUpdater(session, agent, CVE_ID)
     await updater.do()
 
-    session.flaws.labels.create.assert_called_once_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    _assert_manual_triage_label(session, flaw_data)
 
 
 @pytest.mark.asyncio
@@ -844,10 +854,7 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_partial_failure(
     assert "cwe_id" not in updater.updated_fields
     assert flaw_data["aegis_meta"].get("processed") is True
 
-    session.flaws.labels.create.assert_called_once_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    _assert_manual_triage_label(session, flaw_data)
 
 
 @pytest.mark.asyncio
@@ -866,10 +873,7 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_save_failure(
     updater = FlawUpdater(session, agent, CVE_ID)
     await updater.do()
 
-    session.flaws.labels.create.assert_called_once_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    _assert_manual_triage_label(session, flaw_data)
 
 
 @pytest.mark.asyncio
@@ -898,10 +902,11 @@ async def test_schedule_retry_creates_manual_triage_on_last_attempt(mock_exec_fe
 
         await bot.process_cve(BotPosition(last_cve=CVE_ID))
 
-    session.flaws.labels.create.assert_called_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    form_data = session.flaws.labels.create.call_args.kwargs["form_data"]
+    assert form_data["name"] == "manual-triage"
+    assert form_data["type"] == "workflow"
+    assert form_data["state"] == "NEW"
+    assert form_data["reason"]
     assert CVE_ID not in bot.retry_list
 
 
