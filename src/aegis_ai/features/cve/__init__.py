@@ -48,9 +48,9 @@ from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
     RULES_KERNEL_ADDENDUM,
     check_kernel_output,
+    is_kernel_component,
 )
 from aegis_ai.features.data_models import feature_deps
-from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
 

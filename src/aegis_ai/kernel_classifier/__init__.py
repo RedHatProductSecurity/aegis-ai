@@ -30,6 +30,10 @@ from typing import Optional
 import httpx
 import numpy as np
 
+from aegis_ai.features.cve.kernel import (
+    KERNEL_COMPONENTS,  # noqa: F401
+    is_kernel_component,  # noqa: F401
+)
 from aegis_ai.kernel_classifier.cascade import (
     SEVERITY_LABELS,
     apply_cascade,
@@ -38,8 +42,6 @@ from aegis_ai.kernel_classifier.cascade import (
 from aegis_ai.kernel_classifier.html import extract_html_features
 
 logger = logging.getLogger(__name__)
-
-KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel", "linux_kernel"}
 
 CVSS_ISSUER_PRIORITY = ["NIST", "RH", "CVEORG", "OSV", "CISA"]
 
@@ -82,18 +84,6 @@ def _get_git_fetch_sem() -> asyncio.Semaphore:
 
         _git_fetch_sem = asyncio.Semaphore(get_settings().llm_max_jobs)
     return _git_fetch_sem
-
-
-def is_kernel_component(components: list | str | None) -> bool:
-    """Check if any component in the list indicates a Linux kernel flaw."""
-    if not components:
-        return False
-    if isinstance(components, str):
-        components = [components]
-    return bool(
-        {c.lower().strip() for c in components if isinstance(c, str)}
-        & KERNEL_COMPONENTS
-    )
 
 
 def _score_to_bucket(score: float) -> int:

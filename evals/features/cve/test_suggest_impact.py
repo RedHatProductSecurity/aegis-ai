@@ -9,7 +9,7 @@ from aegis_ai.agents import rh_feature_agent
 from aegis_ai.data_models import CVEID
 from aegis_ai.features.cve import SuggestImpact, SuggestImpactModel
 from aegis_ai.features.cve.impact_mappings import score_cvss3_diff, score_impact_diff
-from aegis_ai.kernel_classifier import is_kernel_component
+from aegis_ai.features.cve.kernel import is_kernel_component
 from evals.features.common import (
     DataQualityEvaluator,
     common_feature_evals,
