@@ -31,7 +31,7 @@ from aegis_ai.features.cve import downstream as downstream_mod
 from aegis_ai.features.cve.downstream import (
     collect_downstream_candidates,
 )
-from evals.features.cve.test_suggest_manifest_component_and_state import (
+from evals.features.cve.test_suggest_manifest_components_and_ranges import (
     DEFAULT_CVE_IDS,
 )
 from evals.utils.catalog_cache import (

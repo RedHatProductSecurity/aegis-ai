@@ -1,0 +1,28 @@
+{
+    "url": "{bomq_community}/api/v0alpha/components?name=%2Ago-chi%2Fchi%2A&strict=false&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "github.com/go-chi/chi",
+                "type": "golang",
+                "build_count": 2
+            },
+            {
+                "name": "github.com/go-chi/chi/middleware",
+                "type": "golang",
+                "build_count": 1
+            },
+            {
+                "name": "github.com/go-chi/chi/v5",
+                "type": "golang",
+                "build_count": 19
+            },
+            {
+                "name": "github.com/go-chi/chi/v5/middleware",
+                "type": "golang",
+                "build_count": 1
+            }
+        ],
+        "total": 4
+    }
+}

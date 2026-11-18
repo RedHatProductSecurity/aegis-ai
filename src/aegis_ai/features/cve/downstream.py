@@ -3,10 +3,11 @@
 Catalog gathering is deterministic: bomq components queries with
 ``exclude_subcomponents`` (seed plus reference-caller module paths and
 packaging tokens, narrowed when promiscuous), Anitya Fedora/EPEL names, then
-build/RHCOS version samples. Soft labels mark likely keepers and drop hints.
-Final keep/drop and affectedness may be refined by an agent;
-``collect_downstream`` applies the soft-label rules deterministically for
-tests and fallbacks.
+RHCOS presence checks for RPM keepers. Soft labels mark likely keepers and
+drop hints. Final keep/drop may be refined by an agent; ``collect_downstream``
+applies the soft-label rules deterministically for tests and fallbacks. Row
+affectedness is not computed here — ACE applies sibling ranges per
+``source_component``.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ _MAX_PAGES = 5
 _PROMISCUOUS_NAME_THRESHOLD = 50
 # Importer-only catalog names at or above this build count are omitted from
 # _downstream (OSIM slows down with thousands of affects). Below the limit they
-# stay as NOTAFFECTED with an explanation.
+# stay with an explanation.
 IMPORTER_AFFECT_LIMIT = 100
 
 _LEGAL_ECOSYSTEMS = ("golang", "maven", "npm", "pypi", "cargo", "gem", "generic")
@@ -75,20 +76,23 @@ _ADVISORY_FIELDS = (
     "statement",
     "title",
 )
-_THROUGH_RE = re.compile(
-    r"\b(?:from\s+)?v?([0-9][0-9A-Za-z.+]*)\s+through\s+v?([0-9][0-9A-Za-z.+]*)",
+# OSV range types ACE can compare as package versions (not commit hashes).
+_VERSION_RANGE_TYPES = frozenset({"ECOSYSTEM", "SEMVER"})
+_COMMIT_HASH_RE = re.compile(r"[0-9a-fA-F]{7,40}")
+# Advisory phrases that list exclusive upper bounds as bare versions
+# (before / prior to / fixed in, with or without the word "version(s)").
+# Capture stops after the last dotted version in a comma/and list (version
+# numbers contain dots, so a naive [^.]+ cut truncates at the first component).
+# Optional _N suffix covers Perl trial versions (0.037_1).
+_VERSION_TOKEN = r"v?\d+(?:\.\d+)+(?:_\d+)?"
+_STATED_FIX_LIST_RE = re.compile(
+    r"(?:before|prior\s+to|fixed\s+in)\s+(?:versions?\s+)?"
+    rf"({_VERSION_TOKEN}"
+    rf"(?:\s*,\s*(?:and\s+)?{_VERSION_TOKEN})*"
+    rf"(?:\s+and\s+{_VERSION_TOKEN})?)",
     re.IGNORECASE,
 )
-_BARE_THROUGH_RE = re.compile(
-    r"\bthrough\s+v?([0-9][0-9A-Za-z.+]*)\b",
-    re.IGNORECASE,
-)
-_GTE_RE = re.compile(r"(?:>=|≥)\s*v?([0-9][0-9A-Za-z.+]*)")
-_LT_RE = re.compile(
-    r"(?:before|fixed in|patched in|<)\s*v?([0-9][0-9A-Za-z.+]*)",
-    re.IGNORECASE,
-)
-_VERSION_PART_RE = re.compile(r"\d+|[A-Za-z]+")
+_STATED_VERSION_TOKEN_RE = re.compile(_VERSION_TOKEN, re.IGNORECASE)
 _KEEP_LABELS = frozenset(
     {
         "seed",
@@ -125,21 +129,13 @@ class CatalogHit:
     build_count: int | None = None
 
 
-@dataclass(frozen=True)
-class VersionBound:
-    introduced: str | None = None
-    fixed: str | None = None
-    last_affected: str | None = None
-
-
 @dataclass
 class DownstreamRow:
     name: str
     build_type: str | None = None
     ecosystem: str | None = None
     rhcos: str | None = None
-    affectedness: str | None = None
-    evidence: str | None = None
+    source_component: str | None = None
 
 
 @dataclass
@@ -168,8 +164,7 @@ class DownstreamCandidates:
     seeds: list[str] = field(default_factory=list)
     candidates: list[CandidateHit] = field(default_factory=list)
     anitya_names: dict[str, str] = field(default_factory=dict)
-    versions: dict[str, list[str]] = field(default_factory=dict)
-    rhcos_versions: dict[str, list[str]] = field(default_factory=dict)
+    rhcos_names: set[str] = field(default_factory=set)
     tools_used: list[str] = field(default_factory=list)
     advisory_text: str = ""
     promiscuous_hosts: list[str] = field(default_factory=list)
@@ -201,15 +196,14 @@ class DownstreamCandidates:
             "seeds": self.seeds,
             "candidates": [asdict(hit) for hit in self.candidates],
             "anitya_names": self.anitya_names,
-            "versions": self.versions,
-            "rhcos_versions": self.rhcos_versions,
+            "rhcos_names": sorted(self.rhcos_names),
             "promiscuous_hosts": self.promiscuous_hosts,
             "advisory_text": self.advisory_text,
         }
 
 
 def filter_bomq_response(url: str, payload: Any) -> Any:
-    """Keep only bomq fields used by downstream catalog / version sampling.
+    """Keep only bomq fields used by downstream catalog / RHCOS presence.
 
     Mirrors OSV tool-level filtering so eval ``catalog_cache`` stores slim
     bodies. Non-dict payloads, unknown paths, and responses without a ``data``
@@ -238,25 +232,12 @@ def filter_bomq_response(url: str, payload: Any) -> Any:
             filtered["total"] = payload["total"]
         return filtered
 
-    if path.endswith("/api/v0/search/builds"):
-        slim_data = []
-        for item in data:
-            if not isinstance(item, dict):
-                continue
-            row = {}
-            if "build_version" in item:
-                row["build_version"] = item["build_version"]
-            elif "version" in item:
-                row["version"] = item["version"]
-            slim_data.append(row)
-        return {"data": slim_data}
-
     if path.endswith("/api/v0/search/components"):
         slim_data = []
         for item in data:
             if not isinstance(item, dict):
                 continue
-            row = {"sources": []}
+            row: dict[str, Any] = {"sources": []}
             if "build_name" in item:
                 row["build_name"] = item["build_name"]
             for source in item.get("sources") or []:
@@ -267,7 +248,7 @@ def filter_bomq_response(url: str, payload: Any) -> Any:
                     if not isinstance(component, dict):
                         continue
                     slim_component: dict[str, Any] = {}
-                    for key in ("name", "type", "version"):
+                    for key in ("name", "type"):
                         if key in component:
                             slim_component[key] = component[key]
                     components.append(slim_component)
@@ -521,29 +502,12 @@ def collect_downstream_candidates(
         for hit in candidates
         if hit.soft_label in _KEEP_LABELS and hit.type == "rpm"
     ]
-    ecosystem_hits = [
-        hit
-        for hit in candidates
-        if hit.soft_label in _KEEP_LABELS and hit.type in _LEGAL_ECOSYSTEMS
-    ]
-    versions = _rpm_versions_for_names(getter, hosts, rpm_names, tools)
-    for name, sampled in _ecosystem_versions_for_hits(
-        getter, hosts, ecosystem_hits, tools
-    ).items():
-        existing = versions.setdefault(name, [])
-        for version in sampled:
-            if version not in existing:
-                existing.append(version)
-            if len(existing) >= 8:
-                break
-        versions[name] = existing[:8]
-    rhcos_versions = _rhcos_versions_for_names(getter, hosts, rpm_names, tools)
+    rhcos_names = _rhcos_names_for_names(getter, hosts, rpm_names, tools)
     return DownstreamCandidates(
         seeds=seeds,
         candidates=candidates,
         anitya_names=anitya_names,
-        versions=versions,
-        rhcos_versions=rhcos_versions,
+        rhcos_names=rhcos_names,
         tools_used=tools,
         advisory_text=advisory,
         promiscuous_hosts=promiscuous,
@@ -574,10 +538,8 @@ def collect_downstream(
         )
     rows = resolve_soft_label_rows(
         gathered.candidates,
-        gathered.versions,
-        gathered.rhcos_versions,
+        gathered.rhcos_names,
         gathered.seeds,
-        flaw=flaw,
     )
     return DownstreamResult(
         rows=rows,
@@ -610,13 +572,10 @@ def suppressed_short_path_names(
 
 def resolve_soft_label_rows(
     candidates: list[CandidateHit],
-    versions: dict[str, list[str]],
-    rhcos_versions: dict[str, list[str]],
+    rhcos_names: set[str],
     seeds: list[str],
-    *,
-    flaw: dict[str, Any] | None = None,
 ) -> list[DownstreamRow]:
-    """Keep soft-label keepers and attach affectedness / RHCOS companions."""
+    """Keep soft-label keepers and attach RHCOS companions with source_component."""
     planned: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     short_seeds = suppressed_short_path_names(seeds, {hit.name for hit in candidates})
@@ -627,15 +586,19 @@ def resolve_soft_label_rows(
             CatalogHit(hit.name, hit.type, hit.build_count)
         )
 
-    def add(name: str, kind: str, value: str, *, compat: bool) -> None:
+    def add(name: str, kind: str, value: str, *, seed: str) -> None:
         identity = (name.casefold(), kind, value)
         if identity in seen or name.casefold() in short_seeds:
             return
         seen.add(identity)
-        planned.append({"name": name, "kind": kind, "value": value, "compat": compat})
+        planned.append(
+            {"name": name, "kind": kind, "value": value, "source_component": seed}
+        )
 
     for hit in candidates:
         if hit.soft_label not in _KEEP_LABELS:
+            continue
+        if not hit.seed:
             continue
         if hit.name.casefold() in short_seeds:
             continue
@@ -644,14 +607,9 @@ def resolve_soft_label_rows(
         if classified is None:
             continue
         kind, value = classified
-        add(hit.name, kind, value, compat=hit.soft_label == "compat")
+        add(hit.name, kind, value, seed=hit.seed)
 
-    return _rows_with_affectedness(
-        planned,
-        versions,
-        rhcos_versions,
-        flaw=flaw,
-    )
+    return _build_downstream_rows(planned, rhcos_names)
 
 
 def post_filter_manifest_entries(
@@ -703,6 +661,19 @@ def drop_suppressed_short_path_entries(
 
 _GITHUB_REPO_RE = re.compile(
     r"github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)",
+    re.IGNORECASE,
+)
+# Tag / tree / blob refs that pin a dotted version on a GitHub repo.
+_GITHUB_REF_VERSION_RE = re.compile(
+    r"github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)"
+    r"/(?:blob|tree|releases/tag)/(v?\d+(?:\.\d+)+)",
+    re.IGNORECASE,
+)
+# Product/repo segment naming a bound in advisory prose.
+_FOREIGN_PRODUCT_BOUND_RE = re.compile(
+    r"\b([A-Za-z][A-Za-z0-9_.-]*)\s+"
+    r"(?:through|before|prior\s+to|up\s+to|<=|<)\s+"
+    r"(v?\d+(?:\.\d+)+)",
     re.IGNORECASE,
 )
 
@@ -789,11 +760,12 @@ def promote_reference_caller_modules(
         hits = confirm_name(path)
         if not hits:
             continue
-        entry = _manifest_entry_from_hits(path, hits, _default_manifest_entry)
+        seed = getattr(short, "source_component", None)
+        entry = _manifest_entry_from_hits(
+            path, hits, _default_manifest_entry, source_component=seed
+        )
         if entry is None:
             continue
-        # Do not copy the short row's verdict: the module path is not
-        # version-sampled by confirm_name, so leave UNKNOWN.
         replacements[segment] = entry
         notes.append(
             f"Replaced bare {getattr(short, 'name', segment)} with {entry.name} "
@@ -916,14 +888,15 @@ def ensure_soft_label_keeps(
         if folded not in hard_keep or folded in present or folded in seen_restore:
             continue
         seen_restore.add(folded)
+        if not row.source_component:
+            continue
         restored.append(
             _default_manifest_entry(
                 name=display.get(folded, row.name),
                 build_type=row.build_type,
                 ecosystem=row.ecosystem,
                 rhcos=None,
-                affectedness=row.affectedness,
-                evidence=row.evidence,
+                source_component=row.source_component,
             )
         )
     if not restored:
@@ -940,8 +913,8 @@ def align_manifest_search_keys(
     ``maven`` and ``generic`` are legal on both fields. Soft-label marks
     bundled registry coordinates as ``ecosystem`` and exact builds as
     ``build_type``. Restore that key for names still present in the baseline
-    so ACE searches the right bomq kind. Also copy sample-based AFFECTED /
-    NOTAFFECTED when the agent left UNKNOWN or blank.
+    so ACE searches the right bomq kind. Also copy ``source_component`` when
+    the agent left it blank.
     """
     by_name: dict[str, DownstreamRow] = {}
     for row in baseline_rows:
@@ -973,17 +946,90 @@ def align_manifest_search_keys(
         elif baseline.build_type:
             entry.ecosystem = None
             entry.build_type = baseline.build_type
-        baseline_affect = getattr(baseline, "affectedness", None)
-        entry_affect = getattr(entry, "affectedness", None)
-        if baseline_affect in {"AFFECTED", "NOTAFFECTED"} and entry_affect in (
-            None,
-            "",
-            "UNKNOWN",
-        ):
-            entry.affectedness = baseline_affect
-            if getattr(entry, "evidence", None) in (None, "") and baseline.evidence:
-                entry.evidence = baseline.evidence
+        if baseline.source_component and not getattr(entry, "source_component", None):
+            entry.source_component = baseline.source_component
     return entries
+
+
+def attach_source_components(
+    entries: list[Any],
+    candidates: list[CandidateHit],
+    *,
+    flaw_seeds: list[str] | None = None,
+) -> list[Any]:
+    """Fill ``source_component`` from flaw-domain catalog seeds; drop the rest.
+
+    An unambiguous catalog seed wins over a conflicting agent value. With
+    no catalog seed, a row whose name is itself a flaw seed uses that seed.
+    Otherwise an in-domain agent value is kept and rewritten to the canonical
+    flaw-seed spelling. Out-of-domain values are replaced, or the row is
+    dropped.
+    """
+    flaw_list = [
+        seed for seed in (flaw_seeds or []) if isinstance(seed, str) and seed.strip()
+    ]
+    flaw_folded = {seed.casefold() for seed in flaw_list}
+    seeds_by_name: dict[str, str] = {}
+    ambiguous: set[str] = set()
+    for hit in candidates:
+        if not hit.seed:
+            continue
+        if flaw_folded and hit.seed.casefold() not in flaw_folded:
+            continue
+        folded_name = hit.name.casefold()
+        existing = seeds_by_name.get(folded_name)
+        if existing is None:
+            seeds_by_name[folded_name] = hit.seed
+        elif existing.casefold() != hit.seed.casefold():
+            ambiguous.add(folded_name)
+
+    def canonical(value: str) -> str:
+        folded_value = value.casefold()
+        for flaw_seed in flaw_list:
+            if flaw_seed.casefold() == folded_value:
+                return flaw_seed
+        return value
+
+    kept: list[Any] = []
+    for entry in entries:
+        name = getattr(entry, "name", None)
+        if not isinstance(name, str) or not name.strip():
+            continue
+        folded_name = name.casefold()
+        raw_agent = getattr(entry, "source_component", None)
+        agent = raw_agent.strip() if isinstance(raw_agent, str) else ""
+        catalog = None if folded_name in ambiguous else seeds_by_name.get(folded_name)
+        exact = next(
+            (
+                flaw_seed
+                for flaw_seed in flaw_list
+                if flaw_seed.casefold() == folded_name
+            ),
+            None,
+        )
+        if catalog:
+            seed: str | None = catalog
+        elif exact:
+            seed = exact
+        elif flaw_list and agent and agent.casefold() in flaw_folded:
+            seed = agent
+        elif flaw_list and agent:
+            seed = _flaw_source_for_name(
+                name,
+                flaw_list,
+                explaining_anchor=agent,
+            )
+        elif flaw_list:
+            seed = _flaw_source_for_name(name, flaw_list)
+        else:
+            seed = agent or None
+        if not isinstance(seed, str) or not seed.strip():
+            continue
+        if flaw_folded and seed.casefold() not in flaw_folded:
+            continue
+        entry.source_component = canonical(seed) if flaw_list else seed
+        kept.append(entry)
+    return kept
 
 
 def _catalog_for_seed(
@@ -1019,6 +1065,38 @@ def _merge_hits(*groups: list[CatalogHit]) -> list[CatalogHit]:
     return list(found.values())
 
 
+def _flaw_source_for_name(
+    name: str,
+    flaw_seeds: list[str],
+    *,
+    explaining_anchor: str | None = None,
+    skipped: set[str] | None = None,
+) -> str | None:
+    """Map a catalog name to a Flaw.components seed for ``source_component``.
+
+    Prefer a structural match against flaw seeds. When the explaining
+    anchor is a reference query token and there is exactly one flaw
+    component, attribute that component (Prometheus openshift-priv /
+    version RPMs discovered via a caller reference).
+    """
+    skipped_names = skipped or set()
+    direct = _best_seed_for_name(name, flaw_seeds, skipped_names)
+    if direct:
+        return direct
+    if not explaining_anchor or not flaw_seeds:
+        return None
+    flaw_folded = {seed.casefold() for seed in flaw_seeds}
+    if explaining_anchor.casefold() in flaw_folded:
+        return next(
+            seed
+            for seed in flaw_seeds
+            if seed.casefold() == explaining_anchor.casefold()
+        )
+    if len(flaw_seeds) == 1:
+        return flaw_seeds[0]
+    return None
+
+
 def _label_candidates(
     seeds: list[str],
     catalog: dict[str, list[CatalogHit]],
@@ -1035,6 +1113,9 @@ def _label_candidates(
     names get ``reference`` (visible to the agent, not a soft-label keeper).
     Structural rebuilds against reference tokens still use
     ``version_package`` / ``fork_rebuild`` / ``clear_rebuild``.
+
+    ``CandidateHit.seed`` is always a flaw component (or None). Reference
+    tokens may decide the soft label but never become ``source_component``.
     """
     labeled: list[CandidateHit] = []
     seen: set[tuple[str, str]] = set()
@@ -1069,7 +1150,17 @@ def _label_candidates(
         if folded in flaw_folded or folded in skipped:
             continue
         for hit in catalog.get(folded, []):
-            add(hit, "reference", query_name, None)
+            add(
+                hit,
+                "reference",
+                _flaw_source_for_name(
+                    hit.name,
+                    flaw_seeds,
+                    explaining_anchor=query_name,
+                    skipped=skipped,
+                ),
+                None,
+            )
 
     for package_name, seed in anitya_names.items():
         if _is_subpackage(package_name):
@@ -1077,7 +1168,17 @@ def _label_candidates(
         for hit in catalog.get(package_name.casefold(), []):
             if package_name.casefold() == seed.casefold():
                 continue
-            add(hit, "anitya", seed, None)
+            add(
+                hit,
+                "anitya",
+                _flaw_source_for_name(
+                    hit.name,
+                    flaw_seeds,
+                    explaining_anchor=seed,
+                    skipped=skipped,
+                ),
+                None,
+            )
 
     # Structural rebuilds may match against flaw seeds or reference tokens.
     label_anchors = list(dict.fromkeys([*flaw_seeds, *seeds]))
@@ -1085,29 +1186,53 @@ def _label_candidates(
         for hit in hits:
             if (hit.name.casefold(), hit.type) in seen:
                 continue
-            seed = _best_seed_for_name(hit.name, label_anchors, skipped)
-            if seed is None:
+            anchor = _best_seed_for_name(hit.name, label_anchors, skipped)
+            if anchor is None:
                 add(hit, "drop_hint", None, "unrelated_to_seed")
                 continue
-            label, reason = _soft_label_for(hit, seed)
+            label, reason = _soft_label_for(hit, anchor)
             # Exact name match against a reference token is already labeled
             # above; _soft_label_for would call it "seed" — skip that path.
-            if label == "seed" and seed.casefold() not in flaw_folded:
-                add(hit, "reference", seed, None)
+            if label == "seed" and anchor.casefold() not in flaw_folded:
+                add(
+                    hit,
+                    "reference",
+                    _flaw_source_for_name(
+                        hit.name,
+                        flaw_seeds,
+                        explaining_anchor=anchor,
+                        skipped=skipped,
+                    ),
+                    None,
+                )
                 continue
-            add(hit, label, seed, reason)
+            add(
+                hit,
+                label,
+                _flaw_source_for_name(
+                    hit.name,
+                    flaw_seeds,
+                    explaining_anchor=anchor,
+                    skipped=skipped,
+                ),
+                reason,
+            )
     return labeled
 
 
 def _best_seed_for_name(name: str, seeds: list[str], skipped: set[str]) -> str | None:
-    """Return the seed that best explains a catalog name, or None if unrelated."""
+    """Return the seed that best explains a catalog name, or None if unrelated.
+
+    Every eligible seed is checked for an exact match before any prefix or
+    structural match, so ``libfoobar`` is not claimed by an earlier ``libfoo``.
+    """
     folded = name.casefold()
-    for seed in seeds:
-        if seed.casefold() in skipped:
-            continue
-        seed_folded = seed.casefold()
-        if folded == seed_folded:
+    eligible = [seed for seed in seeds if seed.casefold() not in skipped]
+    for seed in eligible:
+        if folded == seed.casefold():
             return seed
+    for seed in eligible:
+        seed_folded = seed.casefold()
         if _is_openshift_fork_rebuild(name, seed):
             return seed
         if _is_module_path(seed):
@@ -1593,149 +1718,27 @@ def _is_compat(name: str, seed: str) -> bool:
     )
 
 
-def _rpm_versions_for_names(
+def _rhcos_names_for_names(
     getter: Callable[[str], Any],
     hosts: list[str],
     names: list[str],
     tools: list[str],
-) -> dict[str, list[str]]:
-    """Sample SRPM upstream versions for RPM soft-label keepers."""
+) -> set[str]:
+    """Casefolded RPM names that appear inside RHCOS builds."""
     if not names or not hosts:
-        return {}
-    tools.append("bomq_builds")
-    versions: dict[str, list[str]] = {}
-    for name in names:
-        key = name.casefold()
-        found = list(versions.get(key, []))
-        for host in hosts:
-            for version in _build_versions(getter, host, name):
-                if version not in found:
-                    found.append(version)
-            if len(found) >= 8:
-                break
-        versions[key] = found[:8]
-    return versions
-
-
-def _ecosystem_versions_for_hits(
-    getter: Callable[[str], Any],
-    hosts: list[str],
-    hits: list[CandidateHit],
-    tools: list[str],
-) -> dict[str, list[str]]:
-    """Sample nested component versions for ecosystem soft-label keepers."""
-    if not hits or not hosts:
-        return {}
-    tools.append("bomq_component_versions")
-    versions: dict[str, list[str]] = {}
-    for hit in hits:
-        key = hit.name.casefold()
-        found = list(versions.get(key, []))
-        for host in hosts:
-            for version in _component_versions(getter, host, hit.name, hit.type):
-                if version not in found:
-                    found.append(version)
-                if len(found) >= 8:
-                    break
-            if len(found) >= 8:
-                break
-        versions[key] = found[:8]
-    return versions
-
-
-def _build_versions(getter: Callable[[str], Any], host: str, name: str) -> list[str]:
-    """Fetch and normalize upstream versions from bomq build search."""
-    query = urllib.parse.urlencode({"name": name, "strict": "true", "limit": "20"})
-    payload = getter(f"{host}/api/v0/search/builds?{query}")
-    data = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(data, list):
-        return []
-    versions: list[str] = []
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-        raw = item.get("build_version") or item.get("version")
-        if not isinstance(raw, str) or not raw.strip():
-            continue
-        version = _upstream_version(raw)
-        if version and version not in versions:
-            versions.append(version)
-        if len(versions) >= 8:
-            break
-    return versions
-
-
-def _component_versions(
-    getter: Callable[[str], Any],
-    host: str,
-    name: str,
-    component_type: str,
-) -> list[str]:
-    """Upstream versions from bomq component search for one ecosystem type."""
-    query = urllib.parse.urlencode(
-        {
-            "name": name,
-            "strict": "true",
-            "include_types": component_type,
-            "limit": "20",
-        }
-    )
-    payload = getter(f"{host}/api/v0/search/components?{query}")
-    data = payload.get("data") if isinstance(payload, dict) else None
-    if not isinstance(data, list):
-        return []
-    versions: list[str] = []
-    for item in data:
-        if not isinstance(item, dict):
-            continue
-        for source in item.get("sources") or []:
-            if not isinstance(source, dict):
-                continue
-            for component in source.get("components") or []:
-                if not isinstance(component, dict):
-                    continue
-                if str(component.get("name") or "").casefold() != name.casefold():
-                    continue
-                if (
-                    str(component.get("type") or "").casefold()
-                    != component_type.casefold()
-                ):
-                    continue
-                raw = component.get("version")
-                if not isinstance(raw, str) or not raw.strip():
-                    continue
-                version = _upstream_version(raw)
-                if version and version not in versions:
-                    versions.append(version)
-                if len(versions) >= 8:
-                    return versions
-    return versions
-
-
-def _rhcos_versions_for_names(
-    getter: Callable[[str], Any],
-    hosts: list[str],
-    names: list[str],
-    tools: list[str],
-) -> dict[str, list[str]]:
-    """Sample RHCOS-embedded RPM versions for soft-label keepers."""
-    if not names or not hosts:
-        return {}
+        return set()
     tools.append("bomq_rhcos")
-    found: dict[str, list[str]] = {}
+    found: set[str] = set()
     for name in names:
         for host in hosts:
-            versions = _rhcos_component_versions(getter, host, name)
-            if versions is not None:
-                found[name.casefold()] = versions
+            if _rhcos_name_present(getter, host, name):
+                found.add(name.casefold())
                 break
     return found
 
 
-def _rhcos_component_versions(
-    getter: Callable[[str], Any], host: str, name: str
-) -> list[str] | None:
-    """Upstream versions for one RPM name inside RHCOS builds, or None if absent."""
+def _rhcos_name_present(getter: Callable[[str], Any], host: str, name: str) -> bool:
+    """True when ``name`` appears as an RPM inside an RHCOS build on ``host``."""
     query = urllib.parse.urlencode(
         {
             "name": name,
@@ -1747,12 +1750,10 @@ def _rhcos_component_versions(
     )
     payload = getter(f"{host}/api/v0/search/components?{query}")
     if not isinstance(payload, dict):
-        return None
+        return False
     data = payload.get("data")
     if not isinstance(data, list):
-        return None
-    versions: list[str] = []
-    hit = False
+        return False
     for item in data:
         if not isinstance(item, dict):
             continue
@@ -1762,109 +1763,676 @@ def _rhcos_component_versions(
             continue
         if "ironic" in folded:
             continue
-        hit = True
         for source in item.get("sources") or []:
             if not isinstance(source, dict):
                 continue
             for component in source.get("components") or []:
                 if not isinstance(component, dict):
                     continue
-                if str(component.get("name") or "").casefold() != name.casefold():
-                    continue
-                raw = component.get("version")
-                if isinstance(raw, str) and raw and raw not in versions:
-                    versions.append(_upstream_version(raw))
-    if not hit:
-        return None
-    return versions
+                if str(component.get("name") or "").casefold() == name.casefold():
+                    return True
+    return False
 
 
-def _rows_with_affectedness(
+def _build_downstream_rows(
     planned: list[dict[str, Any]],
-    versions: dict[str, list[str]],
-    rhcos_versions: dict[str, list[str]],
-    *,
-    flaw: dict[str, Any] | None = None,
-    bounds: list[VersionBound] | None = None,
+    rhcos_names: set[str],
 ) -> list[DownstreamRow]:
-    """Build DownstreamRow list with affectedness and RHCOS companions."""
+    """Build DownstreamRow list with source_component and RHCOS companions."""
     rows: list[DownstreamRow] = []
-    bounds_cache: dict[str, list[VersionBound]] = {}
     for item in planned:
-        affectedness = None
-        evidence = None
-        sample_affectedness = (
-            item["kind"] == "build_type" and item["value"] == "rpm"
-        ) or (item["kind"] == "ecosystem" and item["value"] in _LEGAL_ECOSYSTEMS)
-        if sample_affectedness:
-            sample = versions.get(item["name"].casefold(), [])
-            if item["compat"]:
-                affectedness = None
-            else:
-                if bounds is not None:
-                    row_bounds = bounds
-                elif flaw is not None:
-                    cache_key = item["name"].casefold()
-                    if cache_key not in bounds_cache:
-                        bounds_cache[cache_key] = _ranges_from_flaw(
-                            flaw, package_name=item["name"]
-                        )
-                    row_bounds = bounds_cache[cache_key]
-                else:
-                    row_bounds = []
-                affectedness = _decide_affectedness(sample, row_bounds)
-            evidence = _evidence(sample)
-        row = DownstreamRow(
-            name=item["name"],
-            affectedness=affectedness,
-            evidence=evidence,
-        )
+        seed = item.get("source_component")
+        if not isinstance(seed, str) or not seed.strip():
+            continue
+        row = DownstreamRow(name=item["name"], source_component=seed)
         if item["kind"] == "build_type":
             row.build_type = item["value"]
         else:
             row.ecosystem = item["value"]
         rows.append(row)
-        if item["name"].casefold() in rhcos_versions:
-            sample = rhcos_versions[item["name"].casefold()]
-            if item["compat"]:
-                companion_affectedness = None
-            elif bounds is not None:
-                companion_affectedness = _decide_affectedness(sample, bounds)
-            elif flaw is not None:
-                cache_key = item["name"].casefold()
-                if cache_key not in bounds_cache:
-                    bounds_cache[cache_key] = _ranges_from_flaw(
-                        flaw, package_name=item["name"]
-                    )
-                companion_affectedness = _decide_affectedness(
-                    sample, bounds_cache[cache_key]
-                )
-            else:
-                companion_affectedness = _decide_affectedness(sample, [])
+        if item["name"].casefold() in rhcos_names:
             rows.append(
                 DownstreamRow(
                     name=item["name"],
                     rhcos="rpm",
-                    affectedness=companion_affectedness,
-                    evidence=_evidence(sample),
+                    source_component=seed,
                 )
             )
     return rows
 
 
-def _ranges_from_flaw(
-    flaw: dict[str, Any],
-    *,
-    package_name: str | None = None,
-) -> list[VersionBound]:
-    """Version bounds from OSV upstream_data, else advisory text."""
-    upstream = flaw.get("upstream_data")
+def _normalize_upstream_data(upstream: Any) -> dict[str, Any]:
+    """Normalize OSIDB/OSV ``upstream_data`` to ``{affected: [...]}``.
+
+    Accepts classic OSV dicts with ``affected``, or OSIDB's list of records
+    with ``upstream_purls``. Anything else becomes an empty dict.
+    """
     if isinstance(upstream, dict):
-        bounds = _osv_bounds(upstream, package_name=package_name)
-        if bounds:
-            return bounds
-    text = _advisory_text(flaw)
-    return _advisory_bounds(text)
+        if isinstance(upstream.get("affected"), list):
+            return upstream
+        return {}
+    if not isinstance(upstream, list):
+        return {}
+    affected: list[dict[str, Any]] = []
+    for record in upstream:
+        if not isinstance(record, dict):
+            continue
+        purls = record.get("upstream_purls")
+        if not isinstance(purls, list):
+            continue
+        for entry in purls:
+            if not isinstance(entry, dict):
+                continue
+            package: dict[str, Any] = {}
+            for key in ("name", "purl", "ecosystem"):
+                value = entry.get(key)
+                if isinstance(value, str) and value.strip():
+                    package[key] = value.strip()
+            item: dict[str, Any] = {}
+            if package:
+                item["package"] = package
+            ranges = entry.get("ranges")
+            if isinstance(ranges, list):
+                item["ranges"] = ranges
+            versions = entry.get("versions")
+            if isinstance(versions, list):
+                item["versions"] = versions
+            if item:
+                affected.append(item)
+    return {"affected": affected} if affected else {}
+
+
+def _short_seed_covered_by_osv_owner(
+    seed: str,
+    seeds: list[str],
+    upstream: dict[str, Any],
+) -> bool:
+    """True when ``seed`` is a bare alias of a co-listed owner with OSV ranges.
+
+    Catalog and soft-label code already suppress short final segments via
+    ``_short_seed_names``. When that owner also has usable ECOSYSTEM/SEMVER
+    UpstreamData, ACE ranges the scoped/module seed; skip advisory extract
+    for the bare alias (e.g. ``xmldom`` beside ``@xmldom/xmldom``).
+    """
+    folded = seed.casefold()
+    if folded not in _short_seed_names(seeds):
+        return False
+    for other in seeds:
+        if other == seed:
+            continue
+        other_folded = other.casefold()
+        if not other_folded.endswith(("/" + folded, "@" + folded)):
+            continue
+        if _osv_version_ranges(_matched_affected(upstream, other)):
+            return True
+    return False
+
+
+def seeds_missing_version_ranges(flaw: dict[str, Any]) -> list[str]:
+    """Flaw components whose OSV data has no ECOSYSTEM or SEMVER range.
+
+    These seeds need an advisory-text extract. GIT ranges do not count.
+    Bare aliases of a co-listed owner that already has usable OSV ranges are
+    treated as covered (no extract).
+    """
+    seeds = _seeds(flaw)
+    upstream = _normalize_upstream_data(flaw.get("upstream_data"))
+    return [
+        seed
+        for seed in seeds
+        if not _osv_version_ranges(_matched_affected(upstream, seed))
+        and not _short_seed_covered_by_osv_owner(seed, seeds, upstream)
+    ]
+
+
+def build_downstream_ranges(
+    flaw: dict[str, Any],
+    extracts: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Reconcile sibling ranges for ``aegis_meta._downstream``.
+
+    One object per ``Flaw.components`` seed that has no usable OSV
+    ECOSYSTEM/SEMVER range. ACE ranges those seeds from UpstreamData (OSV,
+    then CVE.org) first; this list is the advisory reconcile fallback.
+    Seeds with usable OSV ranges are omitted, as are bare aliases of an
+    OSV-backed co-listed owner. Never copies OSV events or
+    ``affected.versions``, and never emits raw GIT events. Bounds pinned to a
+    different GitHub module than a module-path seed are dropped. Live
+    reconcile extracts are not regex-merged; missing extracts on single-seed
+    flaws may synthesize from stated-fix phrases.
+    """
+    seeds = _seeds(flaw)
+    if not seeds:
+        return []
+    upstream = _normalize_upstream_data(flaw.get("upstream_data"))
+    provided = extracts or {}
+    # Only a single-seed flaw can safely synthesize fix versions from advisory
+    # text when the reconcile LLM did not run; multi-seed advisories may name
+    # fixes for different products.
+    advisory_text = _advisory_text(flaw) if len(seeds) == 1 else None
+    entries: list[dict[str, Any]] = []
+    for seed in seeds:
+        if _osv_version_ranges(_matched_affected(upstream, seed)):
+            continue
+        if _short_seed_covered_by_osv_owner(seed, seeds, upstream):
+            continue
+        # Pass advisory_text only when there is no extract for this seed so
+        # omit stays omit and live ranges are not regex-merged.
+        seed_extract = provided.get(seed)
+        extracted = normalize_advisory_extract(
+            seed_extract,
+            advisory_text=advisory_text if seed_extract is None else None,
+        )
+        extracted = _drop_foreign_module_bounds(seed, extracted, flaw)
+        if extracted:
+            entries.append({"source_component": seed, **extracted})
+    return entries
+
+
+def normalize_advisory_extract(
+    extract: Any,
+    advisory_text: str | None = None,
+) -> dict[str, Any] | None:
+    """Turn one agent extract into ``{ranges: ...}`` or ``{versions: ...}``.
+
+    ``omit`` and commit hashes / digit-less tokens become ``None`` (no sibling).
+    A fixed or last-affected bound with no introduced version is stored as
+    ``introduced: "0"``. When ``decision=ranges`` also carries a ``versions``
+    list (isolated versions outside stated intervals), each version becomes a
+    singleton ECOSYSTEM range. Live extracts are not merged with regex stated
+    fixes — the reconcile LLM owns the final bounds. When the extract is
+    missing (``None`` / empty) and ``advisory_text`` is set, synthesize from
+    ``before`` / ``prior to`` / ``fixed in`` as a last-resort single-seed
+    fallback.
+    """
+    payload = _extract_payload(extract)
+    decision = (
+        str(payload.get("decision") or "").casefold() if payload is not None else ""
+    )
+    if payload is not None and decision == "omit":
+        return None
+    if payload is not None and decision == "ranges":
+        ranges = _ecosystem_ranges_from_extract(payload.get("ranges"))
+        for version in _version_list(payload.get("versions")):
+            ranges.append(
+                {
+                    "type": "ECOSYSTEM",
+                    "events": [
+                        {"introduced": version},
+                        {"last_affected": version},
+                    ],
+                }
+            )
+        if ranges:
+            return {"ranges": ranges}
+        return None
+    if payload is not None and decision == "versions":
+        versions = _version_list(payload.get("versions"))
+        if versions:
+            return {"versions": versions}
+        return None
+    if advisory_text:
+        ranges = _rebind_parallel_release_lines(
+            _backfill_stated_fix_versions([], advisory_text)
+        )
+        if ranges:
+            return {"ranges": ranges}
+    return None
+
+
+def _github_ref_versions(flaw: dict[str, Any]) -> list[tuple[str, str]]:
+    """``(github.com/org/repo, version)`` pairs from blob/tree/tag reference URLs."""
+    found: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for ref in flaw.get("references") or []:
+        url = ref.get("url") if isinstance(ref, dict) else ref
+        if not isinstance(url, str):
+            continue
+        match = _GITHUB_REF_VERSION_RE.search(url)
+        if match is None:
+            continue
+        path = f"github.com/{match.group(1)}/{match.group(2)}"
+        version = _clean_version(match.group(3))
+        if not version:
+            continue
+        key = (path.casefold(), version)
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append((path, version))
+    return found
+
+
+def _foreign_bound_versions(seed: str, flaw: dict[str, Any]) -> set[str]:
+    """Versions the flaw attributes to a GitHub repo unrelated to ``seed``.
+
+    Only applies to module-path seeds. A bare packaging seed (``nginx``) is
+    never gated by a ``github.com/nginx/nginx`` tag URL.
+    """
+    if not _is_module_path(seed):
+        return set()
+    foreign_repos = {
+        path.casefold()
+        for path in reference_module_paths(flaw)
+        if not _related_to_seed(path, [seed])
+    }
+    if not foreign_repos:
+        return set()
+    foreign_segments = {
+        path.rsplit("/", 1)[-1] for path in foreign_repos if "/" in path
+    }
+    versions: set[str] = set()
+    for path, version in _github_ref_versions(flaw):
+        if path.casefold() in foreign_repos:
+            versions.add(version)
+    advisory = _advisory_text(flaw)
+    for match in _FOREIGN_PRODUCT_BOUND_RE.finditer(advisory):
+        segment = match.group(1).casefold()
+        if segment not in foreign_segments:
+            continue
+        version = _clean_version(match.group(2))
+        if version:
+            versions.add(version)
+    return versions
+
+
+def _interval_has_foreign_bound(
+    events: list[Any],
+    foreign: set[str],
+) -> bool:
+    """True when a range interval names a foreign non-zero bound."""
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        for key in ("fixed", "last_affected", "introduced"):
+            raw = event.get(key)
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            cleaned = _clean_version(raw)
+            if cleaned and cleaned != "0" and cleaned in foreign:
+                return True
+    return False
+
+
+def _drop_foreign_module_bounds(
+    seed: str,
+    extracted: dict[str, Any] | None,
+    flaw: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Drop extract bounds pinned to a different GitHub module than ``seed``.
+
+    Returns ``None`` (omit) when every interval/version is foreign, or when
+    filtering would leave only an open ``introduced: "0"``. Same-module and
+    bare-seed extracts pass through unchanged.
+    """
+    if not extracted:
+        return extracted
+    foreign = _foreign_bound_versions(seed, flaw)
+    if not foreign:
+        return extracted
+
+    if "ranges" in extracted:
+        kept_ranges: list[dict[str, Any]] = []
+        for block in extracted.get("ranges") or []:
+            if not isinstance(block, dict):
+                continue
+            events = block.get("events")
+            if not isinstance(events, list) or not events:
+                continue
+            if _interval_has_foreign_bound(events, foreign):
+                continue
+            kept_ranges.append(block)
+        if not kept_ranges:
+            return None
+        return {"ranges": kept_ranges}
+
+    if "versions" in extracted:
+        kept_versions = [
+            version
+            for version in extracted.get("versions") or []
+            if isinstance(version, str) and _clean_version(version) not in foreign
+        ]
+        if not kept_versions:
+            return None
+        return {"versions": kept_versions}
+    return extracted
+
+
+def _matched_affected(
+    upstream: dict[str, Any],
+    seed: str,
+) -> list[dict[str, Any]]:
+    """OSV ``affected`` entries for ``seed``, scoped by package name when possible.
+
+    Entries with neither name nor PURL never match a seed, so they cannot
+    suppress advisory extract for every component on a multi-seed flaw.
+    """
+    affected_list = [
+        affected
+        for affected in (upstream.get("affected") or [])
+        if isinstance(affected, dict)
+    ]
+    if not affected_list:
+        return []
+
+    def matches(affected: dict[str, Any]) -> bool:
+        names = _affected_package_names(affected)
+        if not names:
+            return False
+        package = affected.get("package")
+        ecosystem: str | None = None
+        purl: str | None = None
+        if isinstance(package, dict):
+            raw_eco = package.get("ecosystem")
+            if isinstance(raw_eco, str) and raw_eco.strip():
+                ecosystem = raw_eco.strip()
+            raw_purl = package.get("purl")
+            if isinstance(raw_purl, str) and raw_purl.strip():
+                purl = raw_purl.strip()
+        return any(
+            _osv_package_matches(name, seed, ecosystem=ecosystem, purl=purl)
+            for name in names
+        )
+
+    return [affected for affected in affected_list if matches(affected)]
+
+
+def _osv_version_ranges(affected_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """ECOSYSTEM/SEMVER range objects from OSV affected entries (GIT skipped)."""
+    ranges: list[dict[str, Any]] = []
+    for affected in affected_list:
+        for version_range in affected.get("ranges") or []:
+            if not isinstance(version_range, dict):
+                continue
+            range_type = str(version_range.get("type") or "").upper()
+            if range_type not in _VERSION_RANGE_TYPES:
+                continue
+            events = version_range.get("events")
+            if not isinstance(events, list) or not events:
+                continue
+            ranges.append({"type": range_type, "events": events})
+    return ranges
+
+
+def _extract_payload(extract: Any) -> dict[str, Any] | None:
+    """Dict view of an agent extract model or mapping."""
+    if extract is None:
+        return None
+    if hasattr(extract, "model_dump"):
+        payload = extract.model_dump()
+    elif isinstance(extract, dict):
+        payload = extract
+    else:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _ecosystem_ranges_from_extract(
+    raw_ranges: Any,
+) -> list[dict[str, Any]]:
+    """Agent range blocks as ECOSYSTEM events ACE can compare.
+
+    Each introduced→upper-bound interval becomes its own range object so
+    ``fixed`` and ``last_affected`` never share one events array. Parallel
+    ``introduced: "0"`` + ``fixed`` lines are then rebound so later release
+    lines start at the branch point rather than covering earlier fixes.
+    Regex stated-fix backfill is not applied here — the reconcile LLM owns
+    the final bounds.
+    """
+    if not isinstance(raw_ranges, list):
+        return []
+    ranges: list[dict[str, Any]] = []
+    for block in raw_ranges:
+        block_payload = _extract_payload(block)
+        if block_payload is None and isinstance(block, dict):
+            block_payload = block
+        for events in _ecosystem_event_intervals(block_payload):
+            ranges.append({"type": "ECOSYSTEM", "events": events})
+    return _rebind_parallel_release_lines(ranges)
+
+
+def stated_fix_candidate_bounds(advisory_text: str) -> list[str]:
+    """Stated-fix version tokens for the reconcile prompt candidate list.
+
+    Parsed from ``before`` / ``prior to`` / ``fixed in`` phrases. Tokens may be
+    truncated relative to the advisory (hints only); the reconcile LLM copies
+    exact bounds from the text.
+    """
+    return _stated_fix_versions(advisory_text)
+
+
+def _stated_fix_versions(advisory_text: str) -> list[str]:
+    """Cleaned fix versions from ``before`` / ``prior to`` / ``fixed in`` lists."""
+    versions: list[str] = []
+    seen: set[str] = set()
+    for match in _STATED_FIX_LIST_RE.finditer(advisory_text):
+        for token in _STATED_VERSION_TOKEN_RE.findall(match.group(1)):
+            cleaned = _clean_version(token)
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                versions.append(cleaned)
+    return versions
+
+
+def _fixed_event_versions(ranges: list[dict[str, Any]]) -> set[str]:
+    """``fixed`` event tokens already present on extract range objects."""
+    have: set[str] = set()
+    for block in ranges:
+        if not isinstance(block, dict):
+            continue
+        for event in block.get("events") or []:
+            if not isinstance(event, dict):
+                continue
+            fixed = event.get("fixed")
+            if isinstance(fixed, str) and fixed.strip():
+                cleaned = _clean_version(fixed)
+                if cleaned:
+                    have.add(cleaned)
+    return have
+
+
+def _backfill_stated_fix_versions(
+    ranges: list[dict[str, Any]],
+    advisory_text: str,
+) -> list[dict[str, Any]]:
+    """Synthesize introduced-0 fixed bands from stated-fix phrases.
+
+    Used only as a missing-extract last resort (empty ``ranges``). Live
+    reconcile extracts are not merged with these tokens. Versions come from
+    ``before`` / ``prior to`` / ``fixed in`` phrases, including
+    ``version(s)`` lists and optional Perl ``_N`` trial suffixes.
+    """
+    have = _fixed_event_versions(ranges)
+    out = list(ranges)
+    for fixed in _stated_fix_versions(advisory_text):
+        if fixed in have:
+            continue
+        out.append(
+            {
+                "type": "ECOSYSTEM",
+                "events": [{"introduced": "0"}, {"fixed": fixed}],
+            }
+        )
+        have.add(fixed)
+    return out
+
+
+def _version_sort_key(version: str) -> tuple[int, ...]:
+    """Numeric sort key from dotted version components."""
+    parts: list[int] = []
+    for part in version.split("."):
+        match = re.match(r"(\d+)", part)
+        parts.append(int(match.group(1)) if match else 0)
+    return tuple(parts)
+
+
+def _release_line_start(previous: str, fixed: str) -> str | None:
+    """Branch start for ``fixed`` when it opens a line after ``previous``.
+
+    Returns ``None`` when only the last component differs (same release line,
+    patch-only) or the versions cannot be compared as dotted components.
+    """
+    prev_parts = previous.split(".")
+    fix_parts = fixed.split(".")
+    if not prev_parts or not fix_parts:
+        return None
+    limit = min(len(prev_parts), len(fix_parts))
+    differ: int | None = None
+    for idx in range(limit):
+        if _version_sort_key(prev_parts[idx]) != _version_sort_key(fix_parts[idx]):
+            differ = idx
+            break
+    if differ is None:
+        if len(prev_parts) == len(fix_parts):
+            return None
+        differ = limit
+    if differ >= len(fix_parts) - 1:
+        return None
+    start = list(fix_parts)
+    for idx in range(differ + 1, len(start)):
+        start[idx] = "0"
+    return ".".join(start)
+
+
+def _rebind_parallel_release_lines(
+    ranges: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Raise later introduced-0 fixed bands to the parallel release-line start.
+
+    When an extract emits several ``introduced: "0"`` + ``fixed`` intervals
+    (common when the advisory only lists fix versions), later release lines
+    would incorrectly cover versions already closed by earlier fixes. Keep the
+    lowest fix on ``introduced: "0"``; for each later fix whose first differing
+    component is not the last component, set ``introduced`` to that fix with
+    trailing components zeroed (``3.1.11.0`` after ``3.0.16.0`` → ``3.1.0.0``;
+    ``4.3.0`` after ``4.2.7`` → ``4.3.0``, kept even when start equals fixed).
+    Same-line patch pairs and ``last_affected`` / non-zero introduced intervals
+    are left unchanged.
+    """
+    zero_fixed: list[tuple[int, str]] = []
+    for idx, block in enumerate(ranges):
+        if not isinstance(block, dict):
+            continue
+        events = block.get("events")
+        if not isinstance(events, list) or len(events) != 2:
+            continue
+        first, second = events[0], events[1]
+        if not isinstance(first, dict) or not isinstance(second, dict):
+            continue
+        if first.get("introduced") != "0":
+            continue
+        fixed = second.get("fixed")
+        if not isinstance(fixed, str) or not fixed.strip():
+            continue
+        zero_fixed.append((idx, fixed))
+    if len(zero_fixed) < 2:
+        return ranges
+
+    ordered = sorted(zero_fixed, key=lambda item: _version_sort_key(item[1]))
+    out = list(ranges)
+    previous_fixed = ordered[0][1]
+    for idx, fixed in ordered[1:]:
+        start = _release_line_start(previous_fixed, fixed)
+        previous_fixed = fixed
+        if not start:
+            continue
+        block = out[idx]
+        if not isinstance(block, dict):
+            continue
+        out[idx] = {
+            **block,
+            "events": [{"introduced": start}, {"fixed": fixed}],
+        }
+    return out
+
+
+def _ecosystem_events(block: dict[str, Any] | None) -> list[dict[str, str]]:
+    """Flatten extract events into one-key OSV events (tests / callers).
+
+    Prefer ``_ecosystem_event_intervals`` when building persisted ranges so
+    distinct upper-bound types stay in separate range objects.
+    """
+    events: list[dict[str, str]] = []
+    for interval in _ecosystem_event_intervals(block):
+        events.extend(interval)
+    return events
+
+
+def _ecosystem_event_intervals(
+    block: dict[str, Any] | None,
+) -> list[list[dict[str, str]]]:
+    """One events list per introduced→upper-bound interval.
+
+    Reject the whole block when a supplied bound is non-blank but invalid
+    (for example a commit hash). Synthesize ``introduced: "0"`` only when
+    that key is absent or blank and a valid upper bound remains. A trailing
+    ``introduced`` with no upper bound is kept as an open-ended interval
+    (ACE accepts ``introduced``-only ECOSYSTEM ranges).
+    """
+    if not block:
+        return []
+    raw_events = block.get("events")
+    if not isinstance(raw_events, list):
+        return []
+    intervals: list[list[dict[str, str]]] = []
+    pending_introduced: str | None = None
+    for raw in raw_events:
+        event = _extract_payload(raw)
+        if event is None and isinstance(raw, dict):
+            event = raw
+        if not isinstance(event, dict):
+            continue
+        for key in ("introduced", "fixed", "last_affected"):
+            raw_value = event.get(key)
+            if not isinstance(raw_value, str) or not raw_value.strip():
+                continue
+            if _clean_version(raw_value) is None:
+                return []
+        introduced = _clean_version(event.get("introduced"))
+        fixed = _clean_version(event.get("fixed"))
+        last_affected = _clean_version(event.get("last_affected"))
+        if introduced:
+            pending_introduced = introduced
+        for key, value in (("fixed", fixed), ("last_affected", last_affected)):
+            if not value:
+                continue
+            lower = pending_introduced if pending_introduced is not None else "0"
+            intervals.append([{"introduced": lower}, {key: value}])
+            pending_introduced = None
+    if pending_introduced is not None:
+        intervals.append([{"introduced": pending_introduced}])
+    return intervals
+
+
+def _version_list(raw_versions: Any) -> list[str]:
+    """Cleaned version strings from an agent ``versions`` list."""
+    if not isinstance(raw_versions, list):
+        return []
+    versions: list[str] = []
+    for version in raw_versions:
+        cleaned = _clean_version(version)
+        if cleaned and cleaned not in versions:
+            versions.append(cleaned)
+    return versions
+
+
+def _clean_version(value: Any) -> str | None:
+    """Strip a leading ``v`` and reject blank, digit-less, or commit-hash values."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
+        text = text[1:]
+    if not text or _is_commit_hash(text):
+        return None
+    if not any(ch.isdigit() for ch in text):
+        return None
+    return text
+
+
+def _is_commit_hash(value: str) -> bool:
+    """True for hex commit-like tokens, not dotted or numeric versions."""
+    return bool(_COMMIT_HASH_RE.fullmatch(value) and re.search(r"[a-fA-F]", value))
 
 
 def _osv_package_name(affected: dict[str, Any]) -> str | None:
@@ -1875,250 +2443,162 @@ def _osv_package_name(affected: dict[str, Any]) -> str | None:
     name = package.get("name")
     if isinstance(name, str) and name.strip():
         return name.strip()
-    purl = package.get("purl")
-    if isinstance(purl, str) and "/" in purl:
-        # pkg:golang/github.com/foo/bar@v1 -> github.com/foo/bar
-        path = purl.split("/", 1)[1]
-        return path.split("@", 1)[0].strip() or None
-    return None
+    return _osv_purl_path(package.get("purl"))
 
 
-def _osv_package_matches(entry_name: str | None, row_name: str) -> bool:
-    """True when an OSV package name refers to the same project as ``row_name``."""
-    if not entry_name:
-        return True
-    folded = entry_name.casefold()
-    row = row_name.casefold().rstrip("/")
-    if folded == row or folded == row.rsplit("/", 1)[-1]:
-        return True
-    return bool(row.endswith("/" + folded) or folded.endswith("/" + row))
+def _osv_purl_path(purl: Any) -> str | None:
+    """Path after ``pkg:<type>/``, without version, qualifiers, or subpath.
 
-
-def _osv_bounds(
-    upstream: dict[str, Any],
-    *,
-    package_name: str | None = None,
-) -> list[VersionBound]:
-    """Collect version bounds from OSV ``affected`` entries.
-
-    ``GIT`` ranges are skipped (commit hashes are not versions). When
-    ``package_name`` is set, prefer entries whose package matches that name;
-    unnamed entries stay global. If every entry names a package and none
-    match, return no bounds rather than another package's interval.
+    Decodes percent-encoding so npm scopes match (``%40angular/...`` →
+    ``@angular/...``).
     """
-    affected_list = [
-        affected
-        for affected in (upstream.get("affected") or [])
-        if isinstance(affected, dict)
-    ]
-    if package_name:
-        named = [
-            affected
-            for affected in affected_list
-            if _osv_package_name(affected) is not None
-        ]
-        matched = [
-            affected
-            for affected in affected_list
-            if _osv_package_matches(_osv_package_name(affected), package_name)
-        ]
-        # All entries name a package and none match this row: do not fall
-        # back to another package's interval.
-        if named and len(named) == len(affected_list) and not matched:
-            return []
-        if matched:
-            affected_list = matched
-
-    bounds: list[VersionBound] = []
-    for affected in affected_list:
-        for version_range in affected.get("ranges") or []:
-            if not isinstance(version_range, dict):
-                continue
-            range_type = str(version_range.get("type") or "").upper()
-            if range_type == "GIT":
-                continue
-            introduced: str | None = None
-            for event in version_range.get("events") or []:
-                if not isinstance(event, dict):
-                    continue
-                if "introduced" in event and isinstance(event["introduced"], str):
-                    introduced = event["introduced"]
-                if "fixed" in event and isinstance(event["fixed"], str):
-                    bounds.append(VersionBound(introduced, event["fixed"], None))
-                    introduced = None
-                if "last_affected" in event and isinstance(event["last_affected"], str):
-                    bounds.append(
-                        VersionBound(introduced, None, event["last_affected"])
-                    )
-                    introduced = None
-            if introduced is not None:
-                bounds.append(VersionBound(introduced, None, None))
-        for version in affected.get("versions") or []:
-            if isinstance(version, str) and version:
-                bounds.append(VersionBound(version, None, version))
-    return bounds
-
-
-def _clause_around(text: str, start: int, end: int) -> str:
-    """Sentence / clause containing ``text[start:end]`` for negation checks."""
-    left = max(
-        text.rfind(".", 0, start), text.rfind(";", 0, start), text.rfind("\n", 0, start)
-    )
-    right_candidates = [
-        pos
-        for pos in (text.find(".", end), text.find(";", end), text.find("\n", end))
-        if pos != -1
-    ]
-    right = min(right_candidates) if right_candidates else len(text)
-    return text[left + 1 : right]
-
-
-def _advisory_bounds(text: str) -> list[VersionBound]:
-    """Parse introduced/fixed/last_affected bounds from advisory prose."""
-    bounds: list[VersionBound] = []
-    paired_spans: list[tuple[int, int]] = []
-    for match in _THROUGH_RE.finditer(text):
-        clause = _clause_around(text, match.start(), match.end())
-        if re.search(r"\bnot\s+affected\b", clause, flags=re.IGNORECASE):
-            continue
-        bounds.append(VersionBound(match.group(1), None, match.group(2)))
-        paired_spans.append(match.span())
-    for match in _BARE_THROUGH_RE.finditer(text):
-        if any(start <= match.start() < end for start, end in paired_spans):
-            continue
-        clause = _clause_around(text, match.start(), match.end())
-        if re.search(r"\bnot\s+affected\b", clause, flags=re.IGNORECASE):
-            continue
-        bounds.append(VersionBound(None, None, match.group(1)))
-    for match in _GTE_RE.finditer(text):
-        bounds.append(VersionBound(match.group(1), None, None))
-    for match in _LT_RE.finditer(text):
-        bounds.append(VersionBound(None, match.group(1), None))
-    return bounds
-
-
-def _decide_affectedness(versions: list[str], bounds: list[VersionBound]) -> str | None:
-    """SUSE-style: any overlapping sample is AFFECTED; none overlapping is NOTAFFECTED."""
-    if not versions or not bounds:
-        return "UNKNOWN"
-    if any(
-        any(_version_in_bound(version, bound) for bound in bounds)
-        for version in versions
-    ):
-        return "AFFECTED"
-    return "NOTAFFECTED"
-
-
-def _version_in_bound(version: str, bound: VersionBound) -> bool:
-    """True when ``version`` falls inside one VersionBound interval."""
-    key = _version_key(version)
-    below_introduced = (
-        bool(bound.introduced)
-        and bound.introduced != "0"
-        and _version_compare(key, _version_key(bound.introduced)) < 0
-    )
-    at_or_after_fixed = (
-        bool(bound.fixed) and _version_compare(key, _version_key(bound.fixed)) >= 0
-    )
-    after_last_affected = (
-        bool(bound.last_affected)
-        and _version_compare(key, _version_key(bound.last_affected)) > 0
-    )
-    return not (below_introduced or at_or_after_fixed or after_last_affected)
-
-
-def _strip_leading_v(version: str) -> str:
-    """Drop a leading ``v``/``V`` before a digit in a version string."""
-    text = version.strip()
-    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
-        return text[1:]
-    return text
-
-
-# Kind 0 = numeric token, kind 1 = alphabetic (prerelease) token.
-_VersionPart = tuple[int, int] | tuple[int, str]
-
-
-def _version_key(version: str) -> tuple[_VersionPart, ...]:
-    """Tokenize a version into comparable numeric and alphabetic parts."""
-    parts: list[_VersionPart] = []
-    for match in _VERSION_PART_RE.finditer(_strip_leading_v(version)):
-        token = match.group()
-        if token.isdigit():
-            parts.append((0, int(token)))
-        else:
-            parts.append((1, token.casefold()))
-    return tuple(parts)
-
-
-def _version_part_compare(left: _VersionPart, right: _VersionPart) -> int:
-    """Compare one version token pair; numeric sorts before alphabetic."""
-    left_kind, left_value = left
-    right_kind, right_value = right
-    if left_kind != right_kind:
-        return -1 if left_kind < right_kind else 1
-    if isinstance(left_value, int) and isinstance(right_value, int):
-        if left_value < right_value:
-            return -1
-        if left_value > right_value:
-            return 1
-        return 0
-    left_text = str(left_value)
-    right_text = str(right_value)
-    if left_text < right_text:
-        return -1
-    if left_text > right_text:
-        return 1
-    return 0
-
-
-def _version_compare(
-    left: tuple[_VersionPart, ...],
-    right: tuple[_VersionPart, ...],
-) -> int:
-    """Order versions so prerelease suffixes sort before the final release.
-
-    Shared numeric/alpha prefixes compare normally. A leftover alphabetic
-    suffix (``1.2.0rc1`` vs ``1.2.0``) is older; a leftover numeric suffix
-    (``1.2.0.1`` vs ``1.2.0``) is newer.
-    """
-    n = min(len(left), len(right))
-    for index in range(n):
-        ordered = _version_part_compare(left[index], right[index])
-        if ordered:
-            return ordered
-    if len(left) == len(right):
-        return 0
-    longer = left if len(left) > len(right) else right
-    sign = 1 if len(left) > len(right) else -1
-    # First leftover token: alphabetic => prerelease (older); numeric => newer.
-    kind, _value = longer[n]
-    if kind == 1:
-        return -sign
-    return sign
-
-
-def _upstream_version(build_version: str) -> str:
-    """Strip epoch, leading v, and RPM release from a build version."""
-    text = build_version.strip()
-    if ":" in text:
-        epoch, rest = text.split(":", 1)
-        if epoch.isdigit():
-            text = rest
-    if len(text) > 1 and text[0] in "vV" and text[1].isdigit():
-        text = text[1:]
-    if "-" in text:
-        head, tail = text.split("-", 1)
-        if tail[:1].isdigit():
-            return head
-    return text
-
-
-def _evidence(versions: list[str]) -> str | None:
-    """Short slash-joined version sample for affectedness evidence, or None."""
-    if not versions:
+    if not isinstance(purl, str) or "/" not in purl:
         return None
-    return " / ".join(versions[:4])
+    # pkg:golang/github.com/foo/bar@v1 -> github.com/foo/bar
+    # pkg:npm/%40angular/animation -> @angular/animation
+    # pkg:maven/com.example/foo@1.0 -> com.example/foo
+    path = purl.split("/", 1)[1]
+    path = path.split("@", 1)[0]
+    path = path.split("?", 1)[0].split("#", 1)[0]
+    path = urllib.parse.unquote(path).strip()
+    return path or None
+
+
+def _go_major_suffix(path: str) -> str | None:
+    """Terminal ``/vN`` major-version segment, if present."""
+    if "/" not in path:
+        return None
+    tail = path.rsplit("/", 1)[1]
+    return tail if re.fullmatch(r"v[0-9]+", tail) else None
+
+
+def _strip_go_major(path: str) -> str:
+    """Drop a terminal ``/vN`` major-version segment from a Go module path."""
+    if _go_major_suffix(path) is None:
+        return path
+    return path.rsplit("/", 1)[0]
+
+
+def _maven_coords(name: str) -> tuple[str, str] | None:
+    """Parse Maven ``group:artifact`` or two-segment ``group/artifact``."""
+    if ":" in name:
+        group, _, artifact = name.partition(":")
+    else:
+        parts = name.split("/")
+        if len(parts) != 2:
+            return None
+        group, artifact = parts
+        # Require a dotted groupId so Go hosts like github.com/… stay out
+        # when they have more than two segments; two-segment dotted hosts
+        # (go.mongodb.org/mongo-driver) are also possible Maven GAV paths
+        # from PURLs and are disambiguated by comparing both forms below.
+        if "." not in group:
+            return None
+    group = group.strip()
+    artifact = artifact.strip()
+    if not group or not artifact:
+        return None
+    return group, artifact
+
+
+def _osv_is_go_package(
+    ecosystem: str | None = None,
+    purl: str | None = None,
+) -> bool:
+    """True when OSV package metadata identifies a Go module."""
+    if isinstance(ecosystem, str) and ecosystem.strip().casefold() in {"go", "golang"}:
+        return True
+    if isinstance(purl, str):
+        folded = purl.strip().casefold()
+        if folded.startswith(("pkg:golang/", "pkg:go/")):
+            return True
+    return False
+
+
+def _osv_package_matches(
+    entry_name: str | None,
+    row_name: str,
+    *,
+    ecosystem: str | None = None,
+    purl: str | None = None,
+) -> bool:
+    """True when an OSV package name refers to the same project as ``row_name``.
+
+    Matches exact names, Go ``/vN`` major aliases (bare↔versioned only when
+    explicit majors do not conflict), short seeds against a module's final
+    segment, and Maven ``group:artifact`` vs ``group/artifact``. Does not
+    treat an arbitrary path child (``…/project/plugin``) as the parent
+    module, match scoped npm packages to an unscoped namesake, let an npm
+    short name cover a Go module path, or treat a missing name as a
+    wildcard.
+    """
+    if not entry_name:
+        return False
+    folded = entry_name.casefold().rstrip("/")
+    row = row_name.casefold().rstrip("/")
+    if folded == row:
+        return True
+
+    entry_maven = _maven_coords(folded)
+    row_maven = _maven_coords(row)
+    # Cross-form Maven identity (colon vs slash). Do not match a short
+    # artifact-only seed via this path — that is handled below.
+    if entry_maven and row_maven and entry_maven == row_maven:
+        return True
+    if (
+        ":" in folded
+        and entry_maven
+        and (row == f"{entry_maven[0]}/{entry_maven[1]}" or row == entry_maven[1])
+    ):
+        return True
+    if (
+        ":" in row
+        and row_maven
+        and (folded == f"{row_maven[0]}/{row_maven[1]}" or folded == row_maven[1])
+    ):
+        return True
+
+    entry_major = _go_major_suffix(folded)
+    row_major = _go_major_suffix(row)
+    if entry_major and row_major and entry_major != row_major:
+        return False
+
+    entry_base = _strip_go_major(folded)
+    row_base = _strip_go_major(row)
+    if entry_base == row_base:
+        return True
+
+    # Short seed vs full module path (after stripping /vN). Exclude scoped
+    # npm identities from unscoped shorthand matching.
+    if (
+        "/" not in row
+        and not entry_base.startswith("@")
+        and (entry_base == row or entry_base.endswith("/" + row))
+    ):
+        return True
+    # Reverse: short OSV name vs longer seed path. Only for Go records so
+    # an npm "bridge" cannot suppress extract for example.com/acme/bridge.
+    return bool(
+        "/" not in folded
+        and not row_base.startswith("@")
+        and _osv_is_go_package(ecosystem, purl)
+        and (row_base == folded or row_base.endswith("/" + folded))
+    )
+
+
+def _affected_package_names(affected: dict[str, Any]) -> list[str]:
+    """Candidate identity strings for one OSV affected entry (name + PURL)."""
+    package = affected.get("package")
+    if not isinstance(package, dict):
+        return []
+    names: list[str] = []
+    name = package.get("name")
+    if isinstance(name, str) and name.strip():
+        names.append(name.strip())
+    purl_path = _osv_purl_path(package.get("purl"))
+    if purl_path and purl_path not in names:
+        names.append(purl_path)
+    return names
 
 
 def _empty_explanation() -> str:
@@ -2230,6 +2710,7 @@ def apply_usage_policy(
     explanation: str,
     confirm_name: Callable[[str], list[CatalogHit]] | None = None,
     entry_factory: Callable[..., Any] | None = None,
+    flaw_seeds: list[str] | None = None,
 ) -> tuple[list[Any], str]:
     """Keep names that run the buggy code; gate importer-only by build count.
 
@@ -2252,6 +2733,10 @@ def apply_usage_policy(
     importers = {name.casefold() for name in importer_only if name.strip()}
     factory = entry_factory or _default_manifest_entry
     gate_importers = caller_role == "product_feature"
+    flaw_list = [
+        seed for seed in (flaw_seeds or []) if isinstance(seed, str) and seed.strip()
+    ]
+    flaw_folded = {seed.casefold() for seed in flaw_list}
 
     # Separate RHCOS companions so they cannot overwrite RPM rows by name.
     by_name: dict[str, Any] = {}
@@ -2266,8 +2751,49 @@ def apply_usage_policy(
             continue
         by_name.setdefault(folded, entry)
 
+    seed_by_name: dict[str, str] = {}
+    for hit in candidates:
+        if not hit.seed:
+            continue
+        if flaw_folded and hit.seed.casefold() not in flaw_folded:
+            continue
+        seed_by_name.setdefault(hit.name.casefold(), hit.seed)
+
+    def source_for(name: str) -> str | None:
+        folded = name.casefold()
+        direct = seed_by_name.get(folded)
+        if direct and (not flaw_folded or direct.casefold() in flaw_folded):
+            return direct
+        # Match the restored name against flaw / candidate seeds before
+        # inheriting a sole surviving row's source (openssl vs zlib2).
+        if flaw_list:
+            matched = _flaw_source_for_name(name, flaw_list)
+            if matched:
+                return matched
+        seeds = list(dict.fromkeys(seed_by_name.values()))
+        if seeds:
+            matched = _best_seed_for_name(name, seeds, set())
+            if matched:
+                return matched
+            # Sole candidate-map seed is only safe when the flaw itself has
+            # one component; otherwise an unrelated restored RPM can inherit
+            # the only seed that happened to appear in candidates.
+            if len(seeds) == 1 and len(flaw_list) <= 1:
+                return seeds[0]
+        from_entries = [
+            seed
+            for entry in by_name.values()
+            if isinstance((seed := getattr(entry, "source_component", None)), str)
+            and seed.strip()
+            and (not flaw_folded or seed.casefold() in flaw_folded)
+        ]
+        unique = list(dict.fromkeys(from_entries))
+        if len(unique) == 1 and len(flaw_list) <= 1:
+            return unique[0]
+        return None
+
     omitted: list[str] = []
-    kept_na: list[str] = []
+    kept_importers: list[str] = []
 
     if gate_importers:
         for folded in list(by_name):
@@ -2280,8 +2806,7 @@ def apply_usage_policy(
                     by_name.pop(folded, None)
                     continue
                 entry = by_name[folded]
-                entry.affectedness = "NOTAFFECTED"
-                kept_na.append(
+                kept_importers.append(
                     f"{getattr(entry, 'name', folded)}"
                     f" ({count if count is not None else 'unknown'} builds)"
                 )
@@ -2309,7 +2834,12 @@ def apply_usage_policy(
                 display_names.setdefault(hit.name.casefold(), hit.name)
         if not hits:
             continue
-        entry = _manifest_entry_from_hits(name, hits, factory)
+        entry = _manifest_entry_from_hits(
+            name,
+            hits,
+            factory,
+            source_component=source_for(name),
+        )
         if entry is not None:
             by_name[folded] = entry
 
@@ -2325,12 +2855,16 @@ def apply_usage_policy(
             hits = catalog_by_name.get(folded) or []
             if not hits:
                 continue
-            entry = _manifest_entry_from_hits(name, hits, factory)
+            entry = _manifest_entry_from_hits(
+                name,
+                hits,
+                factory,
+                source_component=source_for(name),
+            )
             if entry is None:
                 continue
-            entry.affectedness = "NOTAFFECTED"
             by_name[folded] = entry
-            kept_na.append(
+            kept_importers.append(
                 f"{getattr(entry, 'name', name)}"
                 f" ({count if count is not None else 'unknown'} builds)"
             )
@@ -2342,10 +2876,10 @@ def apply_usage_policy(
             f"{IMPORTER_AFFECT_LIMIT}+ builds that do not run "
             f"{vulnerable_unit or 'the vulnerable unit'}: {', '.join(omitted)}."
         )
-    if kept_na:
+    if kept_importers:
         note_parts.append(
-            "Kept importer-only names below the affect limit as NOTAFFECTED "
-            f"because they only link a shared module: {', '.join(kept_na)}."
+            "Kept importer-only names below the affect limit "
+            f"because they only link a shared module: {', '.join(kept_importers)}."
         )
     note = " ".join(note_parts)
     if note and note not in explanation:
@@ -2401,37 +2935,25 @@ def _manifest_entry_from_hits(
     name: str,
     hits: list[CatalogHit],
     factory: Callable[..., Any],
+    *,
+    source_component: str | None = None,
 ) -> Any | None:
     """Build a ManifestComponentEntry from catalog hits, or None if unclassifiable."""
+    if not isinstance(source_component, str) or not source_component.strip():
+        return None
     classified = _classify(hits, _is_module_path(name))
     if classified is None:
         return None
     kind, value = classified
     kwargs: dict[str, Any] = {
         "name": name,
-        "affectedness": "UNKNOWN",
-        "evidence": None,
+        "source_component": source_component,
     }
     if kind == "build_type":
         kwargs["build_type"] = value
     else:
         kwargs["ecosystem"] = value
     return factory(**kwargs)
-
-
-def query_bomq_build_versions(
-    name: str,
-    *,
-    community: bool = False,
-    get_json: Callable[[str], Any] | None = None,
-) -> list[str]:
-    """Sample upstream versions from bomq build search."""
-    settings = get_settings()
-    host = (settings.bomq_community_url if community else settings.bomq_url).rstrip("/")
-    if not host:
-        return []
-    getter = get_json or http_get_json
-    return _build_versions(getter, host, name)
 
 
 def query_anitya_projects(

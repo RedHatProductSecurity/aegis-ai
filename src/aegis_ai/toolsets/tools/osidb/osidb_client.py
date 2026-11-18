@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 # Single source of truth for OSIDB field selection
 _FLAW_RETRIEVE_FIELDS = (
     "cve_id,impact,cwe_id,title,cve_description,cvss_scores,statement,"
-    "mitigation,components,comments,comment_zero,affects,references,embargoed"
+    "mitigation,components,comments,comment_zero,affects,references,"
+    "upstream_data,embargoed"
 )
 _FLAW_LIST_FIELDS = (
     "cve_id,title,cve_description,impact,statement,comment_zero,embargoed"

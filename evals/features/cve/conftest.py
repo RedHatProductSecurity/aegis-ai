@@ -1,7 +1,7 @@
 """Pytest hooks and fixtures for CVE evals.
 
 Covers suggest-impact, suggest-cwe, suggest-description, suggest-statement,
-suggest-affected-components, suggest-manifest-component-and-state,
+suggest-affected-components, suggest-manifest-components-and-ranges,
 identify-pii, and cvss-diff. See evals under
 ``evals/features/cve/``; rubrics are aligned with AEGIS-333 human feedback
 (CVSS PR/S/CIA for kernel issues, statement severity rationale, title/description
@@ -24,7 +24,16 @@ def pytest_addoption(parser):
         default=None,
         help=(
             "Randomly sample N cases for suggest-affected-components and "
-            "suggest-manifest-component-and-state (default: use all)."
+            "suggest-manifest-components-and-ranges (default: use all)."
+        ),
+    )
+    parser.addoption(
+        "--cve-ids",
+        default=None,
+        help=(
+            "Comma-separated CVE ids for suggest-manifest-components-and-ranges. "
+            "Intersected with the locked sample. Overrides "
+            "AEGIS_EVALS_SUGGEST_MANIFEST_COMPONENT_CVE_IDS."
         ),
     )
     parser.addoption(

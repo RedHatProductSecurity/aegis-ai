@@ -340,7 +340,7 @@ cve_feature_registry: dict[str, type] = {
     "quality-review": cve.QualityReview,
     "suggest-affected-packages": cve.SuggestAffectedPackages,
     "query-affected-components": cve.QueryAffectedComponents,
-    "suggest-manifest-component-and-state": cve.SuggestManifestComponentAndState,
+    "suggest-manifest-components-and-ranges": cve.SuggestManifestComponentAndState,
 }
 DEFAULT_CVE_FEATURES = [
     "suggest-impact",
