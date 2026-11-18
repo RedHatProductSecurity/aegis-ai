@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from aegis_ai.kernel_classifier import is_kernel_component
+from aegis_ai.features.cve.kernel import is_kernel_component
 from aegis_ai.kernel_vulns_repo import describe_git_error, sync_vulns_repo
 
 __all__ = [

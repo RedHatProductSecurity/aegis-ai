@@ -23,7 +23,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from aegis_ai import get_settings
-from aegis_ai.kernel_classifier import is_kernel_component
+from aegis_ai.features.cve.kernel import is_kernel_component
 
 logger = logging.getLogger(__name__)
 
