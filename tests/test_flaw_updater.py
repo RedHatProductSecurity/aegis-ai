@@ -8,7 +8,7 @@ Tests run in offline mode: Session (osidb_bindings.session) and CVE features
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -347,7 +347,7 @@ def test_update_field_skipped_low_data_quality():
 
     changed = update_field(flaw_data, TS, "cwe_id", output, value="CWE-79")
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion discarded: cwe_id"}
     assert flaw_data["cwe_id"] == ""
 
     entries = flaw_data["aegis_meta"]["cwe_id"]
@@ -378,7 +378,7 @@ def test_update_field_skipped_low_confidence():
 
     changed = update_field(flaw_data, TS, "impact", output, value="LOW")
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion discarded: impact"}
     assert flaw_data["impact"] == ""
 
     entries = flaw_data["aegis_meta"]["impact"]
@@ -406,7 +406,7 @@ def test_update_field_skipped_both_metrics_low():
 
     changed = update_field(flaw_data, TS, "title", output, value="Bad title")
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion discarded: title"}
     assert flaw_data["title"] == ""
 
     entries = flaw_data["aegis_meta"]["title"]
@@ -458,7 +458,7 @@ def test_update_field_force_overwrite_no_match_checks_metrics():
 
     changed = update_field(flaw_data, TS, "impact", output, force_overwrite_of="")
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion discarded: impact"}
     assert flaw_data["impact"] == "MODERATE"
 
     entries = flaw_data["aegis_meta"]["impact"]
@@ -483,7 +483,7 @@ def test_update_field_force_overwrite_none_checks_metrics():
 
     changed = update_field(flaw_data, TS, "impact", output)
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion discarded: impact"}
     assert flaw_data["impact"] == ""
 
     entries = flaw_data["aegis_meta"]["impact"]
@@ -565,7 +565,7 @@ async def test_suggest_manifest_preserves_rows_on_catalog_outage(mock_exec_featu
 
     changed = await suggest_manifest_components(agent, flaw_data, TS)
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion failed: _downstream"}
     assert flaw_data["_downstream"] == existing
     entries = flaw_data["aegis_meta"]["_downstream"]
     assert len(entries) == 1
@@ -593,7 +593,7 @@ async def test_suggest_manifest_empty_low_confidence_is_not_lookup_failure(
 
     changed = await suggest_manifest_components(agent, flaw_data, TS)
 
-    assert changed == {"aegis_meta"}
+    assert changed == {"aegis_meta", "suggestion discarded: _downstream"}
     entries = flaw_data["aegis_meta"]["_downstream"]
     assert len(entries) == 1
     assert entries[0]["type"] == "AI-Bot-Skipped"
@@ -666,7 +666,10 @@ async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
     assert result is False
 
     # impact is written even with low metrics (force_overwrite_of="" on empty field)
-    assert updater.updated_fields == {"aegis_meta", "impact"}
+    assert "impact" in updater.updated_fields
+    assert "aegis_meta" in updater.updated_fields
+    # placeholders for discarded suggestions were consumed by apply_suggestions()
+    assert not any(f.startswith("suggestion ") for f in updater.updated_fields)
 
     aegis_meta = flaw_data["aegis_meta"]
     for field in ("components", "title", "cve_description", "cwe_id"):
@@ -716,6 +719,7 @@ async def test_flaw_updater_empty_cwe_records_aegis_meta(mock_exec_feature):
 
     assert result is False
     assert "aegis_meta" in updater.updated_fields
+    assert "cwe_id" not in updater.updated_fields
 
     entries = flaw_data["aegis_meta"]["cwe_id"]
     assert len(entries) == 1
@@ -749,6 +753,19 @@ MANUAL_TRIAGE_LABEL = {
     "type": "workflow",
     "state": "NEW",
 }
+
+
+def _assert_manual_triage_label(session, flaw_data):
+    """Assert that the manual-triage label was created with a non-empty reason."""
+    session.flaws.labels.create.assert_called_once_with(
+        flaw_id=flaw_data["uuid"],
+        form_data=ANY,
+    )
+    form_data = session.flaws.labels.create.call_args.kwargs["form_data"]
+    assert form_data["name"] == "manual-triage"
+    assert form_data["type"] == "workflow"
+    assert form_data["state"] == "NEW"
+    assert form_data["reason"]
 
 
 @pytest.mark.asyncio
@@ -812,10 +829,7 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_all_skipped(
     updater = FlawUpdater(session, agent, CVE_ID)
     await updater.do()
 
-    session.flaws.labels.create.assert_called_once_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    _assert_manual_triage_label(session, flaw_data)
 
 
 @pytest.mark.asyncio
@@ -844,10 +858,7 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_partial_failure(
     assert "cwe_id" not in updater.updated_fields
     assert flaw_data["aegis_meta"].get("processed") is True
 
-    session.flaws.labels.create.assert_called_once_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    _assert_manual_triage_label(session, flaw_data)
 
 
 @pytest.mark.asyncio
@@ -866,10 +877,7 @@ async def test_flaw_updater_do_creates_manual_triage_label_on_save_failure(
     updater = FlawUpdater(session, agent, CVE_ID)
     await updater.do()
 
-    session.flaws.labels.create.assert_called_once_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    _assert_manual_triage_label(session, flaw_data)
 
 
 @pytest.mark.asyncio
@@ -898,10 +906,11 @@ async def test_schedule_retry_creates_manual_triage_on_last_attempt(mock_exec_fe
 
         await bot.process_cve(BotPosition(last_cve=CVE_ID))
 
-    session.flaws.labels.create.assert_called_with(
-        flaw_id=flaw_data["uuid"],
-        form_data=MANUAL_TRIAGE_LABEL,
-    )
+    form_data = session.flaws.labels.create.call_args.kwargs["form_data"]
+    assert form_data["name"] == "manual-triage"
+    assert form_data["type"] == "workflow"
+    assert form_data["state"] == "NEW"
+    assert form_data["reason"]
     assert CVE_ID not in bot.retry_list
 
 
