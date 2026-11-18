@@ -85,7 +85,7 @@ check-openapi:
 	echo "OpenAPI docs are up to date."
 
 fetch-deps:
-	uv sync --frozen --extra=classifier_deps
+	uv sync --frozen
 
 upgrade-deps:
 	uv sync --upgrade
