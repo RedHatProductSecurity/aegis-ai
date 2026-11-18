@@ -229,7 +229,7 @@ class AppSettings(BaseSettings):
     otel_enabled: bool = get_env_flag("AEGIS_OTEL_ENABLED", False)
 
     # Aegis top level agent
-    default_llm_host: str = os.getenv("AEGIS_LLM_HOST", "localhost:11434")
+    default_llm_host: str = os.getenv("AEGIS_LLM_HOST", "http://localhost:11434")
     default_llm_model_name: str = os.getenv("AEGIS_LLM_MODEL", "llama3.2:latest")
     # Optional; empty means "infer the provider from AEGIS_LLM_HOST", as before.
     default_llm_provider: str = os.getenv("AEGIS_LLM_PROVIDER", "")
@@ -244,7 +244,7 @@ class AppSettings(BaseSettings):
 
     # Aegis safety subagent
     safety_enabled: bool = get_env_flag("AEGIS_SAFETY_ENABLED", False)
-    safety_llm_host: str = os.getenv("AEGIS_SAFETY_LLM_HOST", "localhost:11434")
+    safety_llm_host: str = os.getenv("AEGIS_SAFETY_LLM_HOST", "http://localhost:11434")
     safety_llm_model: str = os.getenv("AEGIS_SAFETY_LLM_MODEL", "granite3-guardian-2b")
     safety_llm_openapi_key: str = os.getenv("AEGIS_SAFETY_OPENAPI_KEY", "")
 
