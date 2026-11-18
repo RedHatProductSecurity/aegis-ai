@@ -6,8 +6,8 @@ from pydantic_ai import Agent
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
+from aegis_ai.features.cve.kernel import is_kernel_component
 from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
-from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 
 _KERNEL_FLAGS_KEY = "kernel_flags"
