@@ -1,0 +1,18 @@
+{
+    "url": "{bomq_primary}/api/v0alpha/components?name=rclone&strict=true&group_by=name&exclude_dev=true&exclude_subcomponents=true&exclude_types=&limit=100&page=1",
+    "body": {
+        "data": [
+            {
+                "name": "rclone",
+                "type": "generic",
+                "build_count": 1
+            },
+            {
+                "name": "rclone",
+                "type": "rpm",
+                "build_count": 1
+            }
+        ],
+        "total": 2
+    }
+}
