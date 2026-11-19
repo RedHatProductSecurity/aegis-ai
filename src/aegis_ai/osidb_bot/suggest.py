@@ -113,6 +113,7 @@ def update_field(
     src: str | None = None,
     value: Any | None = None,
     force_overwrite_of: tuple[Any, ...] | None = None,
+    delay_overwrite_of: tuple[Any, ...] | None = None,
 ) -> set[str]:
     """Persist a suggestion onto the flaw when confidence and quality allow."""
     assert (not src) or (not value)
@@ -148,8 +149,14 @@ def update_field(
 
         value = getattr(output, src)
 
-    # write to destination
-    flaw_data[dst] = value
+    aegis_meta_type: str = "AI-Bot"
+    if old_value != value:
+        if delay_overwrite_of is None or old_value not in delay_overwrite_of:
+            # write to destination
+            flaw_data[dst] = value
+        else:
+            # write metadata only with the suggestion tagged as "AI-Bot-Pending"
+            aegis_meta_type = "AI-Bot-Pending"
 
     # record Aegis metadata
     record_aegis_meta(
@@ -157,7 +164,7 @@ def update_field(
         timestamp,
         dst,
         output,
-        type="AI-Bot",
+        type=aegis_meta_type,
         value=value,
         explanation=output.explanation,
     )
@@ -279,7 +286,14 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
         return changed
 
     # pick the "impact" field
-    changed |= update_field(flaw_data, ts, "impact", output, force_overwrite_of=("",))
+    changed |= update_field(
+        flaw_data,
+        ts,
+        "impact",
+        output,
+        force_overwrite_of=("",),
+        delay_overwrite_of=("CRITICAL",),
+    )
 
     if not output.cvss3_vector:
         # no RH CVSS available

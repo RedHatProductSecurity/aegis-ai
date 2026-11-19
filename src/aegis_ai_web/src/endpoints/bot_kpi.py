@@ -193,7 +193,7 @@ def _suggestion_record(
     """
     entry_type = entry.get("type", "")
     deviation: float | None = None
-    if entry_type == "AI-Bot" and "value" in entry:
+    if entry_type in ("AI-Bot", "AI-Bot-Pending") and "value" in entry:
         if _values_equal(entry["value"], current_value):
             deviation = 0.0
         else:
@@ -268,7 +268,7 @@ def _score_records(
             stats.confidence_count += 1
         stats.total_entries += 1
 
-        if record.type == "AI-Bot":
+        if record.type in ("AI-Bot", "AI-Bot-Pending"):
             # A field re-suggested multiple times (only possible via
             # `osidb-bot --force`) counts as one suggestion, so `suggested` is
             # per-field, not per-entry. This keeps it a checkable invariant --
