@@ -608,3 +608,4 @@ def osidb_bot(state_file, force, read_only, max_age, max_retries, cve_ids):
             asyncio.run(runner)
     except RuntimeError as e:
         logger.error(str(e))
+        sys.exit(1)

@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import pytest
 
-from aegis_ai.kernel_classifier.training_input import load_cve_id_file
 from aegis_ai_ml.src.osidb_retrieve import (
     _cap_per_class,
     _load_existing_cve_ids,
@@ -18,6 +17,7 @@ from aegis_ai_ml.src.osidb_retrieve import (
     main,
     normalize_flaws,
 )
+from aegis_ai_ml.src.training_input import load_cve_id_file
 
 # ---------------------------------------------------------------------------
 # normalize_flaws — per-CVE skip reasons
