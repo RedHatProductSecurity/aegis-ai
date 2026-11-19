@@ -431,7 +431,7 @@ def test_update_field_force_overwrite_bypasses_metrics():
         ),
     )
 
-    changed = update_field(flaw_data, TS, "impact", output, force_overwrite_of="")
+    changed = update_field(flaw_data, TS, "impact", output, force_overwrite_of=("",))
 
     assert changed == {"impact"}
     assert flaw_data["impact"] == "LOW"
@@ -456,7 +456,7 @@ def test_update_field_force_overwrite_no_match_checks_metrics():
         ),
     )
 
-    changed = update_field(flaw_data, TS, "impact", output, force_overwrite_of="")
+    changed = update_field(flaw_data, TS, "impact", output, force_overwrite_of=("",))
 
     assert changed == {"aegis_meta", "suggestion discarded: impact"}
     assert flaw_data["impact"] == "MODERATE"
@@ -665,7 +665,7 @@ async def test_flaw_updater_all_skipped_records_aegis_meta(mock_exec_feature):
     result = await updater.apply_suggestions()
     assert result is False
 
-    # impact is written even with low metrics (force_overwrite_of="" on empty field)
+    # impact is written even with low metrics (force_overwrite_of=("",) on empty field)
     assert "impact" in updater.updated_fields
     assert "aegis_meta" in updater.updated_fields
     # placeholders for discarded suggestions were consumed by apply_suggestions()
