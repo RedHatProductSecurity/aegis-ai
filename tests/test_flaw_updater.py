@@ -491,6 +491,88 @@ def test_update_field_force_overwrite_none_checks_metrics():
     assert entries[0]["type"] == "AI-Bot-Skipped"
 
 
+def test_update_field_delay_overwrite_match_records_pending():
+    """delay_overwrite_of records AI-Bot-Pending without changing the field."""
+    flaw_data = _minimal_flaw_data()
+    flaw_data["impact"] = "CRITICAL"
+    output = cast(
+        AegisAnswer,
+        SimpleNamespace(
+            impact="LOW",
+            explanation="test",
+            data_quality=1.0,
+            confidence=1.0,
+            tools_used=[],
+        ),
+    )
+
+    changed = update_field(
+        flaw_data, TS, "impact", output, delay_overwrite_of=("CRITICAL",)
+    )
+
+    assert changed == {"impact"}
+    assert flaw_data["impact"] == "CRITICAL"
+
+    entries = flaw_data["aegis_meta"]["impact"]
+    assert len(entries) == 1
+    assert entries[0]["type"] == "AI-Bot-Pending"
+    assert entries[0]["value"] == "LOW"
+
+
+def test_update_field_delay_overwrite_no_match_writes_normally():
+    """delay_overwrite_of does not delay when current value is not in the tuple."""
+    flaw_data = _minimal_flaw_data()
+    flaw_data["impact"] = "MODERATE"
+    output = cast(
+        AegisAnswer,
+        SimpleNamespace(
+            impact="LOW",
+            explanation="test",
+            data_quality=1.0,
+            confidence=1.0,
+            tools_used=[],
+        ),
+    )
+
+    changed = update_field(
+        flaw_data, TS, "impact", output, delay_overwrite_of=("CRITICAL",)
+    )
+
+    assert changed == {"impact"}
+    assert flaw_data["impact"] == "LOW"
+
+    entries = flaw_data["aegis_meta"]["impact"]
+    assert len(entries) == 1
+    assert entries[0]["type"] == "AI-Bot"
+
+
+def test_update_field_delay_overwrite_same_value_writes_ai_bot():
+    """delay_overwrite_of with matching value that equals suggestion records AI-Bot."""
+    flaw_data = _minimal_flaw_data()
+    flaw_data["impact"] = "CRITICAL"
+    output = cast(
+        AegisAnswer,
+        SimpleNamespace(
+            impact="CRITICAL",
+            explanation="test",
+            data_quality=1.0,
+            confidence=1.0,
+            tools_used=[],
+        ),
+    )
+
+    changed = update_field(
+        flaw_data, TS, "impact", output, delay_overwrite_of=("CRITICAL",)
+    )
+
+    assert changed == {"impact"}
+    assert flaw_data["impact"] == "CRITICAL"
+
+    entries = flaw_data["aegis_meta"]["impact"]
+    assert len(entries) == 1
+    assert entries[0]["type"] == "AI-Bot"
+
+
 @pytest.mark.asyncio
 @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
 async def test_suggest_description_overwrites_cveorg_placeholder(mock_exec_feature):
