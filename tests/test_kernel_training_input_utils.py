@@ -6,7 +6,7 @@ from collections import Counter
 import pytest
 
 from aegis_ai.features.cve.kernel import is_kernel_component
-from aegis_ai.kernel_classifier.training_input import (
+from aegis_ai_ml.src.training_input import (
     CVSS_ISSUER_PRIORITY,
     LinuxVulnsResolver,
     build_generation_report,
