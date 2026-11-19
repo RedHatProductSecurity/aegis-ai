@@ -2,7 +2,7 @@
 
 Both the kernel CVE lookup tool (``toolsets/tools/kernel_cves``) and the
 kernel classifier's offline training pipeline
-(``kernel_classifier/training_input.py``) need an up-to-date local clone of
+(``aegis_ai_ml/src/training_input.py``) need an up-to-date local clone of
 the upstream ``linux/security/vulns`` repo. This module is the single
 clone-or-pull implementation for that repo so the two callers share one
 source URL and one set of timeouts instead of drifting independently.
