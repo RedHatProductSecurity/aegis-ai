@@ -17,7 +17,7 @@ from typing import Any
 
 import osidb_bindings
 
-from aegis_ai.kernel_classifier.training_input import (
+from aegis_ai_ml.src.training_input import (
     LinuxVulnsResolver,
     build_generation_report,
     extract_patch_ids,

@@ -4,7 +4,7 @@
 | Environment Variable           | Description                                     | Default Value          |
 |--------------------------------|-------------------------------------------------|------------------------|
 | `AEGIS_CLI_FEATURE_AGENT`      | Set to `redhat` to use rh profile               | `public`               |
-| `AEGIS_LLM_HOST`               | Aegis LLM host                                  | `localhost:11434`      |
+| `AEGIS_LLM_HOST`               | Aegis LLM host                                  | `http://localhost:11434` |
 | `AEGIS_LLM_MODEL`              | Aegis LLM model                                 | `llama3.2:latest`      |
 | `AEGIS_LLM_PROVIDER`           | Force the API to speak: `openai`, `anthropic` or `google`. Unset means infer it from `AEGIS_LLM_HOST`. Needed for gateways (EnMaaS, LiteLLM, ...) serving a non-OpenAI API | |
 | `AEGIS_LLM_API_KEY`            | Provider-neutral API key. Unset means use the vendor variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`) | |
@@ -14,7 +14,7 @@
 | `AEGIS_LLM_TIMEOUT_SECS`       | Timeout in seconds for a single LLM prompt      | 200                    |
 | `AEGIS_LOG_FILE`               | Optional log file (logs always go to stderr)    |                        |
 | `AEGIS_SAFETY_ENABLED`         | Enable separate model to check model safety     | `false`                |
-| `AEGIS_SAFETY_LLM_HOST`        | Safety LLM host                                 | `localhost:11434`      |
+| `AEGIS_SAFETY_LLM_HOST`        | Safety LLM host                                 | `http://localhost:11434` |
 | `AEGIS_SAFETY_LLM_MODEL`       | Safety LLM model                                | `granite3-guardian-2b` |
 | `AEGIS_SAFETY_OPENAPI_KEY`     | Safety openai key                               |                        |
 | `AEGIS_ML_CVE_DATA_DIR`        | Directory containing CVE training data          |                        |
