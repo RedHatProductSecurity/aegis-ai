@@ -325,7 +325,7 @@ class FlawUpdater:
             reason=self._fail_reason or "osidb-bot internal error",
         )
 
-    def _create_labels(self) -> None:
+    async def _create_labels(self) -> None:
         assert self.flaw_data
         entries = self.flaw_data.get("aegis_meta", {}).get(_KERNEL_FLAGS_KEY, [])
         labels: list[str] = []
@@ -338,7 +338,7 @@ class FlawUpdater:
 
         any_update = False
         for label_name in labels:
-            if self.create_label(label_name, type="alias"):
+            if await self.create_label_async(label_name, type="alias"):
                 any_update = True
 
         if not any_update:
@@ -429,9 +429,7 @@ class FlawUpdater:
                 all_ok = self.on_failure(self.cve) if self.on_failure else False
 
             if _KERNEL_FLAGS_KEY in self.updated_fields:
-                self._osidb_write_pending = True
-                await asyncio.to_thread(self._create_labels)
-                self._osidb_write_pending = False
+                await self._create_labels()
 
         if self.updated_fields:
             self._info(f"updated {self.updated_fields}")
