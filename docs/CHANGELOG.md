@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Changed
+- `suggest-manifest-component-and-state` rows drop `affectedness` / `evidence` and carry `source_component` from the flaw seed; soft keep/drop and search-key alignment remain, and row verdicts are left to ACE [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` stores a `ranges` sibling on `aegis_meta._downstream`: OSV ECOSYSTEM/SEMVER events per flaw component, or a constrained advisory-text extract (`ranges`, `versions`, or omit) when OSV is GIT-only or has no version range [\[AEGIS-540\]](https://redhat.atlassian.net/browse/AEGIS-540)
+- `suggest-manifest-component-and-state` drops `bomq_build_versions_tool`, bomq build/component version sampling, and the local VersionBound / advisory-bounds / sample-affectedness path; RHCOS companions use presence-only checks and ACE owns ranging via sibling `ranges` [\[AEGIS-559\]](https://redhat.atlassian.net/browse/AEGIS-559)
+
+
 ## [0.11.0] - 2026-11-12
 
 ### Added
