@@ -10,8 +10,6 @@ from aegis_ai.features.cve.kernel import is_kernel_component
 from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 
-_KERNEL_FLAGS_KEY = "kernel_flags"
-
 # define the quality of suggestions that we accept
 METRICS_THR = {
     "data_quality": {
@@ -332,17 +330,7 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
         and output.cvss3_vector
         and "A:H" in output.cvss3_vector
     ):
-        aegis_meta = flaw_data.setdefault("aegis_meta", {})
-        dst_field = aegis_meta.setdefault(_KERNEL_FLAGS_KEY, [])
-        dst_field.append(
-            {
-                "type": "AI-Bot",
-                "value": ["kpanic"],
-                "explanation": output.explanation,
-                "timestamp": ts.isoformat(),
-            }
-        )
-        changed.add(_KERNEL_FLAGS_KEY)
+        changed.add("label:kpanic")
 
     return changed
 

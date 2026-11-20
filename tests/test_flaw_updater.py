@@ -101,7 +101,6 @@ async def _canned_exec_feature(feature, flaw_data):
             cvss3_score="3.7",
             cvss3_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
             explanation=explanation,
-            _flags=[],
             **metrics,
         )
     if name == "SuggestStatementText":

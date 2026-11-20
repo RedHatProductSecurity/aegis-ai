@@ -15,7 +15,7 @@ from pydantic_ai import Agent
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
 from aegis_ai.osidb_bot.state import BotPosition, BotStateFileHandler, StateProxy
-from aegis_ai.osidb_bot.suggest import _KERNEL_FLAGS_KEY, DEFAULT_SUGGESTION_LIST
+from aegis_ai.osidb_bot.suggest import DEFAULT_SUGGESTION_LIST
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 
 
@@ -344,23 +344,23 @@ class FlawUpdater:
         )
 
     async def _create_labels(self) -> None:
-        assert self.flaw_data
-        entries = self.flaw_data.get("aegis_meta", {}).get(_KERNEL_FLAGS_KEY, [])
-        labels: list[str] = []
-        for entry in entries:
-            if isinstance(entry, dict):
-                val = entry.get("value", [])
-                if isinstance(val, list):
-                    labels.extend(val)
-        labels = list(dict.fromkeys(labels))
+        """Create custom labels based on self.updated_fields"""
+        for field in list(self.updated_fields):
+            m = re.match(r"label:(.*)", field)
+            if not m:
+                continue
 
-        any_update = False
-        for label_name in labels:
-            if await self.create_label_async(label_name, type="alias"):
-                any_update = True
+            label: str = m.group(1)
+            handled: bool = False
+            match label:
+                case "kpanic":
+                    handled = await self.create_label_async(label, type="alias")
 
-        if not any_update:
-            self.updated_fields.discard(_KERNEL_FLAGS_KEY)
+                case _:
+                    self._warn(f"unhandled label: {label}")
+
+            if not handled:
+                self.updated_fields.remove(field)
 
     def save_flaw(self) -> bool:
         """Save flaw data to OSIDB (two-step: flaw update + CVSS subresource).
@@ -444,8 +444,8 @@ class FlawUpdater:
             else:
                 all_ok = self.on_failure(self.cve) if self.on_failure else False
 
-            if _KERNEL_FLAGS_KEY in self.updated_fields:
-                await self._create_labels()
+            # finally create custom labels
+            await self._create_labels()
 
         if self.updated_fields:
             self._info(f"updated {self.updated_fields}")
