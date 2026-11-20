@@ -293,6 +293,12 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
         delay_overwrite_of=("CRITICAL",),
     )
 
+    # flag potential candidates for CRITICAL
+    if flaw_data.get("impact") == "IMPORTANT":
+        for metric, thr_map in METRICS_THR.items():
+            if getattr(output, metric) <= thr_map["info_thr"]:
+                changed.add("label:review-needed")
+
     if not output.cvss3_vector:
         # no RH CVSS available
         return changed

@@ -338,6 +338,14 @@ class FlawUpdater:
                 case "kpanic":
                     handled = await self.create_label_async(label, type="alias")
 
+                case "review-needed":
+                    # the reason is hard-coded because there is only one trigger for now
+                    handled = await self.create_label_async(
+                        label,
+                        type="workflow",
+                        reason="potential candidate for CRITICAL based on impact and data_quality/confidence metrics",
+                    )
+
                 case _:
                     self._warn(f"unhandled label: {label}")
 
