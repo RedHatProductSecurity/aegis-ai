@@ -77,6 +77,10 @@ KNOWN_FAILURES: dict[str, dict] = {
         "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
         "reason": "sets C:H and I:H for internal kernel stack buffer overflow without plausible user-data impact path",
     },
+    "CVE-2023-53510": {
+        "known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"],
+        "reason": "sets C:H and I:H for internal SCSI request tracking structures without establishing a use-after-free primitive or plausible user-data impact path",
+    },
     # FIXME: tweak RULES_KERNEL_ADDENDUM to eliminate this failure
     "CVE-2026-46082": {
         "known_to_fail_evaluators": ["UnderestimationEvaluator"],

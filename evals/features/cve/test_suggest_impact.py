@@ -252,11 +252,6 @@ cases = [
         expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:N/A:H",
     ),
     SuggestImpactCase(
-        cve_id="CVE-2023-53510",
-        expected_cvss3_vector="CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:H",
-        metadata={"known_to_fail_evaluators": ["CVSSKernelScopeAndPrivileges"]},
-    ),
-    SuggestImpactCase(
         cve_id="CVE-2023-53693",
         expected_impact="MODERATE",
         expected_cvss3_score=5.5,
