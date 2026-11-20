@@ -1,10 +1,10 @@
 """
-Unit tests for the kernel_panic flag pipeline.
+Unit tests for the kpanic label pipeline.
 
 Covers:
 - _flags private attr on SuggestImpactModel
-- aegis_meta.kernel_flags persistence in suggest_impact()
-- FlawCollaborator label creation in FlawUpdater.do()
+- label:kpanic in suggest_impact() updated_fields
+- FlawUpdater label creation via _create_labels()
 """
 
 from datetime import UTC, datetime
@@ -111,7 +111,7 @@ def _mock_session(flaw_data: dict) -> MagicMock:
 
 
 async def _canned_exec_feature_with_flags(feature, flaw_data):
-    """Fake exec_feature returning a SuggestImpact output with kernel flags."""
+    """Fake exec_feature returning a SuggestImpact output with A:H in CVSS."""
     name = feature.__class__.__name__
 
     if name == "SuggestAffectedComponents":
@@ -149,7 +149,6 @@ async def _canned_exec_feature_with_flags(feature, flaw_data):
             data_quality=0.9,
             confidence=0.9,
             tools_used=[],
-            _flags=["kpanic"],
         )
     if name == "SuggestStatementText":
         return SimpleNamespace(
@@ -172,11 +171,11 @@ async def _canned_exec_feature_with_flags(feature, flaw_data):
 
 
 @pytest.mark.asyncio
-class TestSuggestImpactAegisMetaKernelFlags:
-    """Test that suggest_impact() writes kernel_flags to aegis_meta."""
+class TestSuggestImpactKpanicLabel:
+    """Test that suggest_impact() adds label:kpanic to changed fields."""
 
     @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
-    async def test_kernel_flags_persisted_in_aegis_meta(self, mock_exec):
+    async def test_kpanic_label_for_kernel_with_ah(self, mock_exec):
         mock_exec.side_effect = _canned_exec_feature_with_flags
 
         flaw_data = _minimal_flaw_data()
@@ -187,16 +186,11 @@ class TestSuggestImpactAegisMetaKernelFlags:
         agent = MagicMock()
         changed = await suggest_impact(agent, flaw_data, ts)
 
-        assert "kernel_flags" in changed
-        entries = flaw_data["aegis_meta"]["kernel_flags"]
-        assert len(entries) == 1
-        assert entries[0]["type"] == "AI-Bot"
-        assert entries[0]["value"] == ["kpanic"]
-        assert entries[0]["timestamp"] == ts.isoformat()
+        assert "label:kpanic" in changed
 
     @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
-    async def test_no_kernel_flags_without_ah_in_cvss(self, mock_exec):
-        """No kernel_flags key when CVSS vector lacks A:H."""
+    async def test_no_kpanic_label_without_ah_in_cvss(self, mock_exec):
+        """No label:kpanic when CVSS vector lacks A:H."""
 
         async def _no_ah(feature, flaw_data):
             name = feature.__class__.__name__
@@ -221,16 +215,15 @@ class TestSuggestImpactAegisMetaKernelFlags:
         ts = datetime(2025, 6, 1, 12, 0, 0, tzinfo=UTC)
         changed = await suggest_impact(MagicMock(), flaw_data, ts)
 
-        assert "kernel_flags" not in changed
-        assert "kernel_flags" not in flaw_data.get("aegis_meta", {})
+        assert "label:kpanic" not in changed
 
 
 @pytest.mark.asyncio
 class TestFlawUpdaterLabelCreation:
-    """Test that FlawUpdater.do() creates alias labels for kernel_flags."""
+    """Test that FlawUpdater.do() creates alias labels for label:kpanic."""
 
     @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
-    async def test_labels_created_for_kernel_flags(self, mock_exec):
+    async def test_labels_created_for_kpanic(self, mock_exec):
         mock_exec.side_effect = _canned_exec_feature_with_flags
 
         flaw_data = _minimal_flaw_data()
@@ -265,5 +258,5 @@ class TestFlawUpdaterLabelCreation:
 
         # The flaw update itself should still have succeeded
         session.flaws.update.assert_called_once()
-        # kernel_flags should be removed from updated_fields on failure
-        assert "kernel_flags" not in updater.updated_fields
+        # label:kpanic should be removed from updated_fields on failure
+        assert "label:kpanic" not in updater.updated_fields
