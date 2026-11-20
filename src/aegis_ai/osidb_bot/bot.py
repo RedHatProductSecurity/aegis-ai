@@ -282,17 +282,6 @@ class FlawUpdater:
             if isinstance(entry, dict)  # guard against malformed OSIDB data
         )
 
-    async def set_manual_triage(self) -> None:
-        """Create the manual-triage workflow label in a separate thread."""
-        self._osidb_write_pending = True
-        await asyncio.to_thread(
-            self.create_label,
-            name="manual-triage",
-            type="workflow",
-            reason=self._fail_reason or "osidb-bot internal error",
-        )
-        self._osidb_write_pending = False
-
     def create_label(self, name: str, **kwargs) -> bool:
         """Create a flaw label with the given name and type, return True on success."""
         assert self.flaw_data
@@ -320,6 +309,21 @@ class FlawUpdater:
             self._log_osidb_response(e)
             logger.debug("%s: %s", self.cve, e)
             return False
+
+    async def create_label_async(self, name: str, **kwargs) -> bool:
+        """Create a label in a separate thread."""
+        self._osidb_write_pending = True
+        ok: bool = await asyncio.to_thread(self.create_label, name=name, **kwargs)
+        self._osidb_write_pending = False
+        return ok
+
+    async def set_manual_triage(self) -> bool:
+        """Create the manual-triage workflow label in a separate thread."""
+        return await self.create_label_async(
+            name="manual-triage",
+            type="workflow",
+            reason=self._fail_reason or "osidb-bot internal error",
+        )
 
     def _create_labels(self) -> None:
         assert self.flaw_data
