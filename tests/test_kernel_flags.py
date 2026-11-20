@@ -2,7 +2,7 @@
 Unit tests for the kernel_panic flag pipeline.
 
 Covers:
-- FLAG_TO_LABEL mapping and flags population on SuggestImpactModel
+- _flags private attr on SuggestImpactModel
 - aegis_meta.kernel_flags persistence in suggest_impact()
 - FlawCollaborator label creation in FlawUpdater.do()
 """
@@ -13,7 +13,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from aegis_ai.features.cve import _FLAG_TO_LABEL, SuggestImpact
 from aegis_ai.features.cve.data_models import SuggestImpactModel
 from aegis_ai.osidb_bot.bot import FlawUpdater
 
@@ -43,20 +42,6 @@ def _base_model_kwargs(**overrides):
     }
     defaults.update(overrides)
     return defaults
-
-
-class TestFlagToLabelMapping:
-    """Verify the allow-list mapping from classifier features to label names."""
-
-    def test_kernel_panic_maps_to_kpanic(self):
-        assert _FLAG_TO_LABEL["kernel_panic"] == "kpanic"
-
-    def test_kernel_panic_plus_uaf_maps_to_kpanic(self):
-        assert _FLAG_TO_LABEL["kernel_panic_plus_uaf"] == "kpanic"
-
-    def test_unknown_feature_not_in_mapping(self):
-        assert "use_after_free" not in _FLAG_TO_LABEL
-        assert "overflow" not in _FLAG_TO_LABEL
 
 
 class TestSuggestImpactModelFlags:
@@ -187,130 +172,6 @@ async def _canned_exec_feature_with_flags(feature, flaw_data):
 
 
 @pytest.mark.asyncio
-class TestSuggestImpactExecFlagsPopulation:
-    """Verify that SuggestImpact.exec() populates _flags from classifier active_features."""
-
-    @patch("aegis_ai.features.cve.SuggestImpact.post_process", return_value="")
-    @patch("aegis_ai.features.cve.is_kernel_component", return_value=True)
-    @patch("aegis_ai.features.cve.get_settings")
-    async def test_known_features_mapped_and_deduped(
-        self, mock_settings, _mock_kernel, _mock_pp
-    ):
-        mock_settings.return_value = MagicMock(use_kernel_classifier=True)
-
-        model = SuggestImpactModel(**_base_model_kwargs())
-        mock_result = SimpleNamespace(output=model)
-
-        feature = SuggestImpact(MagicMock())
-        classifier = {
-            "active_features": [
-                "kernel_panic",
-                "kernel_panic_plus_uaf",
-            ],
-        }
-
-        with (
-            patch.object(
-                feature, "guarded_run", new_callable=AsyncMock, return_value=mock_result
-            ),
-            patch(
-                "aegis_ai.toolsets.tools.kernel_classifier.kernel_impact_classify",
-                new_callable=AsyncMock,
-                return_value=classifier,
-            ),
-        ):
-            result = await feature.exec(
-                CVE_ID,
-                static_context={
-                    "cvss_scores": [],
-                    "components": ["kernel"],
-                    "comment_zero": "test",
-                },
-            )
-
-        assert result.output._flags == ["kpanic"]
-
-    @patch("aegis_ai.features.cve.SuggestImpact.post_process", return_value="")
-    @patch("aegis_ai.features.cve.is_kernel_component", return_value=True)
-    @patch("aegis_ai.features.cve.get_settings")
-    async def test_unknown_features_ignored(
-        self, mock_settings, _mock_kernel, _mock_pp
-    ):
-        mock_settings.return_value = MagicMock(use_kernel_classifier=True)
-
-        model = SuggestImpactModel(**_base_model_kwargs())
-        mock_result = SimpleNamespace(output=model)
-
-        feature = SuggestImpact(MagicMock())
-        classifier = {
-            "active_features": ["overflow", "use_after_free"],
-        }
-
-        with (
-            patch.object(
-                feature, "guarded_run", new_callable=AsyncMock, return_value=mock_result
-            ),
-            patch(
-                "aegis_ai.toolsets.tools.kernel_classifier.kernel_impact_classify",
-                new_callable=AsyncMock,
-                return_value=classifier,
-            ),
-        ):
-            result = await feature.exec(
-                CVE_ID,
-                static_context={
-                    "cvss_scores": [],
-                    "components": ["kernel"],
-                    "comment_zero": "test",
-                },
-            )
-
-        assert result.output._flags == []
-
-    @patch("aegis_ai.features.cve.SuggestImpact.post_process", return_value="")
-    @patch("aegis_ai.features.cve.is_kernel_component", return_value=True)
-    @patch("aegis_ai.features.cve.get_settings")
-    async def test_mixed_known_and_unknown_features(
-        self, mock_settings, _mock_kernel, _mock_pp
-    ):
-        mock_settings.return_value = MagicMock(use_kernel_classifier=True)
-
-        model = SuggestImpactModel(**_base_model_kwargs())
-        mock_result = SimpleNamespace(output=model)
-
-        feature = SuggestImpact(MagicMock())
-        classifier = {
-            "active_features": [
-                "kernel_panic",
-                "overflow",
-                "kernel_panic_plus_uaf",
-                "use_after_free",
-            ],
-        }
-
-        with (
-            patch.object(
-                feature, "guarded_run", new_callable=AsyncMock, return_value=mock_result
-            ),
-            patch(
-                "aegis_ai.toolsets.tools.kernel_classifier.kernel_impact_classify",
-                new_callable=AsyncMock,
-                return_value=classifier,
-            ),
-        ):
-            result = await feature.exec(
-                CVE_ID,
-                static_context={
-                    "cvss_scores": [],
-                    "components": ["kernel"],
-                    "comment_zero": "test",
-                },
-            )
-
-        assert result.output._flags == ["kpanic"]
-
-
-@pytest.mark.asyncio
 class TestSuggestImpactAegisMetaKernelFlags:
     """Test that suggest_impact() writes kernel_flags to aegis_meta."""
 
@@ -319,6 +180,7 @@ class TestSuggestImpactAegisMetaKernelFlags:
         mock_exec.side_effect = _canned_exec_feature_with_flags
 
         flaw_data = _minimal_flaw_data()
+        flaw_data["components"] = ["kernel"]
         from aegis_ai.osidb_bot.suggest import suggest_impact
 
         ts = datetime(2025, 6, 1, 12, 0, 0, tzinfo=UTC)
@@ -333,27 +195,27 @@ class TestSuggestImpactAegisMetaKernelFlags:
         assert entries[0]["timestamp"] == ts.isoformat()
 
     @patch("aegis_ai.osidb_bot.suggest.exec_feature", new_callable=AsyncMock)
-    async def test_no_kernel_flags_when_empty(self, mock_exec):
-        """No kernel_flags key when output._flags is empty."""
+    async def test_no_kernel_flags_without_ah_in_cvss(self, mock_exec):
+        """No kernel_flags key when CVSS vector lacks A:H."""
 
-        async def _no_flags(feature, flaw_data):
+        async def _no_ah(feature, flaw_data):
             name = feature.__class__.__name__
             if name == "SuggestImpact":
                 return SimpleNamespace(
                     impact="MODERATE",
                     cvss3_score="5.5",
-                    cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+                    cvss3_vector="CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:L",
                     explanation="test",
                     data_quality=0.9,
                     confidence=0.9,
                     tools_used=[],
-                    _flags=[],
                 )
             return await _canned_exec_feature_with_flags(feature, flaw_data)
 
-        mock_exec.side_effect = _no_flags
+        mock_exec.side_effect = _no_ah
 
         flaw_data = _minimal_flaw_data()
+        flaw_data["components"] = ["kernel"]
         from aegis_ai.osidb_bot.suggest import suggest_impact
 
         ts = datetime(2025, 6, 1, 12, 0, 0, tzinfo=UTC)

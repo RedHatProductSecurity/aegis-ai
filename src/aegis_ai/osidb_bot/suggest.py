@@ -326,14 +326,18 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     flaw_data["cvss_scores"] = [rh_cvss]
     changed.add("cvss_scores")
 
-    # persist kernel classifier flags for provenance and label creation
-    if output._flags:
+    # create `kpanic` label for kernel flaws with `A:H` in rh_cvss
+    if (
+        is_kernel_component(flaw_data.get("components"))
+        and output.cvss3_vector
+        and "A:H" in output.cvss3_vector
+    ):
         aegis_meta = flaw_data.setdefault("aegis_meta", {})
         dst_field = aegis_meta.setdefault(_KERNEL_FLAGS_KEY, [])
         dst_field.append(
             {
                 "type": "AI-Bot",
-                "value": output._flags,
+                "value": ["kpanic"],
                 "explanation": output.explanation,
                 "timestamp": ts.isoformat(),
             }
