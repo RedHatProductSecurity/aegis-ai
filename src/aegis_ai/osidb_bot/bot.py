@@ -1,4 +1,5 @@
 import asyncio
+import re
 import textwrap
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -13,7 +14,7 @@ from pydantic_ai import Agent
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID
 from aegis_ai.osidb_bot.state import BotPosition, BotStateFileHandler, StateProxy
-from aegis_ai.osidb_bot.suggest import _KERNEL_FLAGS_KEY, DEFAULT_SUGGESTION_LIST
+from aegis_ai.osidb_bot.suggest import DEFAULT_SUGGESTION_LIST
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
 
 
@@ -195,6 +196,7 @@ class FlawUpdater:
         self.on_failure = on_failure
         self.updated_fields = set()
         self._osidb_write_pending = False
+        self._fail_reason = ""
 
         try:
             # read flaw data
@@ -212,6 +214,7 @@ class FlawUpdater:
         logger.info(f"{self.cve}: {msg}")
 
     def _warn(self, msg: str) -> None:
+        self._fail_reason += f"- {msg}\n"
         logger.warning(f"{self.cve}: {msg}")
 
     def _log_osidb_response(self, e: Exception) -> None:
@@ -246,6 +249,15 @@ class FlawUpdater:
                 all_ok = False
                 self._warn(str(e))
 
+        # look for placeholders for failed/discarded suggestions
+        for field in list(self.updated_fields):
+            if re.match(r"suggestion (?:failed|discarded): ", field):
+                # warn about a failed/discarded suggestion
+                self._warn(field)
+
+                # remove the placeholder from updated_fields
+                self.updated_fields.remove(field)
+
         if not self.updated_fields:
             # nothing has changed (unexpectedly)
             self._warn("left unchanged")
@@ -270,11 +282,11 @@ class FlawUpdater:
             if isinstance(entry, dict)  # guard against malformed OSIDB data
         )
 
-    def create_label(self, label_name: str, label_type: str = "alias") -> bool:
+    def create_label(self, name: str, **kwargs) -> bool:
         """Create a flaw label with the given name and type, return True on success."""
         assert self.flaw_data
         if self.read_only:
-            msg = f"read-only mode, skipping creation of label '{label_name}'"
+            msg = f"read-only mode, skipping creation of label '{name}'"
             self._warn(msg)
             return False
 
@@ -283,39 +295,62 @@ class FlawUpdater:
             cast(Any, self.osidb.flaws).labels.create(
                 flaw_id=flaw_uuid,
                 form_data={
-                    "name": label_name,
-                    "type": label_type,
+                    "name": name,
                     "state": "NEW",
+                    **kwargs,
                 },
             )
-            self._info(f"created label '{label_name}'")
+            self._info(f"created label '{name}'")
             return True
 
         except Exception as e:
-            msg = f"failed to create label '{label_name}' ({e.__class__.__name__})"
+            msg = f"failed to create label '{name}' ({e.__class__.__name__})"
             self._warn(msg)
             self._log_osidb_response(e)
             logger.debug("%s: %s", self.cve, e)
             return False
 
-    def _create_labels(self) -> None:
-        assert self.flaw_data
-        entries = self.flaw_data.get("aegis_meta", {}).get(_KERNEL_FLAGS_KEY, [])
-        labels: list[str] = []
-        for entry in entries:
-            if isinstance(entry, dict):
-                val = entry.get("value", [])
-                if isinstance(val, list):
-                    labels.extend(val)
-        labels = list(dict.fromkeys(labels))
+    async def create_label_async(self, name: str, **kwargs) -> bool:
+        """Create a label in a separate thread."""
+        self._osidb_write_pending = True
+        ok: bool = await asyncio.to_thread(self.create_label, name=name, **kwargs)
+        self._osidb_write_pending = False
+        return ok
 
-        any_update = False
-        for label_name in labels:
-            if self.create_label(label_name):
-                any_update = True
+    async def set_manual_triage(self) -> bool:
+        """Create the manual-triage workflow label in a separate thread."""
+        return await self.create_label_async(
+            name="manual-triage",
+            type="workflow",
+            reason=self._fail_reason or "osidb-bot internal error",
+        )
 
-        if not any_update:
-            self.updated_fields.discard(_KERNEL_FLAGS_KEY)
+    async def _create_labels(self) -> None:
+        """Create custom labels based on self.updated_fields"""
+        for field in list(self.updated_fields):
+            m = re.match(r"label:(.*)", field)
+            if not m:
+                continue
+
+            label: str = m.group(1)
+            handled: bool = False
+            match label:
+                case "kpanic":
+                    handled = await self.create_label_async(label, type="alias")
+
+                case "review-needed":
+                    # the reason is hard-coded because there is only one trigger for now
+                    handled = await self.create_label_async(
+                        label,
+                        type="workflow",
+                        reason="potential candidate for CRITICAL based on impact and data_quality/confidence metrics",
+                    )
+
+                case _:
+                    self._warn(f"unhandled label: {label}")
+
+            if not handled:
+                self.updated_fields.remove(field)
 
     def save_flaw(self) -> bool:
         """Save flaw data to OSIDB (two-step: flaw update + CVSS subresource).
@@ -401,20 +436,14 @@ class FlawUpdater:
             else:
                 all_ok = self.on_failure(self.cve) if self.on_failure else False
 
-            if _KERNEL_FLAGS_KEY in self.updated_fields:
-                self._osidb_write_pending = True
-                await asyncio.to_thread(self._create_labels)
-                self._osidb_write_pending = False
+            # finally create custom labels
+            await self._create_labels()
 
         if self.updated_fields:
             self._info(f"updated {self.updated_fields}")
 
         if not all_ok:
-            self._osidb_write_pending = True
-            await asyncio.to_thread(
-                self.create_label, "manual-triage", label_type="workflow"
-            )
-            self._osidb_write_pending = False
+            await self.set_manual_triage()
 
         return processed
 
@@ -521,13 +550,7 @@ class Bot(StateProxy):
                 and flaw_updater
             ):
                 # the last retry attempt failed, create the manual-triage label
-                flaw_updater._osidb_write_pending = True
-                await asyncio.to_thread(
-                    flaw_updater.create_label,
-                    "manual-triage",
-                    label_type="workflow",
-                )
-                flaw_updater._osidb_write_pending = False
+                await flaw_updater.set_manual_triage()
 
             if not handled_failure:
                 # propagate all but RuntimeError exceptions

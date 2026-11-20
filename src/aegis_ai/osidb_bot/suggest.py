@@ -1,16 +1,14 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Final
 
 from pydantic_ai import Agent
 
 from aegis_ai import get_settings
 from aegis_ai.data_models import CVEID, cveid_validator
 from aegis_ai.features import Feature, cve
+from aegis_ai.features.cve.kernel import is_kernel_component
 from aegis_ai.features.data_models import AegisAnswer, AegisFeatureModel
-from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.osidb_bot.util import FlawData, log_memory, logger
-
-_KERNEL_FLAGS_KEY = "kernel_flags"
 
 # define the quality of suggestions that we accept
 METRICS_THR = {
@@ -38,9 +36,6 @@ def check_metrics(
             logger.info(f"{cve_id}: {feat_name}: too low {field}: {value}")
         if value <= thr_map["skip_thr"]:
             skip_reason = field
-
-    if skip_reason:
-        logger.warning(f"{cve_id}: {feat_name}: discarding suggestion")
 
     return skip_reason
 
@@ -105,7 +100,7 @@ def record_aegis_failure(
         skip_description=f"{dst} suggestion failed",
         explanation=output.explanation,
     )
-    return {"aegis_meta"}
+    return {"aegis_meta", f"suggestion failed: {dst}"}
 
 
 def update_field(
@@ -115,7 +110,8 @@ def update_field(
     output: AegisAnswer,
     src: str | None = None,
     value: Any | None = None,
-    force_overwrite_of: Any = None,
+    force_overwrite_of: tuple[Any, ...] | None = None,
+    delay_overwrite_of: tuple[Any, ...] | None = None,
 ) -> set[str]:
     """Persist a suggestion onto the flaw when confidence and quality allow."""
     assert (not src) or (not value)
@@ -123,7 +119,8 @@ def update_field(
 
     # if force_overwrite_of is specified and matches flaw_data[dst], ignore metrics
     skip_reason: str | None = None
-    if force_overwrite_of is None or force_overwrite_of != flaw_data.get(dst, None):
+    old_value: Final = flaw_data.get(dst, None)
+    if force_overwrite_of is None or old_value not in force_overwrite_of:
         skip_reason = check_metrics(dst, cve_id, output)
 
     if skip_reason:
@@ -140,7 +137,7 @@ def update_field(
                 f" is below threshold {METRICS_THR[skip_reason]['skip_thr']}"
             ),
         )
-        return {"aegis_meta"}
+        return {"aegis_meta", f"suggestion discarded: {dst}"}
 
     # get source value
     if value is None:
@@ -150,8 +147,14 @@ def update_field(
 
         value = getattr(output, src)
 
-    # write to destination
-    flaw_data[dst] = value
+    aegis_meta_type: str = "AI-Bot"
+    if old_value != value:
+        if delay_overwrite_of is None or old_value not in delay_overwrite_of:
+            # write to destination
+            flaw_data[dst] = value
+        else:
+            # write metadata only with the suggestion tagged as "AI-Bot-Pending"
+            aegis_meta_type = "AI-Bot-Pending"
 
     # record Aegis metadata
     record_aegis_meta(
@@ -159,7 +162,7 @@ def update_field(
         timestamp,
         dst,
         output,
-        type="AI-Bot",
+        type=aegis_meta_type,
         value=value,
         explanation=output.explanation,
     )
@@ -225,7 +228,7 @@ async def suggest_description(
         "title",
         output,
         src="suggested_title",
-        force_overwrite_of="From CVEorg collector",
+        force_overwrite_of=("From CVEorg collector",),
     )
     changed |= update_field(
         flaw_data, ts, "cve_description", output, src="suggested_description"
@@ -281,7 +284,20 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
         return changed
 
     # pick the "impact" field
-    changed |= update_field(flaw_data, ts, "impact", output, force_overwrite_of="")
+    changed |= update_field(
+        flaw_data,
+        ts,
+        "impact",
+        output,
+        force_overwrite_of=("",),
+        delay_overwrite_of=("CRITICAL",),
+    )
+
+    # flag potential candidates for CRITICAL
+    if flaw_data.get("impact") == "IMPORTANT":
+        for metric, thr_map in METRICS_THR.items():
+            if getattr(output, metric) <= thr_map["info_thr"]:
+                changed.add("label:review-needed")
 
     if not output.cvss3_vector:
         # no RH CVSS available
@@ -314,19 +330,13 @@ async def suggest_impact(agent: Agent, flaw_data: FlawData, ts: datetime) -> set
     flaw_data["cvss_scores"] = [rh_cvss]
     changed.add("cvss_scores")
 
-    # persist kernel classifier flags for provenance and label creation
-    if output._flags:
-        aegis_meta = flaw_data.setdefault("aegis_meta", {})
-        dst_field = aegis_meta.setdefault(_KERNEL_FLAGS_KEY, [])
-        dst_field.append(
-            {
-                "type": "AI-Bot",
-                "value": output._flags,
-                "explanation": output.explanation,
-                "timestamp": ts.isoformat(),
-            }
-        )
-        changed.add(_KERNEL_FLAGS_KEY)
+    # create `kpanic` label for kernel flaws with `A:H` in rh_cvss
+    if (
+        is_kernel_component(flaw_data.get("components"))
+        and output.cvss3_vector
+        and "A:H" in output.cvss3_vector
+    ):
+        changed.add("label:kpanic")
 
     return changed
 

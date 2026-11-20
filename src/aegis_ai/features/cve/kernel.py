@@ -16,6 +16,21 @@ from aegis_ai import get_settings
 
 logger = logging.getLogger(__name__)
 
+KERNEL_COMPONENTS = {"kernel", "kernel-rt", "linux kernel", "linux_kernel"}
+
+
+def is_kernel_component(components: list | str | None) -> bool:
+    """Check if any component in the list indicates a Linux kernel flaw."""
+    if not components:
+        return False
+    if isinstance(components, str):
+        components = [components]
+    return bool(
+        {c.lower().strip() for c in components if isinstance(c, str)}
+        & KERNEL_COMPONENTS
+    )
+
+
 # ---------------------------------------------------------------------------
 # Kernel-specific addendum appended to _RULES_BASE for kernel CVEs.
 #

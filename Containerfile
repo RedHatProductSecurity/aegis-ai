@@ -42,13 +42,13 @@ COPY --chown=aegis . /opt/app-root
 # install uv, install local dependencies and initialize version string
 RUN set -o pipefail \
     && pip3 install --no-cache-dir gssapi uv \
-    && uv sync --no-cache --frozen --extra classifier_deps \
+    && uv sync --no-cache --frozen \
     && printf '\n[tool.hatch.version.raw-options]\nfallback_version = "%s"\n' \
         "$(uv run python -c 'import aegis_ai; print(aegis_ai.__version__)')" \
     | tee -a pyproject.toml
 
-# remove git repo, docs, and bulky classifier training artifacts
-RUN rm -fr .git docs src/aegis_ai_ml/src/classifier/kernel-cve-impact-classifier/{data,test-results}
+# remove git repo, docs, and `aegis_ai_ml`, which is experimental and outdated
+RUN rm -fr .git docs src/aegis_ai_ml
 
 RUN chgrp -R 0 /opt/app-root && \
     chmod -R g=u /opt/app-root

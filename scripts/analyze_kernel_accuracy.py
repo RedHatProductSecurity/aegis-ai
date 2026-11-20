@@ -270,7 +270,7 @@ async def _local_suggest_one(
             suggested_score = (
                 _score_from_vector(suggested_vector) if suggested_vector else None
             )
-            suggested_kpanic = "kpanic" in output._flags
+            suggested_kpanic = bool(suggested_vector and "A:H" in suggested_vector)
         except Exception as exc:
             log.warning("SuggestImpact failed for %s: %s", cve_id, exc)
             return {"cve_id": cve_id, "error": f"suggest-impact: {exc}"}

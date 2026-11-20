@@ -48,9 +48,9 @@ from aegis_ai.features.cve.impact_mappings import SEVERITY_ORDER, score_to_band
 from aegis_ai.features.cve.kernel import (
     RULES_KERNEL_ADDENDUM,
     check_kernel_output,
+    is_kernel_component,
 )
 from aegis_ai.features.data_models import feature_deps
-from aegis_ai.kernel_classifier import is_kernel_component
 from aegis_ai.prompt import AegisPrompt
 from aegis_ai.toolsets.tools.cwe import cwe_manager
 
@@ -107,14 +107,6 @@ def _build_cve_input(
             inp = inp.model_copy(update=updates)
 
     return inp
-
-
-# Classifier feature -> OSIDB label name.
-# Multiple features can map to the same label (deduped).
-_FLAG_TO_LABEL: dict[str, str] = {
-    "kernel_panic": "kpanic",
-    "kernel_panic_plus_uaf": "kpanic",
-}
 
 
 class SuggestImpact(Feature):
@@ -597,19 +589,6 @@ class SuggestImpact(Feature):
 
         result.output._classifier_diagnostics = classifier_result
         result.output._reconciliation_trace = trace
-
-        # Map classifier feature flags to OSIDB label names so the bot
-        # can create FlawLabel records (e.g. "kpanic") after saving the flaw.
-        if classifier_result and isinstance(classifier_result, dict):
-            active = classifier_result.get("active_features", [])
-            result.output._flags = sorted(
-                {_FLAG_TO_LABEL[f] for f in active if f in _FLAG_TO_LABEL}
-            )
-        elif is_kernel:
-            # without classifier map `A:H` in CVSS to `kpanic` for kernel CVEs
-            cvss3_vector = result.output.cvss3_vector
-            if cvss3_vector and "A:H" in cvss3_vector:
-                result.output._flags = ["kpanic"]
 
         return result
 
