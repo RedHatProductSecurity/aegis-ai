@@ -90,6 +90,13 @@ DEFAULT_CVE_IDS = [
     "CVE-2026-119566",
 ]
 
+KNOWN_FAILURES: dict[str, dict] = {
+    "CVE-2026-119566": {
+        "known_to_fail_evaluators": ["ManifestComponentEvaluator"],
+        "reason": "wrong-project github.com/prometheus/prometheus parent module returned alongside patches child",
+    },
+}
+
 BUILD_TYPES = {"rpm", "container", "maven", "generic"}
 ECOSYSTEMS = {"cargo", "gem", "golang", "maven", "npm", "pypi", "generic"}
 
@@ -443,12 +450,16 @@ def _build_cases(
     cases: list[Case] = []
     for cve_id in cve_ids:
         golden = goldens[cve_id]
+        metadata: dict[str, Any] = {"seed": golden.get("seed"), "cve_id": cve_id}
+        known = KNOWN_FAILURES.get(cve_id)
+        if known:
+            metadata.update(known)
         cases.append(
             Case(
                 name=cve_id,
                 inputs=cve_id,
                 expected_output=golden,
-                metadata={"seed": golden.get("seed"), "cve_id": cve_id},
+                metadata=metadata,
             )
         )
     return cases
