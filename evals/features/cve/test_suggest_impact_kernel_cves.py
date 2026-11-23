@@ -100,7 +100,6 @@ KPANIC_CVES: set[str] = {
     "CVE-2025-39809",
     "CVE-2025-39810",
     "CVE-2025-40320",
-    # passing cases: kernel_panic active, predicted matches expected
     "CVE-2022-50768",
     "CVE-2022-50873",
     "CVE-2023-53186",
