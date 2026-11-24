@@ -343,8 +343,9 @@ class FlawUpdater:
             reason=self._fail_reason or "osidb-bot internal error",
         )
 
-    async def _create_labels(self) -> None:
+    async def _create_labels(self) -> bool:
         """Create custom labels based on self.updated_fields"""
+        all_ok: bool = True
         for field in list(self.updated_fields):
             m = re.match(r"label:(.*)", field)
             if not m:
@@ -360,7 +361,10 @@ class FlawUpdater:
                     self._warn(f"unhandled label: {label}")
 
             if not handled:
+                all_ok = False
                 self.updated_fields.remove(field)
+
+        return all_ok
 
     def save_flaw(self) -> bool:
         """Save flaw data to OSIDB (two-step: flaw update + CVSS subresource).
@@ -445,7 +449,9 @@ class FlawUpdater:
                 all_ok = self.on_failure(self.cve) if self.on_failure else False
 
             # finally create custom labels
-            await self._create_labels()
+            if not await self._create_labels():
+                # do not schedule retry for label creation failure(s)
+                all_ok = False
 
         if self.updated_fields:
             self._info(f"updated {self.updated_fields}")
