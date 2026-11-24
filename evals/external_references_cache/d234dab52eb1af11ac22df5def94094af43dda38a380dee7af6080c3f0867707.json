@@ -1,0 +1,10 @@
+{
+    "url": "https://www.cve.org/CVERecord?id=CVE-2026-14668",
+    "result": {
+        "status": "success",
+        "error_message": null,
+        "url": "https://www.cve.org/CVERecord?id=CVE-2026-14668",
+        "content_type": "application/json",
+        "extracted_text": "{\n  \"descriptions\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Type confusion regarding input of PostgreSQL ctid data type selectivity estimator allows an object creator to view a calculation derived from the value of an arbitrary 4-byte span of memory, via a chosen non-ctid input.  While the calculation loses precision, substantial memory value recovery appears possible.  Versions before PostgreSQL 18.6, 17.11, 16.15, 15.19, and 14.24 are affected.\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"format\": \"CVSS\",\n      \"cvssV3_1\": {\n        \"version\": \"3.1\",\n        \"vectorString\": \"CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:H\",\n        \"baseScore\": 8.1,\n        \"baseSeverity\": \"HIGH\"\n      }\n    }\n  ],\n  \"affected\": [\n    {\n      \"defaultStatus\": \"unaffected\",\n      \"product\": \"PostgreSQL\",\n      \"vendor\": \"n/a\",\n      \"versions\": [\n        {\n          \"lessThan\": \"18.6\",\n          \"status\": \"affected\",\n          \"version\": \"18\",\n          \"versionType\": \"rpm\"\n        },\n        {\n          \"lessThan\": \"17.11\",\n          \"status\": \"affected\",\n          \"version\": \"17\",\n          \"versionType\": \"rpm\"\n        },\n        {\n          \"lessThan\": \"16.15\",\n          \"status\": \"affected\",\n          \"version\": \"16\",\n          \"versionType\": \"rpm\"\n        },\n        {\n          \"lessThan\": \"15.19\",\n          \"status\": \"affected\",\n          \"version\": \"15\",\n          \"versionType\": \"rpm\"\n        },\n        {\n          \"lessThan\": \"14.24\",\n          \"status\": \"affected\",\n          \"version\": \"0\",\n          \"versionType\": \"rpm\"\n        }\n      ]\n    }\n  ]\n}"
+    }
+}
