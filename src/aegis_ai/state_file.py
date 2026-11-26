@@ -53,11 +53,13 @@ class StateFileHandler[T: BaseModel]:
         model_type: type[T],
         *,
         blocking: bool = False,
+        create: bool = True,
         logger: logging.Logger | logging.LoggerAdapter | None = None,
     ):
         self.state_file = state_file
         self.model_type = model_type
         self.blocking = blocking
+        self.create = create
         self.logger = logger or _module_logger
         self.state_fd = -1
 
@@ -70,8 +72,16 @@ class StateFileHandler[T: BaseModel]:
             # no state file configured -> no-op handler
             return self
 
+        # create=False is the read-only discipline: never materialize the file.
+        # An absent file then reads as "no state" (see read()) rather than an
+        # error, and write() refuses to run.
+        flags = os.O_RDWR | (os.O_CREAT if self.create else 0)
         try:
-            self.state_fd = os.open(self.state_file, os.O_RDWR | os.O_CREAT, 0o644)
+            self.state_fd = os.open(self.state_file, flags, 0o644)
+        except FileNotFoundError as e:
+            if self.create:
+                self._fail(e, "failed to open or create state file")
+            return self
         except OSError as e:
             self._fail(e, "failed to open or create state file")
 
@@ -95,9 +105,9 @@ class StateFileHandler[T: BaseModel]:
 
     def read(self) -> T | None:
         """Read and parse the model from the state file, or None if empty/corrupt."""
-        if not self.state_file:
+        if not self.state_file or self.state_fd < 0:
+            # no state file configured, or (create=False) absent on open
             return None
-        assert self.state_fd >= 0
         with os.fdopen(self.state_fd, "r", closefd=False) as f:
             f.seek(0)
             data = f.read()
@@ -115,7 +125,12 @@ class StateFileHandler[T: BaseModel]:
         """Serialize the model and overwrite the state file in place."""
         if not self.state_file:
             return
-        assert self.state_fd >= 0
+        if self.state_fd < 0:
+            # create=False and the file was absent when the handler opened:
+            # a reader must not silently swallow a write.
+            raise RuntimeError(
+                f"state file does not exist and create=False: {self.state_file}"
+            )
         payload = state.model_dump_json(exclude_defaults=True) + "\n"
         raw = payload.encode("utf-8")
         os.lseek(self.state_fd, 0, os.SEEK_SET)
