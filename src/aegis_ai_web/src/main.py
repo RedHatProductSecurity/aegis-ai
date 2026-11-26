@@ -875,6 +875,7 @@ async def cve_kpi(
                         "progress": {
                             "selected_flaws": 142,
                             "refreshed_flaws": 142,
+                            "delivered_flaws": 142,
                             "complete": True,
                         },
                     },

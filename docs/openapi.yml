@@ -1175,6 +1175,7 @@ paths:
                     suggested: 133
                 progress:
                   complete: true
+                  delivered_flaws: 142
                   refreshed_flaws: 142
                   selected_flaws: 142
                 total_flaws_processed: 142

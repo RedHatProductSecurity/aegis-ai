@@ -1665,6 +1665,7 @@
                   },
                   "progress": {
                     "complete": true,
+                    "delivered_flaws": 142,
                     "refreshed_flaws": 142,
                     "selected_flaws": 142
                   },
