@@ -1,6 +1,7 @@
 import asyncio
 import re
 import textwrap
+import threading
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -195,7 +196,8 @@ class FlawUpdater:
         self.retry_list = retry_list or {}
         self.on_failure = on_failure
         self.updated_fields = set()
-        self._osidb_write_pending = False
+        self._osidb_writes_lock = threading.Lock()
+        self._osidb_writes_in_flight: int = 0
         self._fail_reason = ""
 
         try:
@@ -310,12 +312,28 @@ class FlawUpdater:
             logger.debug("%s: %s", self.cve, e)
             return False
 
+    @property
+    def _osidb_write_pending(self) -> bool:
+        with self._osidb_writes_lock:
+            return self._osidb_writes_in_flight > 0
+
+    async def _run_osidb_write(self, fn, *args, **kwargs):
+        """Run *fn* in a thread, keeping the in-flight counter correct even after cancellation."""
+        with self._osidb_writes_lock:
+            self._osidb_writes_in_flight += 1
+
+        def _wrapper():
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                with self._osidb_writes_lock:
+                    self._osidb_writes_in_flight -= 1
+
+        return await asyncio.to_thread(_wrapper)
+
     async def create_label_async(self, name: str, **kwargs) -> bool:
         """Create a label in a separate thread."""
-        self._osidb_write_pending = True
-        ok: bool = await asyncio.to_thread(self.create_label, name=name, **kwargs)
-        self._osidb_write_pending = False
-        return ok
+        return await self._run_osidb_write(self.create_label, name=name, **kwargs)
 
     async def set_manual_triage(self) -> bool:
         """Create the manual-triage workflow label in a separate thread."""
@@ -417,9 +435,7 @@ class FlawUpdater:
             aegis_meta["processed"] = True
 
             # write flaw data
-            self._osidb_write_pending = True
-            processed = await asyncio.to_thread(self.save_flaw)
-            self._osidb_write_pending = False
+            processed = await self._run_osidb_write(self.save_flaw)
 
             if processed:
                 # clear retry entry on the event loop thread (not in the
