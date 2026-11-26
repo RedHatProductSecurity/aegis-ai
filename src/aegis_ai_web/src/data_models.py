@@ -466,7 +466,7 @@ class BotKPIResponse(BaseModel):
 
     The response is paginated over the selected flaws: each page carries the
     detail ``entries`` for its slice of the selection, a ``progress`` block,
-    and a ``next_cursor`` to continue from (absent/null on the final page).
+    and a ``last_cve`` to continue from (absent/null on the final page).
     Intermediate pages carry placeholder aggregates (``total_flaws_processed``
     0, empty ``features``); the final page carries the complete aggregate.
     The ``limit`` request parameter is the page size; a selection that fits
@@ -510,10 +510,10 @@ class BotKPIResponse(BaseModel):
             "Cache refresh progress, present on every paginated response. "
             "complete=true reports that the cache holds every selected flaw "
             "at its current OSIDB watermark; delivery may still continue "
-            "via next_cursor."
+            "via last_cve."
         ),
     )
-    next_cursor: str | None = Field(
+    last_cve: CVEID | None = Field(
         default=None,
         description=(
             "CVE ID of the last flaw delivered by this page; pass it as the "

@@ -847,7 +847,7 @@ async def cve_kpi(
         "and honestly report the cached fraction via the progress block. "
         "Responses are paginated over the selected flaws in pages of the "
         "limit parameter's size, each carrying that slice's detail entries, "
-        "a progress block, and a next_cursor to continue from; the final "
+        "a progress block, and the last_cve to continue from; the final "
         "page carries the aggregate metrics. A selection that fits one page "
         "is served as a single final page."
     ),

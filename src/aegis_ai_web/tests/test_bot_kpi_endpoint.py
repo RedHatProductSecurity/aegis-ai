@@ -531,8 +531,8 @@ class TestOsidbBotKpiPaginationEndpoint:
         self, mock_settings, mock_bindings
     ):
         """Intermediate pages carry placeholder aggregates plus progress and
-        next_cursor and never available_components; the final page carries the
-        complete aggregate, drops next_cursor, and is the only page exposing
+        last_cve and never available_components; the final page carries the
+        complete aggregate, drops last_cve, and is the only page exposing
         available_components."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
@@ -568,7 +568,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             data = page1.json()
             assert data["total_flaws_processed"] == 0
             assert data["features"] == {}
-            assert data["next_cursor"] == "CVE-2025-0001"
+            assert data["last_cve"] == "CVE-2025-0001"
             assert data["progress"] == {
                 "selected_flaws": 3,
                 "refreshed_flaws": 3,
@@ -584,7 +584,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             )
             assert page2.status_code == 200
             data = page2.json()
-            assert data["next_cursor"] == "CVE-2025-0002"
+            assert data["last_cve"] == "CVE-2025-0002"
             assert data["progress"]["refreshed_flaws"] == 3
             assert data["progress"]["complete"] is True
             assert [e["cve_id"] for e in data["entries"]] == ["CVE-2025-0002"]
@@ -596,7 +596,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             assert page3.status_code == 200
             data = page3.json()
             # The final page returns no cursor to continue from.
-            assert "next_cursor" not in data
+            assert "last_cve" not in data
             assert data["progress"]["complete"] is True
             assert data["total_flaws_processed"] == 3
             assert data["features"]["impact"]["suggested"] == 3
@@ -625,7 +625,7 @@ class TestOsidbBotKpiPaginationEndpoint:
         self, mock_settings, mock_bindings
     ):
         """A warm selection that fits one page is served as a single final
-        page: full aggregate and all entries, no next_cursor to follow. Only
+        page: full aggregate and all entries, no last_cve to follow. Only
         the progress block differs from the pre-pagination shape, because the
         paginated path always reports refresh completion. Passing a cursor
         stays in the paginated shape even when everything is cached."""
@@ -658,7 +658,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             assert warm.status_code == 200
             data = warm.json()
             assert data["progress"]["complete"] is True
-            assert "next_cursor" not in data
+            assert "last_cve" not in data
             assert data["total_flaws_processed"] == 2
             assert data["features"]["impact"]["kept"] == 2
             assert [e["cve_id"] for e in data["entries"]] == [
@@ -674,7 +674,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             assert resumed.status_code == 200
             data = resumed.json()
             assert data["progress"]["complete"] is True
-            assert "next_cursor" not in data
+            assert "last_cve" not in data
             assert [e["cve_id"] for e in data["entries"]] == ["CVE-2025-0002"]
 
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
@@ -694,7 +694,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             data = page1.json()
             assert "entries" not in data
             assert "available_components" not in data
-            assert data["next_cursor"] == "CVE-2025-0001"
+            assert data["last_cve"] == "CVE-2025-0001"
             assert data["total_flaws_processed"] == 0
             assert data["progress"]["complete"] is True
 
@@ -703,7 +703,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             )
             assert page2.status_code == 200
             data = page2.json()
-            assert "next_cursor" not in data
+            assert "last_cve" not in data
             assert "entries" not in data
             assert "available_components" not in data
             assert data["progress"]["complete"] is True
@@ -729,7 +729,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             page1 = client.get("/api/v1/analysis/kpi/osidb-bot")
             assert page1.status_code == 200
             data = page1.json()
-            assert data["next_cursor"] == "CVE-2025-0400"
+            assert data["last_cve"] == "CVE-2025-0400"
             assert data["progress"] == {
                 "selected_flaws": 401,
                 "refreshed_flaws": 401,
@@ -740,7 +740,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             page2 = client.get("/api/v1/analysis/kpi/osidb-bot?cursor=CVE-2025-0400")
             assert page2.status_code == 200
             data = page2.json()
-            assert "next_cursor" not in data
+            assert "last_cve" not in data
             assert data["progress"]["complete"] is True
             assert data["total_flaws_processed"] == 401
 
@@ -751,7 +751,7 @@ class TestOsidbBotKpiPaginationEndpoint:
     ):
         """Over the wire, a fully-warm selection larger than one page is
         served in pages of the client's limit -- the honest page size:
-        intermediate pages carry next_cursor, placeholder aggregates, and a
+        intermediate pages carry last_cve, placeholder aggregates, and a
         progress block whose complete flag is true while pagination
         continues; the final page carries the aggregate and no cursor. Warm
         requests hit OSIDB for the flaw index only."""
@@ -773,7 +773,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             page1 = client.get("/api/v1/analysis/kpi/osidb-bot?detail=true&limit=1000")
             assert page1.status_code == 200
             data = page1.json()
-            assert data["next_cursor"] == "CVE-2025-1000"
+            assert data["last_cve"] == "CVE-2025-1000"
             assert len(data["entries"]) == 1000
             assert data["total_flaws_processed"] == 0
             assert data["features"] == {}
@@ -792,7 +792,7 @@ class TestOsidbBotKpiPaginationEndpoint:
             )
             assert page2.status_code == 200
             data = page2.json()
-            assert "next_cursor" not in data
+            assert "last_cve" not in data
             assert len(data["entries"]) == 205
             assert data["total_flaws_processed"] == 1205
             assert data["progress"]["complete"] is True

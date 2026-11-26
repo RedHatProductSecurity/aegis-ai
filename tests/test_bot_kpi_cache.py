@@ -333,16 +333,16 @@ def _batch_fetches(session):
 
 def _paginate(**kwargs):
     """Drive get_osidb_bot_kpi as a paginating client would: follow
-    next_cursor from page to page until the final page. An initial cursor
+    last_cve from page to page until the final page. An initial cursor
     may be passed to resume mid-selection."""
     pages = []
     cursor = kwargs.pop("cursor", None)
     for _ in range(100):
         page = get_osidb_bot_kpi(cursor=cursor, **kwargs)
         pages.append(page)
-        if page.next_cursor is None:
+        if page.last_cve is None:
             return pages
-        cursor = page.next_cursor
+        cursor = page.last_cve
     raise AssertionError("pagination did not reach a final page")
 
 
@@ -1125,7 +1125,7 @@ class TestGetOsidbBotKpiPagination:
     The selection is served in ``limit``-sized pages of sorted CVE IDs: each
     intermediate page refreshes only its own slice, carries placeholder
     aggregates, its own ``entries`` slice, a ``progress`` block over the whole
-    selection, and the ``next_cursor`` to continue from; the final page adds
+    selection, and the ``last_cve`` to continue from; the final page adds
     the complete aggregate. A client that follows the cursor and concatenates
     ``entries`` ends with exactly one copy of every selected flaw's records.
     When the entire remaining selection after the cursor is already fresh in
@@ -1147,7 +1147,7 @@ class TestGetOsidbBotKpiPagination:
         self, mock_settings, mock_bindings, cache_dir
     ):
         """Intermediate pages carry placeholders (0 / {}), their own entries
-        slice, progress over the whole selection, and next_cursor; the final
+        slice, progress over the whole selection, and last_cve; the final
         page carries the complete aggregate but still only its own slice."""
         self._mock_settings(mock_settings, cache_dir)
 
@@ -1192,7 +1192,7 @@ class TestGetOsidbBotKpiPagination:
         page1 = get_osidb_bot_kpi(detail=True, limit=2)
         assert page1.total_flaws_processed == 0
         assert page1.features == {}
-        assert page1.next_cursor == "CVE-2025-0002"
+        assert page1.last_cve == "CVE-2025-0002"
         assert _page_progress(page1).selected_flaws == 5
         assert _page_progress(page1).refreshed_flaws == 5
         assert _page_progress(page1).complete is True
@@ -1203,7 +1203,7 @@ class TestGetOsidbBotKpiPagination:
         }
 
         page2 = get_osidb_bot_kpi(detail=True, limit=2, cursor="CVE-2025-0002")
-        assert page2.next_cursor == "CVE-2025-0004"
+        assert page2.last_cve == "CVE-2025-0004"
         assert _page_progress(page2).refreshed_flaws == 5
         assert _page_progress(page2).complete is True
         assert {e.cve_id for e in _page_entries(page2)} == {
@@ -1212,7 +1212,7 @@ class TestGetOsidbBotKpiPagination:
         }
 
         page3 = get_osidb_bot_kpi(detail=True, limit=2, cursor="CVE-2025-0004")
-        assert page3.next_cursor is None
+        assert page3.last_cve is None
         assert _page_progress(page3).complete is True
         # The final page carries the aggregate over the whole selection...
         assert page3.total_flaws_processed == 5
@@ -1251,14 +1251,14 @@ class TestGetOsidbBotKpiPagination:
 
         _drain_refresh()
         page1 = get_osidb_bot_kpi()
-        assert page1.next_cursor == "CVE-2025-0400"
+        assert page1.last_cve == "CVE-2025-0400"
         assert _page_progress(page1).selected_flaws == 401
         assert _page_progress(page1).refreshed_flaws == 401
         assert _page_progress(page1).complete is True
         assert page1.total_flaws_processed == 0
 
         page2 = get_osidb_bot_kpi(cursor="CVE-2025-0400")
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert _page_progress(page2).complete is True
         assert page2.total_flaws_processed == 401
         assert page2.features["impact"].suggested == 401
@@ -1333,7 +1333,7 @@ class TestGetOsidbBotKpiPagination:
         # truncation), entries cover the 101 cached flaws, and progress
         # reports the cached fraction honestly.
         page = get_osidb_bot_kpi(detail=True, limit=200)
-        assert page.next_cursor is None
+        assert page.last_cve is None
         assert _page_progress(page).selected_flaws == 103
         assert _page_progress(page).refreshed_flaws == 101
         assert _page_progress(page).complete is False
@@ -1345,7 +1345,7 @@ class TestGetOsidbBotKpiPagination:
         # every flaw's records exactly once.
         _drain_refresh()
         final = get_osidb_bot_kpi(detail=True, limit=200)
-        assert final.next_cursor is None
+        assert final.last_cve is None
         assert _page_progress(final).complete is True
         assert final.total_flaws_processed == 103
         assert {e.cve_id for e in _page_entries(final)} == {
@@ -1393,7 +1393,7 @@ class TestGetOsidbBotKpiPagination:
         pages = _paginate(detail=True, limit=200)
         final = pages[-1]
         assert len(pages) == 1
-        assert final.next_cursor is None
+        assert final.last_cve is None
         assert final.total_flaws_processed == 101
         assert _page_progress(final).selected_flaws == 101
         assert _page_progress(final).refreshed_flaws == 101
@@ -1427,7 +1427,7 @@ class TestGetOsidbBotKpiPagination:
 
         page = get_osidb_bot_kpi(detail=True)
         assert page.total_flaws_processed == 1
-        assert page.next_cursor is None
+        assert page.last_cve is None
         assert _page_progress(page).selected_flaws == 2
         assert _page_progress(page).refreshed_flaws == 2
         assert _page_progress(page).complete is True
@@ -1445,7 +1445,7 @@ class TestGetOsidbBotKpiPagination:
         _drain_refresh()
         warm = get_osidb_bot_kpi(detail=True)
         assert _page_progress(warm).complete is True
-        assert warm.next_cursor is None
+        assert warm.last_cve is None
         assert warm.total_flaws_processed == 1
         assert _batch_fetches(session) == []
 
@@ -1476,7 +1476,7 @@ class TestGetOsidbBotKpiPagination:
 
         response = get_osidb_bot_kpi(detail=True)
         assert _page_progress(response).complete is True
-        assert response.next_cursor is None
+        assert response.last_cve is None
         assert response.total_flaws_processed == 3
         assert response.features["impact"].suggested == 3
         assert response.available_components == ["kernel"]
@@ -1519,7 +1519,7 @@ class TestGetOsidbBotKpiPagination:
         assert response.progress is not None
         assert _page_progress(response).complete is True
         assert _page_progress(response).selected_flaws == 3
-        assert response.next_cursor is None
+        assert response.last_cve is None
         assert response.total_flaws_processed == 3
         assert {e.cve_id for e in _page_entries(response)} == {
             "CVE-2025-0002",
@@ -1546,7 +1546,7 @@ class TestGetOsidbBotKpiPagination:
         mock_bindings.new_session.return_value = session
 
         response = get_osidb_bot_kpi(detail=True, limit=1000)
-        assert response.next_cursor is None
+        assert response.last_cve is None
         assert _page_progress(response).complete is True
         assert response.total_flaws_processed == 1000
         assert response.features["impact"].suggested == 1000
@@ -1576,7 +1576,7 @@ class TestGetOsidbBotKpiPagination:
         mock_bindings.new_session.return_value = session
 
         page1 = get_osidb_bot_kpi(detail=True, limit=1000)
-        assert page1.next_cursor == "CVE-2025-1000"
+        assert page1.last_cve == "CVE-2025-1000"
         assert len(_page_entries(page1)) == 1000
         assert {e.cve_id for e in _page_entries(page1)} == {
             f"CVE-2025-{i:04d}" for i in range(1, 1001)
@@ -1586,7 +1586,7 @@ class TestGetOsidbBotKpiPagination:
         assert _page_progress(page1).complete is True
 
         page2 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-1000")
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert _page_progress(page2).complete is True
         assert page2.total_flaws_processed == 1001
         assert [e.cve_id for e in _page_entries(page2)] == ["CVE-2025-1001"]
@@ -1620,7 +1620,7 @@ class TestGetOsidbBotKpiPagination:
         mock_bindings.new_session.return_value = session
 
         page1 = get_osidb_bot_kpi(detail=True, limit=1000)
-        assert page1.next_cursor == "CVE-2025-1000"
+        assert page1.last_cve == "CVE-2025-1000"
         assert len(_page_entries(page1)) == 1000
         assert {e.cve_id for e in _page_entries(page1)} == {
             f"CVE-2025-{i:04d}" for i in range(1, 1001)
@@ -1637,7 +1637,7 @@ class TestGetOsidbBotKpiPagination:
         cached_json_stamped = cache_dir.read_text()
 
         page2 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-1000")
-        assert page2.next_cursor == "CVE-2025-2000"
+        assert page2.last_cve == "CVE-2025-2000"
         assert len(_page_entries(page2)) == 1000
         assert {e.cve_id for e in _page_entries(page2)} == {
             f"CVE-2025-{i:04d}" for i in range(1001, 2001)
@@ -1646,7 +1646,7 @@ class TestGetOsidbBotKpiPagination:
         assert _page_progress(page2).complete is True
 
         page3 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-2000")
-        assert page3.next_cursor is None
+        assert page3.last_cve is None
         assert _page_progress(page3).complete is True
         assert page3.total_flaws_processed == total
         assert page3.features["impact"].suggested == total
@@ -1690,7 +1690,7 @@ class TestGetOsidbBotKpiPagination:
         mock_bindings.new_session.return_value = session
 
         page1 = get_osidb_bot_kpi(limit=1000)
-        assert page1.next_cursor == "CVE-2025-1000"
+        assert page1.last_cve == "CVE-2025-1000"
         assert page1.entries is None
         assert page1.available_components is None
         assert page1.total_flaws_processed == 0
@@ -1698,7 +1698,7 @@ class TestGetOsidbBotKpiPagination:
         assert _page_progress(page1).complete is True
 
         page2 = get_osidb_bot_kpi(limit=1000, cursor="CVE-2025-1000")
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert page2.entries is None
         assert page2.available_components is None
         assert page2.total_flaws_processed == 1200
@@ -1736,14 +1736,14 @@ class TestGetOsidbBotKpiPagination:
 
         # Pages serve as pure cache reads, limit-sized, warm throughout.
         page1 = get_osidb_bot_kpi(detail=True, limit=1000)
-        assert page1.next_cursor == "CVE-2025-1000"
+        assert page1.last_cve == "CVE-2025-1000"
         assert len(_page_entries(page1)) == 1000
         assert page1.total_flaws_processed == 0
         assert _page_progress(page1).selected_flaws == total
         assert _page_progress(page1).complete is True
 
         page2 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-1000")
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert page2.total_flaws_processed == total
         assert page2.features["impact"].suggested == total
         assert len(_page_entries(page2)) == 204
@@ -1786,7 +1786,7 @@ class TestGetOsidbBotKpiPagination:
         # last 10 are uncached; the page is limit-sized (400) and serves the
         # cached records without fetching anything.
         page1 = get_osidb_bot_kpi(detail=True, limit=400, cursor="CVE-2025-0500")
-        assert page1.next_cursor == "CVE-2025-0900"
+        assert page1.last_cve == "CVE-2025-0900"
         assert len(_page_entries(page1)) == 400
         assert {e.cve_id for e in _page_entries(page1)} == {
             f"CVE-2025-{i:04d}" for i in range(501, 901)
@@ -1798,7 +1798,7 @@ class TestGetOsidbBotKpiPagination:
         assert _batch_fetches(session) == []
 
         page2 = get_osidb_bot_kpi(detail=True, limit=400, cursor="CVE-2025-0900")
-        assert page2.next_cursor == "CVE-2025-1300"
+        assert page2.last_cve == "CVE-2025-1300"
         assert len(_page_entries(page2)) == 400
         assert _batch_fetches(session) == []
 
@@ -1806,7 +1806,7 @@ class TestGetOsidbBotKpiPagination:
         # entries yet (honestly reported by progress), and the drain fetches
         # them afterwards.
         page3 = get_osidb_bot_kpi(detail=True, limit=400, cursor="CVE-2025-1300")
-        assert page3.next_cursor is None
+        assert page3.last_cve is None
         assert _page_progress(page3).refreshed_flaws == 1490
         assert _page_progress(page3).complete is False
         assert _batch_fetches(session) == []
@@ -1843,7 +1843,7 @@ class TestGetOsidbBotKpiPagination:
         mock_bindings.new_session.return_value = _make_session(*_numbered_flaws(3))
 
         response = get_osidb_bot_kpi(detail=True, cursor="CVE-2025-0003")
-        assert response.next_cursor is None
+        assert response.last_cve is None
         assert _page_progress(response).complete is True
         assert response.total_flaws_processed == 3
         assert response.entries == []
@@ -1874,7 +1874,7 @@ class TestGetOsidbBotKpiPagination:
         assert _batch_fetches(session) == [{"CVE-2025-0001", "CVE-2025-0003"}]
 
         page1 = get_osidb_bot_kpi(detail=True, limit=2)
-        assert page1.next_cursor == "CVE-2025-0002"
+        assert page1.last_cve == "CVE-2025-0002"
         assert _page_progress(page1).selected_flaws == 4
         assert _page_progress(page1).refreshed_flaws == 4
         assert _page_progress(page1).complete is True
@@ -1929,13 +1929,13 @@ class TestGetOsidbBotKpiPagination:
         _drain_refresh(component="kernel")
         page1 = get_osidb_bot_kpi(detail=True, component="kernel", limit=1)
         assert _page_progress(page1).selected_flaws == 2
-        assert page1.next_cursor == "CVE-2025-0001"
+        assert page1.last_cve == "CVE-2025-0001"
         assert {e.cve_id for e in _page_entries(page1)} == {"CVE-2025-0001"}
 
         page2 = get_osidb_bot_kpi(
             detail=True, component="kernel", limit=1, cursor="CVE-2025-0001"
         )
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert _page_progress(page2).complete is True
         assert page2.total_flaws_processed == 2
         assert page2.available_components == ["kernel"]
@@ -1981,13 +1981,13 @@ class TestGetOsidbBotKpiPagination:
         _drain_refresh(changed_after=changed_after)
         page1 = get_osidb_bot_kpi(detail=True, changed_after=changed_after, limit=1)
         assert _page_progress(page1).selected_flaws == 2
-        assert page1.next_cursor == "CVE-2025-0001"
+        assert page1.last_cve == "CVE-2025-0001"
         assert [e.cve_id for e in _page_entries(page1)] == ["CVE-2025-0001"]
 
         page2 = get_osidb_bot_kpi(
             detail=True, changed_after=changed_after, limit=1, cursor="CVE-2025-0001"
         )
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert _page_progress(page2).complete is True
         assert _page_progress(page2).selected_flaws == 2
         # Only the flaw with an in-window suggestion contributes.
@@ -2025,7 +2025,7 @@ class TestGetOsidbBotKpiPagination:
         expected = {f"CVE-2025-{i:04d}" for i in range(1, 6)}
         for pages in runs:
             final = pages[-1]
-            assert final.next_cursor is None
+            assert final.last_cve is None
             assert _page_progress(final).complete is True
             assert final.total_flaws_processed == 5
             entries = [e for page in pages for e in _page_entries(page)]
@@ -2225,7 +2225,7 @@ class TestSelectionStampLifecycle:
         mock_bindings.new_session.side_effect = sessions
 
         page1 = get_osidb_bot_kpi(detail=True, limit=1)
-        assert page1.next_cursor == "CVE-2025-0001"
+        assert page1.last_cve == "CVE-2025-0001"
         assert _page_progress(page1).selected_flaws == 2
 
         page2 = get_osidb_bot_kpi(detail=True, limit=1, cursor="CVE-2025-0001")
@@ -2234,7 +2234,7 @@ class TestSelectionStampLifecycle:
         assert sessions[1].flaws.retrieve_list_iterator.call_count == 0
         # ...so the run still serves the two-flaw selection it started with,
         # not the three flaws OSIDB now lists.
-        assert page2.next_cursor is None
+        assert page2.last_cve is None
         assert _page_progress(page2).selected_flaws == 2
         assert _page_progress(page2).complete is True
         assert [e.cve_id for e in _page_entries(page2)] == ["CVE-2025-0002"]
@@ -2263,7 +2263,7 @@ class TestSelectionStampLifecycle:
             not in session.flaws.retrieve_list_iterator.call_args.kwargs
         )
         assert _batch_fetches(session) == []
-        assert page.next_cursor is None
+        assert page.last_cve is None
         assert _page_progress(page).selected_flaws == 3
         assert _page_progress(page).refreshed_flaws == 0
         assert _page_progress(page).complete is False
@@ -2497,7 +2497,7 @@ class TestPurePageServing:
         assert _batch_fetches(session) == []
         assert cache_dir.read_text() == cache_json_after_refresh
 
-        assert page.next_cursor is None
+        assert page.last_cve is None
         progress = _page_progress(page)
         assert progress.selected_flaws == 101
         assert progress.refreshed_flaws == 100
@@ -2543,11 +2543,11 @@ class TestDeliveredFlawsProgress:
         assert [_page_progress(page).delivered_flaws for page in pages] == [3, 6, 7]
         # The count is consistent with the cursor chain: each page delivers
         # through the flaw the next request resumes from.
-        assert [page.next_cursor for page in pages[:2]] == [
+        assert [page.last_cve for page in pages[:2]] == [
             "CVE-2025-0003",
             "CVE-2025-0006",
         ]
-        assert pages[-1].next_cursor is None
+        assert pages[-1].last_cve is None
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
@@ -2582,5 +2582,5 @@ class TestDeliveredFlawsProgress:
         assert progress.delivered_flaws == 0
         assert progress.refreshed_flaws == 0
         assert progress.complete is True
-        assert response.next_cursor is None
+        assert response.last_cve is None
         assert _page_entries(response) == []

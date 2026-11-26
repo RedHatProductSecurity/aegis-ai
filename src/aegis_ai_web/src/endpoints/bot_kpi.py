@@ -164,9 +164,9 @@ class BotKPIResult:
     available_components: list[str] | None = None
     # Pagination metadata (see _fetch_with_cache): ``final_page`` marks the
     # response that carries the aggregate over the whole selection;
-    # ``next_cursor`` is set on intermediate pages only.
+    # ``last_cve`` is set on intermediate pages only.
     final_page: bool = True
-    next_cursor: str | None = None
+    last_cve: str | None = None
     progress: BotKPIProgress | None = None
 
 
@@ -810,7 +810,7 @@ def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
 
     Intermediate pages of a paginated response carry placeholder aggregates
     (``total_flaws_processed`` 0, empty ``features``) plus their slice's
-    ``entries``, the refresh ``progress``, and the ``next_cursor`` to
+    ``entries``, the refresh ``progress``, and the ``last_cve`` to
     continue from; the final page carries the complete aggregate.
     """
     if result.final_page:
@@ -831,7 +831,7 @@ def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
     if result.final_page and result.available_components is not None:
         response.available_components = result.available_components
     if not result.final_page:
-        response.next_cursor = result.next_cursor
+        response.last_cve = result.last_cve
     if result.progress is not None:
         response.progress = result.progress
     return response
@@ -1211,7 +1211,7 @@ def _fetch_with_cache(
     delivered_through = page_ids[-1] if page_ids else cursor
     delivered = bisect_right(selected, delivered_through) if delivered_through else 0
     result.final_page = final_page
-    result.next_cursor = None if final_page else (page_ids[-1] if page_ids else cursor)
+    result.last_cve = None if final_page else (page_ids[-1] if page_ids else cursor)
     result.progress = BotKPIProgress(
         selected_flaws=len(selected),
         refreshed_flaws=refreshed,
@@ -1352,7 +1352,7 @@ def get_osidb_bot_kpi(
 ) -> BotKPIResponse:
     """Fetch bot-processed flaws from OSIDB and compute KPI metrics.
 
-    The response is paginated over the selected flaws: follow ``next_cursor``
+    The response is paginated over the selected flaws: follow ``last_cve``
     (passing it back as ``cursor``) until it is absent, accumulating each
     page's ``entries``; the final page carries the aggregate metrics. Pages
     are pure cache reads -- poll the cache-refresh endpoint first to bring
