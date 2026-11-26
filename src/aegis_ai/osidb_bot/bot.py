@@ -24,8 +24,11 @@ class FlawValidationError(RuntimeError):
 
 
 ELIGIBLE_FLAWS = {
-    # only flaws with the DEFAULT workflow in the NEW state
-    "classification": ({"workflow": "DEFAULT", "state": "NEW"},),
+    # only flaws with the DEFAULT/REVIEW workflow in the NEW state
+    "classification": (
+        {"workflow": "DEFAULT", "state": "NEW"},
+        {"workflow": "REVIEW", "state": "NEW"},
+    ),
     # only flaws with no affects
     "affects": ([],),
     # only flaws with no owner
