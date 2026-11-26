@@ -1247,7 +1247,7 @@ paths:
           content:
             application/json:
               example:
-                fresh_count: 152
+                fresh_count: 142
                 outdated_count: 0
                 stale_count: 0
                 total_flaws_selected: 142

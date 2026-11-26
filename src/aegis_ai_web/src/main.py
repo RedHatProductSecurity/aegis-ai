@@ -1046,7 +1046,7 @@ async def osidb_bot_kpi_cache_status(
                 "application/json": {
                     "example": {
                         "total_flaws_selected": 142,
-                        "fresh_count": 152,
+                        "fresh_count": 142,
                         "stale_count": 0,
                         "uncached_count": 0,
                         "outdated_count": 0,
