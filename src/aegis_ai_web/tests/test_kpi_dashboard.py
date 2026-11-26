@@ -86,6 +86,7 @@ def dashboard(monkeypatch, tmp_path):
 
 
 def test_bot_detail_matches_aggregate_and_preserves_unknown_versions(dashboard):
+    _drain_cache_refresh()
     response = client.get("/api/v1/analysis/kpi/osidb-bot?detail=true")
     assert response.status_code == 200
     body = response.json()
@@ -96,8 +97,11 @@ def test_bot_detail_matches_aggregate_and_preserves_unknown_versions(dashboard):
     assert len(body["entries"]) == 4  # history remains available, not extra decisions
     assert {entry["aegis_version"] for entry in body["entries"]} == {"", "0.9.2"}
     assert body["available_components"] == ["kernel", "openssl"]
+    # A selection that fits one page is a single final response; without
+    # detail it carries the aggregate plus the ever-present progress block.
     legacy = client.get("/api/v1/analysis/kpi/osidb-bot").json()
-    assert set(legacy) == {"total_flaws_processed", "features"}
+    assert set(legacy) == {"total_flaws_processed", "features", "progress"}
+    assert legacy["progress"]["complete"] is True
 
 
 def test_bot_kpi_uses_process_credentials_without_delegation(dashboard, monkeypatch):
@@ -145,6 +149,8 @@ async def test_delegated_token_cache_is_destroyed_on_failure(monkeypatch):
 @pytest.mark.parametrize("endpoint", ["cve?feature=all&", "osidb-bot?"])
 def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
     session, _ = dashboard
+    if endpoint.startswith("osidb-bot"):
+        _drain_cache_refresh("?component=kernel")
     response = client.get(
         f"/api/v1/analysis/kpi/{endpoint}detail=true&component=kernel"
         "&aegis_version=0.9.2&recorded_after=2026-09-02T00:00:00Z"
@@ -160,13 +166,20 @@ def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
     assert len(entries) == 1
     assert entries[0]["cve_id"] == "CVE-2026-1000"
     assert entries[0]["aegis_version"] == "0.9.2"
-    # A flaw edited in October still contributes a September suggestion.
+    # A flaw edited in October still contributes a September suggestion:
+    # recorded-time bounds never scope the flaw selection. An updated_dt_gte
+    # may appear as the selection-stamp delta watermark (recent, written by an
+    # earlier test through the shared test cache), never as the recorded
+    # bound -- the fixture flaws were updated 2026-10-01, before any delta
+    # watermark but after the recorded bound.
     for call in session.flaws.retrieve_list_iterator.call_args_list:
         assert "updated_dt_lte" not in call.kwargs
-        assert "updated_dt_gte" not in call.kwargs
+        if "updated_dt_gte" in call.kwargs:
+            assert call.kwargs["updated_dt_gte"] > datetime(2026, 10, 1, tzinfo=UTC)
 
 
 def test_unknown_version_filter_recomputes_bot_decisions(dashboard):
+    _drain_cache_refresh()
     body = client.get(
         "/api/v1/analysis/kpi/osidb-bot?detail=true&aegis_version="
     ).json()
@@ -207,6 +220,23 @@ def test_feedback_keeps_latest_matching_programmatic_record(
     assert [entry["aegis_version"] for entry in metrics["entries"]] == ["0.9.1"]
 
 
+def _drain_cache_refresh(query: str = "") -> dict:
+    """POST the cache-refresh endpoint until the selection is fully fresh.
+
+    Page requests never refresh, so a dashboard test wanting scored data must
+    drain first, exactly like a polling client. The 100-call cap is a safety
+    bound: with the mocked refresh budget a single call drains these
+    fixtures.
+    """
+    for _ in range(100):
+        response = client.post(f"/api/v1/analysis/kpi/osidb-bot/cache-refresh{query}")
+        assert response.status_code == 200
+        counts = response.json()
+        if counts["stale_count"] == 0:
+            return counts
+    raise AssertionError("cache refresh did not drain")
+
+
 def test_legacy_cache_is_refreshed_even_with_same_watermark(dashboard):
     session, flaws = dashboard
     legacy = bot_kpi.BotKPICacheEntry.model_validate(
@@ -223,12 +253,14 @@ def test_legacy_cache_is_refreshed_even_with_same_watermark(dashboard):
     )
     with bot_kpi._cache_handler() as handler:
         handler.write(legacy)
+    _drain_cache_refresh("?component=kernel")
     body = client.get(
         "/api/v1/analysis/kpi/osidb-bot?detail=true&component=kernel"
     ).json()
     assert len(body["entries"]) == 3
     # A narrow request rewrites the shared cache but must preserve the old marker
     # for the unselected flaw so it, too, gets refreshed when later selected.
+    _drain_cache_refresh("?component=openssl")
     body = client.get(
         "/api/v1/analysis/kpi/osidb-bot?detail=true&component=openssl"
     ).json()

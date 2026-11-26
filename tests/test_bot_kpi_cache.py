@@ -2,16 +2,18 @@
 
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from aegis_ai_web.src.data_models import BotKPIEntry, BotKPIProgress, BotKPIResponse
 from aegis_ai_web.src.endpoints.bot_kpi import (
     OSIDB_BOT_BIRTHDAY,
     BotKPICacheEntry,
     FlawCacheData,
+    SelectionStamp,
     _cache_handler,
     _fetch_flaw_index,
     _flaw_cache_data,
@@ -20,11 +22,30 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     _needs_fetch,
     _read_cache,
     get_osidb_bot_kpi,
+    refresh_osidb_bot_kpi_cache,
+    selection_signature,
+    stale_reason,
 )
 
 _BOT_KPI_MODULE = "aegis_ai_web.src.endpoints.bot_kpi"
 
 _DEFAULT_DT = "2025-06-01T00:00:00+00:00"
+
+
+def _drain_refresh(**filters):
+    """Poll the cache-refresh engine until the selection is fully fresh.
+
+    Page requests never refresh, so a test wanting scored data must drain
+    first, exactly like a polling client. The 100-call cap is a safety
+    bound: with the mocked 60s budget a single call drains these fixtures.
+    Selection filters (changed_after / changed_before / component) must
+    match the pages that follow.
+    """
+    for _ in range(100):
+        counts = refresh_osidb_bot_kpi_cache(**filters)
+        if counts.stale_count == 0:
+            return counts
+    raise AssertionError("cache refresh did not drain")
 
 
 def _make_bot_entry(value, *, dq=0.9, conf=0.85, timestamp="2025-03-13T12:00:00"):
@@ -57,7 +78,7 @@ def _make_flaw_dict(
     return flaw
 
 
-def _make_session(*flaws, index_delay=0.0):
+def _make_session(*flaws, index_delay=0.0, batch_delay=0.0):
     """Build a mock OSIDB session for the two-phase fetch.
 
     ``flaws`` are full flaw dicts (each with ``cve_id`` + ``updated_dt``). The
@@ -65,6 +86,8 @@ def _make_session(*flaws, index_delay=0.0):
     second-phase batch iterator (called with ``cve_id=[...]``) returns full flaw
     data for the requested IDs. This lets tests assert exactly which flaws were
     fetched in full versus served from the cache via the index alone.
+    ``batch_delay`` sleeps in each batch fetch so the per-request refresh time
+    budget can be exercised deterministically.
     """
     by_cve = {flaw["cve_id"]: flaw for flaw in flaws}
 
@@ -73,6 +96,8 @@ def _make_session(*flaws, index_delay=0.0):
             time.sleep(index_delay)
         requested = kwargs.get("cve_id")
         if requested is not None:
+            if batch_delay:
+                time.sleep(batch_delay)
             # Second-phase batch fetch: return full flaw data.
             results = []
             for cve_id in requested:
@@ -190,8 +215,41 @@ def _seed_cache(cache_path: Path, flaws: dict[str, FlawCacheData]) -> None:
     cache_path.write_text(entry.model_dump_json())
 
 
+def _seed_stamped_cache(
+    cache_path: Path,
+    flaws: dict[str, FlawCacheData],
+    selections: dict[str, SelectionStamp],
+) -> None:
+    """Write a cache with pre-stamped selections.
+
+    Stamp-age behavior (the rebuild horizon, LRU eviction) is tested by
+    constructing stamps at chosen ``fetched_at`` instants rather than by
+    sleeping.
+    """
+    entry = BotKPICacheEntry(flaws=flaws, selections=selections)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(entry.model_dump_json())
+
+
+def _mock_kpi_settings(mock_settings, cache_dir, *, budget=60) -> None:
+    """Pin the settings the KPI engine reads to real values.
+
+    A MagicMock refresh budget makes the deadline comparison raise TypeError
+    on any slice needing a second batch, so the budget is always an int.
+    """
+    mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+    mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+    mock_settings.return_value.bot_kpi_max_refresh_seconds = budget
+
+
 def _cached_flaw(
-    applied=1, *, updated_dt=_DEFAULT_DT, suggestion_dt=None, current_impact="LOW"
+    applied=1,
+    *,
+    cve_id="CVE-2025-0001",
+    updated_dt=_DEFAULT_DT,
+    suggestion_dt=None,
+    current_impact="LOW",
+    components=(),
 ) -> FlawCacheData:
     """Build a compact cache entry with ``applied`` AI-Bot impact suggestions.
 
@@ -206,9 +264,98 @@ def _cached_flaw(
     flaw = _make_flaw_dict(
         {"processed": True, "impact": entries},
         impact=current_impact,
+        cve_id=cve_id,
         updated_dt=updated_dt,
+        components=list(components),
     )
     return _flaw_cache_data(flaw, updated_dt)
+
+
+def _numbered_flaws(count, *, start=1):
+    """Build ``count`` uniformly bot-processed flaws with sortable CVE IDs.
+
+    Every flaw carries one kept impact suggestion and the default watermark, so
+    large selections can be generated for pagination tests.
+    """
+    return [
+        _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id=f"CVE-2025-{i:04d}",
+        )
+        for i in range(start, start + count)
+    ]
+
+
+def _make_ghost_session(real_flaws, ghost_ids):
+    """Mock OSIDB session whose index lists CVEs missing from the batch fetch.
+
+    A ghost is a flaw that was deleted in OSIDB between the index query and
+    the batch fetch: the index phase still returns its cve_id/updated_dt stub,
+    but the batch phase returns nothing for it.
+    """
+    by_cve = {flaw["cve_id"]: flaw for flaw in real_flaws}
+    index = [
+        {"cve_id": flaw["cve_id"], "updated_dt": flaw["updated_dt"]}
+        for flaw in real_flaws
+    ] + [{"cve_id": cve_id, "updated_dt": _DEFAULT_DT} for cve_id in ghost_ids]
+
+    def _list_iterator(**kwargs):
+        requested = kwargs.get("cve_id")
+        if requested is not None:
+            results = []
+            for cve_id in requested:
+                if cve_id in by_cve:
+                    m = MagicMock()
+                    m.to_dict.return_value = by_cve[cve_id]
+                    results.append(m)
+            return iter(results)
+        stubs = []
+        for item in index:
+            stub = MagicMock()
+            stub.to_dict.return_value = dict(item)
+            stubs.append(stub)
+        return iter(stubs)
+
+    session = MagicMock()
+    session.flaws.retrieve_list_iterator.side_effect = _list_iterator
+    return session
+
+
+def _batch_fetches(session):
+    """The cve_id sets requested by full-data batch fetches, in call order."""
+    return [
+        set(call.kwargs["cve_id"])
+        for call in session.flaws.retrieve_list_iterator.call_args_list
+        if call.kwargs.get("cve_id") is not None
+    ]
+
+
+def _paginate(**kwargs):
+    """Drive get_osidb_bot_kpi as a paginating client would: follow
+    next_cursor from page to page until the final page. An initial cursor
+    may be passed to resume mid-selection."""
+    pages = []
+    cursor = kwargs.pop("cursor", None)
+    for _ in range(100):
+        page = get_osidb_bot_kpi(cursor=cursor, **kwargs)
+        pages.append(page)
+        if page.next_cursor is None:
+            return pages
+        cursor = page.next_cursor
+    raise AssertionError("pagination did not reach a final page")
+
+
+def _page_progress(page: BotKPIResponse) -> BotKPIProgress:
+    """A paginated page's progress block, asserted present."""
+    assert page.progress is not None
+    return page.progress
+
+
+def _page_entries(page: BotKPIResponse) -> list[BotKPIEntry]:
+    """A detail page's entries, asserted present."""
+    assert page.entries is not None
+    return page.entries
 
 
 @pytest.fixture()
@@ -417,12 +564,35 @@ class TestNeedsFetch:
         assert not _needs_fetch(cached, "2025-06-01T00:00:00+00:00")
 
 
+class TestStaleReason:
+    """The staleness semantics for unusable watermarks.
+
+    An unparseable *index* watermark (OSIDB reported no updated_dt) can never
+    be satisfied by a fetch, so a flaw with such a watermark is fresh once
+    cached -- otherwise a polling refresh drain would livelock -- while an
+    uncached one is still fetched once. A malformed *cached* watermark cannot
+    prove freshness, so it stays outdated.
+    """
+
+    def test_cached_flaw_with_unparseable_index_watermark_is_fresh(self):
+        cached = _cached_flaw()
+        assert stale_reason(cached, "") is None
+
+    def test_uncached_flaw_with_unparseable_index_watermark_is_uncached(self):
+        assert stale_reason(None, "") == "uncached"
+
+    def test_malformed_cached_watermark_stays_outdated(self):
+        cached = _cached_flaw(updated_dt="not-a-timestamp")
+        assert stale_reason(cached, _DEFAULT_DT) == "outdated"
+
+
 class TestGetOsidbBotKpiCaching:
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
     def test_first_request_no_cache(self, mock_settings, mock_bindings, cache_dir):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         flaw_data = _make_flaw_dict(
             {"processed": True, "impact": [_make_bot_entry("LOW")]},
@@ -430,6 +600,7 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = _make_session(flaw_data)
 
+        _drain_refresh()
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 1
         assert response.features["impact"].kept == 1
@@ -447,6 +618,7 @@ class TestGetOsidbBotKpiCaching:
         new flaw's full data is fetched via retrieve()."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(cache_dir, {"CVE-2025-0001": _cached_flaw(applied=1)})
 
@@ -464,6 +636,7 @@ class TestGetOsidbBotKpiCaching:
         session = _make_session(cached_flaw, new_flaw)
         mock_bindings.new_session.return_value = session
 
+        _drain_refresh()
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 2
         assert response.features["impact"].suggested == 2
@@ -483,6 +656,7 @@ class TestGetOsidbBotKpiCaching:
         same watermark are served from the cache without a re-fetch or a write."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(
             cache_dir,
@@ -491,7 +665,6 @@ class TestGetOsidbBotKpiCaching:
                 "CVE-2025-0002": _cached_flaw(updated_dt="2025-07-01T00:00:00+00:00"),
             },
         )
-        cached_json_before = cache_dir.read_text()
 
         # The filtering session honors updated_dt bounds like the real server, so
         # changed_after=June selects only the July flaw.
@@ -509,12 +682,18 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = session
 
+        # The first request stamps the selection index for these filters.
+        get_osidb_bot_kpi(changed_after=datetime(2025, 6, 1, tzinfo=UTC))
+        cached_json_stamped = cache_dir.read_text()
+        session.flaws.retrieve_list_iterator.reset_mock()
+
         response = get_osidb_bot_kpi(changed_after=datetime(2025, 6, 1, tzinfo=UTC))
         assert response.total_flaws_processed == 1
 
-        # Only the index call; the selected flaw is already cached, so no batch.
+        # Only the delta-validation index call; the selected flaw is already
+        # cached, so no batch fetch and no write.
         assert session.flaws.retrieve_list_iterator.call_count == 1
-        assert cache_dir.read_text() == cached_json_before
+        assert cache_dir.read_text() == cached_json_stamped
 
     @patch("aegis_ai_web.src.endpoints.bot_kpi.osidb_bindings")
     @patch("aegis_ai_web.src.endpoints.bot_kpi.get_settings")
@@ -523,6 +702,7 @@ class TestGetOsidbBotKpiCaching:
     ):
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         cache_dir.parent.mkdir(parents=True, exist_ok=True)
         cache_dir.write_text("corrupted data!!!")
@@ -533,6 +713,7 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = _make_session(flaw_data)
 
+        _drain_refresh()
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 1
         assert response.features["impact"].kept == 1
@@ -546,9 +727,9 @@ class TestGetOsidbBotKpiCaching:
         double-counted, and the cache file is left untouched."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(cache_dir, {"CVE-2025-0001": _cached_flaw(applied=1)})
-        cached_json_before = cache_dir.read_text()
 
         session = _make_session(
             _make_flaw_dict(
@@ -558,15 +739,20 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = session
 
+        # The first request stamps the selection index; snapshot after it.
+        get_osidb_bot_kpi()
+        cached_json_stamped = cache_dir.read_text()
+        session.flaws.retrieve_list_iterator.reset_mock()
+
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 1
         assert response.features["impact"].suggested == 1
         assert response.features["impact"].kept == 1
 
-        # Only the index call; no batch fetch for unchanged flaws.
+        # Only the delta-validation index call; no batch fetch for unchanged
+        # flaws, and no change means no write.
         assert session.flaws.retrieve_list_iterator.call_count == 1
-        # No change means no write, so the cache file is left untouched.
-        assert cache_dir.read_text() == cached_json_before
+        assert cache_dir.read_text() == cached_json_stamped
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
@@ -579,6 +765,7 @@ class TestGetOsidbBotKpiCaching:
         permanently frozen at its first-seen classification."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(
             cache_dir,
@@ -595,6 +782,7 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = _make_session(edited_flaw)
 
+        _drain_refresh()
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 1
         assert response.features["impact"].suggested == 1
@@ -610,6 +798,7 @@ class TestGetOsidbBotKpiCaching:
         full data isn't re-fetched next time, and it doesn't inflate the KPI."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         processed = _make_flaw_dict(
             {"processed": True, "impact": [_make_bot_entry("LOW")]},
@@ -623,6 +812,7 @@ class TestGetOsidbBotKpiCaching:
         session = _make_session(processed, not_processed)
         mock_bindings.new_session.return_value = session
 
+        _drain_refresh()
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 1
         assert response.features["impact"].suggested == 1
@@ -649,6 +839,7 @@ class TestGetOsidbBotKpiCaching:
         select it."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(
             cache_dir,
@@ -685,6 +876,7 @@ class TestGetOsidbBotKpiCaching:
         contributing, rather than staying frozen at its bot-processed state."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(
             cache_dir,
@@ -699,6 +891,7 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = _make_session(unprocessed)
 
+        _drain_refresh()
         response = get_osidb_bot_kpi()
         assert response.total_flaws_processed == 0
         assert response.features == {}
@@ -721,6 +914,7 @@ class TestGetOsidbBotKpiCaching:
         """
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         range_a = (datetime(2026, 8, 23, tzinfo=UTC), datetime(2026, 8, 26, tzinfo=UTC))
         range_b = (datetime(2026, 8, 27, tzinfo=UTC), datetime(2026, 8, 30, tzinfo=UTC))
@@ -744,19 +938,21 @@ class TestGetOsidbBotKpiCaching:
             updated_dt="2026-08-28T10:00:00+00:00",
         )
 
-        # A fresh session per request; the filtering session honors updated_dt
-        # bounds, so each range selects only its own flaw.
-        session_a1 = _make_filtering_session(flaw_a, flaw_b)
-        session_b = _make_filtering_session(flaw_a, flaw_b)
-        session_a2 = _make_filtering_session(flaw_a, flaw_b)
-        mock_bindings.new_session.side_effect = [session_a1, session_b, session_a2]
+        # A fresh session per request (each refresh and each page opens one);
+        # the filtering session honors updated_dt bounds, so each range
+        # selects only its own flaw.
+        sessions = [_make_filtering_session(flaw_a, flaw_b) for _ in range(5)]
+        mock_bindings.new_session.side_effect = sessions
 
-        # 1. Range A selects and fetches only flaw A.
+        # 1. Range A: the refresh selects and fetches only flaw A, then the
+        # page serves it.
+        _drain_refresh(changed_after=range_a[0], changed_before=range_a[1])
         response_a = get_osidb_bot_kpi(
             changed_after=range_a[0], changed_before=range_a[1]
         )
         assert response_a.total_flaws_processed == 1
-        # 2. Range B selects only flaw B; it must not evict flaw A.
+        # 2. Range B refreshes only flaw B; it must not evict flaw A.
+        _drain_refresh(changed_after=range_b[0], changed_before=range_b[1])
         get_osidb_bot_kpi(changed_after=range_b[0], changed_before=range_b[1])
 
         cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
@@ -768,7 +964,7 @@ class TestGetOsidbBotKpiCaching:
             changed_after=range_a[0], changed_before=range_a[1]
         )
         assert response.total_flaws_processed == 1
-        assert session_a2.flaws.retrieve_list_iterator.call_count == 1
+        assert sessions[-1].flaws.retrieve_list_iterator.call_count == 1
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
@@ -779,6 +975,7 @@ class TestGetOsidbBotKpiCaching:
         a date filter, never prunes the shared cache of other components' flaws."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         _seed_cache(
             cache_dir,
@@ -787,7 +984,6 @@ class TestGetOsidbBotKpiCaching:
                 "CVE-2025-0002": _cached_flaw(),  # a different component
             },
         )
-        cached_json_before = cache_dir.read_text()
 
         # The single selection query carries the ``components`` filter, so OSIDB
         # returns only the kernel flaw; it is cached at the same watermark, so no
@@ -805,6 +1001,10 @@ class TestGetOsidbBotKpiCaching:
         )
         mock_bindings.new_session.return_value = session
 
+        # The first request stamps the kernel selection; snapshot after it.
+        get_osidb_bot_kpi(component="kernel")
+        cached_json_stamped = cache_dir.read_text()
+
         response = get_osidb_bot_kpi(component="kernel")
 
         # Only the kernel flaw is counted, even though both are cached...
@@ -813,7 +1013,7 @@ class TestGetOsidbBotKpiCaching:
         # selects which flaws to score, it never prunes the shared cache).
         cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
         assert set(cached.flaws) == {"CVE-2025-0001", "CVE-2025-0002"}
-        assert cache_dir.read_text() == cached_json_before
+        assert cache_dir.read_text() == cached_json_stamped
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
@@ -825,6 +1025,7 @@ class TestGetOsidbBotKpiCaching:
         the one whose updated_dt falls in the window is selected and counted."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         may_flaw = _make_flaw_dict(
             {
@@ -850,6 +1051,9 @@ class TestGetOsidbBotKpiCaching:
             may_flaw, july_flaw
         )
 
+        _drain_refresh(
+            component="kernel", changed_after=datetime(2025, 6, 1, tzinfo=UTC)
+        )
         response = get_osidb_bot_kpi(
             component="kernel", changed_after=datetime(2025, 6, 1, tzinfo=UTC)
         )
@@ -867,6 +1071,7 @@ class TestGetOsidbBotKpiCaching:
         read-modify-write cycle and clobber each other's results."""
         mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
         mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
 
         flaws = [
             _make_flaw_dict(
@@ -889,7 +1094,7 @@ class TestGetOsidbBotKpiCaching:
         responses = []
 
         def run_and_collect():
-            responses.append(get_osidb_bot_kpi())
+            responses.append(refresh_osidb_bot_kpi_cache())
 
         threads = [threading.Thread(target=run_and_collect) for _ in range(2)]
         for thread in threads:
@@ -897,15 +1102,1485 @@ class TestGetOsidbBotKpiCaching:
         for thread in threads:
             thread.join()
 
-        # The lock serializes the writes; neither response should be corrupted
-        # and both must see the complete two-flaw result.
+        # The lock serializes the writes; neither refresh corrupts the cache.
+        # Each slice refreshes everything the other leaves behind, so both
+        # threads observe a fully fresh selection no matter how they
+        # interleaved.
         assert len(responses) == 2
-        assert [r.total_flaws_processed for r in responses] == [2, 2]
-        for response in responses:
-            assert (
-                response.features["impact"].suggested == response.total_flaws_processed
-            )
+        assert [r.stale_count for r in responses] == [0, 0]
+
+        # After the concurrent refreshes, both flaws are served scored.
+        response = get_osidb_bot_kpi()
+        assert response.total_flaws_processed == 2
+        assert response.features["impact"].suggested == 2
 
         cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
         assert cached.total_flaws_processed == 2
         assert set(cached.flaws.keys()) == {"CVE-2025-0001", "CVE-2025-0002"}
+
+
+class TestGetOsidbBotKpiPagination:
+    """The paginated contract of get_osidb_bot_kpi.
+
+    The selection is served in ``limit``-sized pages of sorted CVE IDs: each
+    intermediate page refreshes only its own slice, carries placeholder
+    aggregates, its own ``entries`` slice, a ``progress`` block over the whole
+    selection, and the ``next_cursor`` to continue from; the final page adds
+    the complete aggregate. A client that follows the cursor and concatenates
+    ``entries`` ends with exactly one copy of every selected flaw's records.
+    When the entire remaining selection after the cursor is already fresh in
+    the cache, pages instead grow to the fixed warm page size (1000) and carry
+    no refresh work; any stale flaw ahead keeps the ``limit``-paced behavior.
+    """
+
+    def _mock_settings(self, mock_settings, cache_dir, *, budget=60):
+        mock_settings.return_value.osidb_server_url = "https://osidb.example.com"
+        mock_settings.return_value.config_dir = str(cache_dir.parent.parent)
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = 60
+        # A MagicMock budget makes the deadline comparison raise TypeError on
+        # any page needing a second batch, so always pin a real int.
+        mock_settings.return_value.bot_kpi_max_refresh_seconds = budget
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_pages_slice_sorted_selection_with_placeholder_aggregates(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Intermediate pages carry placeholders (0 / {}), their own entries
+        slice, progress over the whole selection, and next_cursor; the final
+        page carries the complete aggregate but still only its own slice."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        flaws = [
+            _make_flaw_dict(
+                {"processed": True, "impact": [_make_bot_entry("LOW")]},
+                impact="LOW",
+                cve_id="CVE-2025-0001",
+                components=["kernel"],
+            ),
+            _make_flaw_dict(
+                {"processed": True, "impact": [_make_bot_entry("LOW")]},
+                impact="LOW",
+                cve_id="CVE-2025-0002",
+                components=["openssl"],
+            ),
+            _make_flaw_dict(
+                {"processed": True, "impact": [_make_bot_entry("MODERATE")]},
+                impact="IMPORTANT",
+                cve_id="CVE-2025-0003",
+                components=["kernel"],
+            ),
+            _make_flaw_dict(
+                {"processed": True, "impact": [_make_bot_entry("LOW")]},
+                impact="LOW",
+                cve_id="CVE-2025-0004",
+                components=["firefox"],
+            ),
+            _make_flaw_dict(
+                {"processed": True, "impact": [_make_bot_entry("LOW")]},
+                impact="MODERATE",
+                cve_id="CVE-2025-0005",
+                components=["kernel"],
+            ),
+        ]
+        session = _make_session(*flaws)
+        mock_bindings.new_session.return_value = session
+
+        # Pages never refresh; drain first like a polling client. The drained
+        # cache serves every page with a complete refresh.
+        _drain_refresh()
+        page1 = get_osidb_bot_kpi(detail=True, limit=2)
+        assert page1.total_flaws_processed == 0
+        assert page1.features == {}
+        assert page1.next_cursor == "CVE-2025-0002"
+        assert _page_progress(page1).selected_flaws == 5
+        assert _page_progress(page1).refreshed_flaws == 5
+        assert _page_progress(page1).complete is True
+        assert page1.available_components is None
+        assert {e.cve_id for e in _page_entries(page1)} == {
+            "CVE-2025-0001",
+            "CVE-2025-0002",
+        }
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=2, cursor="CVE-2025-0002")
+        assert page2.next_cursor == "CVE-2025-0004"
+        assert _page_progress(page2).refreshed_flaws == 5
+        assert _page_progress(page2).complete is True
+        assert {e.cve_id for e in _page_entries(page2)} == {
+            "CVE-2025-0003",
+            "CVE-2025-0004",
+        }
+
+        page3 = get_osidb_bot_kpi(detail=True, limit=2, cursor="CVE-2025-0004")
+        assert page3.next_cursor is None
+        assert _page_progress(page3).complete is True
+        # The final page carries the aggregate over the whole selection...
+        assert page3.total_flaws_processed == 5
+        assert page3.features["impact"].suggested == 5
+        assert page3.features["impact"].kept == 3
+        assert page3.features["impact"].modified == 2
+        assert page3.available_components == ["firefox", "kernel", "openssl"]
+        # ...but only its own slice of entries, so accumulating clients don't
+        # double-count the final page.
+        assert {e.cve_id for e in _page_entries(page3)} == {"CVE-2025-0005"}
+
+        # Client accumulation invariant: every selected flaw's records appear
+        # exactly once across the concatenated pages.
+        accumulated = [e for page in (page1, page2, page3) for e in _page_entries(page)]
+        assert len(accumulated) == 5
+        assert {e.cve_id for e in accumulated} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 6)
+        }
+
+        # The drain fetched every flaw's full data in one batch sequence.
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1, 6)},
+        ]
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_default_limit_slices_400_flaws(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Omitting limit serves the documented default of 400 flaws per page:
+        a 401-flaw selection takes two requests, the first ending at flaw
+        #400."""
+        self._mock_settings(mock_settings, cache_dir)
+        session = _make_session(*_numbered_flaws(401))
+        mock_bindings.new_session.return_value = session
+
+        _drain_refresh()
+        page1 = get_osidb_bot_kpi()
+        assert page1.next_cursor == "CVE-2025-0400"
+        assert _page_progress(page1).selected_flaws == 401
+        assert _page_progress(page1).refreshed_flaws == 401
+        assert _page_progress(page1).complete is True
+        assert page1.total_flaws_processed == 0
+
+        page2 = get_osidb_bot_kpi(cursor="CVE-2025-0400")
+        assert page2.next_cursor is None
+        assert _page_progress(page2).complete is True
+        assert page2.total_flaws_processed == 401
+        assert page2.features["impact"].suggested == 401
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_refresh_budget_defers_remainder_to_later_calls(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """When the refresh budget trips mid-slice, the remainder is left for
+        the next refresh call and the returned counts report the partial
+        state. At least one batch always runs, so progress cannot stall."""
+        self._mock_settings(mock_settings, cache_dir, budget=0)
+        session = _make_session(*_numbered_flaws(250), batch_delay=0.05)
+        mock_bindings.new_session.return_value = session
+
+        first = refresh_osidb_bot_kpi_cache()
+        assert first.stale_count == 150
+        assert first.fresh_count == 100
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1, 101)},
+        ]
+
+        second = refresh_osidb_bot_kpi_cache()
+        assert second.stale_count == 50
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1, 101)},
+            {f"CVE-2025-{i:04d}" for i in range(101, 201)},
+        ]
+
+        third = refresh_osidb_bot_kpi_cache()
+        assert third.stale_count == 0
+        assert third.fresh_count == 250
+        assert third.total_flaws_selected == 250
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1, 101)},
+            {f"CVE-2025-{i:04d}" for i in range(101, 201)},
+            {f"CVE-2025-{i:04d}" for i in range(201, 251)},
+        ]
+
+        # With the cache drained, pagination serves the whole selection.
+        pages = _paginate(detail=True, limit=250)
+        assert len(pages) == 1
+        assert pages[0].total_flaws_processed == 250
+        assert _page_progress(pages[0]).complete is True
+        assert {e.cve_id for e in _page_entries(pages[0])} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 251)
+        }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_partial_drain_serves_cached_flaws_and_reports_the_rest(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A mid-drain page serves every flaw that has cached records and
+        honestly reports how much of the selection is not yet cached: the
+        cursor is never truncated by staleness, and after the drain
+        completes, every flaw's records are served exactly once."""
+        self._mock_settings(mock_settings, cache_dir, budget=0)
+        session = _make_session(*_numbered_flaws(103), batch_delay=0.05)
+        mock_bindings.new_session.return_value = session
+
+        # The selection's last flaw is already fresh in the cache.
+        _seed_cache(cache_dir, {"CVE-2025-0103": _cached_flaw(cve_id="CVE-2025-0103")})
+
+        # One budget-exhausted refresh call refreshes the first 100 flaws.
+        first = refresh_osidb_bot_kpi_cache()
+        assert first.stale_count == 2  # 101 and 102 remain uncached
+        assert first.fresh_count == 101
+
+        # A mid-drain page: the cursor covers the whole selection (no
+        # truncation), entries cover the 101 cached flaws, and progress
+        # reports the cached fraction honestly.
+        page = get_osidb_bot_kpi(detail=True, limit=200)
+        assert page.next_cursor is None
+        assert _page_progress(page).selected_flaws == 103
+        assert _page_progress(page).refreshed_flaws == 101
+        assert _page_progress(page).complete is False
+        assert {e.cve_id for e in _page_entries(page)} == (
+            {f"CVE-2025-{i:04d}" for i in range(1, 101)} | {"CVE-2025-0103"}
+        )
+
+        # Draining the rest completes the refresh; a full page then serves
+        # every flaw's records exactly once.
+        _drain_refresh()
+        final = get_osidb_bot_kpi(detail=True, limit=200)
+        assert final.next_cursor is None
+        assert _page_progress(final).complete is True
+        assert final.total_flaws_processed == 103
+        assert {e.cve_id for e in _page_entries(final)} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 104)
+        }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_unparseable_watermark_drain_still_terminates(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Regression test for a refresh livelock: a flaw whose indexed
+        updated_dt is missing can never satisfy a watermark comparison, so a
+        naive drain would re-fetch it forever and never report zero stale.
+        Such a flaw is fetched once and then treated as fresh -- as fresh as
+        OSIDB allows -- so the drain terminates and pagination serves it."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        # 100 flaws with valid watermarks, then the unparseable-watermark flaw
+        # sorting last.
+        unparseable = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0101",
+            updated_dt=None,
+        )
+        session = _make_session(*_numbered_flaws(100), unparseable)
+        mock_bindings.new_session.return_value = session
+
+        # The drain terminates: the unparseable flaw is fetched once (in the
+        # second 100-flaw batch) and never re-fetched.
+        _drain_refresh()
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1, 101)},
+            {"CVE-2025-0101"},
+        ]
+        _drain_refresh()
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1, 101)},
+            {"CVE-2025-0101"},
+        ]
+
+        # Pagination terminates too and delivers every record exactly once,
+        # with an honest complete flag over the whole selection.
+        pages = _paginate(detail=True, limit=200)
+        final = pages[-1]
+        assert len(pages) == 1
+        assert final.next_cursor is None
+        assert final.total_flaws_processed == 101
+        assert _page_progress(final).selected_flaws == 101
+        assert _page_progress(final).refreshed_flaws == 101
+        assert _page_progress(final).complete is True
+        assert {e.cve_id for e in _page_entries(final)} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 102)
+        }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_flaw_vanishing_after_index_is_tombstoned_not_blocking(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A flaw present in the index but absent from the batch fetch
+        (deleted in OSIDB in between) is cached as a non-bot-processed skip
+        marker at the indexed watermark: it contributes no entries, never
+        blocks the drain, and is not re-fetched by later calls."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        real = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+        )
+        session = _make_ghost_session([real], ghost_ids=["CVE-2025-0002"])
+        mock_bindings.new_session.return_value = session
+
+        counts = _drain_refresh()
+        assert counts.stale_count == 0
+        assert counts.total_flaws_selected == 2
+
+        page = get_osidb_bot_kpi(detail=True)
+        assert page.total_flaws_processed == 1
+        assert page.next_cursor is None
+        assert _page_progress(page).selected_flaws == 2
+        assert _page_progress(page).refreshed_flaws == 2
+        assert _page_progress(page).complete is True
+        assert [e.cve_id for e in _page_entries(page)] == ["CVE-2025-0001"]
+
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        ghost = cached.flaws["CVE-2025-0002"]
+        assert ghost.bot_processed is False
+        assert ghost.updated_dt == _DEFAULT_DT
+
+        # The tombstone is fresh: a repeat drain fetches nothing further, so
+        # the vanished flaw cannot stall the refresh, and the single warm
+        # page reports refresh completion via the progress block.
+        session.flaws.retrieve_list_iterator.reset_mock()
+        _drain_refresh()
+        warm = get_osidb_bot_kpi(detail=True)
+        assert _page_progress(warm).complete is True
+        assert warm.next_cursor is None
+        assert warm.total_flaws_processed == 1
+        assert _batch_fetches(session) == []
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_fully_cached_selection_serves_single_final_page(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """When every selected flaw is fresh in the cache, the whole
+        selection is served as one final page: full aggregate and every entry
+        in a single response, no cursor to follow. Only the progress block
+        differs from the pre-pagination shape -- the paginated path always
+        reports refresh completion."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(
+                    cve_id=f"CVE-2025-{i:04d}", components=("kernel",)
+                )
+                for i in (1, 2, 3)
+            },
+        )
+        cached_json_before = cache_dir.read_text()
+        session = _make_session(*_numbered_flaws(3))
+        mock_bindings.new_session.return_value = session
+
+        response = get_osidb_bot_kpi(detail=True)
+        assert _page_progress(response).complete is True
+        assert response.next_cursor is None
+        assert response.total_flaws_processed == 3
+        assert response.features["impact"].suggested == 3
+        assert response.available_components == ["kernel"]
+        assert {e.cve_id for e in _page_entries(response)} == {
+            "CVE-2025-0001",
+            "CVE-2025-0002",
+            "CVE-2025-0003",
+        }
+
+        # Index query only: nothing re-fetched, and the flaw entries are
+        # untouched -- only the selection stamp was persisted.
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        assert _batch_fetches(session) == []
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert (
+            cached.flaws
+            == BotKPICacheEntry.model_validate_json(cached_json_before).flaws
+        )
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_fully_cached_selection_with_cursor_still_reports_progress(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A warm selection sliced by a cursor still paginates: the final
+        page carries the progress block and an aggregate over the whole
+        selection, while its entries cover only the remaining slice."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in (1, 2, 3)
+            },
+        )
+        mock_bindings.new_session.return_value = _make_session(*_numbered_flaws(3))
+
+        response = get_osidb_bot_kpi(detail=True, cursor="CVE-2025-0001")
+        assert response.progress is not None
+        assert _page_progress(response).complete is True
+        assert _page_progress(response).selected_flaws == 3
+        assert response.next_cursor is None
+        assert response.total_flaws_processed == 3
+        assert {e.cve_id for e in _page_entries(response)} == {
+            "CVE-2025-0002",
+            "CVE-2025-0003",
+        }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_warm_selection_of_exactly_limit_is_single_final_page(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A warm selection of exactly `limit` flaws fits one page: a single
+        final response with the full aggregate, every entry, and no cursor."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in range(1, 1001)
+            },
+        )
+        session = _make_session(*_numbered_flaws(1000))
+        mock_bindings.new_session.return_value = session
+
+        response = get_osidb_bot_kpi(detail=True, limit=1000)
+        assert response.next_cursor is None
+        assert _page_progress(response).complete is True
+        assert response.total_flaws_processed == 1000
+        assert response.features["impact"].suggested == 1000
+        assert len(_page_entries(response)) == 1000
+        # Index query only: nothing re-fetched.
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_warm_selection_of_limit_plus_one_ends_with_single_entry_page(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """One flaw past the page boundary splits the run into exactly two
+        requests: a full limit-entry intermediate page, then a final page
+        carrying only the last flaw plus the aggregate over the whole
+        selection."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in range(1, 1002)
+            },
+        )
+        session = _make_session(*_numbered_flaws(1001))
+        mock_bindings.new_session.return_value = session
+
+        page1 = get_osidb_bot_kpi(detail=True, limit=1000)
+        assert page1.next_cursor == "CVE-2025-1000"
+        assert len(_page_entries(page1)) == 1000
+        assert {e.cve_id for e in _page_entries(page1)} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 1001)
+        }
+        assert page1.total_flaws_processed == 0
+        assert page1.features == {}
+        assert _page_progress(page1).complete is True
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-1000")
+        assert page2.next_cursor is None
+        assert _page_progress(page2).complete is True
+        assert page2.total_flaws_processed == 1001
+        assert [e.cve_id for e in _page_entries(page2)] == ["CVE-2025-1001"]
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_warm_selection_serves_limit_sized_pages(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A fully-cached selection is served in pages of the client's limit:
+        the limit is the honest page size, warm or cold. Intermediate pages
+        carry placeholder aggregates, a progress block reporting a complete
+        refresh, and the cursor of their last flaw; the final page carries the
+        aggregate over the whole selection. A warm run never fetches flaw data
+        and never writes the cache: only the run's first request runs the
+        flaw-index query (the stamping scan), and its pages trust the stamp."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        # 2500 flaws = ceil(2500/1000) = 3 pages: 1000 + 1000 + 500.
+        total = 2500
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(
+                    cve_id=f"CVE-2025-{i:04d}", components=("kernel",)
+                )
+                for i in range(1, total + 1)
+            },
+        )
+        session = _make_session(*_numbered_flaws(total))
+        mock_bindings.new_session.return_value = session
+
+        page1 = get_osidb_bot_kpi(detail=True, limit=1000)
+        assert page1.next_cursor == "CVE-2025-1000"
+        assert len(_page_entries(page1)) == 1000
+        assert {e.cve_id for e in _page_entries(page1)} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 1001)
+        }
+        assert page1.total_flaws_processed == 0
+        assert page1.features == {}
+        assert page1.available_components is None
+        assert _page_progress(page1).selected_flaws == total
+        assert _page_progress(page1).refreshed_flaws == total
+        # The cache refresh IS complete while pagination continues: warm
+        # pages carry no refresh work, so this combination is served as-is.
+        assert _page_progress(page1).complete is True
+        # The run's first request stamped the selection; snapshot after it.
+        cached_json_stamped = cache_dir.read_text()
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-1000")
+        assert page2.next_cursor == "CVE-2025-2000"
+        assert len(_page_entries(page2)) == 1000
+        assert {e.cve_id for e in _page_entries(page2)} == {
+            f"CVE-2025-{i:04d}" for i in range(1001, 2001)
+        }
+        assert page2.total_flaws_processed == 0
+        assert _page_progress(page2).complete is True
+
+        page3 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-2000")
+        assert page3.next_cursor is None
+        assert _page_progress(page3).complete is True
+        assert page3.total_flaws_processed == total
+        assert page3.features["impact"].suggested == total
+        assert page3.available_components == ["kernel"]
+        assert {e.cve_id for e in _page_entries(page3)} == {
+            f"CVE-2025-{i:04d}" for i in range(2001, 2501)
+        }
+
+        # ceil(2500/1000) = 3 requests delivered every flaw exactly once.
+        accumulated = [e for page in (page1, page2, page3) for e in _page_entries(page)]
+        assert len(accumulated) == total
+        assert {e.cve_id for e in accumulated} == {
+            f"CVE-2025-{i:04d}" for i in range(1, total + 1)
+        }
+
+        # Only the run's first request ran the flaw-index query (the stamping
+        # full scan); the cursor pages trusted the stamp, and no request made
+        # a cve_id batch fetch of full flaw data...
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        assert _batch_fetches(session) == []
+        # ...and the cache file's bytes are unchanged from the stamp on.
+        assert cache_dir.read_text() == cached_json_stamped
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_warm_pagination_without_detail_omits_entries(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """detail=false keeps entries and available_components out of warm
+        pages while the pagination metadata and the final aggregate remain."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in range(1, 1201)
+            },
+        )
+        session = _make_session(*_numbered_flaws(1200))
+        mock_bindings.new_session.return_value = session
+
+        page1 = get_osidb_bot_kpi(limit=1000)
+        assert page1.next_cursor == "CVE-2025-1000"
+        assert page1.entries is None
+        assert page1.available_components is None
+        assert page1.total_flaws_processed == 0
+        assert page1.features == {}
+        assert _page_progress(page1).complete is True
+
+        page2 = get_osidb_bot_kpi(limit=1000, cursor="CVE-2025-1000")
+        assert page2.next_cursor is None
+        assert page2.entries is None
+        assert page2.available_components is None
+        assert page2.total_flaws_processed == 1200
+        assert page2.features["impact"].suggested == 1200
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_mixed_selection_drains_then_serves_limit_pages(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A mixed selection (mostly cached, a few stale flaws) drains with a
+        single refresh call, then serves limit-sized pages as pure cache
+        reads with correct totals and exactly one copy of every entry."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        # The two stale flaws must sort inside the first page.
+        total = 1204
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in range(3, total + 1)
+            },
+        )
+        session = _make_session(*_numbered_flaws(total))
+        mock_bindings.new_session.return_value = session
+
+        # One refresh call drains the two stale flaws.
+        counts = _drain_refresh()
+        assert counts.stale_count == 0
+        assert _batch_fetches(session) == [{"CVE-2025-0001", "CVE-2025-0002"}]
+        # The drain wrote the two fetched flaws; snapshot the bytes so the
+        # pages can be proven read-only.
+        cache_json_after_refresh = cache_dir.read_text()
+
+        # Pages serve as pure cache reads, limit-sized, warm throughout.
+        page1 = get_osidb_bot_kpi(detail=True, limit=1000)
+        assert page1.next_cursor == "CVE-2025-1000"
+        assert len(_page_entries(page1)) == 1000
+        assert page1.total_flaws_processed == 0
+        assert _page_progress(page1).selected_flaws == total
+        assert _page_progress(page1).complete is True
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=1000, cursor="CVE-2025-1000")
+        assert page2.next_cursor is None
+        assert page2.total_flaws_processed == total
+        assert page2.features["impact"].suggested == total
+        assert len(_page_entries(page2)) == 204
+
+        # The only full-data fetch of the run was the drain, and the pages
+        # never wrote the cache.
+        assert _batch_fetches(session) == [{"CVE-2025-0001", "CVE-2025-0002"}]
+        assert cache_dir.read_text() == cache_json_after_refresh
+
+        accumulated = [e for page in (page1, page2) for e in _page_entries(page)]
+        assert len(accumulated) == total
+        assert {e.cve_id for e in accumulated} == {
+            f"CVE-2025-{i:04d}" for i in range(1, total + 1)
+        }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_cursor_mid_selection_serves_cached_flaws_honestly(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A cursor mid-selection serves limit-sized pages regardless of
+        staleness: the pages never fetch, the stale tail contributes no
+        entries until drained, and progress reports the cached fraction of
+        the whole selection on every page."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        # Fresh prefix through #1490, then a stale tail.
+        total = 1500
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in range(1, 1491)
+            },
+        )
+        session = _make_session(*_numbered_flaws(total))
+        mock_bindings.new_session.return_value = session
+
+        # Resuming mid-selection: the remainder holds 1000 flaws of which the
+        # last 10 are uncached; the page is limit-sized (400) and serves the
+        # cached records without fetching anything.
+        page1 = get_osidb_bot_kpi(detail=True, limit=400, cursor="CVE-2025-0500")
+        assert page1.next_cursor == "CVE-2025-0900"
+        assert len(_page_entries(page1)) == 400
+        assert {e.cve_id for e in _page_entries(page1)} == {
+            f"CVE-2025-{i:04d}" for i in range(501, 901)
+        }
+        assert page1.total_flaws_processed == 0
+        assert _page_progress(page1).selected_flaws == total
+        assert _page_progress(page1).refreshed_flaws == 1490
+        assert _page_progress(page1).complete is False
+        assert _batch_fetches(session) == []
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=400, cursor="CVE-2025-0900")
+        assert page2.next_cursor == "CVE-2025-1300"
+        assert len(_page_entries(page2)) == 400
+        assert _batch_fetches(session) == []
+
+        # The final page reaches the stale tail: those flaws contribute no
+        # entries yet (honestly reported by progress), and the drain fetches
+        # them afterwards.
+        page3 = get_osidb_bot_kpi(detail=True, limit=400, cursor="CVE-2025-1300")
+        assert page3.next_cursor is None
+        assert _page_progress(page3).refreshed_flaws == 1490
+        assert _page_progress(page3).complete is False
+        assert _batch_fetches(session) == []
+        assert len(_page_entries(page3)) == 190  # 200 minus the 10 uncached
+
+        _drain_refresh()
+        assert _batch_fetches(session) == [
+            {f"CVE-2025-{i:04d}" for i in range(1491, 1501)}
+        ]
+
+        accumulated = [e for page in (page1, page2, page3) for e in _page_entries(page)]
+        assert len(accumulated) == 990
+        assert {e.cve_id for e in accumulated} == (
+            {f"CVE-2025-{i:04d}" for i in range(501, 1491)}
+        )
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_cursor_at_last_flaw_terminates_without_looping(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A cursor at the last flaw yields the final page directly: the
+        aggregate is served, no further cursor is returned, and no entries
+        are duplicated for a client that re-sends its last cursor."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        _seed_cache(
+            cache_dir,
+            {
+                f"CVE-2025-{i:04d}": _cached_flaw(cve_id=f"CVE-2025-{i:04d}")
+                for i in (1, 2, 3)
+            },
+        )
+        mock_bindings.new_session.return_value = _make_session(*_numbered_flaws(3))
+
+        response = get_osidb_bot_kpi(detail=True, cursor="CVE-2025-0003")
+        assert response.next_cursor is None
+        assert _page_progress(response).complete is True
+        assert response.total_flaws_processed == 3
+        assert response.entries == []
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_progress_refreshed_counts_whole_selection_not_just_page(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """refreshed_flaws reports freshness across the whole selection at
+        response time -- including flaws the page never touched -- and only
+        the still-stale flaws are fetched by the refresh endpoint."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        # Flaws 0002 and 0004 are already fresh; 0001 and 0003 are stale.
+        _seed_cache(
+            cache_dir,
+            {
+                "CVE-2025-0002": _cached_flaw(cve_id="CVE-2025-0002"),
+                "CVE-2025-0004": _cached_flaw(cve_id="CVE-2025-0004"),
+            },
+        )
+        session = _make_session(*_numbered_flaws(4))
+        mock_bindings.new_session.return_value = session
+
+        _drain_refresh()
+        # Only the two stale flaws were fetched in full.
+        assert _batch_fetches(session) == [{"CVE-2025-0001", "CVE-2025-0003"}]
+
+        page1 = get_osidb_bot_kpi(detail=True, limit=2)
+        assert page1.next_cursor == "CVE-2025-0002"
+        assert _page_progress(page1).selected_flaws == 4
+        assert _page_progress(page1).refreshed_flaws == 4
+        assert _page_progress(page1).complete is True
+        assert {e.cve_id for e in _page_entries(page1)} == {
+            "CVE-2025-0001",
+            "CVE-2025-0002",
+        }
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=2, cursor="CVE-2025-0002")
+        assert _page_progress(page2).complete is True
+        assert page2.total_flaws_processed == 4
+        assert {e.cve_id for e in _page_entries(page2)} == {
+            "CVE-2025-0003",
+            "CVE-2025-0004",
+        }
+        # Pages never fetch: the drain above is the only full-data fetch.
+        assert _batch_fetches(session) == [{"CVE-2025-0001", "CVE-2025-0003"}]
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_component_filter_composes_with_pagination(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """The component filter scopes the selection that pagination slices:
+        pages, progress, and the final aggregate cover only that component's
+        flaws."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        kernel_1 = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+            components=["kernel"],
+        )
+        kernel_2 = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0002",
+            components=["kernel"],
+        )
+        other = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0003",
+            components=["openssl"],
+        )
+        session = _make_component_session(
+            {"kernel": [kernel_1, kernel_2], "openssl": [other]}
+        )
+        mock_bindings.new_session.return_value = session
+
+        _drain_refresh(component="kernel")
+        page1 = get_osidb_bot_kpi(detail=True, component="kernel", limit=1)
+        assert _page_progress(page1).selected_flaws == 2
+        assert page1.next_cursor == "CVE-2025-0001"
+        assert {e.cve_id for e in _page_entries(page1)} == {"CVE-2025-0001"}
+
+        page2 = get_osidb_bot_kpi(
+            detail=True, component="kernel", limit=1, cursor="CVE-2025-0001"
+        )
+        assert page2.next_cursor is None
+        assert _page_progress(page2).complete is True
+        assert page2.total_flaws_processed == 2
+        assert page2.available_components == ["kernel"]
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_changed_after_scoring_applies_to_each_page(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Date filters keep their pre-pagination meaning: the window selects
+        flaws by updated_dt, and each page's scoring drops suggestions whose
+        timestamps fall outside it -- a selected flaw can therefore deliver no
+        entries while still counting toward selected_flaws."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        in_window = _make_flaw_dict(
+            {
+                "processed": True,
+                "impact": [
+                    _make_bot_entry("LOW", timestamp="2025-07-01T00:00:00+00:00")
+                ],
+            },
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+            updated_dt="2025-07-01T00:00:00+00:00",
+        )
+        out_of_window = _make_flaw_dict(
+            {
+                "processed": True,
+                "impact": [
+                    _make_bot_entry("LOW", timestamp="2025-06-01T00:00:00+00:00")
+                ],
+            },
+            impact="LOW",
+            cve_id="CVE-2025-0002",
+            updated_dt="2025-07-02T00:00:00+00:00",
+        )
+        session = _make_filtering_session(in_window, out_of_window)
+        mock_bindings.new_session.return_value = session
+
+        changed_after = datetime(2025, 6, 15, tzinfo=UTC)
+
+        _drain_refresh(changed_after=changed_after)
+        page1 = get_osidb_bot_kpi(detail=True, changed_after=changed_after, limit=1)
+        assert _page_progress(page1).selected_flaws == 2
+        assert page1.next_cursor == "CVE-2025-0001"
+        assert [e.cve_id for e in _page_entries(page1)] == ["CVE-2025-0001"]
+
+        page2 = get_osidb_bot_kpi(
+            detail=True, changed_after=changed_after, limit=1, cursor="CVE-2025-0001"
+        )
+        assert page2.next_cursor is None
+        assert _page_progress(page2).complete is True
+        assert _page_progress(page2).selected_flaws == 2
+        # Only the flaw with an in-window suggestion contributes.
+        assert page2.total_flaws_processed == 1
+        assert page2.entries == []
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_concurrent_clients_converge_after_drain(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Two clients draining and paginating the same selection
+        simultaneously both end with complete, duplicate-free results; their
+        overlapping refreshes do not corrupt the shared cache."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        flaws = _numbered_flaws(5)
+        mock_bindings.new_session.side_effect = lambda **kwargs: _make_session(
+            *flaws, index_delay=0.02
+        )
+
+        runs = []
+
+        def run_client():
+            _drain_refresh()
+            runs.append(_paginate(detail=True, limit=2))
+
+        threads = [threading.Thread(target=run_client) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        assert len(runs) == 2
+        expected = {f"CVE-2025-{i:04d}" for i in range(1, 6)}
+        for pages in runs:
+            final = pages[-1]
+            assert final.next_cursor is None
+            assert _page_progress(final).complete is True
+            assert final.total_flaws_processed == 5
+            entries = [e for page in pages for e in _page_entries(page)]
+            assert {e.cve_id for e in entries} == expected
+            assert len(entries) == 5
+
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert set(cached.flaws) == expected
+        assert cached.total_flaws_processed == 5
+
+
+class TestSelectionStampLifecycle:
+    """The watermark-stamped selection index kept per filter signature.
+
+    A run's first request (no cursor) validates the selection: a full query
+    when no stamp exists, else a delta query bounded near the stamp's
+    watermark. Cursor requests trust the matching stamp with zero OSIDB
+    contact. Stamps past the rebuild horizon are re-queried in full, and
+    interleaved filter scopes beyond the LRU limit are evicted.
+    """
+
+    def _sole_stamp(self, cache_path: Path) -> SelectionStamp:
+        """The cache's single selection stamp, asserted to be alone."""
+        cached = BotKPICacheEntry.model_validate_json(cache_path.read_text())
+        assert len(cached.selections) == 1
+        return next(iter(cached.selections.values()))
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_first_request_full_queries_and_stamps(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A run's first request for a filter signature with no stamp runs
+        the full index query -- bounded only by the bot birthday, never by a
+        watermark -- and persists the resulting stamp, even though the page
+        itself fetches no flaw data."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        session = _make_session(*_numbered_flaws(2))
+        mock_bindings.new_session.return_value = session
+
+        started = datetime.now(UTC)
+        response = get_osidb_bot_kpi(detail=True)
+
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        kwargs = session.flaws.retrieve_list_iterator.call_args.kwargs
+        assert kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
+        assert "updated_dt_gte" not in kwargs
+        assert _batch_fetches(session) == []
+
+        # The cold page serves no entries but reports the selection honestly.
+        assert _page_progress(response).selected_flaws == 2
+        assert _page_progress(response).refreshed_flaws == 0
+        assert _page_progress(response).complete is False
+        assert _page_entries(response) == []
+
+        # The stamp is persisted with the selection's watermarks.
+        stamp = self._sole_stamp(cache_dir)
+        assert stamp.fetched_at >= started
+        assert stamp.index == {
+            "CVE-2025-0001": _DEFAULT_DT,
+            "CVE-2025-0002": _DEFAULT_DT,
+        }
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert cached.flaws == {}
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_second_request_delta_validates_near_watermark_without_writing(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A second no-cursor request validates the stamp with a delta query
+        bounded near the stamp's watermark (minus clock-skew slack), not the
+        full unbounded scan; an empty delta writes nothing."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        # The filtering session honors updated_dt bounds like the real
+        # server, so the delta query genuinely returns nothing: every flaw's
+        # watermark predates the stamp.
+        session = _make_filtering_session(*_numbered_flaws(2))
+        mock_bindings.new_session.return_value = session
+
+        get_osidb_bot_kpi()
+        stamp = self._sole_stamp(cache_dir)
+        cached_json_stamped = cache_dir.read_text()
+        session.flaws.retrieve_list_iterator.reset_mock()
+
+        get_osidb_bot_kpi()
+
+        # Exactly one OSIDB contact: the delta validation.
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        delta_kwargs = session.flaws.retrieve_list_iterator.call_args.kwargs
+        bound = delta_kwargs.get("updated_dt_gte")
+        assert bound is not None
+        # Bounded near the stamp's watermark (minutes-scale slack at most),
+        # i.e. a delta query rather than the full unbounded scan.
+        assert bound <= stamp.fetched_at
+        assert stamp.fetched_at - bound <= timedelta(minutes=5)
+        # Nothing changed, so nothing was fetched and nothing written.
+        assert _batch_fetches(session) == []
+        assert cache_dir.read_text() == cached_json_stamped
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_delta_reseeing_identical_watermarks_keeps_the_stamp(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A delta that re-sees flaws at watermarks identical to the stamp's
+        (e.g. flaws re-seen through the clock-skew slack window) is not a
+        change: the persisted stamp and its watermark stand, and no write
+        happens."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        # _make_session ignores query bounds, so the delta query re-returns
+        # every flaw -- at the very watermarks the stamp already holds.
+        session = _make_session(*_numbered_flaws(2))
+        mock_bindings.new_session.return_value = session
+
+        get_osidb_bot_kpi()
+        stamp_before = self._sole_stamp(cache_dir)
+        cached_json_stamped = cache_dir.read_text()
+        session.flaws.retrieve_list_iterator.reset_mock()
+
+        get_osidb_bot_kpi()
+
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        assert _batch_fetches(session) == []
+        # Not re-stamped: same watermark, same bytes.
+        assert self._sole_stamp(cache_dir) == stamp_before
+        assert cache_dir.read_text() == cached_json_stamped
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_delta_with_advanced_watermark_merges_and_restamps(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """When the delta re-sees a flaw whose watermark advanced, the
+        stamped index is merged and re-stamped at a new watermark; the page
+        serves the flaw's last-known records until a refresh fetches the new
+        state."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        _seed_cache(cache_dir, {"CVE-2025-0001": _cached_flaw()})
+
+        edited = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+        )
+        session = _make_session(edited)
+        mock_bindings.new_session.return_value = session
+
+        # The first request stamps the selection at the flaw's old watermark.
+        get_osidb_bot_kpi()
+        stamp_before = self._sole_stamp(cache_dir)
+
+        # The flaw is edited in OSIDB: watermark advances, impact changes.
+        edited["updated_dt"] = "2025-08-01T00:00:00+00:00"
+        edited["impact"] = "MODERATE"
+
+        mid = get_osidb_bot_kpi(detail=True)
+        # The merged, re-stamped index carries the advanced watermark.
+        stamp_after = self._sole_stamp(cache_dir)
+        assert stamp_after.index["CVE-2025-0001"] == "2025-08-01T00:00:00+00:00"
+        assert stamp_after.fetched_at > stamp_before.fetched_at
+        # The page honestly reports the flaw as no longer fresh and serves
+        # its last-known (kept) records rather than fetching.
+        assert _page_progress(mid).refreshed_flaws == 0
+        assert _page_progress(mid).complete is False
+        assert mid.features["impact"].kept == 1
+        assert _batch_fetches(session) == []
+
+        # A refresh picks up the new state; the next page reflects it.
+        _drain_refresh()
+        final = get_osidb_bot_kpi()
+        assert _page_progress(final).complete is True
+        assert final.features["impact"].modified == 1
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_cursor_pages_trust_the_stamp_with_zero_osidb_contact(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Cursor requests serve from the run's stamp without contacting
+        OSIDB at all, so every page of a run reflects the selection as of
+        the run's first request -- even if OSIDB gained flaws in between."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        _seed_cache(
+            cache_dir,
+            {
+                "CVE-2025-0001": _cached_flaw(cve_id="CVE-2025-0001"),
+                "CVE-2025-0002": _cached_flaw(cve_id="CVE-2025-0002"),
+            },
+        )
+        # A fresh session per request; the second one would list a third
+        # flaw that appeared in OSIDB after the run's first request.
+        sessions = [
+            _make_session(*_numbered_flaws(2)),
+            _make_session(*_numbered_flaws(3)),
+        ]
+        mock_bindings.new_session.side_effect = sessions
+
+        page1 = get_osidb_bot_kpi(detail=True, limit=1)
+        assert page1.next_cursor == "CVE-2025-0001"
+        assert _page_progress(page1).selected_flaws == 2
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=1, cursor="CVE-2025-0001")
+
+        # The trusting page made zero OSIDB index calls...
+        assert sessions[1].flaws.retrieve_list_iterator.call_count == 0
+        # ...so the run still serves the two-flaw selection it started with,
+        # not the three flaws OSIDB now lists.
+        assert page2.next_cursor is None
+        assert _page_progress(page2).selected_flaws == 2
+        assert _page_progress(page2).complete is True
+        assert [e.cve_id for e in _page_entries(page2)] == ["CVE-2025-0002"]
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_cursor_request_without_stamp_self_heals_via_full_query(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A cursor request whose signature has no stamp (cold cache, evicted
+        stamp, or a filter first paginated mid-run) neither fails nor serves
+        an empty page: it falls back to the validating full query, stamps,
+        and serves; the run's following pages then trust that stamp."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        session = _make_session(*_numbered_flaws(3))
+        mock_bindings.new_session.return_value = session
+
+        page = get_osidb_bot_kpi(detail=True, cursor="CVE-2025-0002")
+
+        # Self-healing: one full query (no watermark-derived bound), no
+        # batch fetch, and the remaining flaw is served as a pure cache read
+        # -- it is uncached, so it contributes no phantom entries.
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        assert (
+            "updated_dt_gte"
+            not in session.flaws.retrieve_list_iterator.call_args.kwargs
+        )
+        assert _batch_fetches(session) == []
+        assert page.next_cursor is None
+        assert _page_progress(page).selected_flaws == 3
+        assert _page_progress(page).refreshed_flaws == 0
+        assert _page_progress(page).complete is False
+        assert _page_entries(page) == []
+
+        # The self-heal stamped the selection, so the next cursor page
+        # trusts it with zero OSIDB contact.
+        session.flaws.retrieve_list_iterator.reset_mock()
+        resumed = get_osidb_bot_kpi(detail=True, cursor="CVE-2025-0002")
+        assert session.flaws.retrieve_list_iterator.call_count == 0
+        assert _page_progress(resumed).selected_flaws == 3
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_each_filter_signature_gets_its_own_stamp(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Two filter scopes stamp independently: the component-scoped
+        selection and the unfiltered selection each keep their own index,
+        and each scope's cursor pages trust their own stamp."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        kernel = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0001",
+        )
+        openssl = _make_flaw_dict(
+            {"processed": True, "impact": [_make_bot_entry("LOW")]},
+            impact="LOW",
+            cve_id="CVE-2025-0002",
+        )
+        session = _make_component_session({"kernel": [kernel], "openssl": [openssl]})
+        mock_bindings.new_session.return_value = session
+
+        _seed_cache(
+            cache_dir,
+            {
+                "CVE-2025-0001": _cached_flaw(cve_id="CVE-2025-0001"),
+                "CVE-2025-0002": _cached_flaw(cve_id="CVE-2025-0002"),
+            },
+        )
+
+        get_osidb_bot_kpi(component="kernel")
+        get_osidb_bot_kpi()
+
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert len(cached.selections) == 2
+        # One stamp holds exactly the kernel selection, the other the whole
+        # two-flaw selection: each scope validated its own index.
+        indices = {frozenset(stamp.index) for stamp in cached.selections.values()}
+        assert indices == {
+            frozenset({"CVE-2025-0001"}),
+            frozenset({"CVE-2025-0001", "CVE-2025-0002"}),
+        }
+
+        # Each scope's cursor pages trust their own stamp: no OSIDB contact.
+        session.flaws.retrieve_list_iterator.reset_mock()
+        get_osidb_bot_kpi(component="kernel", cursor="CVE-2025-0001")
+        get_osidb_bot_kpi(cursor="CVE-2025-0001")
+        assert session.flaws.retrieve_list_iterator.call_count == 0
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_stamp_older_than_a_day_is_rebuilt_from_a_full_query(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A stamp past the 24h rebuild horizon can no longer bound deletion
+        drift with a delta query, so the next validating request re-runs the
+        full query and re-stamps fresh."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        flaws = _numbered_flaws(2)
+        signature = selection_signature(None, None, None)
+        # 25h old: past the rebuild horizon.
+        _seed_stamped_cache(
+            cache_dir,
+            {f["cve_id"]: _cached_flaw(cve_id=f["cve_id"]) for f in flaws},
+            {
+                signature: SelectionStamp(
+                    index={f["cve_id"]: f["updated_dt"] for f in flaws},
+                    fetched_at=datetime.now(UTC) - timedelta(hours=25),
+                )
+            },
+        )
+        session = _make_session(*flaws)
+        mock_bindings.new_session.return_value = session
+
+        started = datetime.now(UTC)
+        response = get_osidb_bot_kpi()
+
+        # One index call, and it is the full query: no watermark-derived
+        # updated_dt_gte bound.
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        kwargs = session.flaws.retrieve_list_iterator.call_args.kwargs
+        assert "updated_dt_gte" not in kwargs
+        assert _batch_fetches(session) == []
+        assert response.total_flaws_processed == 2
+
+        # The rebuilt stamp is fresh again.
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert cached.selections[signature].fetched_at >= started
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_fifth_distinct_signature_evicts_the_least_recently_stamped(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """At most four filter signatures keep stamps; a fifth distinct
+        signature evicts the least recently stamped one, not the newest."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        flaws = _numbered_flaws(2)
+        now = datetime.now(UTC)
+        dates = [datetime(2025, 1, day, tzinfo=UTC) for day in (1, 2, 3, 4)]
+        ages = (
+            timedelta(hours=4),
+            timedelta(hours=3),
+            timedelta(hours=2),
+            timedelta(hours=1),
+        )
+
+        def _sig(changed_after):
+            return selection_signature(changed_after, None, None)
+
+        _seed_stamped_cache(
+            cache_dir,
+            {f["cve_id"]: _cached_flaw(cve_id=f["cve_id"]) for f in flaws},
+            {
+                _sig(date): SelectionStamp(
+                    index={f["cve_id"]: f["updated_dt"] for f in flaws},
+                    fetched_at=now - age,
+                )
+                for date, age in zip(dates, ages, strict=True)
+            },
+        )
+        session = _make_session(*flaws)
+        mock_bindings.new_session.return_value = session
+
+        fifth = datetime(2025, 2, 1, tzinfo=UTC)
+        response = get_osidb_bot_kpi(changed_after=fifth)
+        assert response.total_flaws_processed == 2
+
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        # The oldest stamp (Jan 1) was evicted; the newer three and the
+        # freshly stamped fifth signature remain.
+        assert set(cached.selections) == {_sig(date) for date in dates[1:]} | {
+            _sig(fifth)
+        }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_nothing_stale_refresh_persists_new_stamp_for_delta_polling(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Regression test: a refresh call that finds nothing stale must
+        still persist a newly resolved selection stamp. Without it, a
+        polling client on an already-fresh selection with no stamp for its
+        signature (a second filter scope, an evicted stamp) re-ran the full
+        index scan on every poll -- the stamp was built and then dropped by
+        the nothing-stale early return."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        # Everything cached and fresh, but no stamp for this signature yet.
+        seeded = {"CVE-2025-0001": _cached_flaw()}
+        _seed_cache(cache_dir, seeded)
+        session = _make_session(*_numbered_flaws(1))
+        mock_bindings.new_session.return_value = session
+
+        first = refresh_osidb_bot_kpi_cache()
+        assert first.stale_count == 0
+        assert first.fresh_count == 1
+        # The first call paid the full, unbounded index query...
+        index_calls = [
+            call
+            for call in session.flaws.retrieve_list_iterator.call_args_list
+            if "cve_id" not in call.kwargs
+        ]
+        assert len(index_calls) == 1
+        assert "updated_dt_gte" not in index_calls[0].kwargs
+        # ...and its stamps-only write left the flaw entries untouched.
+        stamp = self._sole_stamp(cache_dir)
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert cached.flaws == seeded
+        cache_json_after_first = cache_dir.read_text()
+
+        session.flaws.retrieve_list_iterator.reset_mock()
+        second = refresh_osidb_bot_kpi_cache()
+        assert second.stale_count == 0
+
+        # The second call is only a delta query bounded near the stamp's
+        # watermark (minutes-scale clock-skew slack at most)...
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        bound = session.flaws.retrieve_list_iterator.call_args.kwargs.get(
+            "updated_dt_gte"
+        )
+        assert bound is not None
+        assert bound <= stamp.fetched_at
+        assert stamp.fetched_at - bound <= timedelta(minutes=5)
+        # ...that fetches nothing and, the delta being unchanged, writes
+        # nothing either.
+        assert _batch_fetches(session) == []
+        assert cache_dir.read_text() == cache_json_after_first
+
+
+class TestPurePageServing:
+    """GET pages are pure cache reads: no full-data fetches, no writes."""
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_partially_drained_page_never_fetches_or_writes(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A page request over a partially drained cache is a pure cache
+        read: no full-data batch fetch, no cache write, entries only for the
+        flaws that have cached records, and an honest progress block; after
+        the drain completes, the same page serves everything."""
+        _mock_kpi_settings(mock_settings, cache_dir, budget=0)
+        session = _make_session(*_numbered_flaws(101), batch_delay=0.05)
+        mock_bindings.new_session.return_value = session
+
+        # One budget-exhausted refresh call fetches only the first 100
+        # flaws; the last one is still uncached.
+        first = refresh_osidb_bot_kpi_cache()
+        assert first.stale_count == 1
+        assert first.fresh_count == 100
+        cache_json_after_refresh = cache_dir.read_text()
+        session.flaws.retrieve_list_iterator.reset_mock()
+
+        page = get_osidb_bot_kpi(detail=True, limit=200)
+
+        # The page's only OSIDB contact is the delta-validation index query;
+        # no full-data batch fetch and no cache write.
+        assert session.flaws.retrieve_list_iterator.call_count == 1
+        assert _batch_fetches(session) == []
+        assert cache_dir.read_text() == cache_json_after_refresh
+
+        assert page.next_cursor is None
+        progress = _page_progress(page)
+        assert progress.selected_flaws == 101
+        assert progress.refreshed_flaws == 100
+        assert progress.complete is False
+        # Delivered counts every selected flaw through the page's last CVE,
+        # including the uncached one that contributed no entries.
+        assert progress.delivered_flaws == 101
+        # Only the cached flaws' entries are served; the uncached flaw
+        # contributes no phantom entries.
+        assert {e.cve_id for e in _page_entries(page)} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 101)
+        }
+
+        # After the drain, the same page serves the whole selection.
+        _drain_refresh()
+        final = get_osidb_bot_kpi(detail=True, limit=200)
+        assert _page_progress(final).complete is True
+        assert final.total_flaws_processed == 101
+        assert {e.cve_id for e in _page_entries(final)} == {
+            f"CVE-2025-{i:04d}" for i in range(1, 102)
+        }
+
+
+class TestDeliveredFlawsProgress:
+    """delivered_flaws reports the cumulative count of selected flaws a
+    paginating client has received once it appends the page's entries."""
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_counts_cumulative_position_per_page(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Page N of a limit-L pagination reports L*N flaws delivered, except
+        the final page, which reports the whole selection's size."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        session = _make_session(*_numbered_flaws(7))
+        mock_bindings.new_session.return_value = session
+
+        _drain_refresh()
+        pages = _paginate(detail=True, limit=3)
+
+        assert len(pages) == 3
+        assert [_page_progress(page).delivered_flaws for page in pages] == [3, 6, 7]
+        # The count is consistent with the cursor chain: each page delivers
+        # through the flaw the next request resumes from.
+        assert [page.next_cursor for page in pages[:2]] == [
+            "CVE-2025-0003",
+            "CVE-2025-0006",
+        ]
+        assert pages[-1].next_cursor is None
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_counts_position_without_detail(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """delivered_flaws is a property of the pagination, not the entries:
+        detail=false pages report it identically."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        session = _make_session(*_numbered_flaws(5))
+        mock_bindings.new_session.return_value = session
+
+        _drain_refresh()
+        pages = _paginate(limit=2)
+
+        assert [_page_progress(page).delivered_flaws for page in pages] == [2, 4, 5]
+        assert all(page.entries is None for page in pages)
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_zero_for_empty_selection(self, mock_settings, mock_bindings, cache_dir):
+        """An empty selection delivers a single final page reporting zero
+        selected, refreshed, and delivered flaws."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        session = _make_session()
+        mock_bindings.new_session.return_value = session
+
+        response = get_osidb_bot_kpi(detail=True)
+
+        progress = _page_progress(response)
+        assert progress.selected_flaws == 0
+        assert progress.delivered_flaws == 0
+        assert progress.refreshed_flaws == 0
+        assert progress.complete is True
+        assert response.next_cursor is None
+        assert _page_entries(response) == []

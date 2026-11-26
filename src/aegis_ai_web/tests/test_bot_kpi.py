@@ -17,10 +17,12 @@ from aegis_ai_web.src.endpoints.bot_kpi import (
     _compute_deviation,
     _extract_flaw_ids,
     _merge_feature_stats,
+    _needs_fetch,
     _result_to_response,
     _values_equal,
     aggregate_kpi,
     extract_flaw_kpi,
+    stale_reason,
 )
 
 
@@ -906,3 +908,69 @@ class TestExtractFlawIds:
 
     def test_empty_list(self):
         assert _extract_flaw_ids([]) == []
+
+
+class TestStaleReason:
+    """Classification of a cached flaw against OSIDB's updated_dt watermark."""
+
+    def test_missing_entry_is_uncached(self):
+        assert stale_reason(None, "2026-10-01T00:00:00Z") == "uncached"
+
+    def test_equal_watermark_is_fresh(self):
+        cached = FlawCacheData(updated_dt="2026-10-01T00:00:00Z", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00Z") is None
+
+    def test_advanced_watermark_is_outdated(self):
+        cached = FlawCacheData(updated_dt="2026-09-01T00:00:00Z", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00Z") == "outdated"
+
+    def test_watermark_ahead_of_index_is_fresh(self):
+        # Only an *advanced* OSIDB watermark invalidates an entry; a cached
+        # watermark ahead of the index (e.g. the index row predates the
+        # cached fetch) must not trigger a re-fetch.
+        cached = FlawCacheData(updated_dt="2026-10-02T00:00:00Z", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00Z") is None
+
+    def test_legacy_entry_without_components_is_outdated(self):
+        # components=None predates component provenance, so the entry cannot
+        # be trusted even when its watermark equals OSIDB's exactly.
+        cached = FlawCacheData(updated_dt="2026-10-01T00:00:00Z")
+        assert stale_reason(cached, "2026-10-01T00:00:00Z") == "outdated"
+
+    def test_malformed_cached_watermark_is_outdated(self):
+        cached = FlawCacheData(updated_dt="not-a-timestamp", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00Z") == "outdated"
+
+    def test_empty_osidb_watermark_is_fresh_once_cached(self):
+        # The flaw index stores "" for flaws missing updated_dt. OSIDB
+        # provides no ordering to compare against, so a cached entry is as
+        # fresh as OSIDB allows -- re-fetching could never converge.
+        cached = FlawCacheData(updated_dt="2026-10-01T00:00:00Z", components=[])
+        assert stale_reason(cached, "") is None
+
+    def test_naive_cached_watermark_is_read_as_utc(self):
+        # Naive watermarks are compared as UTC rather than crashing on the
+        # naive/aware datetime mix.
+        cached = FlawCacheData(updated_dt="2026-10-01T00:00:00", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00+00:00") is None
+
+    def test_naive_osidb_watermark_is_read_as_utc(self):
+        cached = FlawCacheData(updated_dt="2026-10-01T02:00:00+00:00", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00") is None
+
+    def test_offset_watermarks_compare_on_absolute_time(self):
+        # 01:00+02:00 is 23:00 UTC on the previous day -- earlier than the
+        # OSIDB watermark despite the later wall-clock reading.
+        cached = FlawCacheData(updated_dt="2026-10-01T01:00:00+02:00", components=[])
+        assert stale_reason(cached, "2026-10-01T00:00:00Z") == "outdated"
+
+
+class TestNeedsFetch:
+    def test_true_for_any_stale_reason(self):
+        assert _needs_fetch(None, "2026-10-01T00:00:00Z") is True
+        legacy = FlawCacheData(updated_dt="2026-10-01T00:00:00Z")
+        assert _needs_fetch(legacy, "2026-10-01T00:00:00Z") is True
+
+    def test_false_when_fresh(self):
+        cached = FlawCacheData(updated_dt="2026-10-01T00:00:00Z", components=[])
+        assert _needs_fetch(cached, "2026-10-01T00:00:00Z") is False

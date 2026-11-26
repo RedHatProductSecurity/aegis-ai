@@ -31,6 +31,7 @@
 | `AEGIS_WEB_FEEDBACK_LOG`   | Feedback log file (CSV format)            | `~/.config/aegis_ai/feedback.csv` |
 | `AEGIS_WEB_PROGRAMMATIC_FEEDBACK_LOG` | Programmatic feedback log file (CSV format) | `~/.config/aegis_ai/programmatic_feedback.csv` |
 | `AEGIS_BOT_KPI_CACHE_DIR`  | Directory for osidb-bot KPI cache file    | `~/.config/aegis_ai/osidb_bot_kpi` |
+| `AEGIS_BOT_KPI_MAX_REFRESH_SECS` | Wall-clock budget per request for refreshing the osidb-bot KPI cache from OSIDB (paginated endpoint) | `20` |
 | `AEGIS_WEB_ENABLE_CONSOLE` | Enable web console                        | `false`                           |
 
 

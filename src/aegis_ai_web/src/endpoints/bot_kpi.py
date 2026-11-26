@@ -7,11 +7,13 @@ values to measure how often analysts keep, modify, or skip bot suggestions.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+import time
+from bisect import bisect_right
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import osidb_bindings
 from fastapi import HTTPException
@@ -25,7 +27,13 @@ from aegis_ai.features.cve.impact_mappings import (
 )
 from aegis_ai.state_file import StateFileHandler
 from aegis_ai.toolsets.tools.osidb.osidb_bearer import BearerOSIDBSession
-from aegis_ai_web.src.data_models import BotFeatureKPI, BotKPIEntry, BotKPIResponse
+from aegis_ai_web.src.data_models import (
+    BotFeatureKPI,
+    BotKPICacheStatusResponse,
+    BotKPIEntry,
+    BotKPIProgress,
+    BotKPIResponse,
+)
 from aegis_ai_web.src.endpoints.kpi_filters import (
     NO_RECORD_FILTERS,
     KPIRecordFilters,
@@ -154,6 +162,12 @@ class BotKPIResult:
     modified_counts: dict[str, int] = field(default_factory=dict)
     entries: list[BotKPIEntry] | None = None
     available_components: list[str] | None = None
+    # Pagination metadata (see _fetch_with_cache): ``final_page`` marks the
+    # response that carries the aggregate over the whole selection;
+    # ``next_cursor`` is set on intermediate pages only.
+    final_page: bool = True
+    next_cursor: str | None = None
+    progress: BotKPIProgress | None = None
 
 
 def _values_equal(suggested: Any, current: Any) -> bool:
@@ -415,6 +429,7 @@ def _fetch_flaw_index(
     changed_after: datetime | None = None,
     changed_before: datetime | None = None,
     component: str | None = None,
+    updated_since: datetime | None = None,
 ) -> dict[str, str]:
     """Fetch a cheap ``{cve_id: updated_dt}`` index of the selected DONE flaws.
 
@@ -435,7 +450,11 @@ def _fetch_flaw_index(
     bounds and ``component`` as the flaw-level ``components`` filter (the field
     the KPI scores against). These drive *selection* only: they never invalidate
     a cache entry, which is refreshed solely when its own ``updated_dt`` advances
-    (see :func:`_fetch_with_cache`).
+    (see :func:`_fetch_with_cache``).
+
+    ``updated_since`` bounds the query to flaws updated since a watermark,
+    turning it into a delta query for stamp validation (see
+    :func:`resolve_selection`); when both bounds apply, the later one wins.
     """
     kwargs: dict[str, Any] = {
         "include_fields": "cve_id,updated_dt",
@@ -444,8 +463,11 @@ def _fetch_flaw_index(
         "cve_id__isempty": False,
         "limit": 1000,
     }
-    if changed_after is not None:
-        kwargs["updated_dt_gte"] = changed_after
+    lower_bounds = [
+        as_utc(bound) for bound in (changed_after, updated_since) if bound is not None
+    ]
+    if lower_bounds:
+        kwargs["updated_dt_gte"] = max(lower_bounds)
     if changed_before is not None:
         kwargs["updated_dt_lte"] = changed_before
     if component is not None:
@@ -465,6 +487,9 @@ def _fetch_flaw_index(
 
 
 _BATCH_SIZE = 100
+
+# Default number of selected flaws served (and at most refreshed) per request.
+_DEFAULT_PAGE_SIZE = 400
 
 
 def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, Any]]:
@@ -489,6 +514,45 @@ def _fetch_flaws_batch(osidb: Any, cve_ids: list[str]) -> dict[str, dict[str, An
     return result
 
 
+def refresh_stale_slice(
+    osidb: Any, index: dict[str, str], stale_ids: list[str]
+) -> dict[str, FlawCacheData]:
+    """Fetch one bounded slice of the stale flaws under the refresh budget.
+
+    Flaws are fetched in ``_BATCH_SIZE`` batches in order. When the time
+    budget (``AEGIS_BOT_KPI_MAX_REFRESH_SECS``) is exhausted, the remaining
+    flaws are left for the next call; at least one batch always runs so every
+    call makes progress. A flaw that vanished between the index query and the
+    fetch (e.g. deleted) is tombstoned as a non-bot-processed skip marker at
+    its indexed watermark, so the refresh still completes. Called by the
+    cache-refresh endpoint, whose polling clients drive the pacing.
+    """
+    fetched: dict[str, FlawCacheData] = {}
+    deadline = time.monotonic() + get_settings().bot_kpi_max_refresh_seconds
+    for offset in range(0, len(stale_ids), _BATCH_SIZE):
+        if fetched and time.monotonic() > deadline:
+            logger.info(
+                "KPI refresh time budget exhausted after %d flaws; "
+                "deferring %d flaws to the next refresh call",
+                len(fetched),
+                len(stale_ids) - offset,
+            )
+            break
+        chunk = stale_ids[offset : offset + _BATCH_SIZE]
+        batch = _fetch_flaws_batch(osidb, chunk)
+        for cve_id in chunk:
+            flaw_data = batch.get(cve_id)
+            if flaw_data is None:
+                fetched[cve_id] = FlawCacheData(
+                    updated_dt=index.get(cve_id, ""),
+                    bot_processed=False,
+                    components=[],
+                )
+            else:
+                fetched[cve_id] = _flaw_cache_data(flaw_data, index.get(cve_id, ""))
+    return fetched
+
+
 def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheData:
     """Build a cache entry from a fully-fetched flaw.
 
@@ -510,21 +574,48 @@ def _flaw_cache_data(flaw_data: dict[str, Any], updated_dt: str) -> FlawCacheDat
     )
 
 
-def _needs_fetch(cached: FlawCacheData | None, updated_dt: str) -> bool:
-    """A flaw needs a full fetch when OSIDB's watermark is newer."""
-    if cached is None or cached.components is None:
-        return True
+def stale_reason(
+    cached: FlawCacheData | None, updated_dt: str
+) -> Literal["uncached", "outdated"] | None:
+    """Why a flaw's cached data is stale; None when it is still current.
+
+    ``uncached`` -- the flaw has no cache entry at all. ``outdated`` -- an
+    entry exists but cannot be trusted to be current: OSIDB's watermark
+    advanced past it, it predates component provenance (``components is
+    None``), or its own watermark is malformed. The latter two share the
+    bucket because the remedy is identical: a full re-fetch.
+
+    A flaw whose *OSIDB* watermark is unusable (the index stores ``""`` when
+    OSIDB reports none) is treated as fresh once cached: OSIDB provides no
+    ordering to compare against, so re-fetching it could never converge and
+    a polling refresh drain would never terminate. It is fetched once, as
+    fresh as OSIDB allows.
+    """
+    if cached is None:
+        return "uncached"
+    if cached.components is None:
+        return "outdated"
     try:
-        cached_dt = datetime.fromisoformat(cached.updated_dt)
         osidb_dt = datetime.fromisoformat(updated_dt)
     except ValueError:
-        # A malformed watermark cannot establish freshness safely.
-        return True
+        return None
+    try:
+        cached_dt = datetime.fromisoformat(cached.updated_dt)
+    except ValueError:
+        # A malformed cached watermark cannot establish freshness safely.
+        return "outdated"
     if cached_dt.tzinfo is None:
         cached_dt = cached_dt.replace(tzinfo=UTC)
     if osidb_dt.tzinfo is None:
         osidb_dt = osidb_dt.replace(tzinfo=UTC)
-    return cached_dt < osidb_dt
+    if cached_dt < osidb_dt:
+        return "outdated"
+    return None
+
+
+def _needs_fetch(cached: FlawCacheData | None, updated_dt: str) -> bool:
+    """A flaw needs a full fetch when its cached data is stale."""
+    return stale_reason(cached, updated_dt) is not None
 
 
 class SuggestionRecord(BaseModel):
@@ -579,6 +670,21 @@ class FlawCacheData(BaseModel):
     fields: dict[str, list[SuggestionRecord]] = {}
 
 
+class SelectionStamp(BaseModel):
+    """The OSIDB flaw index for one selection, watermark-stamped.
+
+    ``index`` maps cve_id to the flaw's OSIDB ``updated_dt`` watermark at the
+    time the selection was last validated. ``fetched_at`` is recorded *before*
+    the validating query is issued, so anything updated during a long query is
+    re-seen by the next delta (monotone-safe). Cursor-carrying page requests
+    trust the matching stamp: all pages of one run reflect the selection as
+    of the run's first request.
+    """
+
+    index: dict[str, str]
+    fetched_at: datetime
+
+
 class BotKPICacheEntry(BaseModel):
     """On-disk cache of each DONE flaw's compact KPI-relevant records.
 
@@ -591,9 +697,15 @@ class BotKPICacheEntry(BaseModel):
     what lets a flaw be correctly re-scored if it's edited again after the bot's
     initial pass: its entry is simply overwritten and the aggregate is recomputed
     from scratch over the selected CVE IDs.
+
+    ``selections`` holds the watermark-stamped selection indexes (see
+    :class:`SelectionStamp`) keyed by filter signature, so a run's first request
+    validates the selection with a cheap delta query instead of a full scan and
+    the run's page requests reuse it without OSIDB contact.
     """
 
     flaws: dict[str, FlawCacheData]
+    selections: dict[str, SelectionStamp] = {}
 
     @property
     def total_flaws_processed(self) -> int:
@@ -694,16 +806,34 @@ def _stats_to_response(stats: FeatureStats, modified_count: int) -> BotFeatureKP
 
 
 def _result_to_response(result: BotKPIResult) -> BotKPIResponse:
-    response = BotKPIResponse(
-        total_flaws_processed=result.total_flaws_processed,
-        features={
+    """Map an internal result to the API response.
+
+    Intermediate pages of a paginated response carry placeholder aggregates
+    (``total_flaws_processed`` 0, empty ``features``) plus their slice's
+    ``entries``, the refresh ``progress``, and the ``next_cursor`` to
+    continue from; the final page carries the complete aggregate.
+    """
+    if result.final_page:
+        features = {
             name: _stats_to_response(stats, result.modified_counts.get(name, 0))
             for name, stats in result.features.items()
-        },
+        }
+        total_flaws_processed = result.total_flaws_processed
+    else:
+        features = {}
+        total_flaws_processed = 0
+    response = BotKPIResponse(
+        total_flaws_processed=total_flaws_processed,
+        features=features,
     )
     if result.entries is not None:
         response.entries = result.entries
+    if result.final_page and result.available_components is not None:
         response.available_components = result.available_components
+    if not result.final_page:
+        response.next_cursor = result.next_cursor
+    if result.progress is not None:
+        response.progress = result.progress
     return response
 
 
@@ -717,23 +847,237 @@ def _get_cache_path() -> Path:
     return Path(settings.config_dir) / "osidb_bot_kpi" / "kpi_cache.json"
 
 
-def _cache_handler() -> StateFileHandler[BotKPICacheEntry]:
+def _cache_handler(*, create: bool = True) -> StateFileHandler[BotKPICacheEntry]:
     """A blocking, file-locked handler over the KPI cache file itself.
 
     Locking the cache file directly (no separate ``.lock`` sidecar) means
     there is only ever one file to reason about. The blocking lock serializes
     the read-modify-write cycles of concurrent requests so they can't clobber
-    each other's results.
+    each other's results. ``create=False`` is the read-only discipline: the
+    cache file (and its directory) is never materialized by a read.
     """
     cache_path = _get_cache_path()
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    return StateFileHandler(str(cache_path), BotKPICacheEntry, blocking=True)
+    if create:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+    return StateFileHandler(
+        str(cache_path), BotKPICacheEntry, blocking=True, create=create
+    )
 
 
 def _read_cache() -> BotKPICacheEntry | None:
-    """Read the cache under a brief lock; None if absent, empty, or corrupt."""
-    with _cache_handler() as handler:
+    """Read the cache under a brief lock; None if absent, empty, or corrupt.
+
+    Read-only: an absent or corrupt cache must not be created or repaired by
+    a reader -- the write path materializes it on first refresh.
+    """
+    with _cache_handler(create=False) as handler:
         return handler.read()
+
+
+def as_utc(value: datetime) -> datetime:
+    """Read a possibly naive datetime as UTC (query params may be naive)."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+def selection_signature(
+    changed_after: datetime | None,
+    changed_before: datetime | None,
+    component: str | None,
+) -> str:
+    """Identify the selection a stamp belongs to, from its filter triple."""
+    return "|".join(
+        (
+            changed_after.isoformat() if changed_after is not None else "",
+            changed_before.isoformat() if changed_before is not None else "",
+            component or "",
+        )
+    )
+
+
+# A stamp is re-validated by a delta query bounded to flaws updated since its
+# watermark; one minute of slack absorbs clock skew between OSIDB and this
+# host (re-seeing a flaw is harmless -- the merge is idempotent).
+_SELECTION_DELTA_SLACK = timedelta(minutes=1)
+
+# A stamp older than a day is rebuilt from a full query so deletions --
+# which delta queries cannot see -- cannot drift the selection forever.
+_SELECTION_FULL_REFRESH_AFTER = timedelta(hours=24)
+
+# Filter signatures whose stamped indexes are kept in the cache file;
+# interleaved filter scopes beyond this evict the least recently stamped.
+_SELECTION_STAMP_LIMIT = 4
+
+
+def evict_old_stamps(stamps: dict[str, SelectionStamp]) -> None:
+    """Keep the most recently stamped ``_SELECTION_STAMP_LIMIT`` signatures."""
+    if len(stamps) <= _SELECTION_STAMP_LIMIT:
+        return
+    by_recency = sorted(stamps, key=lambda sig: as_utc(stamps[sig].fetched_at))
+    for signature in by_recency[: len(stamps) - _SELECTION_STAMP_LIMIT]:
+        del stamps[signature]
+
+
+def merge_stamps(
+    existing: dict[str, SelectionStamp], updated: dict[str, SelectionStamp] | None
+) -> dict[str, SelectionStamp]:
+    """Merge updated stamps onto the live set, keeping the newer stamp per
+    signature so a concurrent writer's fresher validation is never regressed."""
+    if updated is None:
+        return existing
+    merged = dict(existing)
+    for signature, stamp in updated.items():
+        current = merged.get(signature)
+        if current is None or as_utc(stamp.fetched_at) >= as_utc(current.fetched_at):
+            merged[signature] = stamp
+    evict_old_stamps(merged)
+    return merged
+
+
+def resolve_selection(
+    osidb: Any,
+    cached: BotKPICacheEntry | None,
+    *,
+    changed_after: datetime | None,
+    changed_before: datetime | None,
+    component: str | None,
+    validate: bool,
+) -> tuple[dict[str, str], dict[str, SelectionStamp] | None]:
+    """Resolve the selection index, reusing the matching watermark stamp.
+
+    A validating request (a run's first request, or the status endpoints)
+    extends the stamped index with a delta query over flaws updated since the
+    stamp watermark -- measured at ~0.25s for an hour of updates versus the
+    ~150s full scan for 72k flaws -- or rebuilds it with a full query when no
+    stamp exists or it is older than the full-refresh horizon. A trusting
+    request (a cursor-carrying page) serves from the matching stamp with no
+    OSIDB contact, so all pages of one run reflect the selection as of the
+    run's first request. A missing or mismatched stamp always falls back to
+    validation: requests are self-healing and never depend on prior state.
+
+    Returns the resolved index and, when it changed, the stamps to persist.
+    An unchanged index (empty delta, identical watermarks) keeps the existing
+    stamp so the common warm run-start stays write-free.
+    """
+    signature = selection_signature(changed_after, changed_before, component)
+    stamps = dict(cached.selections) if cached is not None else {}
+    stamp = stamps.get(signature)
+
+    if not validate and stamp is not None:
+        return stamp.index, None
+
+    fetched_at = datetime.now(UTC)
+    if (
+        stamp is not None
+        and fetched_at - as_utc(stamp.fetched_at) <= _SELECTION_FULL_REFRESH_AFTER
+    ):
+        delta = _fetch_flaw_index(
+            osidb,
+            changed_after=changed_after,
+            changed_before=changed_before,
+            component=component,
+            updated_since=as_utc(stamp.fetched_at) - _SELECTION_DELTA_SLACK,
+        )
+        if any(
+            stamp.index.get(cve_id) != updated_dt
+            for cve_id, updated_dt in delta.items()
+        ):
+            index = dict(stamp.index)
+            index.update(delta)
+            stamps[signature] = SelectionStamp(index=index, fetched_at=fetched_at)
+            return index, stamps
+        # Nothing changed; the persisted stamp (and its watermark) stands.
+        return stamp.index, None
+
+    index = _fetch_flaw_index(
+        osidb,
+        changed_after=changed_after,
+        changed_before=changed_before,
+        component=component,
+    )
+    stamps[signature] = SelectionStamp(index=index, fetched_at=fetched_at)
+    evict_old_stamps(stamps)
+    return index, stamps
+
+
+@dataclass
+class CacheCheck:
+    """The selection index diffed against the on-disk cache.
+
+    Shared by the KPI refresh path (which fetches ``stale_ids`` and merges
+    them into the cache) and the cache-status endpoint (which only reports
+    the counts). ``cached`` is the cache snapshot taken *before* any fetch,
+    which the merge logic relies on to detect concurrent writes. ``stamps``
+    carries updated selection stamps to persist when the resolution changed
+    the index (None means unchanged).
+    """
+
+    index: dict[str, str]
+    cached: BotKPICacheEntry | None
+    stale_ids: list[str]
+    uncached_count: int
+    outdated_count: int
+    stamps: dict[str, SelectionStamp] | None = None
+
+
+def classify_stale(
+    index: dict[str, str], cached_flaws: dict[str, FlawCacheData]
+) -> tuple[list[str], int, int]:
+    """Classify every selected flaw as fresh, uncached, or outdated.
+
+    Returns the stale CVE IDs in selection order plus the uncached and
+    outdated counts; fresh flaws are simply absent from the stale list.
+    """
+    stale_ids: list[str] = []
+    uncached_count = 0
+    outdated_count = 0
+    for cve_id, updated_dt in index.items():
+        reason = stale_reason(cached_flaws.get(cve_id), updated_dt)
+        if reason is None:
+            continue
+        stale_ids.append(cve_id)
+        if reason == "uncached":
+            uncached_count += 1
+        else:
+            outdated_count += 1
+    return stale_ids, uncached_count, outdated_count
+
+
+def check_cache(
+    osidb: Any,
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+    component: str | None = None,
+    validate: bool = True,
+) -> CacheCheck:
+    """Select the requested flaws and diff their watermarks against the cache.
+
+    Runs the selection resolution (see :func:`resolve_selection`; a trusting
+    check reuses the matching stamp without OSIDB contact) and classifies
+    every selected flaw as fresh, uncached, or outdated (see
+    :func:`stale_reason`). Read-only: full flaw data is never fetched and the
+    cache is never written here -- the caller persists ``stamps`` if it
+    chooses to write at all.
+    """
+    cached = _read_cache()
+    index, stamps = resolve_selection(
+        osidb,
+        cached,
+        changed_after=changed_after,
+        changed_before=changed_before,
+        component=component,
+        validate=validate,
+    )
+    cached_flaws = cached.flaws if cached is not None else {}
+    stale_ids, uncached_count, outdated_count = classify_stale(index, cached_flaws)
+    return CacheCheck(
+        index=index,
+        cached=cached,
+        stale_ids=stale_ids,
+        uncached_count=uncached_count,
+        outdated_count=outdated_count,
+        stamps=stamps,
+    )
 
 
 # -- Endpoint handler ----------------------------------------------------------
@@ -776,67 +1120,222 @@ def _fetch_with_cache(
     component: str | None = None,
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
     detail: bool = False,
+    cursor: str | None = None,
+    limit: int = _DEFAULT_PAGE_SIZE,
 ) -> BotKPIResult:
-    """Select the requested flaws from OSIDB, refresh stale entries, then score.
+    """Serve one limit-sized page of the selection from the cache.
 
     The request's filters drive a single *selection* query and nothing else:
 
-    *Select* -- one cheap ``{cve_id: updated_dt}`` index is fetched with the
-    request's ``changed_after`` / ``changed_before`` (as ``updated_dt`` bounds)
-    and ``component`` pushed down server-side (see :func:`_fetch_flaw_index`).
-    Its CVE IDs are exactly the flaws the response covers.
+    *Select* -- the request's ``changed_after`` / ``changed_before`` (as
+    ``updated_dt`` bounds) and ``component`` define a selection whose index
+    is resolved once per run and then reused: the run's first request (no
+    cursor) validates the watermark-stamped index with a cheap delta query,
+    and the run's page requests (cursor present) trust that stamp without
+    OSIDB contact (see :func:`resolve_selection`). Its CVE IDs, sorted, are
+    exactly the flaws the response covers.
 
-    *Refresh* -- each selected flaw's full data is fetched only when it is
-    uncached or its own ``updated_dt`` watermark advanced past the cached one
-    (see :func:`_needs_fetch`); an unchanged flaw is served from its cache entry.
-    A cache entry is thus invalidated solely by its own watermark, never by the
-    request's filters. Fetches run outside the cache lock so a slow query can't
-    block other requests; when nothing is stale, the cache is served without a
-    write, and only the refreshed CVE keys are ever overwritten -- a narrow
-    request never evicts another window's or component's flaws.
+    *Serve* -- the selection is served in ``limit``-sized pages as pure cache
+    reads: a page never fetches from OSIDB and never writes the cache, so it
+    can never block or time out. A stale flaw serves its last-known cached
+    records and a never-cached flaw simply contributes no entries; the
+    ``progress`` block honestly reports how much of the selection is
+    currently cached. Refreshing is the cache-refresh endpoint's job, driven
+    by polling clients (see :func:`refresh_osidb_bot_kpi_cache`). A selection
+    that fits one page is served as a single final page.
 
-    The aggregate is recomputed fresh from the cached records for the selected
-    CVE IDs, never cached itself.
+    The aggregate is recomputed fresh from the cached records, never cached
+    itself. Intermediate pages carry only their own slice's ``entries`` plus
+    pagination metadata; the final page adds the aggregate over the whole
+    selection, so a client that accumulates pages ends with exactly one copy
+    of every entry.
     """
-    index = _fetch_flaw_index(
+    check = check_cache(
+        osidb,
+        changed_after=changed_after,
+        changed_before=changed_before,
+        component=component,
+        # A run's first request validates the selection; its page requests
+        # trust the stamp so pagination costs no further index queries.
+        validate=cursor is None,
+    )
+    index = check.index
+    cached = check.cached
+
+    selected = sorted(index)
+    page_ids = [cve_id for cve_id in selected if cursor is None or cve_id > cursor][
+        :limit
+    ]
+
+    if check.stamps is not None:
+        # The selection resolution changed the index; persist the stamp so
+        # the run's page requests can trust it.
+        entry = persist_stamps(check.stamps, check.cached)
+    else:
+        entry = cached if cached is not None else BotKPICacheEntry(flaws={})
+
+    live = entry.flaws
+
+    # Pure serving: every flaw of the page is delivered at its last-known
+    # cached state; freshness is reported, not enforced.
+    final_page = not page_ids or page_ids[-1] == selected[-1]
+
+    page_result = entry.to_kpi_result(
+        only_cve_ids=set(page_ids),
+        changed_after=changed_after,
+        changed_before=changed_before,
+        record_filters=record_filters,
+        detail=detail,
+    )
+    if final_page:
+        # The final page's aggregate covers the whole selection; its entries
+        # stay scoped to the page so accumulating clients don't double-count.
+        result = entry.to_kpi_result(
+            only_cve_ids=set(index),
+            changed_after=changed_after,
+            changed_before=changed_before,
+            record_filters=record_filters,
+            detail=detail,
+        )
+        if detail:
+            result.entries = page_result.entries
+    else:
+        result = page_result
+
+    refreshed = sum(
+        1 for cve_id in selected if not _needs_fetch(live.get(cve_id), index[cve_id])
+    )
+    # Delivered counts every selected flaw up to and including this page's
+    # last flaw, so a client appending this page's entries reaches exactly
+    # this total -- an honest delivery bar without any run state.
+    delivered_through = page_ids[-1] if page_ids else cursor
+    delivered = bisect_right(selected, delivered_through) if delivered_through else 0
+    result.final_page = final_page
+    result.next_cursor = None if final_page else (page_ids[-1] if page_ids else cursor)
+    result.progress = BotKPIProgress(
+        selected_flaws=len(selected),
+        refreshed_flaws=refreshed,
+        delivered_flaws=delivered,
+        complete=refreshed == len(selected),
+    )
+    return result
+
+
+def new_osidb_session(osidb_token: str | None) -> Any:
+    """An OSIDB session for the configured server, authenticated per token."""
+    osidb_server = get_settings().osidb_server_url
+    if osidb_token:
+        return BearerOSIDBSession(osidb_server, osidb_token)
+    return osidb_bindings.new_session(osidb_server_uri=osidb_server)
+
+
+def guarded_osidb_call[T](operation: str, call: Callable[[], T]) -> T:
+    """Run an OSIDB-backed handler body, mapping failures to HTTP errors.
+
+    OSError also covers requests.exceptions.RequestException (it subclasses
+    OSError), so this catches real connectivity failures without masking
+    programming bugs (AttributeError, TypeError, etc.) as a 503 outage.
+    """
+    try:
+        return call()
+    except OSError:
+        logger.error("Failed to connect to OSIDB")
+        logger.debug("OSIDB connection error details", exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to connect to OSIDB.",
+        ) from None
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("Error computing %s", operation)
+        logger.debug("%s error details", operation, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal error occurred while computing {operation}.",
+        ) from None
+
+
+def persist_stamps(
+    stamps: dict[str, SelectionStamp], cached: BotKPICacheEntry | None
+) -> BotKPICacheEntry:
+    """Persist newly resolved selection stamps under the cache lock.
+
+    A stamps-only write: flaw entries are never touched, and an unchanged
+    stamp set writes nothing. Without this, a selection resolution that
+    built its stamp via a full query would be re-run in full on every
+    subsequent request. ``cached`` is the pre-resolution snapshot the merge
+    diffs against; returns the post-write cache entry.
+    """
+    with _cache_handler() as handler:
+        latest = handler.read()
+        base = latest if latest is not None else cached
+        if base is None:
+            entry = BotKPICacheEntry(flaws={}, selections=stamps)
+            handler.write(entry)
+            return entry
+        merged = merge_stamps(base.selections, stamps)
+        if merged == base.selections:
+            return base
+        entry = BotKPICacheEntry(flaws=base.flaws, selections=merged)
+        handler.write(entry)
+        return entry
+
+
+def refresh_cache_slice(
+    osidb: Any,
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+    component: str | None = None,
+) -> CacheCheck:
+    """Advance the refresh of the selected flaws by one bounded slice.
+
+    Validates the selection (delta or full query, see :func:`check_cache`),
+    refreshes a time-budgeted slice of the whole stale list (see
+    :func:`refresh_stale_slice`), merges the fetched entries and updated
+    stamps into the cache under the lock, and re-classifies so the returned
+    counts describe the post-slice state. A call with nothing stale refreshes
+    no flaws but still persists a newly resolved selection stamp, so polling
+    an already-fresh selection stops paying the full index scan.
+    """
+    check = check_cache(
         osidb,
         changed_after=changed_after,
         changed_before=changed_before,
         component=component,
     )
+    if not check.stale_ids:
+        if check.stamps is not None:
+            persist_stamps(check.stamps, check.cached)
+        return check
 
-    cached = _read_cache()
+    cached = check.cached
     cached_flaws = cached.flaws if cached is not None else {}
+    fetched = refresh_stale_slice(osidb, check.index, check.stale_ids)
 
-    stale_ids = [
-        cve_id
-        for cve_id, updated_dt in index.items()
-        if _needs_fetch(cached_flaws.get(cve_id), updated_dt)
-    ]
-    batch = _fetch_flaws_batch(osidb, stale_ids)
-    fetched: dict[str, FlawCacheData] = {}
-    for cve_id, flaw_data in batch.items():
-        fetched[cve_id] = _flaw_cache_data(flaw_data, index.get(cve_id, ""))
+    with _cache_handler() as handler:
+        latest = handler.read()
+        existing = latest.flaws if latest is not None else cached_flaws
+        existing_stamps = (
+            latest.selections
+            if latest is not None
+            else (cached.selections if cached is not None else {})
+        )
+        entry = BotKPICacheEntry(
+            flaws=_merge_fetched(existing, fetched, cached_flaws),
+            selections=merge_stamps(existing_stamps, check.stamps),
+        )
+        handler.write(entry)
 
-    if not fetched:
-        # Every selected flaw was already current, so there is nothing to write;
-        # serve the cache as-is.
-        entry = cached if cached is not None else BotKPICacheEntry(flaws={})
-    else:
-        with _cache_handler() as handler:
-            latest = handler.read()
-            existing = latest.flaws if latest is not None else cached_flaws
-            entry = BotKPICacheEntry(
-                flaws=_merge_fetched(existing, fetched, cached_flaws)
-            )
-            handler.write(entry)
-
-    return entry.to_kpi_result(
-        only_cve_ids=set(index),
-        changed_after=changed_after,
-        changed_before=changed_before,
-        record_filters=record_filters,
-        detail=detail,
+    stale_ids, uncached_count, outdated_count = classify_stale(check.index, entry.flaws)
+    return CacheCheck(
+        index=check.index,
+        cached=entry,
+        stale_ids=stale_ids,
+        uncached_count=uncached_count,
+        outdated_count=outdated_count,
+        stamps=None,
     )
 
 
@@ -848,44 +1347,95 @@ def get_osidb_bot_kpi(
     record_filters: KPIRecordFilters = NO_RECORD_FILTERS,
     detail: bool = False,
     osidb_token: str | None = None,
+    cursor: str | None = None,
+    limit: int = _DEFAULT_PAGE_SIZE,
 ) -> BotKPIResponse:
-    """Fetch bot-processed flaws from OSIDB and compute KPI metrics."""
-    try:
+    """Fetch bot-processed flaws from OSIDB and compute KPI metrics.
 
-        def fetch() -> BotKPIResponse:
-            osidb_server = get_settings().osidb_server_url
-            osidb = (
-                BearerOSIDBSession(osidb_server, osidb_token)
-                if osidb_token
-                else osidb_bindings.new_session(osidb_server_uri=osidb_server)
-            )
-            result = _fetch_with_cache(
-                osidb,
-                changed_after=changed_after,
-                changed_before=changed_before,
-                component=component,
-                record_filters=record_filters,
-                detail=detail,
-            )
-            return _result_to_response(result)
+    The response is paginated over the selected flaws: follow ``next_cursor``
+    (passing it back as ``cursor``) until it is absent, accumulating each
+    page's ``entries``; the final page carries the aggregate metrics. Pages
+    are pure cache reads -- poll the cache-refresh endpoint first to bring
+    the cache up to date (see :func:`refresh_osidb_bot_kpi_cache`).
+    """
 
-        return fetch()
-    except OSError:
-        # OSError also covers requests.exceptions.RequestException (it subclasses
-        # OSError), so this catches real connectivity failures without masking
-        # programming bugs (AttributeError, TypeError, etc.) as a 503 outage.
-        logger.error("Failed to connect to OSIDB")
-        logger.debug("OSIDB connection error details", exc_info=True)
-        raise HTTPException(
-            status_code=503,
-            detail="Unable to connect to OSIDB.",
-        ) from None
-    except HTTPException:
-        raise
-    except Exception:
-        logger.error("Error computing osidb-bot KPI")
-        logger.debug("osidb-bot KPI error details", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="An internal error occurred while computing osidb-bot KPI metrics.",
-        ) from None
+    def fetch() -> BotKPIResponse:
+        result = _fetch_with_cache(
+            new_osidb_session(osidb_token),
+            changed_after=changed_after,
+            changed_before=changed_before,
+            component=component,
+            record_filters=record_filters,
+            detail=detail,
+            cursor=cursor,
+            limit=limit,
+        )
+        return _result_to_response(result)
+
+    return guarded_osidb_call("osidb-bot KPI metrics", fetch)
+
+
+def refresh_osidb_bot_kpi_cache(
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+    component: str | None = None,
+    osidb_token: str | None = None,
+) -> BotKPICacheStatusResponse:
+    """Advance the osidb-bot KPI cache refresh by one bounded slice.
+
+    Each call refreshes a time-budgeted batch of the selected flaws' stale
+    entries (at least one batch, so every call makes progress) and returns
+    the post-slice counts. A polling client drains the backlog at its own
+    pace: the poll rate bounds the OSIDB load and no server-side job state
+    exists -- requests stay stateless.
+    """
+
+    def fetch() -> BotKPICacheStatusResponse:
+        check = refresh_cache_slice(
+            new_osidb_session(osidb_token),
+            changed_after=changed_after,
+            changed_before=changed_before,
+            component=component,
+        )
+        return BotKPICacheStatusResponse(
+            total_flaws_selected=len(check.index),
+            fresh_count=len(check.index) - len(check.stale_ids),
+            stale_count=len(check.stale_ids),
+            uncached_count=check.uncached_count,
+            outdated_count=check.outdated_count,
+        )
+
+    return guarded_osidb_call("osidb-bot cache refresh", fetch)
+
+
+def get_osidb_bot_cache_status(
+    *,
+    changed_after: datetime | None = None,
+    changed_before: datetime | None = None,
+    component: str | None = None,
+    osidb_token: str | None = None,
+) -> BotKPICacheStatusResponse:
+    """Report how many selected flaws need a cache refresh, without refreshing.
+
+    Read-only: the cheap OSIDB flaw-index query runs (it *is* the freshness
+    check -- see :func:`check_cache`), but no full flaw data is fetched and
+    the cache file is never written.
+    """
+
+    def fetch() -> BotKPICacheStatusResponse:
+        check = check_cache(
+            new_osidb_session(osidb_token),
+            changed_after=changed_after,
+            changed_before=changed_before,
+            component=component,
+        )
+        return BotKPICacheStatusResponse(
+            total_flaws_selected=len(check.index),
+            fresh_count=len(check.index) - len(check.stale_ids),
+            stale_count=len(check.stale_ids),
+            uncached_count=check.uncached_count,
+            outdated_count=check.outdated_count,
+        )
+
+    return guarded_osidb_call("osidb-bot cache status", fetch)

@@ -430,8 +430,48 @@ class BotKPIEntry(BaseModel):
     confidence: float | None
 
 
+class BotKPIProgress(BaseModel):
+    """osidb-bot KPI cache and delivery progress for a paginated response."""
+
+    selected_flaws: int = Field(
+        ...,
+        ge=0,
+        description="Flaws matching the request's selection filters.",
+    )
+    refreshed_flaws: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Of the selected flaws, those already refreshed in the KPI cache "
+            "at the time of this response."
+        ),
+    )
+    delivered_flaws: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Of the selected flaws, those delivered through this page's last "
+            "flaw -- the cumulative count a paginating client has received "
+            "once it appends this page's entries."
+        ),
+    )
+    complete: bool = Field(
+        ...,
+        description="True when every selected flaw is refreshed in the cache.",
+    )
+
+
 class BotKPIResponse(BaseModel):
-    """Response model for osidb-bot KPI metrics endpoint."""
+    """Response model for osidb-bot KPI metrics endpoint.
+
+    The response is paginated over the selected flaws: each page carries the
+    detail ``entries`` for its slice of the selection, a ``progress`` block,
+    and a ``next_cursor`` to continue from (absent/null on the final page).
+    Intermediate pages carry placeholder aggregates (``total_flaws_processed``
+    0, empty ``features``); the final page carries the complete aggregate.
+    The ``limit`` request parameter is the page size; a selection that fits
+    one page is served as a single final page.
+    """
 
     total_flaws_processed: int = Field(
         ...,
@@ -439,19 +479,96 @@ class BotKPIResponse(BaseModel):
         description=(
             "Number of bot-processed flaws that contributed to the result: those "
             "with at least one suggestion whose timestamp falls in the selected "
-            "time range, or all bot-processed flaws when no range is given."
+            "time range, or all bot-processed flaws when no range is given. "
+            "Placeholder 0 on non-final pages of a paginated response."
         ),
     )
     features: dict[str, BotFeatureKPI] = Field(
-        ..., description="Per-feature KPI metrics keyed by field name"
+        ...,
+        description=(
+            "Per-feature KPI metrics keyed by field name. Empty placeholder on "
+            "non-final pages of a paginated response."
+        ),
     )
     entries: list[BotKPIEntry] | None = Field(
         default=None,
-        description="Compact suggestion/skip records, only with detail=true",
+        description=(
+            "Compact suggestion/skip records for this page's flaws, "
+            "only with detail=true"
+        ),
     )
     available_components: list[str] | None = Field(
         default=None,
-        description="Sorted unique affected components in the selected bot flaws, only with detail=true",
+        description=(
+            "Sorted unique affected components in the selected bot flaws, only "
+            "with detail=true on the final page of a paginated response"
+        ),
+    )
+    progress: BotKPIProgress | None = Field(
+        default=None,
+        description=(
+            "Cache refresh progress, present on every paginated response. "
+            "complete=true reports that the cache holds every selected flaw "
+            "at its current OSIDB watermark; delivery may still continue "
+            "via next_cursor."
+        ),
+    )
+    next_cursor: str | None = Field(
+        default=None,
+        description=(
+            "CVE ID of the last flaw delivered by this page; pass it as the "
+            "cursor query parameter to fetch the next page. Absent (or null) "
+            "on the final page."
+        ),
+    )
+
+
+class BotKPICacheStatusResponse(BaseModel):
+    """Response model for the osidb-bot KPI cache status endpoint.
+
+    Reports the refresh state of the osidb-bot KPI cache for the requested
+    selection without refreshing it. Checkable invariants:
+    total_flaws_selected = fresh_count + stale_count, and
+    stale_count = uncached_count + outdated_count.
+    """
+
+    total_flaws_selected: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "DONE flaws in OSIDB matching the request's selection filters "
+            "(changed_after / changed_before / component)."
+        ),
+    )
+    fresh_count: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Selected flaws whose cached data is current and would be served "
+            "from the cache without an OSIDB re-fetch."
+        ),
+    )
+    stale_count: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Selected flaws whose full data would be re-fetched on the next "
+            "KPI request: uncached_count + outdated_count."
+        ),
+    )
+    uncached_count: int = Field(
+        ...,
+        ge=0,
+        description="Selected flaws with no cache entry yet (cold start).",
+    )
+    outdated_count: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Selected flaws whose OSIDB updated_dt watermark advanced past "
+            "the cached one, including legacy cache entries missing "
+            "component provenance."
+        ),
     )
 
 
