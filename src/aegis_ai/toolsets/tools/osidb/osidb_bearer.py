@@ -36,6 +36,16 @@ class _BearerFlawOperations:
             headers={"Authorization": f"Bearer {token}"},
         )
 
+    def count(self, **params: Any) -> int:
+        """Count flaws matching the filters with one cheap limit-1 query."""
+        normalized = _normalize_list_params(params)
+        normalized["limit"] = 1
+        response = osidb_api.osidb_api_v2_flaws_list.sync(
+            client=self._client,
+            **normalized,
+        )
+        return response.count if response is not None else 0
+
     def retrieve_list_iterator(self, **params: Any):
         normalized = _normalize_list_params(params)
         while True:

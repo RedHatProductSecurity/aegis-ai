@@ -44,7 +44,6 @@ from . import (
     web_feature_agent,
 )
 from .data_models import (
-    BotKPICacheStatusResponse,
     BotKPIResponse,
     CVEMultiAnalysisRequest,
     CVEMultiAnalysisResponse,
@@ -54,11 +53,7 @@ from .data_models import (
     Feedback,
     ProgrammaticFeedback,
 )
-from .endpoints.bot_kpi import (
-    get_osidb_bot_cache_status,
-    get_osidb_bot_kpi,
-    refresh_osidb_bot_kpi_cache,
-)
+from .endpoints.bot_kpi import get_osidb_bot_kpi
 from .endpoints.kpi import SortOrder, get_cve_kpi
 from .endpoints.kpi_filters import KPIRecordFilters, utc
 from .feedback_logger import feedback_logger, programmatic_feedback_logger
@@ -841,15 +836,14 @@ async def cve_kpi(
         "Compares bot suggestions against current flaw values to measure "
         "how often analysts keep, modify, or skip bot suggestions. "
         "Only flaws in DONE workflow state are included. "
-        "Results are served from a cache that is refreshed separately via "
-        "the cache-refresh endpoint; pages are pure cache reads that never "
-        "fetch from OSIDB, serve each selected flaw's last-known records, "
-        "and honestly report the cached fraction via the progress block. "
-        "Responses are paginated over the selected flaws in pages of the "
-        "limit parameter's size, each carrying that slice's detail entries, "
-        "a progress block, and the last_cve to continue from; the final "
-        "page carries the aggregate metrics. A selection that fits one page "
-        "is served as a single final page."
+        "Results are served in limit-sized pages, each refreshing exactly "
+        "its own slice's stale flaws from OSIDB (per-request work is "
+        "bounded by the page size, so no request can run long) and "
+        "honestly reporting the cached fraction via the progress block. "
+        "Responses are paginated over the selected flaws, each carrying "
+        "that slice's detail entries, a progress block, and the last_cve "
+        "to continue from; the final page carries the aggregate metrics. "
+        "A selection that fits one page is served as a single final page."
     ),
     response_model=BotKPIResponse,
     response_model_exclude_unset=True,
@@ -955,142 +949,6 @@ async def osidb_bot_kpi(
         osidb_token=osidb_token,
         cursor=cursor,
         limit=limit,
-    )
-
-
-@app.get(
-    f"/api/{AEGIS_REST_API_VERSION}/analysis/kpi/osidb-bot/cache-status",
-    summary="Get osidb-bot KPI cache status",
-    description=(
-        "Report how many flaws selected by the request's filters are fresh, "
-        "uncached, or outdated in the osidb-bot KPI cache, without fetching "
-        "or refreshing anything. The freshness check itself queries the "
-        "cheap OSIDB flaw index (cve_id and updated_dt only); the cache "
-        "file is never written by this endpoint. Only flaws in DONE "
-        "workflow state are included."
-    ),
-    response_model=BotKPICacheStatusResponse,
-    responses={
-        200: {
-            "description": "Successful response with osidb-bot KPI cache refresh counts",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "total_flaws_selected": 142,
-                        "fresh_count": 137,
-                        "stale_count": 5,
-                        "uncached_count": 2,
-                        "outdated_count": 3,
-                    },
-                }
-            },
-        },
-        503: {
-            "description": "OSIDB is unreachable",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Unable to connect to OSIDB."}
-                }
-            },
-        },
-    },
-)
-async def osidb_bot_kpi_cache_status(
-    changed_after: datetime | None = Query(  # noqa: B008
-        default=None,
-        description="Only count flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
-    ),
-    changed_before: datetime | None = Query(  # noqa: B008
-        default=None,
-        description="Only count flaws updated before this ISO 8601 datetime.",
-    ),
-    component: str | None = Query(
-        default=None,
-        description="Scope the cache status to flaws affecting this component, e.g. 'kernel'.",
-    ),
-) -> BotKPICacheStatusResponse:
-    """Get osidb-bot KPI cache refresh status for the selected flaws."""
-    if changed_after and changed_before and utc(changed_after) > utc(changed_before):
-        raise HTTPException(
-            status_code=422,
-            detail="changed_after must be earlier than changed_before.",
-        )
-    osidb_token = await _get_request_osidb_token()
-    return await asyncio.to_thread(
-        get_osidb_bot_cache_status,
-        changed_after=changed_after,
-        changed_before=changed_before,
-        component=component or None,
-        osidb_token=osidb_token,
-    )
-
-
-@app.post(
-    f"/api/{AEGIS_REST_API_VERSION}/analysis/kpi/osidb-bot/cache-refresh",
-    summary="Advance the osidb-bot KPI cache refresh",
-    description=(
-        "Refresh one time-budgeted slice of the selected flaws' stale "
-        "osidb-bot KPI cache entries and return the post-slice refresh "
-        "counts (the same shape as the cache-status endpoint). Polling this "
-        "endpoint drains the refresh backlog at the client's pace: every "
-        "call makes progress (at least one batch), the poll rate bounds the "
-        "OSIDB load, and no server-side job state exists. The selection "
-        "filters (changed_after / changed_before / component) match the KPI "
-        "endpoint's. Only flaws in DONE workflow state are included."
-    ),
-    response_model=BotKPICacheStatusResponse,
-    responses={
-        200: {
-            "description": "Successful response with post-slice cache refresh counts",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "total_flaws_selected": 142,
-                        "fresh_count": 142,
-                        "stale_count": 0,
-                        "uncached_count": 0,
-                        "outdated_count": 0,
-                    },
-                }
-            },
-        },
-        503: {
-            "description": "OSIDB is unreachable",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Unable to connect to OSIDB."}
-                }
-            },
-        },
-    },
-)
-async def osidb_bot_kpi_cache_refresh(
-    changed_after: datetime | None = Query(  # noqa: B008
-        default=None,
-        description="Only refresh flaws updated after this ISO 8601 datetime (e.g. 2025-01-01T00:00:00Z).",
-    ),
-    changed_before: datetime | None = Query(  # noqa: B008
-        default=None,
-        description="Only refresh flaws updated before this ISO 8601 datetime.",
-    ),
-    component: str | None = Query(
-        default=None,
-        description="Scope the refresh to flaws affecting this component, e.g. 'kernel'.",
-    ),
-) -> BotKPICacheStatusResponse:
-    """Advance the osidb-bot KPI cache refresh by one bounded slice."""
-    if changed_after and changed_before and utc(changed_after) > utc(changed_before):
-        raise HTTPException(
-            status_code=422,
-            detail="changed_after must be earlier than changed_before.",
-        )
-    osidb_token = await _get_request_osidb_token()
-    return await asyncio.to_thread(
-        refresh_osidb_bot_kpi_cache,
-        changed_after=changed_after,
-        changed_before=changed_before,
-        component=component or None,
-        osidb_token=osidb_token,
     )
 
 

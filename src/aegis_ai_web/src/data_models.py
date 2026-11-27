@@ -523,55 +523,6 @@ class BotKPIResponse(BaseModel):
     )
 
 
-class BotKPICacheStatusResponse(BaseModel):
-    """Response model for the osidb-bot KPI cache status endpoint.
-
-    Reports the refresh state of the osidb-bot KPI cache for the requested
-    selection without refreshing it. Checkable invariants:
-    total_flaws_selected = fresh_count + stale_count, and
-    stale_count = uncached_count + outdated_count.
-    """
-
-    total_flaws_selected: int = Field(
-        ...,
-        ge=0,
-        description=(
-            "DONE flaws in OSIDB matching the request's selection filters "
-            "(changed_after / changed_before / component)."
-        ),
-    )
-    fresh_count: int = Field(
-        ...,
-        ge=0,
-        description=(
-            "Selected flaws whose cached data is current and would be served "
-            "from the cache without an OSIDB re-fetch."
-        ),
-    )
-    stale_count: int = Field(
-        ...,
-        ge=0,
-        description=(
-            "Selected flaws whose full data would be re-fetched on the next "
-            "KPI request: uncached_count + outdated_count."
-        ),
-    )
-    uncached_count: int = Field(
-        ...,
-        ge=0,
-        description="Selected flaws with no cache entry yet (cold start).",
-    )
-    outdated_count: int = Field(
-        ...,
-        ge=0,
-        description=(
-            "Selected flaws whose OSIDB updated_dt watermark advanced past "
-            "the cached one, including legacy cache entries missing "
-            "component provenance."
-        ),
-    )
-
-
 class KPIComponentDetails(BaseModel):
     """
     Component-level feedback diff for a KPI entry.

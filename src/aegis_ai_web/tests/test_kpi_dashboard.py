@@ -66,6 +66,16 @@ def dashboard(monkeypatch, tmp_path):
         return [MagicMock(to_dict=MagicMock(return_value=flaw)) for flaw in selected]
 
     session.flaws.retrieve_list_iterator.side_effect = retrieve
+
+    def count(**kwargs):
+        # Mirror the index phase's component filtering for the selection-size
+        # query the engine uses to detect deletions.
+        component = kwargs.get("components")
+        return sum(
+            1 for flaw in flaws if not component or component in flaw["components"]
+        )
+
+    session.flaws.count.side_effect = count
     monkeypatch.setattr(bot_kpi.osidb_bindings, "new_session", lambda **_: session)
     monkeypatch.setattr(
         kpi.feedback_logger,
@@ -86,7 +96,6 @@ def dashboard(monkeypatch, tmp_path):
 
 
 def test_bot_detail_matches_aggregate_and_preserves_unknown_versions(dashboard):
-    _drain_cache_refresh()
     response = client.get("/api/v1/analysis/kpi/osidb-bot?detail=true")
     assert response.status_code == 200
     body = response.json()
@@ -149,8 +158,6 @@ async def test_delegated_token_cache_is_destroyed_on_failure(monkeypatch):
 @pytest.mark.parametrize("endpoint", ["cve?feature=all&", "osidb-bot?"])
 def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
     session, _ = dashboard
-    if endpoint.startswith("osidb-bot"):
-        _drain_cache_refresh("?component=kernel")
     response = client.get(
         f"/api/v1/analysis/kpi/{endpoint}detail=true&component=kernel"
         "&aegis_version=0.9.2&recorded_after=2026-09-02T00:00:00Z"
@@ -179,7 +186,6 @@ def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
 
 
 def test_unknown_version_filter_recomputes_bot_decisions(dashboard):
-    _drain_cache_refresh()
     body = client.get(
         "/api/v1/analysis/kpi/osidb-bot?detail=true&aegis_version="
     ).json()
@@ -220,23 +226,6 @@ def test_feedback_keeps_latest_matching_programmatic_record(
     assert [entry["aegis_version"] for entry in metrics["entries"]] == ["0.9.1"]
 
 
-def _drain_cache_refresh(query: str = "") -> dict:
-    """POST the cache-refresh endpoint until the selection is fully fresh.
-
-    Page requests never refresh, so a dashboard test wanting scored data must
-    drain first, exactly like a polling client. The 100-call cap is a safety
-    bound: with the mocked refresh budget a single call drains these
-    fixtures.
-    """
-    for _ in range(100):
-        response = client.post(f"/api/v1/analysis/kpi/osidb-bot/cache-refresh{query}")
-        assert response.status_code == 200
-        counts = response.json()
-        if counts["stale_count"] == 0:
-            return counts
-    raise AssertionError("cache refresh did not drain")
-
-
 def test_legacy_cache_is_refreshed_even_with_same_watermark(dashboard):
     session, flaws = dashboard
     legacy = bot_kpi.BotKPICacheEntry.model_validate(
@@ -253,14 +242,12 @@ def test_legacy_cache_is_refreshed_even_with_same_watermark(dashboard):
     )
     with bot_kpi._cache_handler() as handler:
         handler.write(legacy)
-    _drain_cache_refresh("?component=kernel")
     body = client.get(
         "/api/v1/analysis/kpi/osidb-bot?detail=true&component=kernel"
     ).json()
     assert len(body["entries"]) == 3
     # A narrow request rewrites the shared cache but must preserve the old marker
     # for the unselected flaw so it, too, gets refreshed when later selected.
-    _drain_cache_refresh("?component=openssl")
     body = client.get(
         "/api/v1/analysis/kpi/osidb-bot?detail=true&component=openssl"
     ).json()
