@@ -61,6 +61,7 @@ FLAW_FIELDS = [
     "statement",
     "title",
     "updated_dt",
+    "upstream_data",
     "uuid",
 ]
 

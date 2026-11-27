@@ -468,7 +468,7 @@ def suggest_affected_packages(cve_id, markdown):
 @click.option(
     "--markdown", "-m", is_flag=True, help="Output as markdown instead of JSON."
 )
-def suggest_manifest_component_and_state(cve_id, markdown):
+def suggest_manifest_components_and_ranges(cve_id, markdown):
     """
     Suggest same-project downstream components and affectedness for a CVE.
     """

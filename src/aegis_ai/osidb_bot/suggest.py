@@ -112,6 +112,7 @@ def update_field(
     value: Any | None = None,
     force_overwrite_of: tuple[Any, ...] | None = None,
     delay_overwrite_of: tuple[Any, ...] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> set[str]:
     """Persist a suggestion onto the flaw when confidence and quality allow."""
     assert (not src) or (not value)
@@ -165,6 +166,7 @@ def update_field(
         type=aegis_meta_type,
         value=value,
         explanation=output.explanation,
+        **(extra or {}),
     )
 
     return {dst}
@@ -206,7 +208,16 @@ async def suggest_manifest_components(
         row.model_dump() if hasattr(row, "model_dump") else row
         for row in output.manifest_components
     ]
-    return update_field(flaw_data, ts, "_downstream", output, value=rows)
+    return update_field(
+        flaw_data,
+        ts,
+        "_downstream",
+        output,
+        value=rows,
+        # FIXME: the extra ranges sibling is an interim solution, misaligned
+        # with the shape of the other aegis_meta entries
+        extra={"ranges": list(getattr(output, "ranges", None) or [])},
+    )
 
 
 async def suggest_description(

@@ -657,8 +657,8 @@ aegis component-intelligence "libcap"
 # CVE Flaw Content Quality Review
 aegis quality-review "CVE-2025-0725"
 
-# Same-project downstream components and affectedness
-aegis suggest-manifest-component-and-state "CVE-2025-0725"
+# Same-project downstream components (with source_component seeds)
+aegis suggest-manifest-components-and-ranges "CVE-2025-0725"
 ```
 
 ---

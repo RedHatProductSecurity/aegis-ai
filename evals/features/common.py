@@ -93,6 +93,7 @@ MIN_SCORE_THRESHOLD = 0.1
 EVALUATOR_SCORE_THRESHOLDS: dict[str, float] = {
     "EcosystemEvaluator": 0.8,
     "ManifestComponentEvaluator": 0.8,
+    "ManifestRangesEvaluator": 0.8,
 }
 
 # evaluation summary for each evaluated feature
