@@ -331,6 +331,17 @@ def _batch_fetches(session):
     ]
 
 
+def _index_calls(session):
+    """The flaw-index queries (everything but cve_id batch fetches), in call
+    order -- the sequence a test asserts on when distinguishing delta
+    validation, full rebuilds, and count queries."""
+    return [
+        call
+        for call in session.flaws.retrieve_list_iterator.call_args_list
+        if "cve_id" not in call.kwargs
+    ]
+
+
 def _paginate(**kwargs):
     """Drive get_osidb_bot_kpi as a paginating client would: follow
     last_cve from page to page until the final page. An initial cursor
@@ -1097,9 +1108,8 @@ class TestGetOsidbBotKpiPagination:
     selection, and the ``last_cve`` to continue from; the final page adds
     the complete aggregate. A client that follows the cursor and concatenates
     ``entries`` ends with exactly one copy of every selected flaw's records.
-    When the entire remaining selection after the cursor is already fresh in
-    the cache, pages instead grow to the fixed warm page size (1000) and carry
-    no refresh work; any stale flaw ahead keeps the ``limit``-paced behavior.
+    A fully warm page is a pure cache read: it fetches nothing and writes
+    nothing.
     """
 
     def _mock_settings(self, mock_settings, cache_dir):
@@ -1625,6 +1635,71 @@ class TestGetOsidbBotKpiPagination:
         assert {e.cve_id for e in accumulated} == {
             f"CVE-2025-{i:04d}" for i in range(1, total + 1)
         }
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_warm_run_start_page_fetches_nothing_following_page_fetches_its_slice(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A run interrupted mid-pagination leaves its tail uncached while
+        its stamp still covers the whole selection. Resuming, the run's
+        first page is a pure cache read -- no flaw fetched, nothing written,
+        the delta validation and its count the only OSIDB contact -- while
+        the following page fetches exactly its own slice's uncached flaws
+        and makes no further index or count contact."""
+        self._mock_settings(mock_settings, cache_dir)
+
+        flaws = _numbered_flaws(4)
+        # The previous run delivered only page 1 (flaws 0001-0002) before
+        # stopping; its stamp still covers the whole four-flaw selection.
+        _seed_stamped_cache(
+            cache_dir,
+            {
+                "CVE-2025-0001": _cached_flaw(cve_id="CVE-2025-0001"),
+                "CVE-2025-0002": _cached_flaw(cve_id="CVE-2025-0002"),
+            },
+            {
+                selection_signature(None, None, None): SelectionStamp(
+                    index={f["cve_id"]: f["updated_dt"] for f in flaws},
+                    fetched_at=datetime.now(UTC),
+                )
+            },
+        )
+        # The filtering session honors the delta bound, so validation sees
+        # no change and the count matches the stamp: nothing to re-stamp.
+        session = _make_filtering_session(*flaws)
+        mock_bindings.new_session.return_value = session
+
+        cache_json_before = cache_dir.read_text()
+        page1 = get_osidb_bot_kpi(detail=True, limit=2)
+        assert page1.last_cve == "CVE-2025-0002"
+        assert page1.total_flaws_processed == 0
+        assert _page_progress(page1).selected_flaws == 4
+        # The warm page honestly reports the selection's uncached tail as
+        # not yet refreshed, while serving its own slice without work.
+        assert _page_progress(page1).refreshed_flaws == 2
+        assert _page_progress(page1).complete is False
+        assert {e.cve_id for e in _page_entries(page1)} == {
+            "CVE-2025-0001",
+            "CVE-2025-0002",
+        }
+        assert _batch_fetches(session) == []
+        assert cache_dir.read_text() == cache_json_before
+        assert session.flaws.count.call_count == 1
+
+        page2 = get_osidb_bot_kpi(detail=True, limit=2, cursor="CVE-2025-0002")
+        assert page2.last_cve is None
+        assert _page_progress(page2).complete is True
+        assert page2.total_flaws_processed == 4
+        assert {e.cve_id for e in _page_entries(page2)} == {
+            "CVE-2025-0003",
+            "CVE-2025-0004",
+        }
+        # The trusting cursor page made zero OSIDB contact -- no index
+        # query, no count -- and fetched exactly its own slice's flaws.
+        assert len(_index_calls(session)) == 1
+        assert session.flaws.count.call_count == 1
+        assert _batch_fetches(session) == [{"CVE-2025-0003", "CVE-2025-0004"}]
 
     @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
     @patch(f"{_BOT_KPI_MODULE}.get_settings")
@@ -2287,6 +2362,136 @@ class TestSelectionStampLifecycle:
         # nothing either.
         assert _batch_fetches(session) == []
         assert cache_dir.read_text() == cache_json_after_first
+
+
+class TestDeletionDetection:
+    """Deletions, which delta queries cannot see, are caught by a cheap
+    OSIDB count at run start.
+
+    The count runs over the same selection filters as the index (bounded
+    by the bot birthday, never carrying the delta's watermark bound), so
+    it counts exactly the set the stamp's index selected. When OSIDB holds
+    fewer flaws than the stamp indexed -- flaws were deleted, or left the
+    DONE state -- the selection is rebuilt with the full unbounded query;
+    a count at or above the index size means delta extension only.
+    """
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_lower_count_rebuilds_selection_in_full_and_restamps(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """A flaw that left the selection stays in the stamped index -- the
+        delta query only adds and updates -- but the count catches it: OSIDB
+        holds two of the stamp's three flaws, so the run start re-runs the
+        full unbounded index query and re-stamps the shrunken selection.
+        The survivors were already fresh, so the rebuild fetches no flaw
+        data, and the deleted flaw's cache entry is retained: selection
+        never evicts."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        flaws = _numbered_flaws(3)
+        seeded_flaws = {f["cve_id"]: _cached_flaw(cve_id=f["cve_id"]) for f in flaws}
+        _seed_stamped_cache(
+            cache_dir,
+            seeded_flaws,
+            {
+                selection_signature(None, None, None): SelectionStamp(
+                    index={f["cve_id"]: f["updated_dt"] for f in flaws},
+                    fetched_at=datetime.now(UTC),
+                )
+            },
+        )
+        # OSIDB now lists only the first two flaws; the third was deleted.
+        session = _make_session(*flaws[:2])
+        # The count agrees with the listing: two of the stamp's three.
+        session.flaws.count.side_effect = lambda **kwargs: 2
+        mock_bindings.new_session.return_value = session
+
+        started = datetime.now(UTC)
+        response = get_osidb_bot_kpi(detail=True)
+
+        # The count query carries the selection filters -- bounded by the
+        # bot birthday like the index, and without the delta's watermark
+        # bound, so it counts the same set the index selects.
+        assert session.flaws.count.call_count == 1
+        count_kwargs = session.flaws.count.call_args.kwargs
+        assert count_kwargs["workflow_state"] == "DONE"
+        assert count_kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
+        assert count_kwargs["cve_id__isempty"] is False
+        assert "updated_dt_gte" not in count_kwargs
+
+        # Delta validation first, then the full rebuild the deficit
+        # triggered -- unbounded by any watermark, still birthday-bounded.
+        index_calls = _index_calls(session)
+        assert len(index_calls) == 2
+        assert index_calls[0].kwargs["updated_dt_gte"] is not None
+        assert "updated_dt_gte" not in index_calls[1].kwargs
+        assert index_calls[1].kwargs["created_dt_gte"] == OSIDB_BOT_BIRTHDAY
+
+        # The shrunken selection is served and re-stamped...
+        assert _page_progress(response).selected_flaws == 2
+        assert _page_progress(response).complete is True
+        assert response.total_flaws_processed == 2
+        assert {e.cve_id for e in _page_entries(response)} == {
+            "CVE-2025-0001",
+            "CVE-2025-0002",
+        }
+        cached = BotKPICacheEntry.model_validate_json(cache_dir.read_text())
+        assert len(cached.selections) == 1
+        stamp = next(iter(cached.selections.values()))
+        assert stamp.index == {
+            "CVE-2025-0001": _DEFAULT_DT,
+            "CVE-2025-0002": _DEFAULT_DT,
+        }
+        assert stamp.fetched_at >= started
+        # ...the rebuild is index-only (the survivors were already fresh)...
+        assert _batch_fetches(session) == []
+        # ...and the deleted flaw's cache entry is retained, not pruned.
+        assert set(cached.flaws) == set(seeded_flaws)
+
+    @patch(f"{_BOT_KPI_MODULE}.osidb_bindings")
+    @patch(f"{_BOT_KPI_MODULE}.get_settings")
+    def test_count_at_or_above_index_size_never_rebuilds_in_full(
+        self, mock_settings, mock_bindings, cache_dir
+    ):
+        """Only a deficit rebuilds. Run starts whose count equals the
+        stamp's index size (nothing deleted) or exceeds it (OSIDB holds
+        flaws the delta window has yet to merge) stay delta-extension only:
+        the full unbounded scan never re-runs, nothing is fetched, and
+        nothing is written. A cold run start (no stamp) never runs the
+        count at all -- the full query is its validation."""
+        _mock_kpi_settings(mock_settings, cache_dir)
+        session = _make_filtering_session(*_numbered_flaws(2))
+        # Two validating run starts follow the cold one: count == index
+        # size, then a count above it (a surplus is not a deletion signal).
+        session.flaws.count.side_effect = [2, 5]
+        mock_bindings.new_session.return_value = session
+
+        # Cold run start: the stamp is built by the full query alone.
+        first = get_osidb_bot_kpi()
+        assert first.total_flaws_processed == 2
+        assert session.flaws.count.call_count == 0
+        assert len(_index_calls(session)) == 1
+        assert "updated_dt_gte" not in _index_calls(session)[0].kwargs
+        cache_json_stamped = cache_dir.read_text()
+
+        # Second run start: the count equals the index size. Delta only.
+        assert get_osidb_bot_kpi().total_flaws_processed == 2
+        # Third run start: the count exceeds it. Still delta only.
+        assert get_osidb_bot_kpi().total_flaws_processed == 2
+
+        assert session.flaws.count.call_count == 2
+        # One full query (the cold start) plus two bounded deltas; the only
+        # flaw fetch was the cold start's own slice, and nothing was
+        # written since.
+        index_calls = _index_calls(session)
+        assert len(index_calls) == 3
+        assert "updated_dt_gte" not in index_calls[0].kwargs
+        assert all(
+            call.kwargs["updated_dt_gte"] is not None for call in index_calls[1:]
+        )
+        assert _batch_fetches(session) == [{"CVE-2025-0001", "CVE-2025-0002"}]
+        assert cache_dir.read_text() == cache_json_stamped
 
 
 class TestDeliveredFlawsProgress:
