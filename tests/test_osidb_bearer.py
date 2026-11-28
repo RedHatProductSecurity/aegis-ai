@@ -56,6 +56,41 @@ def test_bearer_session_follows_pagination(mocker):
     assert list_call.call_args_list[1].kwargs["offset"] == 2
 
 
+def test_bearer_session_count_sends_one_limit_1_query(mocker):
+    """flaws.count() answers the KPI engine's deletion-detection query with
+    one cheap page: the server's total count, not the (empty) results."""
+    count_call = mocker.patch(
+        "aegis_ai.toolsets.tools.osidb.osidb_bearer.osidb_api.osidb_api_v2_flaws_list.sync",
+        return_value=SimpleNamespace(results=[], next_=UNSET, count=721),
+    )
+
+    session = osidb_bearer.BearerOSIDBSession(
+        "https://osidb.example.com/", "user-access-token"
+    )
+    assert session.flaws.count(workflow_state="DONE", cve_id__isempty=False) == 721
+
+    kwargs = count_call.call_args.kwargs
+    assert kwargs["client"] is session.flaws._client
+    assert kwargs["limit"] == 1
+    # Django-style filters normalize exactly like the list iterator's.
+    assert kwargs["workflow_state"] == ["DONE"]
+    assert kwargs["cve_id_isempty"] is False
+
+
+def test_bearer_session_count_returns_zero_without_a_response(mocker):
+    """A count query that yields no response returns 0 rather than raising,
+    so the caller never sees a partial failure from the cheap check."""
+    mocker.patch(
+        "aegis_ai.toolsets.tools.osidb.osidb_bearer.osidb_api.osidb_api_v2_flaws_list.sync",
+        return_value=None,
+    )
+
+    session = osidb_bearer.BearerOSIDBSession(
+        "https://osidb.example.com/", "user-access-token"
+    )
+    assert session.flaws.count() == 0
+
+
 def test_validate_osidb_token_returns_verified_identity(mocker):
     verify = mocker.patch(
         "aegis_ai.toolsets.tools.osidb.osidb_bearer.auth_api.auth_token_verify_create.sync",

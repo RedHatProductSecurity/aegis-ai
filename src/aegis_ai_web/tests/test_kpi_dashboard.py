@@ -66,6 +66,16 @@ def dashboard(monkeypatch, tmp_path):
         return [MagicMock(to_dict=MagicMock(return_value=flaw)) for flaw in selected]
 
     session.flaws.retrieve_list_iterator.side_effect = retrieve
+
+    def count(**kwargs):
+        # Mirror the index phase's component filtering for the selection-size
+        # query the engine uses to detect deletions.
+        component = kwargs.get("components")
+        return sum(
+            1 for flaw in flaws if not component or component in flaw["components"]
+        )
+
+    session.flaws.count.side_effect = count
     monkeypatch.setattr(bot_kpi.osidb_bindings, "new_session", lambda **_: session)
     monkeypatch.setattr(
         kpi.feedback_logger,
@@ -96,8 +106,11 @@ def test_bot_detail_matches_aggregate_and_preserves_unknown_versions(dashboard):
     assert len(body["entries"]) == 4  # history remains available, not extra decisions
     assert {entry["aegis_version"] for entry in body["entries"]} == {"", "0.9.2"}
     assert body["available_components"] == ["kernel", "openssl"]
+    # A selection that fits one page is a single final response; without
+    # detail it carries the aggregate plus the ever-present progress block.
     legacy = client.get("/api/v1/analysis/kpi/osidb-bot").json()
-    assert set(legacy) == {"total_flaws_processed", "features"}
+    assert set(legacy) == {"total_flaws_processed", "features", "progress"}
+    assert legacy["progress"]["complete"] is True
 
 
 def test_bot_kpi_uses_process_credentials_without_delegation(dashboard, monkeypatch):
@@ -160,10 +173,16 @@ def test_component_version_and_recorded_time_intersection(dashboard, endpoint):
     assert len(entries) == 1
     assert entries[0]["cve_id"] == "CVE-2026-1000"
     assert entries[0]["aegis_version"] == "0.9.2"
-    # A flaw edited in October still contributes a September suggestion.
+    # A flaw edited in October still contributes a September suggestion:
+    # recorded-time bounds never scope the flaw selection. An updated_dt_gte
+    # may appear as the selection-stamp delta watermark (recent, written by an
+    # earlier test through the shared test cache), never as the recorded
+    # bound -- the fixture flaws were updated 2026-10-01, before any delta
+    # watermark but after the recorded bound.
     for call in session.flaws.retrieve_list_iterator.call_args_list:
         assert "updated_dt_lte" not in call.kwargs
-        assert "updated_dt_gte" not in call.kwargs
+        if "updated_dt_gte" in call.kwargs:
+            assert call.kwargs["updated_dt_gte"] > datetime(2026, 10, 1, tzinfo=UTC)
 
 
 def test_unknown_version_filter_recomputes_bot_decisions(dashboard):
