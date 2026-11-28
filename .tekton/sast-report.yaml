@@ -541,7 +541,7 @@ spec:
 
       write_upload_status "$UPLOAD_WARNINGS" "${UPLOAD_NOTE:-SARIF upload accepted by GitHub.}"
   - name: report
-    image: quay.io/konflux-ci/konflux-test:v1.5.11@sha256:3e54b27ccc83159c52dd1602e563b2b35b4811fd2b9c754bc1ca84b8cc430cd5
+    image: quay.io/konflux-ci/konflux-test:v1.5.12@sha256:18652fc45eb5f3f474673bc0b9bcea1d3431dbb68d9a90ad2553668721f325f5
     script: |
       #!/bin/bash
       set -euo pipefail
